@@ -1,10 +1,12 @@
 """Built-in public smoke arenas."""
 
 from eslams.arena import registry
+from eslams.arenas.battleship import BattleshipArena
 from eslams.arenas.checkers import CheckersArena
 from eslams.arenas.chess import ChessArena
 from eslams.arenas.connect_four import ConnectFourArena
 from eslams.arenas.gomoku import GomokuArena
+from eslams.arenas.gridworld import CliffWalkingArena, FrozenLakeArena, TaxiArena
 from eslams.arenas.hex import HexArena
 from eslams.arenas.mancala import MancalaArena
 from eslams.arenas.matrix_games import PrisonersDilemmaArena, RockPaperScissorsArena
@@ -31,6 +33,10 @@ registry.register(CheckersArena)
 registry.register(MancalaArena)
 registry.register(PentagoArena)
 registry.register(UltimateTicTacToeArena)
+registry.register(BattleshipArena)
+registry.register(FrozenLakeArena)
+registry.register(CliffWalkingArena)
+registry.register(TaxiArena)
 registry.register(RockPaperScissorsArena)
 registry.register(PrisonersDilemmaArena)
 registry.register(BlackjackArena)
@@ -42,11 +48,14 @@ registry.register(NegotiationArena)
 
 __all__ = [
     "BargainingArena",
+    "BattleshipArena",
     "BlackjackArena",
     "CheckersArena",
     "ChessArena",
+    "CliffWalkingArena",
     "ConnectFourArena",
     "FirstPriceSealedBidAuctionArena",
+    "FrozenLakeArena",
     "GomokuArena",
     "GoofspielArena",
     "HexArena",
@@ -57,6 +66,7 @@ __all__ = [
     "PentagoArena",
     "PrisonersDilemmaArena",
     "RockPaperScissorsArena",
+    "TaxiArena",
     "TicTacToeArena",
     "UltimateTicTacToeArena",
     "registry",
