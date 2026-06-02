@@ -83,12 +83,18 @@ Every run can produce:
 
 ## Built-in Public Smoke Arenas
 
+- Bargaining
+- Blackjack
 - Checkers
 - Chess
 - Connect Four
+- First-price Sealed-Bid Auction
 - Gomoku
+- Goofspiel
 - Hex
+- Liar's Dice
 - Mancala
+- Negotiation
 - Othello / Reversi
 - Pentago
 - Prisoner's Dilemma

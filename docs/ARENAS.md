@@ -14,12 +14,18 @@ An arena is more than a game engine. It defines:
 
 Built-in public smoke arenas:
 
+- `bargaining`
+- `blackjack`
 - `checkers`
 - `chess`
 - `connect-four`
+- `first-price-sealed-bid-auction`
 - `gomoku`
+- `goofspiel`
 - `hex`
+- `liars-dice`
 - `mancala`
+- `negotiation`
 - `othello`
 - `pentago`
 - `prisoners-dilemma`
