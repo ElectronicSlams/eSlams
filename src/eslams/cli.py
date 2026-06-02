@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+import eslams.arenas  # noqa: F401
 from eslams.agents import HttpAgent, ModelProviderAgent
 from eslams.arena import registry
-from eslams.arenas import ChessArena, ConnectFourArena, TicTacToeArena  # noqa: F401
 from eslams.artifacts import ArtifactValidator
 from eslams.protocol import ActRequest
 from eslams.replay import render_replay_html
