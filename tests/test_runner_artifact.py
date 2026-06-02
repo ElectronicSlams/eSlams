@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from eslams.artifacts import ArtifactValidator
+from eslams.cli import main
 from eslams.hashing import canonical_json
 from eslams.runner import RunConfig, Runner
 
@@ -74,6 +75,42 @@ def test_runner_stamps_platform_verified_artifact_metadata(tmp_path: Path, monke
     report = ArtifactValidator().validate_report(result.artifact_path)
     assert report.errors == []
     assert report.signature.verified is True
+
+
+def test_cli_run_accepts_artifact_provenance_metadata(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("RUNNER_SIGNING_KEY", "test-gateway-signing-key")
+    monkeypatch.setenv("RUNNER_SIGNING_KEY_ID", "gateway-ci-key")
+
+    status = main(
+        [
+            "run",
+            "--arena",
+            "tic-tac-toe",
+            "--agent",
+            "first-legal",
+            "--opponent",
+            "first-legal",
+            "--output-dir",
+            str(tmp_path),
+            "--verification-level",
+            "Gateway Verified",
+            "--eval-suite-version",
+            "real-provider-smoke:1.0.0",
+            "--runner-version",
+            "eslams-real-eval-runner:0.1.0",
+        ]
+    )
+
+    assert status == 0
+    artifacts = list(tmp_path.glob("run_*.eslams"))
+    assert len(artifacts) == 1
+    manifest = json.loads((artifacts[0] / "manifest.json").read_text(encoding="utf-8"))
+    score = json.loads((artifacts[0] / "scores" / "score.json").read_text(encoding="utf-8"))
+    assert manifest["verification_level"] == "Gateway Verified"
+    assert manifest["eval_suite_version"] == "real-provider-smoke:1.0.0"
+    assert manifest["runner_version"] == "eslams-real-eval-runner:0.1.0"
+    assert score["verification_level"] == "Gateway Verified"
+    assert ArtifactValidator().validate_report(artifacts[0]).signature.verified is True
 
 
 def test_validator_detects_signed_manifest_tamper(tmp_path: Path, monkeypatch):
