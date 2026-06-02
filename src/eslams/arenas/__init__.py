@@ -1,6 +1,12 @@
 """Built-in public smoke arenas."""
 
 from eslams.arena import registry
+from eslams.arenas.advanced_cards import (
+    CribbageArena,
+    EuchreArena,
+    GinRummyArena,
+    HanabiArena,
+)
 from eslams.arenas.battleship import BattleshipArena
 from eslams.arenas.checkers import CheckersArena
 from eslams.arenas.chess import ChessArena
@@ -61,6 +67,10 @@ registry.register(SheddingCardGameArena)
 registry.register(CrazyEightsArena)
 registry.register(HeartsArena)
 registry.register(SpadesArena)
+registry.register(GinRummyArena)
+registry.register(EuchreArena)
+registry.register(CribbageArena)
+registry.register(HanabiArena)
 registry.register(LeducHoldemArena)
 registry.register(LimitTexasHoldemArena)
 registry.register(NoLimitTexasHoldemArena)
@@ -91,11 +101,15 @@ __all__ = [
     "ChessArena",
     "CliffWalkingArena",
     "ConnectFourArena",
+    "CribbageArena",
     "CrazyEightsArena",
+    "EuchreArena",
     "FirstPriceSealedBidAuctionArena",
     "FrozenLakeArena",
     "GomokuArena",
     "GoofspielArena",
+    "GinRummyArena",
+    "HanabiArena",
     "HeartsArena",
     "HexArena",
     "IceHockeyStyleArena",
