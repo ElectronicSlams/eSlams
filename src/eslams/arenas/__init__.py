@@ -16,8 +16,14 @@ from eslams.arenas.gridworld import CliffWalkingArena, FrozenLakeArena, TaxiAren
 from eslams.arenas.hex import HexArena
 from eslams.arenas.mancala import MancalaArena
 from eslams.arenas.matrix_games import PrisonersDilemmaArena, RockPaperScissorsArena
+from eslams.arenas.nine_mens_morris import NineMensMorrisArena
 from eslams.arenas.othello import OthelloArena
 from eslams.arenas.pentago import PentagoArena
+from eslams.arenas.poker import (
+    LeducHoldemArena,
+    LimitTexasHoldemArena,
+    NoLimitTexasHoldemArena,
+)
 from eslams.arenas.strategic_games import (
     BargainingArena,
     BlackjackArena,
@@ -47,6 +53,10 @@ registry.register(SheddingCardGameArena)
 registry.register(CrazyEightsArena)
 registry.register(HeartsArena)
 registry.register(SpadesArena)
+registry.register(LeducHoldemArena)
+registry.register(LimitTexasHoldemArena)
+registry.register(NoLimitTexasHoldemArena)
+registry.register(NineMensMorrisArena)
 registry.register(RockPaperScissorsArena)
 registry.register(PrisonersDilemmaArena)
 registry.register(BlackjackArena)
@@ -71,9 +81,13 @@ __all__ = [
     "GoofspielArena",
     "HeartsArena",
     "HexArena",
+    "LeducHoldemArena",
     "LiarsDiceArena",
+    "LimitTexasHoldemArena",
     "MancalaArena",
     "NegotiationArena",
+    "NineMensMorrisArena",
+    "NoLimitTexasHoldemArena",
     "OthelloArena",
     "PentagoArena",
     "PrisonersDilemmaArena",
