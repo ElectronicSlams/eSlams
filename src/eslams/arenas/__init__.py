@@ -26,6 +26,7 @@ from eslams.arenas.control_arcade import (
     MountainCarArena,
     PaddleBallArena,
 )
+from eslams.arenas.east_asian_board import GoArena, ShogiArena, XiangqiArena
 from eslams.arenas.gomoku import GomokuArena
 from eslams.arenas.gridworld import CliffWalkingArena, FrozenLakeArena, TaxiArena
 from eslams.arenas.hex import HexArena
@@ -53,6 +54,7 @@ from eslams.arenas.strategic_games import (
     NegotiationArena,
 )
 from eslams.arenas.tic_tac_toe import TicTacToeArena
+from eslams.arenas.tile_card_games import BridgeArena, DouDizhuArena, MahjongArena
 from eslams.arenas.ultimate_tic_tac_toe import UltimateTicTacToeArena
 
 registry.register(ConnectFourArena)
@@ -61,7 +63,10 @@ registry.register(ChessArena)
 registry.register(OthelloArena)
 registry.register(GomokuArena)
 registry.register(HexArena)
+registry.register(GoArena)
 registry.register(CheckersArena)
+registry.register(ShogiArena)
+registry.register(XiangqiArena)
 registry.register(MancalaArena)
 registry.register(PentagoArena)
 registry.register(UltimateTicTacToeArena)
@@ -77,6 +82,9 @@ registry.register(GinRummyArena)
 registry.register(EuchreArena)
 registry.register(CribbageArena)
 registry.register(HanabiArena)
+registry.register(MahjongArena)
+registry.register(DouDizhuArena)
+registry.register(BridgeArena)
 registry.register(BackgammonArena)
 registry.register(LeducHoldemArena)
 registry.register(LimitTexasHoldemArena)
@@ -108,6 +116,7 @@ __all__ = [
     "BipedalWalkerArena",
     "BlackjackArena",
     "BoxingStyleArena",
+    "BridgeArena",
     "CarRacingArena",
     "CartPoleArena",
     "CheckersArena",
@@ -116,10 +125,12 @@ __all__ = [
     "ConnectFourArena",
     "CribbageArena",
     "CrazyEightsArena",
+    "DouDizhuArena",
     "EuchreArena",
     "FirstPriceSealedBidAuctionArena",
     "FrozenLakeArena",
     "GomokuArena",
+    "GoArena",
     "GoofspielArena",
     "GinRummyArena",
     "HanabiArena",
@@ -130,6 +141,7 @@ __all__ = [
     "LiarsDiceArena",
     "LimitTexasHoldemArena",
     "LunarLanderArena",
+    "MahjongArena",
     "MancalaArena",
     "MountainCarArena",
     "NegotiationArena",
@@ -141,9 +153,11 @@ __all__ = [
     "PrisonersDilemmaArena",
     "RockPaperScissorsArena",
     "SheddingCardGameArena",
+    "ShogiArena",
     "SpadesArena",
     "TaxiArena",
     "TicTacToeArena",
     "UltimateTicTacToeArena",
+    "XiangqiArena",
     "registry",
 ]
