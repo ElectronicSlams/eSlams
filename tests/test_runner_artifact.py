@@ -19,6 +19,16 @@ def test_runner_generates_replay_events(tmp_path: Path):
     assert result.replay_events[-1].terminal is True
 
 
+def test_runner_generates_replay_html(tmp_path: Path):
+    result = Runner().run(RunConfig(arena_id="hex", seed=5, output_dir=tmp_path, max_turns=2))
+    replay_path = result.artifact_path / "replay" / "index.html"
+    manifest = json.loads((result.artifact_path / "manifest.json").read_text(encoding="utf-8"))
+
+    assert replay_path.exists()
+    assert "eSlams Replay" in replay_path.read_text(encoding="utf-8")
+    assert any(item["path"] == "replay/index.html" for item in manifest["files"])
+
+
 def test_runner_signs_artifact_when_key_is_configured(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("RUNNER_SIGNING_KEY", "test-runner-signing-key")
     monkeypatch.setenv("RUNNER_SIGNING_KEY_ID", "test-key")

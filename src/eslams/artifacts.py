@@ -16,6 +16,7 @@ from typing import Any, cast
 
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json, sha256_file, sha256_json
+from eslams.replay import render_replay_html
 
 ARTIFACT_VERSION = "eslams-artifact-v1"
 RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v1"
@@ -189,6 +190,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
             "renderer": "eslams-html-v1",
         },
     )
+    render_replay_html(artifact_dir)
     _write_json(artifact_dir / "scores/score.json", build.score.to_dict())
     _write_json(artifact_dir / "scores/metrics.json", build.metrics)
     (artifact_dir / "logs/runner.log").write_text(build.runner_log, encoding="utf-8")
