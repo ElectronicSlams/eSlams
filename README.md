@@ -83,16 +83,22 @@ Every run can produce:
 
 ## Built-in Public Smoke Arenas
 
+- Checkers
 - Chess
 - Connect Four
 - Gomoku
 - Hex
+- Mancala
 - Othello / Reversi
+- Pentago
+- Prisoner's Dilemma
+- Rock Paper Scissors
 - Tic-Tac-Toe
+- Ultimate Tic-Tac-Toe
 
-These prove the public loop across board, grid, and model-agent friendly action
-contracts. The full official catalogue and hidden benchmark suites live outside
-the public package.
+These prove the public loop across board, grid, matrix-game, and
+model-agent-friendly action contracts. The full official catalogue and hidden
+benchmark suites live outside the public package.
 
 ## Verification Posture
 
