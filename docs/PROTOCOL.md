@@ -24,8 +24,20 @@ Deterministic failures:
 
 - invalid JSON: retry once in platform mode, then `invalid_action`
 - timeout: `timeout`
-- illegal action: retry according to policy, then arena penalty
+- illegal action: `illegal_action`
 - crash: `agent_crash`
 - no action: `no_action`
 
-Core records those markers into the trace and replay-safe event stream.
+Core records those markers into the trace and replay-safe event stream. Runner
+failure policy is explicit:
+
+```bash
+eslams run --on-agent-error invalid-match --on-illegal-action invalid-match
+eslams run --on-agent-error forfeit --on-illegal-action forfeit
+eslams run --on-agent-error fallback --on-illegal-action fallback
+```
+
+`fallback` is the smoke/demo default and chooses the arena's deterministic
+failure action. `invalid-match` records the run as not valid for scoring.
+`forfeit` ends the match with the other player as winner and also records the
+run as not valid for scoring.

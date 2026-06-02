@@ -1,11 +1,13 @@
 # eSlams Artifacts
 
-Every serious run produces a `.eslams` proof package. During local development it is a directory; for transport it can be zipped with the `.eslams` extension.
+Every serious run produces a `.eslams` proof package. `.eslams` is the
+portable zip-compatible archive. The expanded inspection directory uses the
+`.eslams.d` suffix.
 
 Required structure:
 
 ```text
-run.eslams/
+run.eslams.d/
   manifest.json
   traces/public_trace.jsonl
   traces/agent_visible_trace.jsonl
@@ -28,7 +30,7 @@ run.eslams/
 
 `manifest.json` contains file hashes and an artifact id derived from the
 manifest file table. It also records the deterministic replay contract for new
-Core artifacts:
+Core artifacts and the scoring-validity posture:
 
 ```json
 {
@@ -36,9 +38,18 @@ Core artifacts:
     "version": "eslams-deterministic-replay-v1",
     "status": "recorded",
     "source": "traces/auditor_trace.jsonl"
-  }
+  },
+  "match_valid_for_scoring": true,
+  "invalid_reason": null,
+  "agent_error_count_by_player": { "player_1": 0, "player_2": 0 },
+  "illegal_action_count_by_player": { "player_1": 0, "player_2": 0 },
+  "fallback_action_count_by_player": { "player_1": 0, "player_2": 0 },
+  "provider_status_by_player": { "player_1": "not_provider", "player_2": "not_provider" }
 }
 ```
+
+`runs/latest.eslams` points at the latest archive when a run produced one.
+`runs/latest.eslams.d` points at the latest expanded copy.
 
 Public artifacts never include hidden official eval seeds or private judge-only
 data in public traces.

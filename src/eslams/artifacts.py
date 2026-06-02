@@ -65,6 +65,12 @@ class ArtifactManifest:
     runner_version: str
     verification_level: str
     deterministic_replay: dict[str, Any]
+    match_valid_for_scoring: bool
+    invalid_reason: str | None
+    agent_error_count_by_player: dict[str, int]
+    illegal_action_count_by_player: dict[str, int]
+    fallback_action_count_by_player: dict[str, int]
+    provider_status_by_player: dict[str, str]
     files: list[dict[str, Any]]
     hash_algorithm: str
     signature: dict[str, Any]
@@ -83,6 +89,12 @@ class ArtifactManifest:
             "runner_version": self.runner_version,
             "verification_level": self.verification_level,
             "deterministic_replay": self.deterministic_replay,
+            "match_valid_for_scoring": self.match_valid_for_scoring,
+            "invalid_reason": self.invalid_reason,
+            "agent_error_count_by_player": self.agent_error_count_by_player,
+            "illegal_action_count_by_player": self.illegal_action_count_by_player,
+            "fallback_action_count_by_player": self.fallback_action_count_by_player,
+            "provider_status_by_player": self.provider_status_by_player,
             "files": self.files,
             "hash_algorithm": self.hash_algorithm,
             "signature": self.signature,
@@ -178,7 +190,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
     """Write a directory artifact or zip-compatible .eslams archive."""
 
     output_path = output_path.resolve()
-    artifact_dir = output_path if not archive else output_path.with_suffix("")
+    artifact_dir = expanded_artifact_path(output_path)
     if artifact_dir.exists():
         shutil.rmtree(artifact_dir)
     required_dirs = {
@@ -270,6 +282,12 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
                 "public_replay_snapshot",
             ],
         },
+        match_valid_for_scoring=build.score.match_valid_for_scoring,
+        invalid_reason=build.score.invalid_reason,
+        agent_error_count_by_player=build.score.agent_error_count_by_player,
+        illegal_action_count_by_player=build.score.illegal_action_count_by_player,
+        fallback_action_count_by_player=build.score.fallback_action_count_by_player,
+        provider_status_by_player=build.score.provider_status_by_player,
         files=files,
         hash_algorithm="sha256",
         signature=_manifest_signature_metadata(signed=signing_key is not None),
@@ -283,9 +301,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         _write_json(signature_path, _runner_signature(manifest_path, manifest_dict, signing_key))
 
     if archive:
-        archive_path = (
-            output_path if output_path.suffix == ".eslams" else output_path.with_suffix(".eslams")
-        )
+        archive_path = archive_artifact_path(output_path)
         if archive_path.exists():
             archive_path.unlink()
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -294,6 +310,24 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
                     zf.write(path, path.relative_to(artifact_dir).as_posix())
         return archive_path
     return artifact_dir
+
+
+def archive_artifact_path(path: Path) -> Path:
+    """Return the canonical .eslams archive path for an artifact output path."""
+
+    if path.suffix == ".eslams":
+        return path
+    if path.name.endswith(".eslams.d"):
+        return path.with_suffix("")
+    return path.with_suffix(".eslams")
+
+
+def expanded_artifact_path(path: Path) -> Path:
+    """Return the canonical expanded .eslams.d path for an artifact output path."""
+
+    if path.name.endswith(".eslams.d"):
+        return path
+    return archive_artifact_path(path).with_suffix(".eslams.d")
 
 
 class ArtifactValidator:

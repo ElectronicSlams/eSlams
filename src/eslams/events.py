@@ -91,6 +91,12 @@ class ScoreSummary:
     outcome: dict[str, Any] | None
     metrics: dict[str, Any]
     verification_level: str = "Local Artifact"
+    match_valid_for_scoring: bool = True
+    invalid_reason: str | None = None
+    agent_error_count_by_player: dict[str, int] = field(default_factory=dict)
+    illegal_action_count_by_player: dict[str, int] = field(default_factory=dict)
+    fallback_action_count_by_player: dict[str, int] = field(default_factory=dict)
+    provider_status_by_player: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -102,4 +108,10 @@ class ScoreSummary:
             "outcome": self.outcome,
             "metrics": self.metrics,
             "verification_level": self.verification_level,
+            "match_valid_for_scoring": self.match_valid_for_scoring,
+            "invalid_reason": self.invalid_reason,
+            "agent_error_count_by_player": self.agent_error_count_by_player,
+            "illegal_action_count_by_player": self.illegal_action_count_by_player,
+            "fallback_action_count_by_player": self.fallback_action_count_by_player,
+            "provider_status_by_player": self.provider_status_by_player,
         }
