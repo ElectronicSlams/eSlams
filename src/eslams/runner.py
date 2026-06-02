@@ -23,6 +23,7 @@ class RunConfig:
     arena_id: str
     agent_1: Any = "random"
     agent_2: Any = "first-legal"
+    agents: dict[str, Any] | None = None
     seed: int = 1
     max_turns: int | None = None
     time_budget_ms: int = 30_000
@@ -46,10 +47,7 @@ class Runner:
 
     def run(self, config: RunConfig) -> RunResult:
         arena = registry.create(config.arena_id)
-        agents = {
-            "player_1": _agent(config.agent_1, seed=config.seed),
-            "player_2": _agent(config.agent_2, seed=config.seed + 1),
-        }
+        agents = _agents_for_arena(arena, config)
         run_id = config.run_id or f"run_{uuid.uuid4().hex[:16]}"
         episode_id = "episode_001"
         state = arena.initial_state(config.seed)
@@ -149,10 +147,7 @@ class Runner:
         build = ArtifactBuildInput(
             run_id=run_id,
             arena_version=f"{arena.id}:{arena.version}",
-            agent_version=(
-                f"{getattr(agents['player_1'], 'id', 'agent')}:"
-                f"{getattr(agents['player_1'], 'version', '1')}"
-            ),
+            agent_version=_agent_versions(agents),
             score=score,
             trace_events=trace_events,
             replay_events=replay_events,
@@ -188,6 +183,29 @@ def _agent(value: Any, *, seed: int) -> Any:
     if isinstance(value, str):
         return create_builtin_agent(value, seed=seed)
     return value
+
+
+def _agents_for_arena(arena: Arena, config: RunConfig) -> dict[str, Any]:
+    provided = dict(config.agents or {})
+    agents: dict[str, Any] = {}
+    for index, player_id in enumerate(arena.players):
+        if player_id in provided:
+            value = provided[player_id]
+        elif player_id == "player_1":
+            value = config.agent_1
+        elif player_id == "player_2":
+            value = config.agent_2
+        else:
+            value = config.agent_1
+        agents[player_id] = _agent(value, seed=config.seed + index)
+    return agents
+
+
+def _agent_versions(agents: dict[str, Any]) -> str:
+    return ";".join(
+        f"{player_id}:{getattr(agent, 'id', 'agent')}:{getattr(agent, 'version', '1')}"
+        for player_id, agent in sorted(agents.items())
+    )
 
 
 def _request(
