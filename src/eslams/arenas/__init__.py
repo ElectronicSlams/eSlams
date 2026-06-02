@@ -4,6 +4,12 @@ from eslams.arena import registry
 from eslams.arenas.battleship import BattleshipArena
 from eslams.arenas.checkers import CheckersArena
 from eslams.arenas.chess import ChessArena
+from eslams.arenas.classic_cards import (
+    CrazyEightsArena,
+    HeartsArena,
+    SheddingCardGameArena,
+    SpadesArena,
+)
 from eslams.arenas.connect_four import ConnectFourArena
 from eslams.arenas.gomoku import GomokuArena
 from eslams.arenas.gridworld import CliffWalkingArena, FrozenLakeArena, TaxiArena
@@ -37,6 +43,10 @@ registry.register(BattleshipArena)
 registry.register(FrozenLakeArena)
 registry.register(CliffWalkingArena)
 registry.register(TaxiArena)
+registry.register(SheddingCardGameArena)
+registry.register(CrazyEightsArena)
+registry.register(HeartsArena)
+registry.register(SpadesArena)
 registry.register(RockPaperScissorsArena)
 registry.register(PrisonersDilemmaArena)
 registry.register(BlackjackArena)
@@ -54,10 +64,12 @@ __all__ = [
     "ChessArena",
     "CliffWalkingArena",
     "ConnectFourArena",
+    "CrazyEightsArena",
     "FirstPriceSealedBidAuctionArena",
     "FrozenLakeArena",
     "GomokuArena",
     "GoofspielArena",
+    "HeartsArena",
     "HexArena",
     "LiarsDiceArena",
     "MancalaArena",
@@ -66,6 +78,8 @@ __all__ = [
     "PentagoArena",
     "PrisonersDilemmaArena",
     "RockPaperScissorsArena",
+    "SheddingCardGameArena",
+    "SpadesArena",
     "TaxiArena",
     "TicTacToeArena",
     "UltimateTicTacToeArena",
