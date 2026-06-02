@@ -85,9 +85,14 @@ Every run can produce:
 
 - Chess
 - Connect Four
+- Gomoku
+- Hex
+- Othello / Reversi
 - Tic-Tac-Toe
 
-These prove the public loop. The full official catalogue and hidden benchmark suites live outside the public package.
+These prove the public loop across board, grid, and model-agent friendly action
+contracts. The full official catalogue and hidden benchmark suites live outside
+the public package.
 
 ## Verification Posture
 
