@@ -25,6 +25,20 @@ eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 ```
 
+Run provider-backed model agents by passing `provider:model` and setting the
+provider key in the environment:
+
+```bash
+export OPENAI_API_KEY=...
+export ANTHROPIC_API_KEY=...
+export GEMINI_API_KEY=...
+
+eslams run --arena tic-tac-toe --agent openai:gpt-5-mini --opponent anthropic:claude-sonnet-4-20250514
+eslams run --arena tic-tac-toe --agent gemini:gemini-flash-lite-latest --opponent first-legal
+```
+
+Provider receipts are written into the artifact without API keys.
+
 ## Agent Protocol
 
 Agents implement:
@@ -63,6 +77,7 @@ Every run can produce:
 - private judge trace
 - auditor trace
 - replay events
+- provider receipts for model agents
 - local replay page
 - `.eslams` artifact with manifest and hashes
 

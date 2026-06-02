@@ -124,7 +124,7 @@ def _provider_agent(value: str) -> ModelProviderAgent | None:
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-20250514", "ANTHROPIC_API_KEY"),
-        "gemini": ("gemini-2.5-flash", "GEMINI_API_KEY"),
+        "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
