@@ -11,6 +11,14 @@ from eslams.arenas.classic_cards import (
     SpadesArena,
 )
 from eslams.arenas.connect_four import ConnectFourArena
+from eslams.arenas.control_arcade import (
+    AlienShooterArena,
+    BoxingStyleArena,
+    CartPoleArena,
+    IceHockeyStyleArena,
+    MountainCarArena,
+    PaddleBallArena,
+)
 from eslams.arenas.gomoku import GomokuArena
 from eslams.arenas.gridworld import CliffWalkingArena, FrozenLakeArena, TaxiArena
 from eslams.arenas.hex import HexArena
@@ -57,6 +65,12 @@ registry.register(LeducHoldemArena)
 registry.register(LimitTexasHoldemArena)
 registry.register(NoLimitTexasHoldemArena)
 registry.register(NineMensMorrisArena)
+registry.register(CartPoleArena)
+registry.register(MountainCarArena)
+registry.register(PaddleBallArena)
+registry.register(AlienShooterArena)
+registry.register(BoxingStyleArena)
+registry.register(IceHockeyStyleArena)
 registry.register(RockPaperScissorsArena)
 registry.register(PrisonersDilemmaArena)
 registry.register(BlackjackArena)
@@ -68,8 +82,11 @@ registry.register(NegotiationArena)
 
 __all__ = [
     "BargainingArena",
+    "AlienShooterArena",
     "BattleshipArena",
     "BlackjackArena",
+    "BoxingStyleArena",
+    "CartPoleArena",
     "CheckersArena",
     "ChessArena",
     "CliffWalkingArena",
@@ -81,14 +98,17 @@ __all__ = [
     "GoofspielArena",
     "HeartsArena",
     "HexArena",
+    "IceHockeyStyleArena",
     "LeducHoldemArena",
     "LiarsDiceArena",
     "LimitTexasHoldemArena",
     "MancalaArena",
+    "MountainCarArena",
     "NegotiationArena",
     "NineMensMorrisArena",
     "NoLimitTexasHoldemArena",
     "OthelloArena",
+    "PaddleBallArena",
     "PentagoArena",
     "PrisonersDilemmaArena",
     "RockPaperScissorsArena",
