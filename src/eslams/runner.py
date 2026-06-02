@@ -57,6 +57,7 @@ class Runner:
         replay_events: list[ReplayEvent] = [_replay_event(run_id, episode_id, state, None, [])]
         agent_io: list[dict[str, Any]] = []
         errors: list[dict[str, Any]] = []
+        provider_receipts: list[dict[str, Any]] = []
         history: list[dict[str, Any]] = []
         max_turns = config.max_turns or arena.max_turns
         start = time.perf_counter()
@@ -76,6 +77,18 @@ class Runner:
                 memory_policy=self.memory_policy,
             )
             response, markers, latency_ms = _call_agent(agent, request)
+            receipt = getattr(agent, "last_receipt", None)
+            if isinstance(receipt, dict):
+                provider_receipts.append(
+                    {
+                        **receipt,
+                        "run_id": run_id,
+                        "episode_id": episode_id,
+                        "turn_id": state.turn,
+                        "active_player": player_id,
+                        "latency_ms": latency_ms,
+                    }
+                )
             action = (
                 response.action
                 if response
@@ -116,6 +129,7 @@ class Runner:
                     "response": response.to_dict() if response else None,
                     "latency_ms": latency_ms,
                     "markers": markers,
+                    "provider_receipt": receipt if isinstance(receipt, dict) else None,
                 }
             )
             history.append(
@@ -146,6 +160,7 @@ class Runner:
             runner_log=f"run_id={run_id} arena={arena.id} elapsed_ms={elapsed_ms}\n",
             agent_io=agent_io,
             errors=errors,
+            provider_receipts=provider_receipts,
             scoring_policy_version=f"{arena.id}-score:1.0.0",
         )
         output = write_artifact(build, artifact_path, archive=config.archive)
