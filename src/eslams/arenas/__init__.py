@@ -7,6 +7,7 @@ from eslams.arenas.advanced_cards import (
     GinRummyArena,
     HanabiArena,
 )
+from eslams.arenas.backgammon import BackgammonArena
 from eslams.arenas.battleship import BattleshipArena
 from eslams.arenas.checkers import CheckersArena
 from eslams.arenas.chess import ChessArena
@@ -30,6 +31,11 @@ from eslams.arenas.gridworld import CliffWalkingArena, FrozenLakeArena, TaxiAren
 from eslams.arenas.hex import HexArena
 from eslams.arenas.mancala import MancalaArena
 from eslams.arenas.matrix_games import PrisonersDilemmaArena, RockPaperScissorsArena
+from eslams.arenas.modern_control import (
+    BipedalWalkerArena,
+    CarRacingArena,
+    LunarLanderArena,
+)
 from eslams.arenas.nine_mens_morris import NineMensMorrisArena
 from eslams.arenas.othello import OthelloArena
 from eslams.arenas.pentago import PentagoArena
@@ -71,6 +77,7 @@ registry.register(GinRummyArena)
 registry.register(EuchreArena)
 registry.register(CribbageArena)
 registry.register(HanabiArena)
+registry.register(BackgammonArena)
 registry.register(LeducHoldemArena)
 registry.register(LimitTexasHoldemArena)
 registry.register(NoLimitTexasHoldemArena)
@@ -81,6 +88,9 @@ registry.register(PaddleBallArena)
 registry.register(AlienShooterArena)
 registry.register(BoxingStyleArena)
 registry.register(IceHockeyStyleArena)
+registry.register(LunarLanderArena)
+registry.register(CarRacingArena)
+registry.register(BipedalWalkerArena)
 registry.register(RockPaperScissorsArena)
 registry.register(PrisonersDilemmaArena)
 registry.register(BlackjackArena)
@@ -93,9 +103,12 @@ registry.register(NegotiationArena)
 __all__ = [
     "BargainingArena",
     "AlienShooterArena",
+    "BackgammonArena",
     "BattleshipArena",
+    "BipedalWalkerArena",
     "BlackjackArena",
     "BoxingStyleArena",
+    "CarRacingArena",
     "CartPoleArena",
     "CheckersArena",
     "ChessArena",
@@ -116,6 +129,7 @@ __all__ = [
     "LeducHoldemArena",
     "LiarsDiceArena",
     "LimitTexasHoldemArena",
+    "LunarLanderArena",
     "MancalaArena",
     "MountainCarArena",
     "NegotiationArena",
