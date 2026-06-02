@@ -35,6 +35,7 @@ def test_openai_model_agent_parses_legal_json_action(monkeypatch):
         assert url == "https://api.openai.com/v1/responses"
         assert headers["Authorization"] == "Bearer test-key"
         assert json["model"] == "gpt-test"
+        assert "reasoning" not in json
         return httpx.Response(
             200,
             json={
@@ -96,6 +97,35 @@ def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):
     assert response.action == 1
 
 
+def test_openai_registry_can_select_none_reasoning_effort(monkeypatch):
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: int,
+    ) -> httpx.Response:
+        assert url == "https://api.openai.com/v1/responses"
+        assert json["model"] == "gpt-5.4-mini"
+        assert json["reasoning"] == {"effort": "none"}
+        return httpx.Response(
+            200,
+            json={"id": "resp_123", "output_text": '{"action": 1}'},
+            headers={"x-request-id": "req_123"},
+        )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    response = ModelProviderAgent(
+        provider="openai",
+        model="gpt-5.4-mini",
+        api_key_env="OPENAI_API_KEY",
+    ).act(_request())
+
+    assert response.action == 1
+
+
 def test_gemini_model_agent_receipt_does_not_include_key(monkeypatch):
     def fake_post(
         url: str,
@@ -106,6 +136,7 @@ def test_gemini_model_agent_receipt_does_not_include_key(monkeypatch):
     ) -> httpx.Response:
         assert "gemini-test:generateContent" in url
         assert headers["x-goog-api-key"] == "gemini-key"
+        assert json["generationConfig"] == {"maxOutputTokens": 1024}
         return httpx.Response(
             200,
             json={
@@ -141,3 +172,33 @@ def test_gemini_model_agent_receipt_does_not_include_key(monkeypatch):
     assert response.action == 1
     assert agent.last_receipt is not None
     assert "gemini-key" not in str(agent.last_receipt)
+
+
+def test_gemma_model_agent_omits_thinking_config(monkeypatch):
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: int,
+    ) -> httpx.Response:
+        assert "gemma-3-27b-it:generateContent" in url
+        assert json["generationConfig"] == {"maxOutputTokens": 1024, "temperature": 0.0}
+        return httpx.Response(
+            200,
+            json={
+                "responseId": "gemma-response",
+                "candidates": [{"content": {"parts": [{"text": '{"action": 2}'}]}}],
+            },
+        )
+
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    response = ModelProviderAgent(
+        provider="gemini",
+        model="gemma-3-27b-it",
+        api_key_env="GEMINI_API_KEY",
+    ).act(_request())
+
+    assert response.action == 2

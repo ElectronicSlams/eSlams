@@ -11,6 +11,10 @@ from typing import Any, Callable
 import httpx
 
 from eslams.protocol import ActRequest, ActResponse, ProtocolError
+from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers.anthropic import MESSAGES_ENDPOINT
+from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
+from eslams.providers.openai import RESPONSES_ENDPOINT
 
 
 class AgentError(RuntimeError):
@@ -121,6 +125,7 @@ class ModelProviderAgent:
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         self.last_receipt: dict[str, Any] | None = None
+        self.capabilities = load_provider_registry().resolve(self.provider, self.model)
 
     def act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
@@ -178,11 +183,11 @@ class ModelProviderAgent:
             ],
             "max_output_tokens": self.max_output_tokens,
         }
-        reasoning = _openai_reasoning(self.model)
+        reasoning = self.capabilities.reasoning_payload()
         if reasoning:
             payload["reasoning"] = reasoning
         response = _post_json(
-            "https://api.openai.com/v1/responses",
+            RESPONSES_ENDPOINT,
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
@@ -197,18 +202,20 @@ class ModelProviderAgent:
             response=response,
             provider_id=data.get("id"),
             usage=data.get("usage"),
+            capabilities=self.capabilities,
         )
 
     def _call_anthropic(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         payload = {
             "model": self.model,
             "max_tokens": self.max_output_tokens,
-            "temperature": self.temperature,
             "system": _SYSTEM_INSTRUCTIONS,
             "messages": [{"role": "user", "content": prompt}],
         }
+        if self.capabilities.supports_temperature:
+            payload["temperature"] = self.temperature
         response = _post_json(
-            "https://api.anthropic.com/v1/messages",
+            MESSAGES_ENDPOINT,
             headers={
                 "x-api-key": api_key,
                 "anthropic-version": "2023-06-01",
@@ -228,9 +235,15 @@ class ModelProviderAgent:
             response=response,
             provider_id=data.get("id"),
             usage=data.get("usage"),
+            capabilities=self.capabilities,
         )
 
     def _call_gemini(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        generation_config: dict[str, Any] = {"maxOutputTokens": self.max_output_tokens}
+        if self.capabilities.supports_temperature:
+            generation_config["temperature"] = self.temperature
+        if self.capabilities.supports_google_thinking_config:
+            generation_config["thinkingConfig"] = {"thinkingBudget": 0}
         payload = {
             "contents": [
                 {
@@ -238,14 +251,10 @@ class ModelProviderAgent:
                     "parts": [{"text": f"{_SYSTEM_INSTRUCTIONS}\n\n{prompt}"}],
                 }
             ],
-            "generationConfig": {
-                "temperature": self.temperature,
-                "maxOutputTokens": self.max_output_tokens,
-                "thinkingConfig": {"thinkingBudget": 0},
-            },
+            "generationConfig": generation_config,
         }
         response = _post_json(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent",
+            GENERATE_CONTENT_ENDPOINT.format(model=self.model),
             headers={
                 "x-goog-api-key": api_key,
                 "Content-Type": "application/json",
@@ -266,6 +275,7 @@ class ModelProviderAgent:
             response=response,
             provider_id=data.get("responseId"),
             usage=data.get("usageMetadata"),
+            capabilities=self.capabilities,
         )
 
 
@@ -324,10 +334,14 @@ def _receipt(
     response: httpx.Response,
     provider_id: Any,
     usage: Any,
+    capabilities: ModelCapabilities,
 ) -> dict[str, Any]:
     return {
         "provider": provider,
         "model": model,
+        "model_capability_known": capabilities.known,
+        "game_agent_supported": capabilities.game_agent_supported,
+        "capability_sources": list(capabilities.sources),
         "provider_response_id": provider_id,
         "status_code": response.status_code,
         "request_id": response.headers.get("x-request-id")
@@ -351,14 +365,6 @@ def _openai_text(data: dict[str, Any]) -> str:
             if isinstance(content.get("text"), str):
                 chunks.append(content["text"])
     return "".join(chunks)
-
-
-def _openai_reasoning(model: str) -> dict[str, str] | None:
-    if model.startswith("gpt-5.2") or model.startswith("gpt-5.1"):
-        return {"effort": "none"}
-    if model.startswith("gpt-5"):
-        return {"effort": "minimal"}
-    return None
 
 
 def _parse_model_action(

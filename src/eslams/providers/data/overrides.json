@@ -1,0 +1,39 @@
+{
+  "organizations": [],
+  "models": [
+    {
+      "provider": "openai",
+      "model": "gpt-5.4-mini",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": ["responses"],
+      "modalities": {"input": ["text"], "output": ["text"]},
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": ["none", "low", "medium", "high", "xhigh"],
+      "default_reasoning_effort": "none",
+      "supports_google_thinking_config": false,
+      "max_output_tokens": null,
+      "context_window": null,
+      "last_verified_at": "2026-06-02T00:00:00Z",
+      "sources": ["local-override"]
+    },
+    {
+      "provider": "google",
+      "model": "gemma-3-27b-it",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": ["generateContent"],
+      "modalities": {"input": ["text"], "output": ["text"]},
+      "supports_temperature": true,
+      "supports_reasoning": false,
+      "reasoning_efforts": [],
+      "default_reasoning_effort": null,
+      "supports_google_thinking_config": false,
+      "max_output_tokens": null,
+      "context_window": null,
+      "last_verified_at": "2026-06-02T00:00:00Z",
+      "sources": ["local-override"]
+    }
+  ]
+}

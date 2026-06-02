@@ -25,6 +25,10 @@ eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 ```
 
+`eslams run` writes a packaged `.eslams` archive by default and keeps an
+expanded `.eslams.d` copy beside it for inspection. Use `--expanded` when you
+only want the expanded directory.
+
 Run provider-backed model agents by passing `provider:model` and setting the
 provider key in the environment:
 
@@ -38,6 +42,31 @@ eslams run --arena tic-tac-toe --agent gemini:gemini-flash-lite-latest --opponen
 ```
 
 Provider receipts are written into the artifact without API keys.
+
+Inspect and refresh the local provider capability registry:
+
+```bash
+eslams models list --provider openai --game-agent-supported
+eslams models list --provider gemini --game-agent-supported --json
+eslams models update --providers openai,anthropic,google
+```
+
+The adapters only send optional provider parameters when the registry marks a
+model as supporting them. Unknown models still run through the base API shape,
+but Core warns before a run when a provider model is missing, unavailable, not
+marked game-agent-supported, or missing its API key.
+
+For smoke/demo runs, Core defaults to deterministic fallback actions after
+agent errors or illegal moves. For model comparison, make invalidity explicit:
+
+```bash
+eslams run \
+  --arena chess \
+  --agent openai:gpt-5-mini \
+  --opponent anthropic:claude-sonnet-4-20250514 \
+  --on-agent-error invalid-match \
+  --on-illegal-action invalid-match
+```
 
 ## Agent Protocol
 
@@ -81,6 +110,10 @@ Every run can produce:
 - local replay page
 - `.eslams` artifact with manifest, hashes, deterministic replay audit, and
   optional runner signature
+
+Score and manifest metadata include `match_valid_for_scoring`,
+`invalid_reason`, agent error counts, illegal action counts, fallback action
+counts, and provider status by player.
 
 ## Built-in Public Smoke Arenas
 
