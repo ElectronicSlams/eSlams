@@ -6,7 +6,7 @@ import json
 import shutil
 import zipfile
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -90,6 +90,7 @@ class ArtifactBuildInput:
     runner_log: str
     agent_io: list[dict[str, Any]]
     errors: list[dict[str, Any]]
+    provider_receipts: list[dict[str, Any]] = field(default_factory=list)
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str = "standard-score:1.0.0"
@@ -145,7 +146,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
     (artifact_dir / "logs/runner.log").write_text(build.runner_log, encoding="utf-8")
     _write_jsonl(artifact_dir / "logs/agent_io.jsonl", build.agent_io)
     _write_jsonl(artifact_dir / "logs/errors.jsonl", build.errors)
-    _write_jsonl(artifact_dir / "receipts/provider_receipts.jsonl", [])
+    _write_jsonl(artifact_dir / "receipts/provider_receipts.jsonl", build.provider_receipts)
     _write_json(
         artifact_dir / "environment/lockfile.json",
         {"python": ">=3.9", "package": "eslams-core"},

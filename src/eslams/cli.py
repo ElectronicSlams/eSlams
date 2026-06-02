@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from eslams.agents import HttpAgent
+from eslams.agents import HttpAgent, ModelProviderAgent
 from eslams.arena import registry
 from eslams.arenas import ChessArena, ConnectFourArena, TicTacToeArena  # noqa: F401
 from eslams.artifacts import ArtifactValidator
@@ -32,12 +32,12 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument(
         "--agent",
         default="random",
-        help="Agent for player_1: random, first-legal, or URL.",
+        help="Agent for player_1: random, first-legal, URL, or provider:model.",
     )
     run.add_argument(
         "--opponent",
         default="first-legal",
-        help="Agent for player_2: random, first-legal, or URL.",
+        help="Agent for player_2: random, first-legal, URL, or provider:model.",
     )
     run.add_argument("--seed", type=int, default=1)
     run.add_argument("--output-dir", type=Path, default=Path("runs"))
@@ -111,10 +111,35 @@ def main(argv: list[str] | None = None) -> int:
     raise AssertionError(args.command)
 
 
-def _agent_arg(value: str) -> str | HttpAgent:
+def _agent_arg(value: str) -> str | HttpAgent | ModelProviderAgent:
     if value.startswith("http://") or value.startswith("https://"):
         return HttpAgent(url=value)
+    provider = _provider_agent(value)
+    if provider is not None:
+        return provider
     return value
+
+
+def _provider_agent(value: str) -> ModelProviderAgent | None:
+    defaults = {
+        "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
+        "anthropic": ("claude-sonnet-4-20250514", "ANTHROPIC_API_KEY"),
+        "gemini": ("gemini-2.5-flash", "GEMINI_API_KEY"),
+    }
+    if ":" in value:
+        provider, model = value.split(":", 1)
+    else:
+        provider, model = value, ""
+    provider = provider.lower()
+    if provider not in defaults:
+        return None
+    default_model, env_name = defaults[provider]
+    return ModelProviderAgent(
+        provider=provider,
+        model=model or default_model,
+        api_key_env=env_name,
+        version=model or default_model,
+    )
 
 
 def _agent_command(args: argparse.Namespace) -> int:
