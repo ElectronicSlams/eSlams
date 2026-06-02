@@ -42,6 +42,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--seed", type=int, default=1)
     run.add_argument("--output-dir", type=Path, default=Path("runs"))
     run.add_argument("--archive", action="store_true")
+    run.add_argument("--verification-level", default="Local Artifact")
+    run.add_argument("--eval-suite-version", default="public-smoke:1.0.0")
+    run.add_argument("--runner-version", default="eslams-runner:0.1.0")
 
     validate = sub.add_parser("validate", help="Validate an artifact directory or .eslams zip.")
     validate.add_argument("artifact", type=Path)
@@ -82,6 +85,9 @@ def main(argv: list[str] | None = None) -> int:
                 seed=args.seed,
                 output_dir=args.output_dir,
                 archive=args.archive,
+                verification_level=args.verification_level,
+                eval_suite_version=args.eval_suite_version,
+                runner_version=args.runner_version,
             )
         )
         print(
