@@ -178,6 +178,9 @@ class ModelProviderAgent:
             ],
             "max_output_tokens": self.max_output_tokens,
         }
+        reasoning = _openai_reasoning(self.model)
+        if reasoning:
+            payload["reasoning"] = reasoning
         response = _post_json(
             "https://api.openai.com/v1/responses",
             headers={
@@ -348,6 +351,14 @@ def _openai_text(data: dict[str, Any]) -> str:
             if isinstance(content.get("text"), str):
                 chunks.append(content["text"])
     return "".join(chunks)
+
+
+def _openai_reasoning(model: str) -> dict[str, str] | None:
+    if model.startswith("gpt-5.2") or model.startswith("gpt-5.1"):
+        return {"effort": "none"}
+    if model.startswith("gpt-5"):
+        return {"effort": "minimal"}
+    return None
 
 
 def _parse_model_action(

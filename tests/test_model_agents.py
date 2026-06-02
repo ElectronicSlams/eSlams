@@ -62,6 +62,40 @@ def test_openai_model_agent_parses_legal_json_action(monkeypatch):
     assert response.metadata["provider_receipt"]["provider_response_id"] == "resp_123"
 
 
+def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: int,
+    ) -> httpx.Response:
+        assert url == "https://api.openai.com/v1/responses"
+        assert headers["Authorization"] == "Bearer test-key"
+        assert json["model"] == "gpt-5-mini"
+        assert json["reasoning"] == {"effort": "minimal"}
+        return httpx.Response(
+            200,
+            json={
+                "id": "resp_123",
+                "output_text": '{"action": 1, "confidence": 0.8}',
+                "usage": {"input_tokens": 10, "output_tokens": 8},
+            },
+            headers={"x-request-id": "req_123"},
+        )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    response = ModelProviderAgent(
+        provider="openai",
+        model="gpt-5-mini",
+        api_key_env="OPENAI_API_KEY",
+    ).act(_request())
+
+    assert response.action == 1
+
+
 def test_gemini_model_agent_receipt_does_not_include_key(monkeypatch):
     def fake_post(
         url: str,
