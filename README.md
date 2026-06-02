@@ -79,7 +79,7 @@ Every run can produce:
 - replay events
 - provider receipts for model agents
 - local replay page
-- `.eslams` artifact with manifest and hashes
+- `.eslams` artifact with manifest, hashes, and optional runner signature
 
 ## Built-in Public Smoke Arenas
 

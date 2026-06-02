@@ -7,7 +7,6 @@ Required structure:
 ```text
 run.eslams/
   manifest.json
-  signatures/runner.sig
   traces/public_trace.jsonl
   traces/agent_visible_trace.jsonl
   traces/private_judge_trace.jsonl
@@ -28,3 +27,18 @@ run.eslams/
 ```
 
 `manifest.json` contains file hashes and an artifact id derived from the manifest file table. Public artifacts never include hidden official eval seeds or private judge-only data in public traces.
+
+## Runner Signatures
+
+When `RUNNER_SIGNING_KEY` is set, Core writes `signatures/runner_signature.json`.
+The signature uses HMAC-SHA256 over a canonical JSON payload containing the
+artifact id, artifact version, run id, and SHA-256 hash of `manifest.json`.
+
+The signing key is never written to the artifact. `RUNNER_SIGNING_KEY_ID` may be
+set to include a non-secret key identifier; otherwise Core records
+`runner-env-key`.
+
+`eslams validate` verifies the signature when `RUNNER_SIGNING_KEY` is available.
+Without the key, validation still checks artifact hashes and reports the
+signature as unverified. Unsigned local artifacts remain portable and report
+`unsigned`.

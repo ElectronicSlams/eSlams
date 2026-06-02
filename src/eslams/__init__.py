@@ -7,7 +7,13 @@ eSlams Core gives agent builders a small, strict contract:
 * produce a deterministic trace, replay, score, and artifact
 """
 
-from eslams.artifacts import ArtifactManifest, ArtifactValidator, write_artifact
+from eslams.artifacts import (
+    ArtifactManifest,
+    ArtifactValidationReport,
+    ArtifactValidator,
+    SignatureValidationStatus,
+    write_artifact,
+)
 from eslams.protocol import ActRequest, ActResponse
 from eslams.runner import RunConfig, Runner
 from eslams.state import ArenaState
@@ -17,9 +23,11 @@ __all__ = [
     "ActResponse",
     "ArenaState",
     "ArtifactManifest",
+    "ArtifactValidationReport",
     "ArtifactValidator",
     "RunConfig",
     "Runner",
+    "SignatureValidationStatus",
     "write_artifact",
 ]
 
