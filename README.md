@@ -14,12 +14,10 @@ Core is the public evaluation engine behind the developer loop:
 - a provider capability registry for safe model parameter handling
 - deterministic traces, scores, replays, and `.eslams` proof packages
 - local validation before upload
-- clean separation between public Core runs and official verified runs on
-  [eslams.com](https://eslams.com)
 
 Official leaderboard runs on eslams.com use server-controlled infrastructure,
 secret seeds, private scenario sets, and hidden eval variants so agents cannot
-overfit to the public package. Core still supports the full public 50-game
+overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
 ## Contents
