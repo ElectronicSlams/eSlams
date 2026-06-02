@@ -24,6 +24,11 @@ class RunConfig:
     agent_1: Any = "random"
     agent_2: Any = "first-legal"
     agents: dict[str, Any] | None = None
+    verification_level: str = "Local Artifact"
+    wrapper_version: str = "legal_action_v1:1.0.0"
+    eval_suite_version: str = "public-smoke:1.0.0"
+    scoring_policy_version: str | None = None
+    runner_version: str = "eslams-runner:0.1.0"
     seed: int = 1
     max_turns: int | None = None
     time_budget_ms: int = 30_000
@@ -142,7 +147,14 @@ class Runner:
             state = next_state
 
         elapsed_ms = int((time.perf_counter() - start) * 1000)
-        score = _score_summary(run_id, arena, state, trace_events, elapsed_ms)
+        score = _score_summary(
+            run_id,
+            arena,
+            state,
+            trace_events,
+            elapsed_ms,
+            verification_level=config.verification_level,
+        )
         artifact_path = config.output_dir / f"{run_id}.eslams"
         build = ArtifactBuildInput(
             run_id=run_id,
@@ -156,7 +168,11 @@ class Runner:
             agent_io=agent_io,
             errors=errors,
             provider_receipts=provider_receipts,
-            scoring_policy_version=f"{arena.id}-score:1.0.0",
+            wrapper_version=config.wrapper_version,
+            eval_suite_version=config.eval_suite_version,
+            scoring_policy_version=config.scoring_policy_version or f"{arena.id}-score:1.0.0",
+            runner_version=config.runner_version,
+            verification_level=config.verification_level,
         )
         output = write_artifact(build, artifact_path, archive=config.archive)
         latest = config.output_dir / "latest.eslams"
@@ -334,6 +350,8 @@ def _score_summary(
     state: ArenaState,
     trace_events: list[TraceEvent],
     elapsed_ms: int,
+    *,
+    verification_level: str,
 ) -> ScoreSummary:
     scores = arena.score(state)
     winner = str(state.outcome["winner"]) if state.outcome and state.outcome.get("winner") else None
@@ -359,4 +377,5 @@ def _score_summary(
             "confidence_interval": [primary, primary],
             "cost_usd": 0.0,
         },
+        verification_level=verification_level,
     )
