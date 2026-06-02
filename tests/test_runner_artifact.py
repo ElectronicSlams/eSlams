@@ -49,6 +49,33 @@ def test_runner_signs_artifact_when_key_is_configured(tmp_path: Path, monkeypatc
     assert report.signature.verified is True
 
 
+def test_runner_stamps_platform_verified_artifact_metadata(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("RUNNER_SIGNING_KEY", "test-platform-signing-key")
+    monkeypatch.setenv("RUNNER_SIGNING_KEY_ID", "platform-ci-key")
+
+    result = Runner().run(
+        RunConfig(
+            arena_id="connect-four",
+            seed=19,
+            output_dir=tmp_path,
+            verification_level="Platform Verified",
+            eval_suite_version="platform-public-run:1.0.0",
+            runner_version="eslams-platform-runner:0.1.0",
+        )
+    )
+    manifest = json.loads((result.artifact_path / "manifest.json").read_text(encoding="utf-8"))
+    score = json.loads((result.artifact_path / "scores" / "score.json").read_text(encoding="utf-8"))
+
+    assert manifest["verification_level"] == "Platform Verified"
+    assert manifest["eval_suite_version"] == "platform-public-run:1.0.0"
+    assert manifest["runner_version"] == "eslams-platform-runner:0.1.0"
+    assert score["verification_level"] == "Platform Verified"
+
+    report = ArtifactValidator().validate_report(result.artifact_path)
+    assert report.errors == []
+    assert report.signature.verified is True
+
+
 def test_validator_detects_signed_manifest_tamper(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("RUNNER_SIGNING_KEY", "test-runner-signing-key")
     monkeypatch.setenv("RUNNER_SIGNING_KEY_ID", "test-key")
