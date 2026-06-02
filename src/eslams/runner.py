@@ -317,7 +317,12 @@ def _trace_event(
             "request": request.to_dict(),
             "response": response.to_dict() if response else None,
         },
-        auditor={**public, "protocol_version": request.protocol_version},
+        auditor={
+            **public,
+            "protocol_version": request.protocol_version,
+            "state_before": state.to_dict(),
+            "state_after": next_state.to_dict(),
+        },
     )
 
 

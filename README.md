@@ -75,11 +75,12 @@ Every run can produce:
 - public trace
 - agent-visible trace
 - private judge trace
-- auditor trace
+- auditor trace with deterministic before/after state snapshots
 - replay events
 - provider receipts for model agents
 - local replay page
-- `.eslams` artifact with manifest, hashes, and optional runner signature
+- `.eslams` artifact with manifest, hashes, deterministic replay audit, and
+  optional runner signature
 
 ## Built-in Public Smoke Arenas
 

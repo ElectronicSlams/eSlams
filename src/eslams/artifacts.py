@@ -24,6 +24,7 @@ RUNNER_SIGNATURE_ALGORITHM = "hmac-sha256"
 RUNNER_SIGNATURE_PATH = "signatures/runner_signature.json"
 RUNNER_SIGNING_KEY_ENV = "RUNNER_SIGNING_KEY"
 RUNNER_SIGNING_KEY_ID_ENV = "RUNNER_SIGNING_KEY_ID"
+DETERMINISTIC_REPLAY_VERSION = "eslams-deterministic-replay-v1"
 REQUIRED_FILES = {
     "manifest.json",
     "traces/public_trace.jsonl",
@@ -63,6 +64,7 @@ class ArtifactManifest:
     scoring_policy_version: str
     runner_version: str
     verification_level: str
+    deterministic_replay: dict[str, Any]
     files: list[dict[str, Any]]
     hash_algorithm: str
     signature: dict[str, Any]
@@ -80,6 +82,7 @@ class ArtifactManifest:
             "scoring_policy_version": self.scoring_policy_version,
             "runner_version": self.runner_version,
             "verification_level": self.verification_level,
+            "deterministic_replay": self.deterministic_replay,
             "files": self.files,
             "hash_algorithm": self.hash_algorithm,
             "signature": self.signature,
@@ -129,9 +132,32 @@ class SignatureValidationStatus:
 
 
 @dataclass(frozen=True)
+class DeterministicReplayValidationStatus:
+    status: str
+    verified: bool = False
+    arena_id: str | None = None
+    action_event_count: int | None = None
+    replay_event_count: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "status": self.status,
+            "verified": self.verified,
+        }
+        if self.arena_id is not None:
+            payload["arena_id"] = self.arena_id
+        if self.action_event_count is not None:
+            payload["action_event_count"] = self.action_event_count
+        if self.replay_event_count is not None:
+            payload["replay_event_count"] = self.replay_event_count
+        return payload
+
+
+@dataclass(frozen=True)
 class ArtifactValidationReport:
     errors: list[str]
     signature: SignatureValidationStatus
+    deterministic_replay: DeterministicReplayValidationStatus
 
     @property
     def valid(self) -> bool:
@@ -141,6 +167,7 @@ class ArtifactValidationReport:
         payload: dict[str, Any] = {
             "valid": self.valid,
             "signature": self.signature.to_dict(),
+            "deterministic_replay": self.deterministic_replay.to_dict(),
         }
         if self.errors:
             payload["errors"] = self.errors
@@ -231,6 +258,18 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         scoring_policy_version=build.scoring_policy_version,
         runner_version=build.runner_version,
         verification_level=build.verification_level,
+        deterministic_replay={
+            "version": DETERMINISTIC_REPLAY_VERSION,
+            "status": "recorded",
+            "source": "traces/auditor_trace.jsonl",
+            "action_event_count": len(build.trace_events),
+            "replay_event_count": len(build.replay_events),
+            "checks": [
+                "auditor_state_chain",
+                "registered_arena_transition",
+                "public_replay_snapshot",
+            ],
+        },
         files=files,
         hash_algorithm="sha256",
         signature=_manifest_signature_metadata(signed=signing_key is not None),
@@ -278,6 +317,7 @@ class ArtifactValidator:
             return ArtifactValidationReport(
                 errors=errors,
                 signature=SignatureValidationStatus(status="not_checked"),
+                deterministic_replay=DeterministicReplayValidationStatus(status="not_checked"),
             )
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -285,6 +325,7 @@ class ArtifactValidator:
             return ArtifactValidationReport(
                 errors=[*errors, f"manifest is invalid JSON: {exc}"],
                 signature=SignatureValidationStatus(status="not_checked"),
+                deterministic_replay=DeterministicReplayValidationStatus(status="not_checked"),
             )
         if manifest.get("artifact_version") != ARTIFACT_VERSION:
             errors.append("manifest.artifact_version is unsupported")
@@ -297,7 +338,16 @@ class ArtifactValidator:
                 manifest_path,
             )
             errors.extend(signature_errors)
-            return ArtifactValidationReport(errors=errors, signature=signature_status)
+            replay_status, replay_errors = _validate_deterministic_replay(
+                artifact_dir,
+                manifest,
+            )
+            errors.extend(replay_errors)
+            return ArtifactValidationReport(
+                errors=errors,
+                signature=signature_status,
+                deterministic_replay=replay_status,
+            )
         for entry in file_entries:
             if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
                 errors.append("manifest.files contains invalid entry")
@@ -319,7 +369,16 @@ class ArtifactValidator:
             manifest_path,
         )
         errors.extend(signature_errors)
-        return ArtifactValidationReport(errors=errors, signature=signature_status)
+        replay_status, replay_errors = _validate_deterministic_replay(
+            artifact_dir,
+            manifest,
+        )
+        errors.extend(replay_errors)
+        return ArtifactValidationReport(
+            errors=errors,
+            signature=signature_status,
+            deterministic_replay=replay_status,
+        )
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -328,6 +387,309 @@ def _write_json(path: Path, payload: Any) -> None:
 
 def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
     path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
+
+
+def _validate_deterministic_replay(
+    artifact_dir: Path,
+    manifest: dict[str, Any],
+) -> tuple[DeterministicReplayValidationStatus, list[str]]:
+    errors: list[str] = []
+    deterministic_metadata_value = manifest.get("deterministic_replay")
+    deterministic_metadata = (
+        deterministic_metadata_value if isinstance(deterministic_metadata_value, dict) else None
+    )
+    required = (
+        deterministic_metadata is not None
+        and deterministic_metadata.get("status") == "recorded"
+    )
+    if (
+        deterministic_metadata is not None
+        and required
+        and deterministic_metadata.get("version") != DETERMINISTIC_REPLAY_VERSION
+    ):
+        errors.append("deterministic replay version is unsupported")
+
+    auditor_rows = _read_jsonl(artifact_dir / "traces/auditor_trace.jsonl", errors)
+    replay_rows = _read_jsonl(artifact_dir / "replay/replay_events.jsonl", errors)
+    if auditor_rows is None or replay_rows is None:
+        return (
+            DeterministicReplayValidationStatus(status="invalid"),
+            errors,
+        )
+
+    action_rows = [row for row in auditor_rows if row.get("event_type") == "action"]
+    has_state_snapshots = all(
+        isinstance(row.get("state_before"), dict) and isinstance(row.get("state_after"), dict)
+        for row in action_rows
+    )
+    if not action_rows and not required:
+        return (
+            DeterministicReplayValidationStatus(
+                status="not_recorded",
+                action_event_count=0,
+                replay_event_count=len(replay_rows),
+            ),
+            errors,
+        )
+    if not has_state_snapshots:
+        if required:
+            errors.append("deterministic replay audit is missing auditor state snapshots")
+            return (
+                DeterministicReplayValidationStatus(
+                    status="invalid",
+                    action_event_count=len(action_rows),
+                    replay_event_count=len(replay_rows),
+                ),
+                errors,
+            )
+        return (
+            DeterministicReplayValidationStatus(
+                status="not_recorded",
+                action_event_count=len(action_rows),
+                replay_event_count=len(replay_rows),
+            ),
+            errors,
+        )
+
+    arena_id = _artifact_arena_id(artifact_dir, manifest, errors)
+    if arena_id is None:
+        return (
+            DeterministicReplayValidationStatus(
+                status="invalid",
+                action_event_count=len(action_rows),
+                replay_event_count=len(replay_rows),
+            ),
+            errors,
+        )
+
+    from eslams.arenas import registry
+
+    try:
+        arena = registry.create(arena_id)
+    except KeyError as exc:
+        errors.append(f"deterministic replay arena is unavailable: {exc}")
+        return (
+            DeterministicReplayValidationStatus(
+                status="invalid",
+                arena_id=arena_id,
+                action_event_count=len(action_rows),
+                replay_event_count=len(replay_rows),
+            ),
+            errors,
+        )
+
+    _validate_deterministic_replay_counts(
+        deterministic_metadata,
+        action_rows,
+        replay_rows,
+        errors,
+    )
+    if len(replay_rows) != len(action_rows) + 1:
+        errors.append("deterministic replay event count does not match action trace length")
+
+    previous_state = None
+    for index, row in enumerate(action_rows):
+        state_before = _arena_state_from_payload(
+            row.get("state_before"),
+            f"auditor trace event {index} state_before",
+            errors,
+        )
+        state_after = _arena_state_from_payload(
+            row.get("state_after"),
+            f"auditor trace event {index} state_after",
+            errors,
+        )
+        if state_before is None or state_after is None:
+            continue
+
+        if previous_state is not None and state_before.state_hash != previous_state.state_hash:
+            errors.append(
+                f"auditor trace event {index} state_before does not continue prior state"
+            )
+        if row.get("turn_id") != state_before.turn:
+            errors.append(f"auditor trace event {index} turn_id does not match state_before")
+        if row.get("active_player") != state_before.active_player:
+            errors.append(
+                f"auditor trace event {index} active_player does not match state_before"
+            )
+        if row.get("state_hash_before") != state_before.state_hash:
+            errors.append(
+                f"auditor trace event {index} state_hash_before does not match state_before"
+            )
+        if row.get("state_hash_after") != state_after.state_hash:
+            errors.append(
+                f"auditor trace event {index} state_hash_after does not match state_after"
+            )
+
+        _compare_replay_snapshot(replay_rows, index, state_before, errors)
+        recorded_action = row.get("action")
+        action = _resolve_recorded_action(
+            legal_actions=arena.legal_actions_for(state_before, state_before.active_player),
+            recorded_action=recorded_action,
+        )
+        if not arena.is_legal(state_before, state_before.active_player, action):
+            errors.append(f"auditor trace event {index} action is not legal for state_before")
+            previous_state = state_after
+            continue
+        try:
+            computed_state = arena.apply_action(state_before, state_before.active_player, action)
+        except Exception as exc:  # pragma: no cover - defensive validation path
+            errors.append(f"auditor trace event {index} action replay failed: {exc}")
+            previous_state = state_after
+            continue
+
+        if computed_state.state_hash != state_after.state_hash:
+            errors.append(
+                f"auditor trace event {index} state_after does not match replayed action"
+            )
+        if not _canonical_equal(computed_state.to_dict(), state_after.to_dict()):
+            errors.append(
+                f"auditor trace event {index} state_after payload does not match replayed action"
+            )
+        _compare_replay_snapshot(replay_rows, index + 1, computed_state, errors)
+        previous_state = state_after
+
+    status = "verified" if not errors else "invalid"
+    return (
+        DeterministicReplayValidationStatus(
+            status=status,
+            verified=not errors,
+            arena_id=arena_id,
+            action_event_count=len(action_rows),
+            replay_event_count=len(replay_rows),
+        ),
+        errors,
+    )
+
+
+def _read_jsonl(path: Path, errors: list[str]) -> list[dict[str, Any]] | None:
+    rows: list[dict[str, Any]] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        errors.append(f"{path.relative_to(path.parents[2]).as_posix()} cannot be read: {exc}")
+        return None
+    for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{path.name} line {line_number} is invalid JSON: {exc}")
+            return None
+        if not isinstance(row, dict):
+            errors.append(f"{path.name} line {line_number} must be a JSON object")
+            return None
+        rows.append(row)
+    return rows
+
+
+def _artifact_arena_id(
+    artifact_dir: Path,
+    manifest: dict[str, Any],
+    errors: list[str],
+) -> str | None:
+    score_path = artifact_dir / "scores/score.json"
+    try:
+        score = json.loads(score_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"scores/score.json cannot be read for deterministic replay: {exc}")
+        return None
+    if isinstance(score, dict) and isinstance(score.get("arena_id"), str):
+        return cast(str, score["arena_id"])
+    arena_version = manifest.get("arena_version")
+    if isinstance(arena_version, str) and ":" in arena_version:
+        return arena_version.split(":", 1)[0]
+    errors.append("deterministic replay arena_id is missing")
+    return None
+
+
+def _validate_deterministic_replay_counts(
+    deterministic_metadata: Any,
+    action_rows: list[dict[str, Any]],
+    replay_rows: list[dict[str, Any]],
+    errors: list[str],
+) -> None:
+    if not isinstance(deterministic_metadata, dict):
+        return
+    action_count = deterministic_metadata.get("action_event_count")
+    replay_count = deterministic_metadata.get("replay_event_count")
+    if isinstance(action_count, int) and action_count != len(action_rows):
+        errors.append("deterministic replay action_event_count does not match auditor trace")
+    if isinstance(replay_count, int) and replay_count != len(replay_rows):
+        errors.append("deterministic replay replay_event_count does not match replay trace")
+
+
+def _arena_state_from_payload(
+    payload: Any,
+    context: str,
+    errors: list[str],
+) -> Any | None:
+    if not isinstance(payload, dict):
+        errors.append(f"{context} must be a JSON object")
+        return None
+    try:
+        from eslams.state import ArenaState
+
+        return ArenaState(
+            state_id=payload["state_id"],
+            turn=payload["turn"],
+            active_player=payload["active_player"],
+            public_state=payload["public_state"],
+            private_state_by_player=payload["private_state_by_player"],
+            legal_actions_by_player=payload["legal_actions_by_player"],
+            scores=payload["scores"],
+            terminal=payload["terminal"],
+            outcome=payload["outcome"],
+            rng_commitment=payload["rng_commitment"],
+            render_hints=payload["render_hints"],
+            metadata=payload.get("metadata", {}),
+            state_hash=payload.get("state_hash"),
+        )
+    except KeyError as exc:
+        errors.append(f"{context} is missing field {exc}")
+    except (TypeError, ValueError) as exc:
+        errors.append(f"{context} is invalid: {exc}")
+    return None
+
+
+def _resolve_recorded_action(*, legal_actions: list[Any], recorded_action: Any) -> Any:
+    recorded_json = json.loads(canonical_json(recorded_action))
+    for action in legal_actions:
+        if action == recorded_action:
+            return action
+        if json.loads(canonical_json(action)) == recorded_json:
+            return action
+    return recorded_action
+
+
+def _canonical_equal(left: Any, right: Any) -> bool:
+    return canonical_json(left) == canonical_json(right)
+
+
+def _compare_replay_snapshot(
+    replay_rows: list[dict[str, Any]],
+    index: int,
+    state: Any,
+    errors: list[str],
+) -> None:
+    if index >= len(replay_rows):
+        errors.append(f"replay event {index} is missing")
+        return
+    replay = replay_rows[index]
+    expected = {
+        "state_hash": state.state_hash,
+        "active_player": state.active_player,
+        "public_state": state.public_state,
+        "scores": state.scores,
+        "terminal": state.terminal,
+        "render_hints": state.render_hints,
+    }
+    for key, value in expected.items():
+        if not _canonical_equal(replay.get(key), value):
+            errors.append(f"replay event {index} {key} does not match deterministic state")
+    if replay.get("turn_id") != state.turn:
+        errors.append(f"replay event {index} turn_id does not match deterministic state")
 
 
 def _file_entries(artifact_dir: Path) -> list[dict[str, Any]]:

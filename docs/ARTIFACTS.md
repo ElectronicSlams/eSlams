@@ -26,7 +26,38 @@ run.eslams/
   broadcast/vod_metadata.json
 ```
 
-`manifest.json` contains file hashes and an artifact id derived from the manifest file table. Public artifacts never include hidden official eval seeds or private judge-only data in public traces.
+`manifest.json` contains file hashes and an artifact id derived from the
+manifest file table. It also records the deterministic replay contract for new
+Core artifacts:
+
+```json
+{
+  "deterministic_replay": {
+    "version": "eslams-deterministic-replay-v1",
+    "status": "recorded",
+    "source": "traces/auditor_trace.jsonl"
+  }
+}
+```
+
+Public artifacts never include hidden official eval seeds or private judge-only
+data in public traces.
+
+## Deterministic Replay Audit
+
+The auditor trace stores the full canonical arena state before and after each
+action. `eslams validate` reconstructs those states, resolves the recorded JSON
+action against the registered arena's legal actions, applies the action through
+the arena, and verifies:
+
+- the before/after state hash chain;
+- the registered arena transition result;
+- the public replay snapshot for each state.
+
+This catches semantic tampering even when the manifest file table is refreshed
+after editing trace or replay files. Older artifacts without state snapshots are
+reported as `deterministic_replay.status = "not_recorded"` rather than being
+mistaken for fully audited replay packages.
 
 ## Runner Signatures
 

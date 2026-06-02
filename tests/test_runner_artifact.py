@@ -3,7 +3,7 @@ from pathlib import Path
 
 from eslams.artifacts import ArtifactValidator
 from eslams.cli import main
-from eslams.hashing import canonical_json
+from eslams.hashing import canonical_json, sha256_file, sha256_json
 from eslams.runner import RunConfig, Runner
 
 
@@ -18,6 +18,36 @@ def test_runner_generates_replay_events(tmp_path: Path):
     result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=3, output_dir=tmp_path))
     assert result.replay_events[0].action is None
     assert result.replay_events[-1].terminal is True
+
+
+def test_validator_verifies_deterministic_replay_contract(tmp_path: Path):
+    result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=3, output_dir=tmp_path))
+
+    report = ArtifactValidator().validate_report(result.artifact_path)
+    manifest = json.loads((result.artifact_path / "manifest.json").read_text(encoding="utf-8"))
+    auditor_events = _read_jsonl(result.artifact_path / "traces/auditor_trace.jsonl")
+
+    assert report.errors == []
+    assert report.deterministic_replay.status == "verified"
+    assert report.deterministic_replay.verified is True
+    assert report.deterministic_replay.arena_id == "tic-tac-toe"
+    assert manifest["deterministic_replay"]["status"] == "recorded"
+    assert auditor_events[0]["state_before"]["state_hash"] == result.replay_events[0].state_hash
+    assert auditor_events[0]["state_after"]["state_hash"] == result.replay_events[1].state_hash
+
+
+def test_validator_detects_replay_tamper_after_manifest_refresh(tmp_path: Path):
+    result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=3, output_dir=tmp_path))
+    replay_path = result.artifact_path / "replay/replay_events.jsonl"
+    replay_events = _read_jsonl(replay_path)
+    replay_events[1]["public_state"] = {"board": ["tampered"]}
+    _write_jsonl(replay_path, replay_events)
+    _refresh_manifest_hashes(result.artifact_path)
+
+    report = ArtifactValidator().validate_report(result.artifact_path)
+
+    assert "replay event 1 public_state does not match deterministic state" in report.errors
+    assert report.deterministic_replay.status == "invalid"
 
 
 def test_runner_generates_replay_html(tmp_path: Path):
@@ -127,3 +157,28 @@ def test_validator_detects_signed_manifest_tamper(tmp_path: Path, monkeypatch):
 
     assert report.signature.status == "invalid"
     assert "runner signature payload does not match manifest" in report.errors
+
+
+def _read_jsonl(path: Path) -> list[dict[str, object]]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
+    path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
+
+
+def _refresh_manifest_hashes(artifact_path: Path) -> None:
+    manifest_path = artifact_path / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    files = sorted(manifest["files"], key=lambda item: item["path"])
+    for entry in files:
+        file_path = artifact_path / entry["path"]
+        entry["sha256"] = sha256_file(file_path)
+        entry["bytes"] = file_path.stat().st_size
+    manifest["files"] = files
+    manifest["artifact_id"] = sha256_json(files)
+    manifest_path.write_text(canonical_json(manifest) + "\n", encoding="utf-8")
