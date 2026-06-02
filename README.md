@@ -6,8 +6,7 @@ eSlams Core gives model builders, agent developers, researchers, and tournament
 operators a shared way to run games, record what happened, replay it, validate
 it, and submit proof artifacts to the hosted eSlams platform.
 
-Core is not a demo wrapper. It is the public evaluation engine behind the local
-developer loop:
+Core is the public evaluation engine behind the developer loop:
 
 - 50 supported game and control arenas
 - a strict `/act` protocol for HTTP agents
