@@ -2,22 +2,29 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
+import os
 import shutil
 import zipfile
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 
 ARTIFACT_VERSION = "eslams-artifact-v1"
+RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v1"
+RUNNER_SIGNATURE_ALGORITHM = "hmac-sha256"
+RUNNER_SIGNATURE_PATH = "signatures/runner_signature.json"
+RUNNER_SIGNING_KEY_ENV = "RUNNER_SIGNING_KEY"
+RUNNER_SIGNING_KEY_ID_ENV = "RUNNER_SIGNING_KEY_ID"
 REQUIRED_FILES = {
     "manifest.json",
-    "signatures/runner.sig",
     "traces/public_trace.jsonl",
     "traces/agent_visible_trace.jsonl",
     "traces/private_judge_trace.jsonl",
@@ -98,6 +105,47 @@ class ArtifactBuildInput:
     verification_level: str = "Local Artifact"
 
 
+@dataclass(frozen=True)
+class SignatureValidationStatus:
+    status: str
+    path: str | None = None
+    algorithm: str | None = None
+    key_id: str | None = None
+    verified: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "status": self.status,
+            "verified": self.verified,
+        }
+        if self.path is not None:
+            payload["path"] = self.path
+        if self.algorithm is not None:
+            payload["algorithm"] = self.algorithm
+        if self.key_id is not None:
+            payload["key_id"] = self.key_id
+        return payload
+
+
+@dataclass(frozen=True)
+class ArtifactValidationReport:
+    errors: list[str]
+    signature: SignatureValidationStatus
+
+    @property
+    def valid(self) -> bool:
+        return not self.errors
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "valid": self.valid,
+            "signature": self.signature.to_dict(),
+        }
+        if self.errors:
+            payload["errors"] = self.errors
+        return payload
+
+
 def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: bool = False) -> Path:
     """Write a directory artifact or zip-compatible .eslams archive."""
 
@@ -165,8 +213,8 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         },
     )
     _write_json(artifact_dir / "broadcast/vod_metadata.json", {"status": "not_requested"})
-    (artifact_dir / "signatures/runner.sig").write_text("unsigned-local\n", encoding="utf-8")
 
+    signing_key = _runner_signing_key()
     files = _file_entries(artifact_dir)
     artifact_id = sha256_json(files)
     manifest = ArtifactManifest(
@@ -183,12 +231,15 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         verification_level=build.verification_level,
         files=files,
         hash_algorithm="sha256",
-        signature={
-            "level": "Unsigned Local",
-            "covers": ["manifest", "file_hashes", "score", "trace_references"],
-        },
+        signature=_manifest_signature_metadata(signed=signing_key is not None),
     )
-    _write_json(artifact_dir / "manifest.json", manifest.to_dict())
+    manifest_dict = manifest.to_dict()
+    manifest_path = artifact_dir / "manifest.json"
+    _write_json(manifest_path, manifest_dict)
+    if signing_key is not None:
+        signature_path = artifact_dir / RUNNER_SIGNATURE_PATH
+        signature_path.parent.mkdir(parents=True, exist_ok=True)
+        _write_json(signature_path, _runner_signature(manifest_path, manifest_dict, signing_key))
 
     if archive:
         archive_path = (
@@ -206,6 +257,9 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
 
 class ArtifactValidator:
     def validate(self, path: Path) -> list[str]:
+        return self.validate_report(path).errors
+
+    def validate_report(self, path: Path) -> ArtifactValidationReport:
         artifact_dir, cleanup = _materialize(path)
         try:
             return self._validate_dir(artifact_dir)
@@ -213,23 +267,35 @@ class ArtifactValidator:
             if cleanup:
                 shutil.rmtree(artifact_dir, ignore_errors=True)
 
-    def _validate_dir(self, artifact_dir: Path) -> list[str]:
+    def _validate_dir(self, artifact_dir: Path) -> ArtifactValidationReport:
         errors: list[str] = []
         missing = sorted(rel for rel in REQUIRED_FILES if not (artifact_dir / rel).exists())
         errors.extend(f"missing required file: {rel}" for rel in missing)
         manifest_path = artifact_dir / "manifest.json"
         if not manifest_path.exists():
-            return errors
+            return ArtifactValidationReport(
+                errors=errors,
+                signature=SignatureValidationStatus(status="not_checked"),
+            )
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
-            return [*errors, f"manifest is invalid JSON: {exc}"]
+            return ArtifactValidationReport(
+                errors=[*errors, f"manifest is invalid JSON: {exc}"],
+                signature=SignatureValidationStatus(status="not_checked"),
+            )
         if manifest.get("artifact_version") != ARTIFACT_VERSION:
             errors.append("manifest.artifact_version is unsupported")
         file_entries = manifest.get("files")
         if not isinstance(file_entries, list):
             errors.append("manifest.files must be a list")
-            return errors
+            signature_status, signature_errors = _validate_runner_signature(
+                artifact_dir,
+                manifest,
+                manifest_path,
+            )
+            errors.extend(signature_errors)
+            return ArtifactValidationReport(errors=errors, signature=signature_status)
         for entry in file_entries:
             if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
                 errors.append("manifest.files contains invalid entry")
@@ -245,7 +311,13 @@ class ArtifactValidator:
         expected_artifact_id = sha256_json(sorted(file_entries, key=lambda item: item["path"]))
         if manifest.get("artifact_id") != expected_artifact_id:
             errors.append("manifest.artifact_id does not match file table")
-        return errors
+        signature_status, signature_errors = _validate_runner_signature(
+            artifact_dir,
+            manifest,
+            manifest_path,
+        )
+        errors.extend(signature_errors)
+        return ArtifactValidationReport(errors=errors, signature=signature_status)
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -259,10 +331,235 @@ def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
 def _file_entries(artifact_dir: Path) -> list[dict[str, Any]]:
     entries = []
     for path in sorted(artifact_dir.rglob("*")):
-        if path.is_file() and path.name != "manifest.json":
+        if path.is_file():
             rel = path.relative_to(artifact_dir).as_posix()
+            if rel == "manifest.json" or rel.startswith("signatures/"):
+                continue
             entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
     return sorted(entries, key=lambda item: item["path"])
+
+
+def _manifest_signature_metadata(*, signed: bool) -> dict[str, Any]:
+    metadata: dict[str, Any] = {
+        "level": "Runner Signed" if signed else "Unsigned Local",
+        "status": "signed" if signed else "unsigned",
+        "covers": ["manifest_sha256", "artifact_id", "artifact_version", "run_id"],
+    }
+    if signed:
+        metadata["algorithm"] = RUNNER_SIGNATURE_ALGORITHM
+        metadata["signature_path"] = RUNNER_SIGNATURE_PATH
+    return metadata
+
+
+def _runner_signature(
+    manifest_path: Path,
+    manifest: dict[str, Any],
+    signing_key: str,
+) -> dict[str, Any]:
+    signed_at = utc_now_iso()
+    key_id = os.environ.get(RUNNER_SIGNING_KEY_ID_ENV, "runner-env-key")
+    signed_payload = _signature_payload(
+        manifest=manifest,
+        manifest_sha256=sha256_file(manifest_path),
+        signed_at=signed_at,
+        key_id=key_id,
+    )
+    return {
+        "signature_version": RUNNER_SIGNATURE_VERSION,
+        "status": "signed",
+        "algorithm": RUNNER_SIGNATURE_ALGORITHM,
+        "key_id": key_id,
+        "signed_at": signed_at,
+        "signed_payload": signed_payload,
+        "signature": _hmac_sha256(signing_key, signed_payload),
+    }
+
+
+def _signature_payload(
+    *,
+    manifest: dict[str, Any],
+    manifest_sha256: str,
+    signed_at: str,
+    key_id: str,
+) -> dict[str, Any]:
+    return {
+        "signature_version": RUNNER_SIGNATURE_VERSION,
+        "algorithm": RUNNER_SIGNATURE_ALGORITHM,
+        "key_id": key_id,
+        "signed_at": signed_at,
+        "artifact_version": manifest.get("artifact_version"),
+        "artifact_id": manifest.get("artifact_id"),
+        "run_id": manifest.get("run_id"),
+        "manifest_sha256": manifest_sha256,
+    }
+
+
+def _runner_signing_key() -> str | None:
+    value = os.environ.get(RUNNER_SIGNING_KEY_ENV)
+    if value == "":
+        return None
+    return value
+
+
+def _hmac_sha256(signing_key: str, payload: dict[str, Any]) -> str:
+    digest = hmac.new(
+        signing_key.encode("utf-8"),
+        canonical_json(payload).encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{RUNNER_SIGNATURE_ALGORITHM}:{digest}"
+
+
+def _validate_runner_signature(
+    artifact_dir: Path,
+    manifest: dict[str, Any],
+    manifest_path: Path,
+) -> tuple[SignatureValidationStatus, list[str]]:
+    signature_metadata = manifest.get("signature")
+    manifest_signature_status = None
+    signature_rel = RUNNER_SIGNATURE_PATH
+    if isinstance(signature_metadata, dict):
+        status = signature_metadata.get("status")
+        if isinstance(status, str):
+            manifest_signature_status = status
+        manifest_path_value = signature_metadata.get("signature_path")
+        if isinstance(manifest_path_value, str):
+            signature_rel = manifest_path_value
+
+    signature_subpath = _safe_artifact_subpath(signature_rel)
+    if signature_subpath is None:
+        return (
+            SignatureValidationStatus(status="invalid", path=signature_rel),
+            ["runner signature path is invalid"],
+        )
+
+    signature_path = artifact_dir / signature_subpath
+    if not signature_path.exists():
+        if manifest_signature_status == "signed":
+            return (
+                SignatureValidationStatus(status="missing", path=signature_rel),
+                ["runner signature is declared signed but the signature file is missing"],
+            )
+        return SignatureValidationStatus(status="unsigned"), []
+
+    try:
+        signature_record = json.loads(signature_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return (
+            SignatureValidationStatus(status="invalid", path=signature_rel),
+            [f"runner signature is invalid JSON: {exc}"],
+        )
+    if not isinstance(signature_record, dict):
+        return (
+            SignatureValidationStatus(status="invalid", path=signature_rel),
+            ["runner signature must be a JSON object"],
+        )
+
+    record_status = signature_record.get("status")
+    if record_status == "unsigned":
+        if manifest_signature_status == "signed":
+            return (
+                SignatureValidationStatus(status="invalid", path=signature_rel),
+                ["runner signature is declared signed but the signature file is unsigned"],
+            )
+        return SignatureValidationStatus(status="unsigned", path=signature_rel), []
+    if record_status != "signed":
+        return (
+            SignatureValidationStatus(status="invalid", path=signature_rel),
+            ["runner signature status is unsupported"],
+        )
+
+    return _validate_signed_runner_signature(
+        signature_record=cast(dict[str, Any], signature_record),
+        signature_rel=signature_rel,
+        manifest=manifest,
+        manifest_path=manifest_path,
+    )
+
+
+def _validate_signed_runner_signature(
+    *,
+    signature_record: dict[str, Any],
+    signature_rel: str,
+    manifest: dict[str, Any],
+    manifest_path: Path,
+) -> tuple[SignatureValidationStatus, list[str]]:
+    errors: list[str] = []
+    signature_version = signature_record.get("signature_version")
+    algorithm = signature_record.get("algorithm")
+    key_id = signature_record.get("key_id")
+    signed_at = signature_record.get("signed_at")
+    signed_payload = signature_record.get("signed_payload")
+    signature_value = signature_record.get("signature")
+
+    if signature_version != RUNNER_SIGNATURE_VERSION:
+        errors.append("runner signature version is unsupported")
+    if algorithm != RUNNER_SIGNATURE_ALGORITHM:
+        errors.append("runner signature algorithm is unsupported")
+    if not isinstance(key_id, str) or not key_id:
+        errors.append("runner signature key_id must be a non-empty string")
+        key_id = None
+    if not isinstance(signed_at, str) or not signed_at:
+        errors.append("runner signature signed_at must be a non-empty string")
+        signed_at = None
+    if not isinstance(signed_payload, dict):
+        errors.append("runner signature signed_payload must be a JSON object")
+    if not isinstance(signature_value, str) or not signature_value.startswith(
+        f"{RUNNER_SIGNATURE_ALGORITHM}:"
+    ):
+        errors.append("runner signature value is missing or unsupported")
+
+    status = SignatureValidationStatus(
+        status="invalid",
+        path=signature_rel,
+        algorithm=algorithm if isinstance(algorithm, str) else None,
+        key_id=key_id if isinstance(key_id, str) else None,
+    )
+    if errors:
+        return status, errors
+
+    expected_payload = _signature_payload(
+        manifest=manifest,
+        manifest_sha256=sha256_file(manifest_path),
+        signed_at=cast(str, signed_at),
+        key_id=cast(str, key_id),
+    )
+    signed_payload_dict = cast(dict[str, Any], signed_payload)
+    if signed_payload_dict != expected_payload:
+        return status, ["runner signature payload does not match manifest"]
+
+    signing_key = _runner_signing_key()
+    if signing_key is None:
+        return (
+            SignatureValidationStatus(
+                status="unverified_missing_key",
+                path=signature_rel,
+                algorithm=RUNNER_SIGNATURE_ALGORITHM,
+                key_id=cast(str, key_id),
+            ),
+            [],
+        )
+
+    expected_signature = _hmac_sha256(signing_key, signed_payload_dict)
+    if not hmac.compare_digest(cast(str, signature_value), expected_signature):
+        return status, ["runner signature verification failed"]
+    return (
+        SignatureValidationStatus(
+            status="verified",
+            path=signature_rel,
+            algorithm=RUNNER_SIGNATURE_ALGORITHM,
+            key_id=cast(str, key_id),
+            verified=True,
+        ),
+        [],
+    )
+
+
+def _safe_artifact_subpath(rel: str) -> Path | None:
+    path = Path(rel)
+    if path.is_absolute() or ".." in path.parts or rel == "":
+        return None
+    return path
 
 
 def _materialize(path: Path) -> tuple[Path, bool]:

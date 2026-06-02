@@ -96,11 +96,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "validate":
-        errors = ArtifactValidator().validate(args.artifact)
-        if errors:
-            print(json.dumps({"valid": False, "errors": errors}, indent=2))
+        report = ArtifactValidator().validate_report(args.artifact)
+        payload = report.to_dict()
+        payload["artifact"] = str(args.artifact)
+        if report.errors:
+            print(json.dumps(payload, indent=2))
             return 1
-        print(json.dumps({"valid": True, "artifact": str(args.artifact)}, indent=2))
+        print(json.dumps(payload, indent=2))
         return 0
     if args.command == "replay":
         output = render_replay_html(args.artifact, args.output)
