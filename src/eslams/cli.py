@@ -290,8 +290,10 @@ def _agent_label(agent: str | HttpAgent | ModelProviderAgent) -> str:
 
 
 def _terminal_reason(result: Any) -> str | None:
-    if result.score.outcome and isinstance(result.score.outcome.get("reason"), str):
-        return result.score.outcome["reason"]
+    if result.score.outcome:
+        reason = result.score.outcome.get("reason")
+        if isinstance(reason, str):
+            return reason
     if result.replay_events:
         terminal_reason = result.replay_events[-1].public_state.get("terminal_reason")
         if isinstance(terminal_reason, str):

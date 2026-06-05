@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from eslams.providers.capabilities import ModelCapabilities
 
@@ -216,8 +216,8 @@ def _registry_from_payloads(
 
 
 def _load_package_json(filename: str) -> dict[str, Any]:
-    package = resources.files("eslams.providers").joinpath("data", filename)
-    return json.loads(package.read_text(encoding="utf-8"))
+    package = resources.files("eslams.providers").joinpath("data").joinpath(filename)
+    return cast(dict[str, Any], json.loads(package.read_text(encoding="utf-8")))
 
 
 def _normalize(value: str) -> str:

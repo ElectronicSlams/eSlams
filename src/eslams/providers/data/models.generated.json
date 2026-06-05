@@ -143971,14 +143971,14 @@
       "supports_temperature": true
     },
     {
-      "available_from_api": null,
+      "available_from_api": true,
       "context_window": 272000,
-      "default_reasoning_effort": null,
+      "default_reasoning_effort": "minimal",
       "endpoints": [
-        "chat"
+        "responses"
       ],
       "game_agent_supported": true,
-      "last_verified_at": null,
+      "last_verified_at": "2026-06-02T00:00:00Z",
       "max_output_tokens": 128000,
       "modalities": {
         "input": [
@@ -143990,14 +143990,20 @@
       },
       "model": "gpt-5-mini",
       "provider": "openai",
-      "reasoning_efforts": [],
+      "reasoning_efforts": [
+        "minimal",
+        "low",
+        "medium",
+        "high"
+      ],
       "sources": [
         "litellm",
+        "local-override",
         "models.dev"
       ],
       "supports_google_thinking_config": false,
       "supports_reasoning": true,
-      "supports_temperature": true
+      "supports_temperature": false
     },
     {
       "available_from_api": null,
