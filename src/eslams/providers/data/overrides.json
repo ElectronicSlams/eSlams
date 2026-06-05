@@ -3,6 +3,21 @@
   "models": [
     {
       "provider": "openai",
+      "model": "gpt-5-mini",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": ["responses"],
+      "modalities": {"input": ["text"], "output": ["text"]},
+      "supports_temperature": false,
+      "supports_reasoning": true,
+      "reasoning_efforts": ["minimal", "low", "medium", "high"],
+      "default_reasoning_effort": "minimal",
+      "supports_google_thinking_config": false,
+      "last_verified_at": "2026-06-02T00:00:00Z",
+      "sources": ["local-override"]
+    },
+    {
+      "provider": "openai",
       "model": "gpt-5.4-mini",
       "available_from_api": true,
       "game_agent_supported": true,
