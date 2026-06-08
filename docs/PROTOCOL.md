@@ -41,3 +41,28 @@ eslams run --on-agent-error fallback --on-illegal-action fallback
 failure action. `invalid-match` records the run as not valid for scoring.
 `forfeit` ends the match with the other player as winner and also records the
 run as not valid for scoring.
+
+## Provider-Backed Agents
+
+Provider-backed agents still speak the same `/act` protocol. Core keeps provider
+runtime concerns outside the public action contract and records them as
+redacted provider receipts:
+
+- timeout, connect timeout, read timeout
+- retry count and retry backoff
+- synchronous concurrency limit
+- rate limit per minute
+- generic gateway/base URL routing
+- gateway mode and redacted gateway request ids
+- normalized usage and explicit unavailable reasons
+- pricing provenance and `cost_unavailable` when pricing is not configured
+
+Provider receipts use `eslams.provider.receipt.v1`. Public replay exports never
+include raw prompts, raw responses, request headers, tokens, API keys, or debug
+provider payloads.
+
+Run a no-spend provider preflight:
+
+```bash
+eslams providers preflight --provider openai --model gpt-5-mini --arena tic-tac-toe
+```

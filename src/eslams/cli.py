@@ -7,17 +7,40 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import eslams.arenas  # noqa: F401
 from eslams.agents import HttpAgent, ModelProviderAgent
 from eslams.arena import registry
+from eslams.arena_transport import smoke_all_arenas
 from eslams.artifacts import ArtifactValidator
+from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
+from eslams.contracts.json_schema import export_schemas
+from eslams.eval_runtime import (
+    ResumeInvariant,
+    append_progress_event,
+    load_resume_checkpoint,
+    progress_event,
+    should_skip_case,
+)
+from eslams.fixtures import ARTIFACT_FIXTURE_KINDS, create_artifact_fixture
+from eslams.official import merge_official_results
+from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
+from eslams.provider_preflight import provider_preflight
 from eslams.providers import load_provider_registry
+from eslams.public_replay import (
+    create_uploaded_smoke_fixture,
+    export_public_replay,
+    validate_public_replay,
+)
+from eslams.publication_export import export_publication_bundle, validate_publication_bundle
+from eslams.rendering import renderer_vocabulary_rows
 from eslams.replay import render_replay_html
 from eslams.runner import FAILURE_POLICIES, RunConfig, Runner
+from eslams.runner_health import current_runner_health
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -30,6 +53,116 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("init", help="Create a local eSlams workspace.")
 
     sub.add_parser("arenas", help="List built-in arenas.")
+
+    arena = sub.add_parser("arena", help="Arena transport helper commands.")
+    arena_sub = arena.add_subparsers(dest="arena_command", required=True)
+    arena_smoke = arena_sub.add_parser("smoke", help="Smoke-test stateless arena transport.")
+    arena_smoke.add_argument("--all", action="store_true", dest="all_arenas")
+    arena_smoke.add_argument("--json", action="store_true")
+
+    schemas = sub.add_parser("schemas", help="Export versioned contract schemas.")
+    schemas_sub = schemas.add_subparsers(dest="schemas_command", required=True)
+    schemas_export = schemas_sub.add_parser("export", help="Write JSON schema files.")
+    schemas_export.add_argument("--out", type=Path, required=True)
+
+    artifact = sub.add_parser("artifact", help="Artifact helper commands.")
+    artifact_sub = artifact.add_subparsers(dest="artifact_command", required=True)
+    artifact_public = artifact_sub.add_parser(
+        "public-export",
+        help="Export a no-secret public replay package.",
+    )
+    artifact_public.add_argument("artifact", type=Path)
+    artifact_public.add_argument("--out", type=Path, required=True)
+
+    fixtures = sub.add_parser("fixtures", help="Generate deterministic fixtures.")
+    fixtures_sub = fixtures.add_subparsers(dest="fixtures_command", required=True)
+    fixtures_replay = fixtures_sub.add_parser("replay", help="Generate replay fixtures.")
+    fixtures_replay.add_argument("--kind", choices=["uploaded-smoke"], required=True)
+    fixtures_replay.add_argument("--out", type=Path, required=True)
+    fixtures_artifact = fixtures_sub.add_parser("artifact", help="Generate artifact fixtures.")
+    fixtures_artifact.add_argument("--kind", choices=list(ARTIFACT_FIXTURE_KINDS), required=True)
+    fixtures_artifact.add_argument("--out", type=Path, required=True)
+
+    catalogue = sub.add_parser("catalogue", help="Export public catalogue rows.")
+    catalogue_sub = catalogue.add_subparsers(dest="catalogue_command", required=True)
+    for name in ("games", "models", "availability", "renderers"):
+        command = catalogue_sub.add_parser(name, help=f"Export {name} catalogue rows.")
+        command.add_argument("--json", action="store_true")
+
+    plan = sub.add_parser("plan", help="Create deterministic no-secret eval plans.")
+    plan_sub = plan.add_subparsers(dest="plan_command", required=True)
+    plan_official = plan_sub.add_parser("official", help="Plan an official eval suite.")
+    plan_official.add_argument("--suite", required=True)
+    plan_official.add_argument("--providers", default="")
+    plan_official.add_argument("--arenas", default="")
+    plan_official.add_argument("--shard-count", type=int, default=1)
+    plan_official.add_argument("--json", action="store_true")
+    plan_battlefield = plan_sub.add_parser("battlefield", help="Plan Battlefield cases.")
+    plan_battlefield.add_argument("--pairs", default="")
+    plan_battlefield.add_argument("--arenas", default="")
+    plan_battlefield.add_argument("--shard-count", type=int, default=1)
+    plan_battlefield.add_argument("--json", action="store_true")
+    plan_public = plan_sub.add_parser("public-match", help="Plan a public match request.")
+    plan_public.add_argument("--request", type=Path, required=True)
+    plan_public.add_argument("--shard-count", type=int, default=1)
+    plan_public.add_argument("--json", action="store_true")
+    plan_progress = plan_sub.add_parser("progress", help="Append a progress JSONL event.")
+    plan_progress.add_argument("--plan", type=Path, required=True)
+    plan_progress.add_argument("--out", type=Path, required=True)
+    plan_progress.add_argument("--current-case")
+    plan_progress.add_argument("--completed-cases", type=int, default=0)
+    plan_progress.add_argument("--failed-cases", type=int, default=0)
+    plan_progress.add_argument("--skipped-cases", type=int, default=0)
+    plan_progress.add_argument("--elapsed-seconds", type=float, default=0.0)
+    plan_progress.add_argument("--provider-latencies-ms", default="")
+    plan_resume = plan_sub.add_parser("resume-check", help="Check if a case can be skipped.")
+    plan_resume.add_argument("--checkpoint", type=Path, required=True)
+    plan_resume.add_argument("--case-id", required=True)
+    plan_resume.add_argument("--artifact-digest", required=True)
+    plan_resume.add_argument("--model-id", required=True)
+    plan_resume.add_argument("--suite-fingerprint", required=True)
+    plan_resume.add_argument("--runner-version", required=True)
+    plan_resume.add_argument("--plan-hash", required=True)
+
+    publish = sub.add_parser("publish", help="Publication bundle helpers.")
+    publish_sub = publish.add_subparsers(dest="publish_command", required=True)
+    publish_export = publish_sub.add_parser(
+        "export",
+        help="Export deterministic publication bundle files.",
+    )
+    publish_export.add_argument(
+        "--kind",
+        choices=["official-proof", "battlefield-sample", "uploaded-replay"],
+        required=True,
+    )
+    publish_export.add_argument("--plan", type=Path)
+    publish_export.add_argument("--artifacts", type=Path)
+    publish_export.add_argument("--artifact", type=Path)
+    publish_export.add_argument("--out", type=Path, required=True)
+    publish_validate = publish_sub.add_parser(
+        "validate",
+        help="Validate a deterministic publication bundle.",
+    )
+    publish_validate.add_argument("bundle", type=Path)
+    publish_validate.add_argument("--json", action="store_true")
+
+    official = sub.add_parser("official", help="Official result helpers.")
+    official_sub = official.add_subparsers(dest="official_command", required=True)
+    official_merge = official_sub.add_parser("merge", help="Merge official result artifacts.")
+    official_merge.add_argument("run_dir", type=Path)
+    official_merge.add_argument("--out", type=Path, required=True)
+
+    providers = sub.add_parser("providers", help="Provider runtime helper commands.")
+    providers_sub = providers.add_subparsers(dest="providers_command", required=True)
+    providers_preflight = providers_sub.add_parser("preflight", help="Preflight a provider model.")
+    providers_preflight.add_argument("--provider", required=True)
+    providers_preflight.add_argument("--model", required=True)
+    providers_preflight.add_argument("--arena", default="tic-tac-toe", choices=registry.list())
+
+    runner_cmd = sub.add_parser("runner", help="Runner/container helper commands.")
+    runner_sub = runner_cmd.add_subparsers(dest="runner_command", required=True)
+    runner_health = runner_sub.add_parser("health", help="Print runner health metadata.")
+    runner_health.add_argument("--json", action="store_true")
 
     models = sub.add_parser("models", help="Inspect or refresh provider model capabilities.")
     models_sub = models.add_subparsers(dest="models_command", required=True)
@@ -91,12 +224,31 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--verification-level", default="Local Artifact")
     run.add_argument("--eval-suite-version", default="public-smoke:1.0.0")
     run.add_argument("--runner-version", default="eslams-runner:0.1.0")
+    run.add_argument("--suite-id")
+    run.add_argument("--case-id")
+    run.add_argument("--suite-fingerprint")
+    run.add_argument("--plan-hash")
+    run.add_argument("--shard-index", type=int)
+    run.add_argument("--shard-count", type=int)
 
     validate = sub.add_parser("validate", help="Validate an artifact directory or .eslams zip.")
     validate.add_argument("artifact", type=Path)
+    validate.add_argument(
+        "--profile",
+        choices=[
+            "runner-bundle",
+            "official-bundle",
+            "battlefield-bundle",
+            "public-replay-package",
+            "auto",
+        ],
+        default="runner-bundle",
+    )
+    validate.add_argument("--summary-json", action="store_true")
 
     replay = sub.add_parser("replay", help="Render a local HTML replay from an artifact.")
-    replay.add_argument("artifact", type=Path)
+    replay.add_argument("artifact")
+    replay.add_argument("extra", nargs="?")
     replay.add_argument("--output", type=Path)
 
     agent = sub.add_parser("agent", help="Agent helper commands.")
@@ -122,6 +274,26 @@ def main(argv: list[str] | None = None) -> int:
         for arena_id in registry.list():
             print(arena_id)
         return 0
+    if args.command == "arena":
+        return _arena_command(args)
+    if args.command == "schemas":
+        return _schemas_command(args)
+    if args.command == "artifact":
+        return _artifact_command(args)
+    if args.command == "fixtures":
+        return _fixtures_command(args)
+    if args.command == "catalogue":
+        return _catalogue_command(args)
+    if args.command == "plan":
+        return _plan_command(args)
+    if args.command == "publish":
+        return _publish_command(args)
+    if args.command == "official":
+        return _official_command(args)
+    if args.command == "providers":
+        return _providers_command(args)
+    if args.command == "runner":
+        return _runner_command(args)
     if args.command == "models":
         return _models_command(args)
     if args.command == "run":
@@ -143,6 +315,12 @@ def main(argv: list[str] | None = None) -> int:
                 verification_level=args.verification_level,
                 eval_suite_version=args.eval_suite_version,
                 runner_version=args.runner_version,
+                suite_id=args.suite_id,
+                case_id=args.case_id,
+                suite_fingerprint=args.suite_fingerprint,
+                plan_hash=args.plan_hash,
+                shard_index=args.shard_index,
+                shard_count=args.shard_count,
             )
         )
         print(
@@ -164,21 +342,195 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "validate":
-        report = ArtifactValidator().validate_report(args.artifact)
+        report = ArtifactValidator().validate_report(args.artifact, profile=args.profile)
         payload = report.to_dict()
-        payload["artifact"] = str(args.artifact)
+        if args.summary_json:
+            print(json.dumps(payload, sort_keys=True))
+            return 0 if report.valid else 1
         if report.errors:
             print(json.dumps(payload, indent=2))
             return 1
         print(json.dumps(payload, indent=2))
         return 0
     if args.command == "replay":
-        output = render_replay_html(args.artifact, args.output)
+        if args.artifact == "validate-public":
+            if args.extra is None:
+                print("replay validate-public requires an artifact or directory", file=sys.stderr)
+                return 2
+            payload = validate_public_replay(Path(args.extra))
+            print(json.dumps(payload, indent=2))
+            return 0 if payload.get("valid") is True else 1
+        output = render_replay_html(Path(args.artifact), args.output)
         print(json.dumps({"replay": str(output)}, indent=2))
         return 0
     if args.command == "agent":
         return _agent_command(args)
     raise AssertionError(args.command)
+
+
+def _schemas_command(args: argparse.Namespace) -> int:
+    if args.schemas_command == "export":
+        written = export_schemas(args.out)
+        print(json.dumps({"schemas": [str(path) for path in written]}, indent=2))
+        return 0
+    raise AssertionError(args.schemas_command)
+
+
+def _arena_command(args: argparse.Namespace) -> int:
+    if args.arena_command == "smoke":
+        if not args.all_arenas:
+            print("arena smoke currently requires --all", file=sys.stderr)
+            return 2
+        payload = smoke_all_arenas()
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(
+                f"ok={str(payload['ok']).lower()} "
+                f"game_count={payload['game_count']}"
+            )
+        return 0 if payload["ok"] is True else 1
+    raise AssertionError(args.arena_command)
+
+
+def _artifact_command(args: argparse.Namespace) -> int:
+    if args.artifact_command == "public-export":
+        output = export_public_replay(args.artifact, args.out)
+        print(json.dumps({"public_replay_package": str(output)}, indent=2))
+        return 0
+    raise AssertionError(args.artifact_command)
+
+
+def _fixtures_command(args: argparse.Namespace) -> int:
+    if args.fixtures_command == "replay" and args.kind == "uploaded-smoke":
+        output = create_uploaded_smoke_fixture(args.out)
+        print(json.dumps({"fixture": str(output)}, indent=2))
+        return 0
+    if args.fixtures_command == "artifact":
+        output = create_artifact_fixture(args.kind, args.out)
+        print(json.dumps({"fixture": str(output)}, indent=2))
+        return 0
+    raise AssertionError(args.fixtures_command)
+
+
+def _catalogue_command(args: argparse.Namespace) -> int:
+    rows_by_command: dict[str, Callable[[], list[dict[str, Any]]]] = {
+        "games": game_catalogue_rows,
+        "models": model_catalogue_rows,
+        "availability": availability_rows,
+        "renderers": renderer_vocabulary_rows,
+    }
+    rows = rows_by_command[args.catalogue_command]()
+    if args.json:
+        print(json.dumps(rows, indent=2))
+        return 0
+    for row in rows:
+        label = row.get("game_id") or f"{row.get('provider')}:{row.get('model')}"
+        print(f"{label} status={row.get('launch_status') or row.get('status') or 'ready'}")
+    return 0
+
+
+def _plan_command(args: argparse.Namespace) -> int:
+    if args.plan_command == "official":
+        payload = official_plan(
+            suite=args.suite,
+            providers=_comma_list(args.providers),
+            arenas=_comma_list(args.arenas),
+            shard_count=args.shard_count,
+        )
+    elif args.plan_command == "battlefield":
+        payload = battlefield_plan(
+            pairs=_comma_list(args.pairs),
+            arenas=_comma_list(args.arenas),
+            shard_count=args.shard_count,
+        )
+    elif args.plan_command == "public-match":
+        payload = public_match_plan(request_path=args.request, shard_count=args.shard_count)
+    elif args.plan_command == "progress":
+        plan_payload = _read_json_file(args.plan)
+        payload = progress_event(
+            plan=plan_payload,
+            current_case=args.current_case,
+            completed_cases=args.completed_cases,
+            failed_cases=args.failed_cases,
+            skipped_cases=args.skipped_cases,
+            elapsed_seconds=args.elapsed_seconds,
+            provider_latencies_ms=_int_list(args.provider_latencies_ms),
+        )
+        append_progress_event(args.out, payload)
+    elif args.plan_command == "resume-check":
+        invariant = ResumeInvariant(
+            case_id=args.case_id,
+            artifact_digest=args.artifact_digest,
+            model_id=args.model_id,
+            suite_fingerprint=args.suite_fingerprint,
+            runner_version=args.runner_version,
+            plan_hash=args.plan_hash,
+        )
+        payload = {
+            "case_id": args.case_id,
+            "skip": should_skip_case(load_resume_checkpoint(args.checkpoint), invariant),
+            "resume_key": invariant.resume_key,
+        }
+    else:
+        raise AssertionError(args.plan_command)
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
+def _publish_command(args: argparse.Namespace) -> int:
+    if args.publish_command == "export":
+        output = export_publication_bundle(
+            kind=args.kind,
+            output_dir=args.out,
+            artifacts_dir=args.artifacts,
+            artifact=args.artifact,
+            plan_path=args.plan,
+        )
+        print(json.dumps({"publication_bundle": str(output)}, indent=2))
+        return 0
+    if args.publish_command == "validate":
+        payload = validate_publication_bundle(args.bundle)
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        elif payload["valid"]:
+            print("publication bundle valid")
+        else:
+            print("publication bundle invalid")
+            for error in payload["errors"]:
+                print(f"- {error}")
+        return 0 if payload["valid"] is True else 1
+    raise AssertionError(args.publish_command)
+
+
+def _official_command(args: argparse.Namespace) -> int:
+    if args.official_command == "merge":
+        output = merge_official_results(args.run_dir, args.out)
+        print(json.dumps({"official_result": str(output)}, indent=2))
+        return 0
+    raise AssertionError(args.official_command)
+
+
+def _providers_command(args: argparse.Namespace) -> int:
+    if args.providers_command == "preflight":
+        payload = provider_preflight(args.provider, args.model, args.arena)
+        print(json.dumps(payload, indent=2))
+        return 0 if payload["ok"] is True else 1
+    raise AssertionError(args.providers_command)
+
+
+def _runner_command(args: argparse.Namespace) -> int:
+    if args.runner_command == "health":
+        payload = current_runner_health()
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(
+                f"core_version={payload['core_version']} "
+                f"game_count={payload['game_count']}"
+            )
+        return 0
+    raise AssertionError(args.runner_command)
 
 
 def _agent_arg(value: str) -> str | HttpAgent | ModelProviderAgent:
@@ -256,6 +608,21 @@ def _provider_agent(value: str) -> ModelProviderAgent | None:
         api_key_env=env_name,
         version=model or default_model,
     )
+
+
+def _comma_list(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _int_list(value: str) -> list[int]:
+    return [int(item.strip()) for item in value.split(",") if item.strip()]
+
+
+def _read_json_file(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return value
 
 
 def _print_run_preflight(

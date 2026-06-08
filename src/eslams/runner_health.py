@@ -1,0 +1,53 @@
+"""Runner health payload helpers."""
+
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+from typing import Any
+
+import eslams.arenas  # noqa: F401
+from eslams.arena import registry as arena_registry
+from eslams.contracts.runner_job import runner_health_payload
+from eslams.hashing import canonical_json
+from eslams.providers import load_provider_registry
+from eslams.rendering import renderer_vocabulary_rows
+
+CORE_VERSION = "0.1.0"
+
+
+def current_runner_health() -> dict[str, Any]:
+    game_ids = arena_registry.list()
+    action_schemas = [
+        arena_registry.create(arena_id).action_schema
+        for arena_id in game_ids
+    ]
+    renderer_vocabulary = renderer_vocabulary_rows()
+    registry_rows = [
+        record.to_dict()
+        for record in load_provider_registry().list_models()
+    ]
+    return runner_health_payload(
+        core_commit=_git_commit(),
+        core_version=CORE_VERSION,
+        registry_rows=registry_rows,
+        game_ids=game_ids,
+        renderer_vocabulary=[canonical_json(row) for row in renderer_vocabulary],
+        action_schemas=action_schemas,
+    ).to_dict()
+
+
+def _git_commit() -> str | None:
+    root = Path(__file__).resolve().parents[2]
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    value = result.stdout.strip()
+    return value or None

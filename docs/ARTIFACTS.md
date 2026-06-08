@@ -24,6 +24,11 @@ run.eslams.d/
   environment/lockfile.json
   environment/container_digest.txt
   environment/package_versions.json
+  public/public_manifest.json
+  public/public_result_summary.json
+  public_reasoning/reasoning.jsonl
+  validation/validation_summary.json
+  scores/official_result.json
   broadcast/broadcast_manifest.json
   broadcast/vod_metadata.json
 ```
@@ -53,6 +58,39 @@ Core artifacts and the scoring-validity posture:
 
 Public artifacts never include hidden official eval seeds or private judge-only
 data in public traces.
+
+## Profiles and Public Exports
+
+Core validates artifacts with explicit profiles:
+
+- `runner-bundle`: the full local runner artifact.
+- `official-bundle`: a runner bundle with official result and runner signature
+  requirements.
+- `battlefield-bundle`: a runner bundle with public match projection
+  requirements.
+- `public-replay-package`: a no-secret replay package containing only
+  `manifest.json`, public replay files, replay manifest, and optional public
+  reasoning.
+
+Use `--summary-json` to produce the stable
+`eslams.artifact.validation.v1` validation contract:
+
+```bash
+eslams validate runs/latest.eslams --profile runner-bundle --summary-json
+```
+
+Public replay packages can be exported and validated without private traces,
+provider prompts, raw model responses, request headers, API keys, or debug
+payloads:
+
+```bash
+eslams artifact public-export runs/latest.eslams --out public_replay_package
+eslams replay validate-public public_replay_package
+```
+
+Broadcast video remains metadata-only in Core. `broadcast/vod_metadata.json`
+can describe external media status, destination ids, hashes, and failure
+reasons, but Core does not generate MP4 files or upload video.
 
 ## Deterministic Replay Audit
 
@@ -84,3 +122,18 @@ set to include a non-secret key identifier; otherwise Core records
 Without the key, validation still checks artifact hashes and reports the
 signature as unverified. Unsigned local artifacts remain portable and report
 `unsigned`.
+
+## Publication Bundles
+
+Publication bundles are deterministic storage/database inputs for Platform:
+
+```bash
+eslams publish export --kind uploaded-replay --artifact runs/latest.eslams --out bundle
+eslams publish validate bundle --json
+```
+
+Bundles include public manifests, public replay files, proof index rows,
+leaderboard rows, provider/model rows, aggregate usage, an object manifest,
+checkpoint manifest, and signature/readback manifest. Core validates object
+hashes, projection hashes, public replay packages, aggregate usage shape, and
+proof-row policy without requiring secrets or storage credentials.

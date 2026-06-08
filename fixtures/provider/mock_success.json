@@ -1,0 +1,20 @@
+{
+  "schema_version": "eslams.provider.receipt.v1",
+  "scenario": "success",
+  "provider": "mock",
+  "model": "mock-legal-action",
+  "outcome": "ok",
+  "usage": {
+    "input_tokens": 8,
+    "output_tokens": 2,
+    "cached_input_tokens": null,
+    "reasoning_tokens": null,
+    "total_tokens": 10
+  },
+  "usage_unavailable_reason": null,
+  "estimated_cost": {
+    "status": "cost_unavailable",
+    "unavailable_reason": "pricing_not_configured"
+  },
+  "redaction_version": "provider-receipt-redaction-v1"
+}

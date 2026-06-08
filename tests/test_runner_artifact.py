@@ -215,6 +215,42 @@ def test_cli_run_accepts_artifact_provenance_metadata(tmp_path: Path, monkeypatc
     assert ArtifactValidator().validate_report(artifacts[0]).signature.verified is True
 
 
+def test_runner_records_suite_context_and_timeout_metadata(tmp_path: Path):
+    result = Runner().run(
+        RunConfig(
+            arena_id="tic-tac-toe",
+            seed=3,
+            output_dir=tmp_path,
+            time_budget_ms=12_345,
+            suite_id="official-v1",
+            case_id="case-tic-tac-toe-001",
+            suite_fingerprint="suite-fingerprint",
+            plan_hash="plan-hash",
+            shard_index=0,
+            shard_count=2,
+            model_id_by_player={
+                "player_1": "builtin:random",
+                "player_2": "builtin:first-legal",
+            },
+        )
+    )
+    manifest = json.loads((result.artifact_path / "manifest.json").read_text(encoding="utf-8"))
+    score = json.loads((result.artifact_path / "scores/score.json").read_text(encoding="utf-8"))
+    trace = _read_jsonl(result.artifact_path / "traces/auditor_trace.jsonl")
+
+    assert manifest["run_metadata"]["suite_id"] == "official-v1"
+    assert manifest["run_metadata"]["case_id"] == "case-tic-tac-toe-001"
+    assert manifest["run_metadata"]["plan_hash"] == "plan-hash"
+    assert manifest["run_metadata"]["requested_time_budget_ms"] == 12_345
+    assert manifest["run_metadata"]["effective_time_budget_ms"] == 12_345
+    assert manifest["run_metadata"]["model_id_by_player"]["player_1"] == "builtin:random"
+    assert score["metrics"]["suite_context"]["case_id"] == "case-tic-tac-toe-001"
+    assert score["metrics"]["requested_time_budget_ms"] == 12_345
+    assert trace[0]["suite_context"]["suite_id"] == "official-v1"
+    assert trace[0]["requested_time_budget_ms"] == 12_345
+    assert trace[0]["effective_time_budget_ms"] == 12_345
+
+
 def test_cli_models_list_can_emit_supported_registry_json(capsys):
     status = main(["models", "list", "--provider", "openai", "--game-agent-supported", "--json"])
 
