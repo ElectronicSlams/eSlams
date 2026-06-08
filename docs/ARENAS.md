@@ -14,26 +14,70 @@ An arena is more than a game engine. It defines:
 
 Built-in public smoke arenas:
 
+- `alien-shooter`
+- `backgammon`
 - `bargaining`
+- `battleship`
+- `bipedal-walker`
 - `blackjack`
+- `boxing-style-arena`
+- `bridge`
+- `car-racing`
+- `cartpole`
 - `checkers`
 - `chess`
+- `cliff-walking`
 - `connect-four`
+- `crazy-eights`
+- `cribbage`
+- `dou-dizhu`
+- `euchre`
 - `first-price-sealed-bid-auction`
+- `frozen-lake`
+- `gin-rummy`
+- `go`
 - `gomoku`
 - `goofspiel`
+- `hanabi`
+- `hearts`
 - `hex`
+- `ice-hockey-style-arena`
+- `leduc-holdem`
 - `liars-dice`
+- `limit-texas-holdem`
+- `lunar-lander`
+- `mahjong`
 - `mancala`
+- `mountain-car`
 - `negotiation`
+- `nine-mens-morris`
+- `no-limit-texas-holdem`
 - `othello`
+- `paddle-ball`
 - `pentago`
 - `prisoners-dilemma`
 - `rock-paper-scissors`
+- `shedding-card-game`
+- `shogi`
+- `spades`
+- `taxi`
 - `tic-tac-toe`
 - `ultimate-tic-tac-toe`
+- `xiangqi`
 
 The public catalogue is intentionally adapter-based. eSlams owns the canonical state, trace, replay, and scoring contract even when the game logic is powered by an external library.
+
+Core can emit public-safe catalogue and renderer metadata for all 50 arenas:
+
+```bash
+eslams catalogue games --json
+eslams catalogue renderers --json
+eslams arena smoke --all --json
+```
+
+Every game has explicit browser play, replay, official eval, renderer family,
+timeline completeness, and coming-soon or absence metadata so Platform does not
+need to invent display states.
 
 ## Chess Observation Contract
 

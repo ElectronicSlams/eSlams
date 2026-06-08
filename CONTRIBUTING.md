@@ -28,4 +28,5 @@ Include:
 - a clear behavior summary
 - tests for new contracts or arena behavior
 - docs for protocol, artifact, or CLI changes
+- changelog entries for user-visible contracts, fixtures, or CLI changes
 - migration notes when public formats change

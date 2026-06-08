@@ -1,0 +1,14 @@
+{
+  "schema_version": "eslams.provider.receipt.v1",
+  "scenario": "provider_error",
+  "provider": "mock",
+  "model": "mock-legal-action",
+  "outcome": "provider_error",
+  "usage": {},
+  "usage_unavailable_reason": "provider_error",
+  "estimated_cost": {
+    "status": "cost_unavailable",
+    "unavailable_reason": "pricing_not_configured"
+  },
+  "redaction_version": "provider-receipt-redaction-v1"
+}

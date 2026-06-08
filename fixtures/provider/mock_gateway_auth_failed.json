@@ -1,0 +1,14 @@
+{
+  "schema_version": "eslams.provider.receipt.v1",
+  "scenario": "gateway_auth_failed",
+  "provider": "mock",
+  "model": "mock-legal-action",
+  "outcome": "gateway_auth_failed",
+  "usage": {},
+  "usage_unavailable_reason": "gateway_auth_failed",
+  "estimated_cost": {
+    "status": "cost_unavailable",
+    "unavailable_reason": "pricing_not_configured"
+  },
+  "redaction_version": "provider-receipt-redaction-v1"
+}

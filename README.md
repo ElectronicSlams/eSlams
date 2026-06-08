@@ -27,6 +27,7 @@ catalogue listed below.
 - [Run Model Agents](#run-model-agents)
 - [Build an HTTP Agent](#build-an-http-agent)
 - [What a Run Produces](#what-a-run-produces)
+- [Platform Contracts](#platform-contracts)
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
@@ -238,6 +239,29 @@ eslams replay runs/latest.eslams
 The replay viewer includes split agent move lists, play/pause playback, public
 state details, and chess-specific board coordinates, side-colored pieces, FEN,
 winner, terminal reason, legal count, check/checkmate status, and score.
+
+## Platform Contracts
+
+Core exposes stable, no-secret contracts for Platform and runner/container
+integrations. See [docs/PLATFORM_CONTRACTS.md](docs/PLATFORM_CONTRACTS.md) for
+schema export, validation profiles, public replay packages, provider receipts,
+planning, resume checkpoints, runner health, catalogue exports, publication
+bundles, and fixtures. See [CHANGELOG.md](CHANGELOG.md) for the release summary
+of contract and CLI changes.
+
+Common integration commands:
+
+```bash
+eslams schemas export --out schemas/
+eslams validate runs/latest.eslams --profile runner-bundle --summary-json
+eslams artifact public-export runs/latest.eslams --out public_replay_package
+eslams replay validate-public public_replay_package
+eslams providers preflight --provider openai --model gpt-5-mini --arena tic-tac-toe
+eslams plan official --suite public-smoke --providers openai --arenas tic-tac-toe --json
+eslams publish export --kind uploaded-replay --artifact runs/latest.eslams --out bundle
+eslams publish validate bundle --json
+eslams arena smoke --all --json
+```
 
 ## Upload to eslams.com
 

@@ -32,6 +32,13 @@ class RunConfig:
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str | None = None
     runner_version: str = "eslams-runner:0.1.0"
+    suite_id: str | None = None
+    case_id: str | None = None
+    suite_fingerprint: str | None = None
+    plan_hash: str | None = None
+    shard_index: int | None = None
+    shard_count: int | None = None
+    model_id_by_player: dict[str, str] | None = None
     seed: int = 1
     max_turns: int | None = None
     time_budget_ms: int = 30_000
@@ -65,7 +72,17 @@ class Runner:
         episode_id = "episode_001"
         state = arena.initial_state(config.seed)
         trace_events: list[TraceEvent] = []
-        replay_events: list[ReplayEvent] = [_replay_event(run_id, episode_id, state, None, [])]
+        replay_events: list[ReplayEvent] = [
+            _replay_event(
+                run_id,
+                episode_id,
+                state,
+                None,
+                [],
+                actor_player=None,
+                state_hash_before=None,
+            )
+        ]
         agent_io: list[dict[str, Any]] = []
         errors: list[dict[str, Any]] = []
         provider_receipts: list[dict[str, Any]] = []
@@ -80,6 +97,8 @@ class Runner:
         match_valid_for_scoring = True
         invalid_reason: str | None = None
         max_turns = config.max_turns or arena.max_turns
+        effective_time_budget_ms = max(1, config.time_budget_ms)
+        suite_context = _suite_context(config)
         start = time.perf_counter()
 
         while not state.terminal and state.turn < max_turns:
@@ -92,24 +111,26 @@ class Runner:
                 episode_id=episode_id,
                 agent=agent,
                 player_id=player_id,
-                time_budget_ms=config.time_budget_ms,
+                time_budget_ms=effective_time_budget_ms,
                 history=history,
                 memory_policy=self.memory_policy,
             )
             response, markers, latency_ms = _call_agent(agent, request)
-            receipt = getattr(agent, "last_receipt", None)
-            if isinstance(receipt, dict):
+            receipt = _last_provider_receipt(agent)
+            attempt_receipts = _provider_attempt_receipts(agent, fallback=receipt)
+            if attempt_receipts:
                 provider_status[player_id] = "ok"
-                provider_receipts.append(
-                    {
-                        **receipt,
-                        "run_id": run_id,
-                        "episode_id": episode_id,
-                        "turn_id": state.turn,
-                        "active_player": player_id,
-                        "latency_ms": latency_ms,
-                    }
-                )
+                for attempt_receipt in attempt_receipts:
+                    provider_receipts.append(
+                        {
+                            **attempt_receipt,
+                            "run_id": run_id,
+                            "episode_id": episode_id,
+                            "turn_id": state.turn,
+                            "active_player": player_id,
+                            "latency_ms": latency_ms,
+                        }
+                    )
             if _has_agent_error(markers):
                 agent_error_count[player_id] += 1
                 provider_status[player_id] = _provider_status(agent, response, markers)
@@ -203,9 +224,22 @@ class Runner:
                 action=action,
                 latency_ms=latency_ms,
                 markers=markers,
+                requested_time_budget_ms=config.time_budget_ms,
+                effective_time_budget_ms=effective_time_budget_ms,
+                suite_context=suite_context,
             )
             trace_events.append(trace)
-            replay_events.append(_replay_event(run_id, episode_id, next_state, action, markers))
+            replay_events.append(
+                _replay_event(
+                    run_id,
+                    episode_id,
+                    next_state,
+                    action,
+                    markers,
+                    actor_player=player_id,
+                    state_hash_before=state.state_hash,
+                )
+            )
             agent_io.append(
                 {
                     "turn_id": state.turn,
@@ -242,6 +276,9 @@ class Runner:
             illegal_action_count_by_player=illegal_action_count,
             fallback_action_count_by_player=fallback_action_count,
             provider_status_by_player=provider_status,
+            suite_context=suite_context,
+            requested_time_budget_ms=config.time_budget_ms,
+            effective_time_budget_ms=effective_time_budget_ms,
         )
         output_name = f"{run_id}.eslams" if config.archive else f"{run_id}.eslams.d"
         artifact_path = config.output_dir / output_name
@@ -257,6 +294,13 @@ class Runner:
             agent_io=agent_io,
             errors=errors,
             provider_receipts=provider_receipts,
+            run_metadata={
+                **suite_context,
+                "requested_time_budget_ms": config.time_budget_ms,
+                "effective_time_budget_ms": effective_time_budget_ms,
+                "max_turns": max_turns,
+                "model_id_by_player": dict(config.model_id_by_player or {}),
+            },
             wrapper_version=config.wrapper_version,
             eval_suite_version=config.eval_suite_version,
             scoring_policy_version=config.scoring_policy_version or f"{arena.id}-score:1.0.0",
@@ -301,6 +345,22 @@ def _agents_for_arena(arena: Arena, config: RunConfig) -> dict[str, Any]:
             value = config.agent_1
         agents[player_id] = _agent(value, seed=config.seed + index)
     return agents
+
+
+def _last_provider_receipt(agent: Any) -> dict[str, Any] | None:
+    receipt = getattr(agent, "last_receipt", None)
+    return receipt if isinstance(receipt, dict) else None
+
+
+def _provider_attempt_receipts(
+    agent: Any,
+    *,
+    fallback: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    receipts = getattr(agent, "attempt_receipts", None)
+    if isinstance(receipts, list):
+        return [receipt for receipt in receipts if isinstance(receipt, dict)]
+    return [fallback] if fallback is not None else []
 
 
 def _publish_latest_links(
@@ -373,6 +433,17 @@ def _request(
     )
 
 
+def _suite_context(config: RunConfig) -> dict[str, Any]:
+    return {
+        "suite_id": config.suite_id,
+        "case_id": config.case_id,
+        "suite_fingerprint": config.suite_fingerprint,
+        "plan_hash": config.plan_hash,
+        "shard_index": config.shard_index,
+        "shard_count": config.shard_count,
+    }
+
+
 def _call_agent(agent: Any, request: ActRequest) -> tuple[ActResponse | None, list[str], int]:
     start = time.perf_counter()
     markers: list[str] = []
@@ -409,16 +480,24 @@ def _trace_event(
     action: Any,
     latency_ms: int,
     markers: list[str],
+    requested_time_budget_ms: int,
+    effective_time_budget_ms: int,
+    suite_context: dict[str, Any],
 ) -> TraceEvent:
     event_id = f"{run_id}:{state.turn:06d}"
     public = {
         "state_hash_before": state.state_hash,
         "state_hash_after": next_state.state_hash,
         "active_player": state.active_player,
+        "actor_player": state.active_player,
+        "seat": state.active_player,
         "action": action,
         "scores": next_state.scores,
         "markers": markers,
         "latency_ms": latency_ms,
+        "requested_time_budget_ms": requested_time_budget_ms,
+        "effective_time_budget_ms": effective_time_budget_ms,
+        "suite_context": suite_context,
         "public_explanation": response.public_explanation if response else None,
     }
     return TraceEvent(
@@ -453,7 +532,13 @@ def _replay_event(
     state: ArenaState,
     action: Any | None,
     markers: list[str],
+    *,
+    actor_player: str | None,
+    state_hash_before: str | None,
 ) -> ReplayEvent:
+    public_reasoning_ref = None
+    if action is not None:
+        public_reasoning_ref = f"public_reasoning/reasoning.jsonl#{state.turn}"
     return ReplayEvent(
         event_id=f"{run_id}:replay:{state.turn:06d}",
         run_id=run_id,
@@ -461,7 +546,17 @@ def _replay_event(
         turn_id=state.turn,
         state_hash=str(state.state_hash),
         active_player=state.active_player,
+        actor_player=actor_player,
+        seat=actor_player,
+        state_hash_before=state_hash_before,
+        state_hash_after=str(state.state_hash),
         action=action,
+        action_label=None if action is None else str(action),
+        public_reasoning_ref=public_reasoning_ref,
+        visibility="public",
+        public_safe=True,
+        state_hash_valid=True,
+        state_hash_invalid_reason=None,
         public_state=state.public_state,
         scores=state.scores,
         terminal=state.terminal,
@@ -484,6 +579,9 @@ def _score_summary(
     illegal_action_count_by_player: dict[str, int],
     fallback_action_count_by_player: dict[str, int],
     provider_status_by_player: dict[str, str],
+    suite_context: dict[str, Any],
+    requested_time_budget_ms: int,
+    effective_time_budget_ms: int,
 ) -> ScoreSummary:
     scores = arena.score(state)
     winner = str(state.outcome["winner"]) if state.outcome and state.outcome.get("winner") else None
@@ -511,9 +609,12 @@ def _score_summary(
             "illegal_action_count_by_player": illegal_action_count_by_player,
             "fallback_action_count_by_player": fallback_action_count_by_player,
             "provider_status_by_player": provider_status_by_player,
+            "suite_context": suite_context,
+            "requested_time_budget_ms": requested_time_budget_ms,
+            "effective_time_budget_ms": effective_time_budget_ms,
             "sample_size": 1,
             "confidence_interval": [primary, primary],
-            "cost_usd": 0.0,
+            "estimated_cost": {"status": "cost_unavailable"},
         },
         verification_level=verification_level,
         match_valid_for_scoring=match_valid_for_scoring,
@@ -522,6 +623,19 @@ def _score_summary(
         illegal_action_count_by_player=illegal_action_count_by_player,
         fallback_action_count_by_player=fallback_action_count_by_player,
         provider_status_by_player=provider_status_by_player,
+        scoring_safety_reason=invalid_reason,
+        aggregate_usage={
+            "input_tokens": None,
+            "output_tokens": None,
+            "cached_input_tokens": None,
+            "reasoning_tokens": None,
+            "total_tokens": None,
+            "usage_unavailable_reason": "no_provider_usage_recorded",
+        },
+        aggregate_cost={
+            "status": "cost_unavailable",
+            "unavailable_reason": "pricing_not_configured",
+        },
     )
 
 

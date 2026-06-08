@@ -8,12 +8,26 @@ import json
 import os
 import shutil
 import zipfile
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
+from eslams.contracts.artifact import (
+    ARTIFACT_PROFILES,
+    PublicArtifactManifest,
+    PublicResultSummary,
+)
+from eslams.contracts.replay import PublicReasoningRow, PublicReplayManifest, ReplayParticipant
+from eslams.contracts.safety import scan_public_payload
+from eslams.contracts.versions import (
+    ARTIFACT_MANIFEST_SCHEMA_VERSION,
+    ARTIFACT_VALIDATION_SCHEMA_VERSION,
+    OFFICIAL_RESULT_SCHEMA_VERSION,
+    REPLAY_MANIFEST_SCHEMA_VERSION,
+)
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 from eslams.replay import render_replay_html
@@ -45,6 +59,31 @@ REQUIRED_FILES = {
     "broadcast/broadcast_manifest.json",
     "broadcast/vod_metadata.json",
 }
+PUBLIC_REPLAY_PACKAGE_REQUIRED_FILES = {
+    "manifest.json",
+    "replay/replay_events.jsonl",
+    "replay/replay_manifest.json",
+}
+PUBLIC_SUMMARY_FILES = {
+    "public/public_manifest.json",
+    "public/public_result_summary.json",
+    "validation/validation_summary.json",
+    "scores/official_result.json",
+}
+PROFILE_REQUIRED_FILES = {
+    "runner_bundle": REQUIRED_FILES,
+    "official_bundle": REQUIRED_FILES | {"scores/official_result.json"},
+    "battlefield_bundle": REQUIRED_FILES
+    | {"public/public_manifest.json", "public/public_result_summary.json"},
+    "public_replay_package": PUBLIC_REPLAY_PACKAGE_REQUIRED_FILES,
+}
+PROFILE_ALIASES = {
+    "runner-bundle": "runner_bundle",
+    "official-bundle": "official_bundle",
+    "battlefield-bundle": "battlefield_bundle",
+    "public-replay-package": "public_replay_package",
+    "auto": "auto",
+}
 
 
 def utc_now_iso() -> str:
@@ -74,15 +113,29 @@ class ArtifactManifest:
     files: list[dict[str, Any]]
     hash_algorithm: str
     signature: dict[str, Any]
+    manifest_schema_version: str = ARTIFACT_MANIFEST_SCHEMA_VERSION
+    artifact_profile: str = "runner_bundle"
+    artifact_kind: str = "local_match"
+    model_identity_by_player: dict[str, Any] = field(default_factory=dict)
+    run_metadata: dict[str, Any] = field(default_factory=dict)
+    scoring_safety_reason: str | None = None
+    runner_signature_status: str = "unsigned"
+    public_exports: dict[str, Any] = field(default_factory=dict)
+    validation_summary_path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "manifest_schema_version": self.manifest_schema_version,
             "artifact_version": self.artifact_version,
+            "artifact_profile": self.artifact_profile,
+            "artifact_kind": self.artifact_kind,
             "artifact_id": self.artifact_id,
             "run_id": self.run_id,
             "created_at": self.created_at,
             "agent_version": self.agent_version,
             "arena_version": self.arena_version,
+            "model_identity_by_player": self.model_identity_by_player,
+            "run_metadata": self.run_metadata,
             "wrapper_version": self.wrapper_version,
             "eval_suite_version": self.eval_suite_version,
             "scoring_policy_version": self.scoring_policy_version,
@@ -95,6 +148,10 @@ class ArtifactManifest:
             "illegal_action_count_by_player": self.illegal_action_count_by_player,
             "fallback_action_count_by_player": self.fallback_action_count_by_player,
             "provider_status_by_player": self.provider_status_by_player,
+            "scoring_safety_reason": self.scoring_safety_reason,
+            "runner_signature_status": self.runner_signature_status,
+            "public_exports": self.public_exports,
+            "validation_summary_path": self.validation_summary_path,
             "files": self.files,
             "hash_algorithm": self.hash_algorithm,
             "signature": self.signature,
@@ -114,6 +171,7 @@ class ArtifactBuildInput:
     agent_io: list[dict[str, Any]]
     errors: list[dict[str, Any]]
     provider_receipts: list[dict[str, Any]] = field(default_factory=list)
+    run_metadata: dict[str, Any] = field(default_factory=dict)
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str = "standard-score:1.0.0"
@@ -170,6 +228,15 @@ class ArtifactValidationReport:
     errors: list[str]
     signature: SignatureValidationStatus
     deterministic_replay: DeterministicReplayValidationStatus
+    profile: str = "runner_bundle"
+    artifact: str | None = None
+    artifact_id: str | None = None
+    run_id: str | None = None
+    verification_level: str | None = None
+    scoring_eligible: bool | None = None
+    archive_sha256: str | None = None
+    artifact_size_bytes: int | None = None
+    schema_version: str = ARTIFACT_VALIDATION_SCHEMA_VERSION
 
     @property
     def valid(self) -> bool:
@@ -177,12 +244,26 @@ class ArtifactValidationReport:
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
+            "schema_version": self.schema_version,
             "valid": self.valid,
+            "validation_status": "valid" if self.valid else "invalid",
+            "profile": self.profile,
+            "artifact": self.artifact,
+            "artifact_id": self.artifact_id,
+            "run_id": self.run_id,
+            "verification_level": self.verification_level,
+            "scoring_eligible": self.scoring_eligible,
+            "archive_sha256": self.archive_sha256,
+            "artifact_size_bytes": self.artifact_size_bytes,
             "signature": self.signature.to_dict(),
+            "runner_signature_status": self.signature.status,
             "deterministic_replay": self.deterministic_replay.to_dict(),
+            "replay_status": self.deterministic_replay.status,
         }
         if self.errors:
             payload["errors"] = self.errors
+        else:
+            payload["errors"] = []
         return payload
 
 
@@ -219,18 +300,19 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         artifact_dir / "replay/replay_events.jsonl",
         (event.to_dict() for event in build.replay_events),
     )
-    _write_json(
-        artifact_dir / "replay/replay_manifest.json",
-        {
-            "replay_version": "eslams-replay-v1",
-            "run_id": build.run_id,
-            "event_count": len(build.replay_events),
-            "privacy": "public",
-            "renderer": "eslams-html-v1",
-        },
+    arena_id = _arena_id_from_version(build.arena_version)
+    replay_manifest = _public_replay_manifest(build, arena_id)
+    _write_json(artifact_dir / "replay/replay_manifest.json", replay_manifest)
+    _write_jsonl(
+        artifact_dir / "public_reasoning/reasoning.jsonl",
+        _public_reasoning_rows(build.replay_events),
     )
     render_replay_html(artifact_dir)
     _write_json(artifact_dir / "scores/score.json", build.score.to_dict())
+    _write_json(
+        artifact_dir / "scores/official_result.json",
+        _official_result_summary(build.score, arena_id),
+    )
     _write_json(artifact_dir / "scores/metrics.json", build.metrics)
     (artifact_dir / "logs/runner.log").write_text(build.runner_log, encoding="utf-8")
     _write_jsonl(artifact_dir / "logs/agent_io.jsonl", build.agent_io)
@@ -251,9 +333,51 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
             "broadcast_version": "eslams-broadcast-v1",
             "run_id": build.run_id,
             "vod_available": False,
+            "broadcastVideoAvailable": False,
         },
     )
-    _write_json(artifact_dir / "broadcast/vod_metadata.json", {"status": "not_requested"})
+    _write_json(
+        artifact_dir / "broadcast/vod_metadata.json",
+        {
+            "status": "not_requested",
+            "failure_reason": "video_generation_not_owned_by_core",
+        },
+    )
+    _write_json(
+        artifact_dir / "public/public_result_summary.json",
+        _public_result_summary(build.score, arena_id).to_dict(),
+    )
+    _write_json(
+        artifact_dir / "public/public_manifest.json",
+        PublicArtifactManifest(
+            run_id=build.run_id,
+            artifact_id="see-manifest",
+            arena_id=arena_id,
+            artifact_profile="runner_bundle",
+            artifact_kind="local_match",
+            replay_manifest_path="replay/replay_manifest.json",
+            replay_events_path="replay/replay_events.jsonl",
+            public_result_summary_path="public/public_result_summary.json",
+            notes=["Artifact id is recorded in manifest.json to avoid recursive hashing."],
+        ).to_dict(),
+    )
+    _write_json(
+        artifact_dir / "validation/validation_summary.json",
+        {
+            "schema_version": ARTIFACT_VALIDATION_SCHEMA_VERSION,
+            "artifact": str(output_path),
+            "profile": "runner_bundle",
+            "valid": True,
+            "validation_status": "not_validated_at_write_time",
+            "errors": [],
+            "run_id": build.run_id,
+            "artifact_id": "see-manifest",
+            "verification_level": build.verification_level,
+            "replay_status": "recorded",
+            "scoring_eligible": build.score.match_valid_for_scoring,
+            "runner_signature_status": "pending",
+        },
+    )
 
     signing_key = _runner_signing_key()
     files = _file_entries(artifact_dir)
@@ -288,6 +412,22 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         illegal_action_count_by_player=build.score.illegal_action_count_by_player,
         fallback_action_count_by_player=build.score.fallback_action_count_by_player,
         provider_status_by_player=build.score.provider_status_by_player,
+        scoring_safety_reason=build.score.scoring_safety_reason,
+        runner_signature_status="signed" if signing_key is not None else "unsigned",
+        model_identity_by_player=_model_identity_by_player(build.agent_version),
+        run_metadata={
+            "time_source": "system_utc",
+            "artifact_writer": "eslams-core",
+            **build.run_metadata,
+        },
+        public_exports={
+            "public_manifest": "public/public_manifest.json",
+            "public_result_summary": "public/public_result_summary.json",
+            "public_replay_manifest": "replay/replay_manifest.json",
+            "public_replay_events": "replay/replay_events.jsonl",
+            "public_reasoning": "public_reasoning/reasoning.jsonl",
+        },
+        validation_summary_path="validation/validation_summary.json",
         files=files,
         hash_algorithm="sha256",
         signature=_manifest_signature_metadata(signed=signing_key is not None),
@@ -330,39 +470,126 @@ def expanded_artifact_path(path: Path) -> Path:
     return archive_artifact_path(path).with_suffix(".eslams.d")
 
 
-class ArtifactValidator:
-    def validate(self, path: Path) -> list[str]:
-        return self.validate_report(path).errors
+@contextmanager
+def open_artifact(path: Path) -> Iterator[Path]:
+    """Materialize an artifact archive or directory for read-only inspection."""
 
-    def validate_report(self, path: Path) -> ArtifactValidationReport:
+    artifact_dir, cleanup = _materialize(path)
+    try:
+        yield artifact_dir
+    finally:
+        if cleanup:
+            shutil.rmtree(artifact_dir, ignore_errors=True)
+
+
+def read_member(path: Path, member: str) -> bytes:
+    """Read a member from an expanded or archived artifact."""
+
+    member_path = _safe_artifact_subpath(member)
+    if member_path is None:
+        raise ValueError(f"invalid artifact member path {member!r}")
+    path = path.resolve()
+    if path.is_dir():
+        return (path / member_path).read_bytes()
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as zf:
+            return zf.read(member_path.as_posix())
+    raise FileNotFoundError(path)
+
+
+def extract_validation_summary(path: Path) -> dict[str, Any] | None:
+    return _extract_json_member(path, "validation/validation_summary.json")
+
+
+def extract_provider_usage(path: Path) -> dict[str, Any]:
+    rows = _extract_jsonl_member(path, "receipts/provider_receipts.jsonl")
+    totals = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cached_input_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 0,
+    }
+    unavailable_reasons: list[str] = []
+    for row in rows:
+        usage = row.get("usage")
+        if not isinstance(usage, dict):
+            reason = row.get("usage_unavailable_reason")
+            if isinstance(reason, str):
+                unavailable_reasons.append(reason)
+            continue
+        for key in totals:
+            value = usage.get(key)
+            if isinstance(value, int) and not isinstance(value, bool):
+                totals[key] += value
+    return {
+        "usage": totals,
+        "usage_unavailable_reasons": sorted(set(unavailable_reasons)),
+        "receipt_count": len(rows),
+    }
+
+
+def extract_public_manifest(path: Path) -> dict[str, Any] | None:
+    return _extract_json_member(path, "public/public_manifest.json")
+
+
+class ArtifactValidator:
+    def validate(self, path: Path, *, profile: str = "runner_bundle") -> list[str]:
+        return self.validate_report(path, profile=profile).errors
+
+    def validate_report(
+        self,
+        path: Path,
+        *,
+        profile: str = "runner_bundle",
+    ) -> ArtifactValidationReport:
         artifact_dir, cleanup = _materialize(path)
         try:
-            return self._validate_dir(artifact_dir)
+            normalized_profile = _normalize_validation_profile(profile, artifact_dir)
+            return self._validate_dir(artifact_dir, normalized_profile, path.resolve())
         finally:
             if cleanup:
                 shutil.rmtree(artifact_dir, ignore_errors=True)
 
-    def _validate_dir(self, artifact_dir: Path) -> ArtifactValidationReport:
+    def _validate_dir(
+        self,
+        artifact_dir: Path,
+        profile: str,
+        source_path: Path,
+    ) -> ArtifactValidationReport:
         errors: list[str] = []
-        missing = sorted(rel for rel in REQUIRED_FILES if not (artifact_dir / rel).exists())
+        required_files = PROFILE_REQUIRED_FILES[profile]
+        missing = sorted(rel for rel in required_files if not (artifact_dir / rel).exists())
         errors.extend(f"missing required file: {rel}" for rel in missing)
         manifest_path = artifact_dir / "manifest.json"
         if not manifest_path.exists():
-            return ArtifactValidationReport(
+            return _validation_report(
                 errors=errors,
                 signature=SignatureValidationStatus(status="not_checked"),
                 deterministic_replay=DeterministicReplayValidationStatus(status="not_checked"),
+                profile=profile,
+                source_path=source_path,
+                artifact_dir=artifact_dir,
             )
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
-            return ArtifactValidationReport(
+            return _validation_report(
                 errors=[*errors, f"manifest is invalid JSON: {exc}"],
                 signature=SignatureValidationStatus(status="not_checked"),
                 deterministic_replay=DeterministicReplayValidationStatus(status="not_checked"),
+                profile=profile,
+                source_path=source_path,
+                artifact_dir=artifact_dir,
             )
         if manifest.get("artifact_version") != ARTIFACT_VERSION:
             errors.append("manifest.artifact_version is unsupported")
+        manifest_schema_version = manifest.get("manifest_schema_version")
+        if (
+            manifest_schema_version is not None
+            and manifest_schema_version != ARTIFACT_MANIFEST_SCHEMA_VERSION
+        ):
+            errors.append("manifest.manifest_schema_version is unsupported")
         file_entries = manifest.get("files")
         if not isinstance(file_entries, list):
             errors.append("manifest.files must be a list")
@@ -372,55 +599,410 @@ class ArtifactValidator:
                 manifest_path,
             )
             errors.extend(signature_errors)
-            replay_status, replay_errors = _validate_deterministic_replay(
+            replay_status, replay_errors = _profile_replay_validation(
                 artifact_dir,
                 manifest,
+                profile,
             )
             errors.extend(replay_errors)
-            return ArtifactValidationReport(
+            errors.extend(
+                _profile_specific_errors(artifact_dir, manifest, profile, signature_status)
+            )
+            errors.extend(_public_safety_errors(artifact_dir, profile))
+            return _validation_report(
                 errors=errors,
                 signature=signature_status,
                 deterministic_replay=replay_status,
+                profile=profile,
+                source_path=source_path,
+                artifact_dir=artifact_dir,
+                manifest=manifest,
             )
-        for entry in file_entries:
-            if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
-                errors.append("manifest.files contains invalid entry")
-                continue
-            file_path = artifact_dir / entry["path"]
-            if not file_path.exists():
-                errors.append(f"manifest file missing on disk: {entry['path']}")
-                continue
-            expected = entry.get("sha256")
-            actual = sha256_file(file_path)
-            if expected != actual:
-                errors.append(f"hash mismatch for {entry['path']}")
-        expected_artifact_id = sha256_json(sorted(file_entries, key=lambda item: item["path"]))
-        if manifest.get("artifact_id") != expected_artifact_id:
-            errors.append("manifest.artifact_id does not match file table")
+        errors.extend(_validate_file_table(artifact_dir, manifest, file_entries))
         signature_status, signature_errors = _validate_runner_signature(
             artifact_dir,
             manifest,
             manifest_path,
         )
         errors.extend(signature_errors)
-        replay_status, replay_errors = _validate_deterministic_replay(
+        replay_status, replay_errors = _profile_replay_validation(
             artifact_dir,
             manifest,
+            profile,
         )
         errors.extend(replay_errors)
-        return ArtifactValidationReport(
+        errors.extend(_profile_specific_errors(artifact_dir, manifest, profile, signature_status))
+        errors.extend(_public_safety_errors(artifact_dir, profile))
+        return _validation_report(
             errors=errors,
             signature=signature_status,
             deterministic_replay=replay_status,
+            profile=profile,
+            source_path=source_path,
+            artifact_dir=artifact_dir,
+            manifest=manifest,
         )
 
 
+def _normalize_validation_profile(profile: str, artifact_dir: Path) -> str:
+    normalized = PROFILE_ALIASES.get(profile, profile).replace("-", "_")
+    if normalized == "auto":
+        manifest_path = artifact_dir / "manifest.json"
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                return "runner_bundle"
+            artifact_profile = manifest.get("artifact_profile")
+            if isinstance(artifact_profile, str):
+                candidate = PROFILE_ALIASES.get(artifact_profile, artifact_profile).replace(
+                    "-",
+                    "_",
+                )
+                if candidate in PROFILE_REQUIRED_FILES:
+                    return candidate
+        return "runner_bundle"
+    if normalized not in PROFILE_REQUIRED_FILES:
+        valid = ", ".join(sorted((*ARTIFACT_PROFILES, "auto")))
+        raise ValueError(f"validation profile must be one of: {valid}")
+    return normalized
+
+
+def _validate_file_table(
+    artifact_dir: Path,
+    manifest: dict[str, Any],
+    file_entries: list[Any],
+) -> list[str]:
+    errors: list[str] = []
+    valid_entries: list[dict[str, Any]] = []
+    for entry in file_entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            errors.append("manifest.files contains invalid entry")
+            continue
+        valid_entries.append(entry)
+        file_path = artifact_dir / entry["path"]
+        if not file_path.exists():
+            errors.append(f"manifest file missing on disk: {entry['path']}")
+            continue
+        expected = entry.get("sha256")
+        actual = sha256_file(file_path)
+        if expected != actual:
+            errors.append(f"hash mismatch for {entry['path']}")
+    expected_artifact_id = sha256_json(sorted(valid_entries, key=lambda item: item["path"]))
+    if manifest.get("artifact_id") != expected_artifact_id:
+        errors.append("manifest.artifact_id does not match file table")
+    return errors
+
+
+def _profile_replay_validation(
+    artifact_dir: Path,
+    manifest: dict[str, Any],
+    profile: str,
+) -> tuple[DeterministicReplayValidationStatus, list[str]]:
+    if profile == "public_replay_package":
+        errors: list[str] = []
+        replay_rows = _read_jsonl(artifact_dir / "replay/replay_events.jsonl", errors)
+        replay_count = len(replay_rows) if replay_rows is not None else None
+        replay_manifest_path = artifact_dir / "replay/replay_manifest.json"
+        try:
+            replay_manifest = json.loads(replay_manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(f"replay/replay_manifest.json cannot be read: {exc}")
+            replay_manifest = {}
+        if (
+            isinstance(replay_manifest, dict)
+            and replay_manifest.get("schema_version") not in {None, REPLAY_MANIFEST_SCHEMA_VERSION}
+        ):
+            errors.append("replay manifest schema_version is unsupported")
+        return (
+            DeterministicReplayValidationStatus(
+                status="not_required_for_public_profile" if not errors else "invalid",
+                verified=not errors,
+                replay_event_count=replay_count,
+            ),
+            errors,
+        )
+    return _validate_deterministic_replay(artifact_dir, manifest)
+
+
+def _profile_specific_errors(
+    artifact_dir: Path,
+    manifest: dict[str, Any],
+    profile: str,
+    signature: SignatureValidationStatus,
+) -> list[str]:
+    errors: list[str] = []
+    if profile == "official_bundle":
+        if signature.status in {"unsigned", "missing", "not_checked"}:
+            errors.append("runner_signature_missing")
+        if not (artifact_dir / "scores/official_result.json").exists():
+            errors.append("missing required file: scores/official_result.json")
+    if profile == "public_replay_package":
+        artifact_profile = manifest.get("artifact_profile")
+        if artifact_profile not in {None, "public_replay_package", "uploaded_replay"}:
+            errors.append("public replay package has incompatible artifact_profile")
+    return errors
+
+
+def _public_safety_errors(artifact_dir: Path, profile: str) -> list[str]:
+    errors: list[str] = []
+    candidates = [
+        "replay/replay_events.jsonl",
+        "replay/replay_manifest.json",
+        "public/public_manifest.json",
+        "public/public_result_summary.json",
+        "public_reasoning/reasoning.jsonl",
+    ]
+    if profile == "public_replay_package":
+        candidates.append("manifest.json")
+    for rel in candidates:
+        path = artifact_dir / rel
+        if not path.exists():
+            continue
+        if path.suffix == ".jsonl":
+            rows = _read_public_jsonl(path)
+            for row_index, row in enumerate(rows):
+                for issue in scan_public_payload(row, root=f"{rel}[{row_index}]"):
+                    errors.append(
+                        f"unsafe public payload key in {rel}: {issue.path} ({issue.key})"
+                    )
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            errors.append(f"{rel} is invalid JSON: {exc}")
+            continue
+        for issue in scan_public_payload(payload, root=rel):
+            errors.append(f"unsafe public payload key in {rel}: {issue.path} ({issue.key})")
+    return errors
+
+
+def _read_public_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            rows.append({"invalid_json_line": line_number})
+            continue
+        if isinstance(value, dict):
+            rows.append(value)
+    return rows
+
+
+def _extract_json_member(path: Path, member: str) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(read_member(path, member).decode("utf-8"))
+    except (OSError, KeyError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _extract_jsonl_member(path: Path, member: str) -> list[dict[str, Any]]:
+    try:
+        lines = read_member(path, member).decode("utf-8").splitlines()
+    except (OSError, KeyError):
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            rows.append(value)
+    return rows
+
+
+def _validation_report(
+    *,
+    errors: list[str],
+    signature: SignatureValidationStatus,
+    deterministic_replay: DeterministicReplayValidationStatus,
+    profile: str,
+    source_path: Path,
+    artifact_dir: Path,
+    manifest: dict[str, Any] | None = None,
+) -> ArtifactValidationReport:
+    return ArtifactValidationReport(
+        errors=errors,
+        signature=signature,
+        deterministic_replay=deterministic_replay,
+        profile=profile,
+        artifact=str(source_path),
+        artifact_id=_optional_manifest_str(manifest, "artifact_id"),
+        run_id=_optional_manifest_str(manifest, "run_id"),
+        verification_level=_optional_manifest_str(manifest, "verification_level"),
+        scoring_eligible=_optional_manifest_bool(manifest, "match_valid_for_scoring"),
+        archive_sha256=_artifact_source_hash(source_path, artifact_dir),
+        artifact_size_bytes=_artifact_source_size(source_path, artifact_dir),
+    )
+
+
+def _optional_manifest_str(manifest: dict[str, Any] | None, key: str) -> str | None:
+    if manifest is None:
+        return None
+    value = manifest.get(key)
+    return value if isinstance(value, str) else None
+
+
+def _optional_manifest_bool(manifest: dict[str, Any] | None, key: str) -> bool | None:
+    if manifest is None:
+        return None
+    value = manifest.get(key)
+    return value if isinstance(value, bool) else None
+
+
+def _artifact_source_hash(source_path: Path, artifact_dir: Path) -> str | None:
+    if source_path.is_file():
+        return sha256_file(source_path)
+    if artifact_dir.is_dir():
+        return sha256_json(_file_entries(artifact_dir))
+    return None
+
+
+def _artifact_source_size(source_path: Path, artifact_dir: Path) -> int | None:
+    if source_path.is_file():
+        return source_path.stat().st_size
+    if artifact_dir.is_dir():
+        return sum(path.stat().st_size for path in artifact_dir.rglob("*") if path.is_file())
+    return None
+
+
 def _write_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
 
 
 def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
+
+
+def _arena_id_from_version(arena_version: str) -> str:
+    return arena_version.split(":", 1)[0] if ":" in arena_version else arena_version
+
+
+def _model_identity_by_player(agent_version: str) -> dict[str, dict[str, str]]:
+    identities: dict[str, dict[str, str]] = {}
+    for item in agent_version.split(";"):
+        parts = item.split(":")
+        if len(parts) < 3:
+            continue
+        player_id = parts[0]
+        identities[player_id] = {
+            "agent_id": parts[1],
+            "agent_version": ":".join(parts[2:]),
+        }
+    return identities
+
+
+def _public_replay_manifest(build: ArtifactBuildInput, arena_id: str) -> dict[str, Any]:
+    event_count = len(build.replay_events)
+    move_frame_count = sum(1 for event in build.replay_events if event.action is not None)
+    state_frame_count = sum(1 for event in build.replay_events if event.public_state)
+    visible_frame_count = sum(1 for event in build.replay_events if event.visibility == "public")
+    setup_only = move_frame_count == 0
+    timeline_completeness = "setup_only" if setup_only else "playable"
+    reasoning_count = sum(1 for event in build.replay_events if event.public_reasoning_ref)
+    participants = [
+        ReplayParticipant(
+            player_id=player_id,
+            seat=player_id,
+            label=player_id.replace("_", " ").title(),
+            model_identity=_model_identity_by_player(build.agent_version).get(player_id, {}),
+        )
+        for player_id in sorted(build.score.scores_by_player)
+    ]
+    return PublicReplayManifest(
+        replay_id=f"{build.run_id}:public-replay",
+        run_id=build.run_id,
+        arena_id=arena_id,
+        variant_id="default",
+        event_count=event_count,
+        visible_frame_count=visible_frame_count,
+        state_frame_count=state_frame_count,
+        move_frame_count=move_frame_count,
+        setup_only=setup_only,
+        timeline_completeness=timeline_completeness,
+        renderer_kind="eslams-html-v1",
+        render_hints_version="render-hints-v1",
+        public_state_shape_version="public-state-v1",
+        has_public_state=state_frame_count > 0,
+        state_hash_valid=True,
+        participants=participants,
+        showcase_ready=not setup_only and visible_frame_count >= 2,
+        minimum_autoplay_frames=2,
+        autoplay_ready=not setup_only and visible_frame_count >= 2,
+        reasoning_frame_coverage=(
+            reasoning_count / move_frame_count if move_frame_count else 0.0
+        ),
+    ).to_dict()
+
+
+def _public_reasoning_rows(replay_events: list[ReplayEvent]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for event in replay_events:
+        if event.action is None:
+            continue
+        rows.append(
+            PublicReasoningRow(
+                turn=event.turn_id,
+                seat=event.seat,
+                actor_player=event.actor_player,
+                action=event.action,
+                state_hash_before=event.state_hash_before,
+                state_hash_after=event.state_hash_after,
+                public_explanation=None,
+                source_event_id=event.event_id,
+            ).to_dict()
+        )
+    return rows
+
+
+def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSummary:
+    reason = None
+    if score.outcome and isinstance(score.outcome.get("reason"), str):
+        reason = cast(str, score.outcome["reason"])
+    return PublicResultSummary(
+        run_id=score.run_id,
+        arena_id=arena_id,
+        winner=score.winner,
+        outcome=score.outcome,
+        score={
+            "primary_score": score.primary_score,
+            "scores_by_player": score.scores_by_player,
+        },
+        reason=reason,
+        valid_for_scoring=score.match_valid_for_scoring,
+        scoring_safety_reason=score.scoring_safety_reason,
+    )
+
+
+def _official_result_summary(score: ScoreSummary, arena_id: str) -> dict[str, Any]:
+    public_summary = _public_result_summary(score, arena_id).to_dict()
+    return {
+        **public_summary,
+        "schema_version": OFFICIAL_RESULT_SCHEMA_VERSION,
+        "case_counts": {
+            "completed": 1,
+            "failed": 0 if score.match_valid_for_scoring else 1,
+            "non_scoring": 0 if score.match_valid_for_scoring else 1,
+        },
+        "aggregate_usage": score.aggregate_usage,
+        "aggregate_cost": score.aggregate_cost,
+        "proof_counts": {
+            "artifact": 1,
+            "public_replay": 1,
+            "provider_receipt": 0,
+        },
+        "runner_signature_status": "pending",
+        "audit_links": [],
+    }
 
 
 def _validate_deterministic_replay(
