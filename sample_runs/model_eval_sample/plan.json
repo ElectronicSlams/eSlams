@@ -1,0 +1,40 @@
+{
+  "schema_version": "eslams.eval.plan.v1",
+  "kind": "official",
+  "generated_at": "1970-01-01T00:00:00Z",
+  "plan_hash": "fixture-plan",
+  "suite_fingerprint": "fixture-suite",
+  "core_version": "0.1.0",
+  "runner_version": "eslams-runner:0.1.0",
+  "registry_hash": "fixture-registry",
+  "selected_providers": [
+    "builtin"
+  ],
+  "selected_models": [
+    "builtin:first-legal"
+  ],
+  "selected_arenas": [
+    "tic-tac-toe"
+  ],
+  "case_count_expected": 1,
+  "shards": [
+    {
+      "shard_index": 0,
+      "shard_count": 1,
+      "case_count": 1,
+      "case_ids": [
+        "official-fixture:builtin:first-legal:tic-tac-toe"
+      ]
+    }
+  ],
+  "required_environment_names": [],
+  "output_references": [
+    {
+      "kind": "artifact_directory",
+      "path": "sample_runs/model_eval_sample"
+    }
+  ],
+  "policy_ids": [
+    "official-eval-v1"
+  ]
+}
