@@ -58,6 +58,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     run.add_argument("--seed", type=int, default=1)
     run.add_argument("--max-turns", type=int)
+    run.add_argument(
+        "--time-budget-ms",
+        type=int,
+        default=30_000,
+        help="Per-action agent time budget in milliseconds.",
+    )
     run.add_argument("--output-dir", type=Path, default=Path("runs"))
     run.add_argument(
         "--archive",
@@ -129,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
                 agent_2=agent_2,
                 seed=args.seed,
                 max_turns=args.max_turns,
+                time_budget_ms=args.time_budget_ms,
                 output_dir=args.output_dir,
                 archive=args.archive,
                 on_agent_error=args.on_agent_error,
