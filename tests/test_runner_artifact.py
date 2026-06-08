@@ -191,6 +191,8 @@ def test_cli_run_accepts_artifact_provenance_metadata(tmp_path: Path, monkeypatc
             "real-provider-smoke:1.0.0",
             "--runner-version",
             "eslams-real-eval-runner:0.1.0",
+            "--time-budget-ms",
+            "45000",
         ]
     )
 
@@ -208,6 +210,8 @@ def test_cli_run_accepts_artifact_provenance_metadata(tmp_path: Path, monkeypatc
     assert payload["artifact"].endswith(".eslams")
     assert payload["expanded_artifact"].endswith(".eslams.d")
     assert payload["summary"]["match_valid_for_scoring"] is True
+    trace = _read_jsonl(expanded / "traces" / "auditor_trace.jsonl")
+    assert trace[0]["request"]["time_budget_ms"] == 45_000
     assert ArtifactValidator().validate_report(artifacts[0]).signature.verified is True
 
 
