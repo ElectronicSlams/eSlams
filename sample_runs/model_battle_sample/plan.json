@@ -1,0 +1,40 @@
+{
+  "schema_version": "eslams.eval.plan.v1",
+  "kind": "battlefield",
+  "generated_at": "1970-01-01T00:00:00Z",
+  "suite_fingerprint": "sha256:ef3f5274b1254e4ac44b584150a72fccf07a9e94ca7cf0cd4d96226f67007b7c",
+  "core_version": "0.1.0",
+  "runner_version": "eslams-runner:0.1.0",
+  "registry_hash": "sha256:4ab07bef71055ca49ae5ea17d3d79bedf2db0e50df437084f7392fc3628a0b82",
+  "selected_providers": [
+    "cursor-harness"
+  ],
+  "selected_models": [
+    "cursor-harness:composer-2.5_vs_cursor-harness:grok-build-0.1"
+  ],
+  "selected_arenas": [
+    "chess"
+  ],
+  "case_count_expected": 1,
+  "shards": [
+    {
+      "shard_index": 0,
+      "shard_count": 1,
+      "case_count": 1,
+      "case_ids": [
+        "battlefield:cursor-harness:composer-2.5_vs_cursor-harness:grok-build-0.1:chess"
+      ]
+    }
+  ],
+  "required_environment_names": [],
+  "output_references": [
+    {
+      "kind": "artifact_directory",
+      "path": "runs/battlefield"
+    }
+  ],
+  "policy_ids": [
+    "battlefield-smoke-v1"
+  ],
+  "plan_hash": "sha256:4a58ae3c85626f16861085072333a24d952fe5874a064c35fbc59b7aba90f61f"
+}
