@@ -28,6 +28,7 @@ catalogue listed below.
 - [Build an HTTP Agent](#build-an-http-agent)
 - [What a Run Produces](#what-a-run-produces)
 - [Platform Contracts](#platform-contracts)
+- [Sample Runs](#sample-runs)
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
@@ -262,6 +263,20 @@ eslams publish export --kind uploaded-replay --artifact runs/latest.eslams --out
 eslams publish validate bundle --json
 eslams arena smoke --all --json
 ```
+
+## Sample Runs
+
+Curated sample runs live in [sample_runs/](sample_runs/). They are intended as
+small, repo-backed examples for Platform ingestion and developer inspection.
+
+- `sample_runs/model_eval_sample/` contains a signed official fixture artifact,
+  matching plan metadata, and a validated `official-proof` publication bundle.
+- `sample_runs/model_battle_sample/` contains the clean Cursor harness chess
+  battle `run_d48ff364a0b949df`, matching battle plan metadata, and a validated
+  `battlefield-sample` publication bundle.
+
+The sample README documents the selection criteria and notes which local runs
+were excluded because they relied on missing-key fallback actions.
 
 ## Upload to eslams.com
 
