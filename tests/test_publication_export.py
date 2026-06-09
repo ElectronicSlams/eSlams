@@ -84,6 +84,16 @@ def test_publication_battlefield_sample_fixture_validates():
     assert validate_publication_bundle(fixture)["valid"] is True
 
 
+def test_sample_run_publication_bundles_validate_against_current_contract():
+    official = Path("sample_runs/model_eval_sample/publication_bundle")
+    battlefield = Path("sample_runs/model_battle_sample/publication_bundle")
+
+    assert official.exists()
+    assert battlefield.exists()
+    assert validate_publication_bundle(official)["valid"] is True
+    assert validate_publication_bundle(battlefield)["valid"] is True
+
+
 def test_cli_publish_export_and_validate(tmp_path: Path):
     result = Runner().run(
         RunConfig(arena_id="tic-tac-toe", seed=4, output_dir=tmp_path, archive=True)

@@ -2,15 +2,15 @@
   "schema_version": "eslams.eval.plan.v1",
   "kind": "battlefield",
   "generated_at": "1970-01-01T00:00:00Z",
-  "suite_fingerprint": "sha256:ef3f5274b1254e4ac44b584150a72fccf07a9e94ca7cf0cd4d96226f67007b7c",
-  "core_version": "0.1.0",
-  "runner_version": "eslams-runner:0.1.0",
-  "registry_hash": "sha256:4ab07bef71055ca49ae5ea17d3d79bedf2db0e50df437084f7392fc3628a0b82",
+  "suite_fingerprint": "sha256:e16245f26226198642687e235b1810f548e75f502c113a8a434a956afc4e0ce7",
+  "core_version": "0.2.0",
+  "runner_version": "eslams-runner:0.2.0",
+  "registry_hash": "sha256:4abc93b089ac4a14b9505131afd15ac2ea659482f41c21c96d2c99f8722c2c78",
   "selected_providers": [
-    "cursor-harness"
+    "builtin"
   ],
   "selected_models": [
-    "cursor-harness:composer-2.5_vs_cursor-harness:grok-build-0.1"
+    "builtin:first-legal+builtin:first-legal"
   ],
   "selected_arenas": [
     "chess"
@@ -22,7 +22,7 @@
       "shard_count": 1,
       "case_count": 1,
       "case_ids": [
-        "battlefield:cursor-harness:composer-2.5_vs_cursor-harness:grok-build-0.1:chess"
+        "battlefield:builtin:first-legal+builtin:first-legal:chess"
       ]
     }
   ],
@@ -30,11 +30,11 @@
   "output_references": [
     {
       "kind": "artifact_directory",
-      "path": "runs/battlefield"
+      "path": "sample_runs/model_battle_sample"
     }
   ],
   "policy_ids": [
     "battlefield-smoke-v1"
   ],
-  "plan_hash": "sha256:4a58ae3c85626f16861085072333a24d952fe5874a064c35fbc59b7aba90f61f"
+  "plan_hash": "sha256:9c8962b2435c76be3cd4541f5f0b1f0814815685f064043aae390625a681beaa"
 }
