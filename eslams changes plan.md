@@ -789,3 +789,55 @@ Do not start with provider runtime, eval planning, or publication backfill. Thos
 2. Add full-proof manifest/checkpoint exports.
 3. Add all-50 Arena smoke.
 4. Add runner job and stateless Arena transport contracts.
+
+## 2026-06-09 - Platform integration follow-ups after refreshed Core README/CHANGELOG
+
+Platform re-read the refreshed Core `README.md`, `CHANGELOG.md`, and `docs/PLATFORM_CONTRACTS.md`, then added a stronger `pnpm core:contracts:check` gate. That gate now verifies:
+
+- `runner health --json`
+- `catalogue games --json`
+- `catalogue renderers --json`
+- `schemas export --out <tmp>`
+- `arena smoke --all --json`
+- `publish validate sample_runs/model_eval_sample/publication_bundle --json`
+- `publish validate sample_runs/model_battle_sample/publication_bundle --json`
+
+The gate passes against Core commit `6ef44c74b0605e67db7f30f8f1254e4c1f069d0a`, with `50` Core games, `50` renderer rows, `50` all-arena smoke rows, `14` schema exports, and valid official-proof plus Battlefield-sample publication bundles.
+
+### Platform changes made
+
+- Platform now treats all `50` games as browser-playable/replay-playable in its shared catalogue and DB seed path, matching Core's `browser_play_availability = ready` and `replay_availability = playable`.
+- The API seed fallback now derives from the shared `@eslams/core-types` catalogue instead of maintaining a second hand-written Arena list.
+- The runner-container artifact validator now accepts Core's current snake_case manifest contract intentionally instead of requiring the older stricter local shape.
+- The shared TypeScript artifact manifest parser now accepts Core file rows with `bytes` and `sha256:`-prefixed hashes, plus `manifest_schema_version`, `artifact_id`, `artifact_kind`, `run_id`, `verification_level`, and ISO `created_at`.
+
+### New Core asks
+
+1. **Catalogue display labels and public rules need product-grade rows.**
+   Runtime readiness is now good, but public metadata is still too generic for Platform to source directly from Core. Several rows report `display_group = Board` for card/game-theory/control games, names lose expected punctuation or casing such as `Tic Tac Toe`, `Leduc Holdem`, `Liars Dice`, and `First Price Sealed Bid Auction`, and `public_rules` / `public_scoring_summary` are currently generic.
+
+   Requested fields for `eslams.catalogue.game.v1`:
+   - `public_display_name`
+   - `public_category`
+   - `public_variant_label`
+   - `public_short_description`
+   - `public_rules_summary`
+   - `public_scoring_summary`
+   - `player_count_label`
+   - `information_model`
+   - `turn_model`
+
+2. **Artifact manifest fixtures should cover Core and Platform aliases.**
+   Platform had to inspect sample archives to confirm that Core's canonical fields are snake_case and that file rows use `bytes` plus `sha256:` hashes. Please ship manifest compatibility fixtures and a short README covering:
+   - current runner bundle manifest
+   - official signed manifest
+   - Battlefield sample manifest
+   - uploaded/public replay package manifest
+   - expected validation summary for each
+   - which fields are canonical Core fields versus Platform/camel projection aliases
+
+3. **Keep public variant labels in the catalogue export.**
+   Platform still sees `variant_token = default` for `23` non-standard public variants, so it keeps its own public variant labels for now. Core should export machine token, public slug, and display label together so Platform can remove the last buildplan-owned game-label overlay.
+
+4. **Consider a Core-owned TypeScript schema bundle or generated contract examples.**
+   Platform now has to maintain TypeScript compatibility parsers for Core manifests and validation summaries. A generated JSON-schema/example bundle is enough for CI, but a small generated TypeScript type package or published schema fixture set would reduce alias drift for non-Python hosts.
