@@ -12,8 +12,8 @@ from eslams.contracts.eval_plan import EvalPlanEnvelope
 from eslams.hashing import sha256_json
 from eslams.providers import load_provider_registry
 
-CORE_VERSION = "0.2.0"
-RUNNER_VERSION = "eslams-runner:0.2.0"
+CORE_VERSION = "0.3.0"
+RUNNER_VERSION = "eslams-runner:0.3.0"
 PLAN_GENERATED_AT = "1970-01-01T00:00:00Z"
 
 

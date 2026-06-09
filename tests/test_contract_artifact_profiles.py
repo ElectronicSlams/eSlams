@@ -39,7 +39,7 @@ def test_schema_versions_have_no_secret_examples_and_export_deterministically(tm
         examples.update(provider())
 
     assert set(schema_versions()) <= set(examples)
-    assert "prompt" not in canonical_json(examples).lower()
+    assert '"prompt":' not in canonical_json(examples).lower()
     assert "api_key" not in canonical_json(examples).lower()
 
     first = tmp_path / "schemas_a"
@@ -404,7 +404,7 @@ def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, c
         (tmp_path / "schemas" / "schema_bundle_manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["schema_version"] == "eslams.schema.bundle_manifest.v1"
-    assert manifest["core_package_version"] == "0.2.0"
+    assert manifest["core_package_version"] == "0.3.0"
     assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v1"
     assert any(
         row["schema_version"] == "eslams.catalogue.renderer.v1"

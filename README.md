@@ -28,11 +28,12 @@ catalogue listed below.
 - [Build an HTTP Agent](#build-an-http-agent)
 - [What a Run Produces](#what-a-run-produces)
 - [Platform Contracts](#platform-contracts)
+- [Arena Session Transport](#arena-session-transport)
 - [Sample Runs](#sample-runs)
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
-- [Release v0.2.0](#release-v020)
+- [Release v0.3.0](#release-v030)
 - [Contribute](#contribute)
 - [Support eSlams](#support-eslams)
 
@@ -275,6 +276,59 @@ eslams publish export --kind uploaded-replay --artifact runs/latest.eslams --out
 eslams publish validate bundle --json
 eslams arena smoke --all --json
 ```
+
+## Arena Session Transport
+
+Core v0.3.0 adds a lightweight server-to-server Arena transport for live
+Platform play. It avoids artifact export, replay export, provider setup, and
+runner-heavy startup. Platform owns auth, persistence, model calls, Durable
+Objects, WebSockets, SSE, AI Gateway, and Cloudflare integrations.
+
+Python API:
+
+```python
+from eslams.arena_transport import legal_actions_page, start_session, step_session
+
+players = {
+    "player_1": {"kind": "human", "label": "Human"},
+    "player_2": {"kind": "model", "label": "AI"},
+}
+
+started = start_session("tic-tac-toe", "standard", 1, players)
+stepped = step_session(started["session_state"], "player_1", "4")
+page = legal_actions_page(started["session_state"], "player_1", query="center")
+```
+
+CLI API:
+
+```bash
+eslams arena start \
+  --game tic-tac-toe \
+  --variant standard \
+  --seed 1 \
+  --players-json '{"player_1":{"kind":"human"},"player_2":{"kind":"model"}}'
+```
+
+Start and step responses include `public_state`, a canonical live
+`display_frame`, active/next actor metadata, legal action tokens, polished
+`legal_action_descriptors`, public-safe Arena events, strict state hash status,
+paging metadata, and Core timing fields. `session_state` is trusted server
+state and may contain hidden/private game state; Platform must not forward it
+to browsers. Browser-streamable fields are `public_state`, `display_frame`,
+`legal_action_descriptors`, `events`, actor metadata, terminal/outcome fields,
+and timing.
+
+Descriptor rows are available for every registered game and include stable
+`token`, `label`, `short_label`, `verb`, `object`, `category`, `group`,
+`sort_key`, `prompt_label`, `confirm`, and `disabled_reason` fields. Large
+action sets can be paged or searched with `legal_actions_page`.
+
+Arena event types include `session.started`, `human.action.accepted`,
+`state.applied`, `model.action.requested`, `model.action.accepted`,
+`arena.auto_advanced`, `turn.ready_for_human`, `match.completed`, and
+`turn.failed`. Events and display frames are public-safe and never include
+prompts, raw responses, private observations, provider receipts, hidden eval
+material, or private reasoning.
 
 ## Sample Runs
 
@@ -575,17 +629,17 @@ eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
 ```
 
-## Release v0.2.0
+## Release v0.3.0
 
-Core v0.2.0 is the named Platform contract release. Release from a clean main
+Core v0.3.0 is the named Arena transport contract release. Release from a clean main
 checkout after tests pass:
 
 ```bash
 python3 -m pytest -q
 python3 -m ruff check .
 python3 -m mypy src
-git tag -a v0.2.0 -m "eSlams Core v0.2.0"
-git push origin main v0.2.0
+git tag -a v0.3.0 -m "eSlams Core v0.3.0"
+git push origin main v0.3.0
 ```
 
 `eslams schemas export --out schemas/` writes individual schema files plus

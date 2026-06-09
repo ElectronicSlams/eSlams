@@ -1,0 +1,85 @@
+{
+  "schema_version": "eslams.arena.golden.v0_3",
+  "games": [
+    {
+      "game_id": "chess",
+      "first_token": "a2a3",
+      "first_label": "Move a2 to a3 (a3)",
+      "first_category": "move_piece",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "chessboard"
+    },
+    {
+      "game_id": "tic-tac-toe",
+      "first_token": "0",
+      "first_label": "Play top-left",
+      "first_category": "mark_square",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "grid"
+    },
+    {
+      "game_id": "connect-four",
+      "first_token": "0",
+      "first_label": "Drop in column 1",
+      "first_category": "drop_disc",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "grid"
+    },
+    {
+      "game_id": "othello",
+      "first_token": "[2,3]",
+      "first_label": "Place at row 3, column 4",
+      "first_category": "place_piece",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "grid"
+    },
+    {
+      "game_id": "blackjack",
+      "first_token": "hit",
+      "first_label": "Hit",
+      "first_category": "action",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "card-table"
+    },
+    {
+      "game_id": "gin-rummy",
+      "first_token": "draw:deck",
+      "first_label": "Draw from deck",
+      "first_category": "draw_card",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "card-table"
+    },
+    {
+      "game_id": "liars-dice",
+      "first_token": "1x1",
+      "first_label": "Bid 1 x 1",
+      "first_category": "bid",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "dice-table"
+    },
+    {
+      "game_id": "negotiation",
+      "first_token": "offer:20:1",
+      "first_label": "Offer 20 / 1",
+      "first_category": "offer",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "negotiation-table"
+    },
+    {
+      "game_id": "first-price-sealed-bid-auction",
+      "first_token": "0",
+      "first_label": "Bid 0",
+      "first_category": "bid",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "auction-table"
+    },
+    {
+      "game_id": "gomoku",
+      "first_token": "0",
+      "first_label": "Place at row 1, column 1",
+      "first_category": "place_piece",
+      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "renderer_family": "grid"
+    }
+  ]
+}

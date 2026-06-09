@@ -79,6 +79,26 @@ Every game has explicit browser play, replay, official eval, renderer family,
 timeline completeness, and coming-soon or absence metadata so Platform does not
 need to invent display states.
 
+## Live Arena Session Transport
+
+Core v0.3.0 exposes fast server-to-server Arena session helpers:
+
+- `start_session(game_slug, variant, seed, players, options=None)`
+- `step_session(session_state, player_id, action_token)`
+- `legal_actions_page(session_state, player_id, query=None, limit=50, cursor=None)`
+
+These helpers are intentionally lightweight. They do not call models, export
+artifacts, export replay packages, persist sessions, store secrets, or know
+about Cloudflare. They own legality, state transition, hash verification,
+public display frames, public-safe events, and legal action descriptors.
+
+`session_state` is trusted Platform/server state and may contain hidden cards or
+other private state. Browser-safe fields are `public_state`, `display_frame`,
+`legal_action_descriptors`, `events`, actor metadata, terminal/outcome fields,
+and timing. Live `display_frame` uses the same projection shape as
+`replay/display_frames.jsonl`, so Platform can render live play and replay with
+one UI contract.
+
 ## Chess Observation Contract
 
 The chess arena is powered by `python-chess` and exposes rule-derived context

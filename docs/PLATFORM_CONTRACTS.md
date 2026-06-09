@@ -15,7 +15,8 @@ eslams schemas export --out schemas/
 Current schema versions include artifact manifests and validation summaries,
 public replay events and manifests, provider receipts, eval plans, official
 progress events, resume checkpoints, official results, publication bundle and
-validation payloads, runner jobs, and catalogue rows.
+validation payloads, runner jobs, catalogue rows, and live Arena start/step,
+event, action descriptor, and legal-action page payloads.
 
 The export also writes `schema_bundle_manifest.json`. The manifest is
 deterministic and records Core package version, git commit when available,
@@ -183,10 +184,68 @@ eslams runner health --json
 eslams runner result --artifact runs/latest.eslams --artifact-uri URI --job-id JOB
 ```
 
-The stateless Arena helpers expose initial state, legal actions, step, public
-state, state hash, serialize, and deserialize functions. Browser start/resume
-contracts include idempotency key fields and response metadata, but Core does
-not store browser sessions.
+The legacy stateless Arena helpers expose initial state, legal actions, step,
+public state, state hash, serialize, and deserialize functions. Core v0.3.0
+also exposes a lightweight live Arena session transport for trusted Platform
+orchestration:
+
+```python
+from eslams.arena_transport import legal_actions_page, start_session, step_session
+
+players = {
+    "player_1": {"kind": "human", "label": "Human"},
+    "player_2": {"kind": "model", "label": "AI"},
+}
+
+started = start_session("tic-tac-toe", "standard", 1, players)
+stepped = step_session(started["session_state"], "player_1", "4")
+page = legal_actions_page(started["session_state"], "player_1", query="center")
+```
+
+CLI equivalents:
+
+```bash
+eslams arena start --game tic-tac-toe --variant standard --seed 1 \
+  --players-json '{"player_1":{"kind":"human"},"player_2":{"kind":"model"}}'
+eslams arena step --state session_state.json --player-id player_1 --action-token 4
+eslams arena legal-actions-page --state session_state.json --player-id player_1 --query center
+```
+
+Start and step results emit:
+
+- trusted `session_state` JSON object for Platform-owned storage only
+- `state_hash` and `state_hash_status`
+- browser-safe `public_state`
+- canonical live `display_frame` in the same shape as replay display frames
+- `active_player`, `next_actor_kind`, terminal/outcome fields, and terminal scores
+- legal action token strings and polished `legal_action_descriptors`
+- paging metadata for large action sets
+- public-safe Arena events
+- phase timing fields and `total_core_ms`
+
+`session_state` may include private or hidden game state. Platform must not
+forward it to browsers or public streams. Browser-streamable fields are the
+public state, display frame, action descriptors for the active actor, events,
+actor metadata, terminal/outcome fields, and timing.
+
+Action descriptor rows use `eslams.arena.action_descriptor.v1` and include
+stable `token`, `label`, `short_label`, `verb`, `object`, `category`, `group`,
+`sort_key`, `prompt_label`, `confirm`, and `disabled_reason`. Tokens are stable
+strings: string actions pass through unchanged, while numeric/list/object
+actions use canonical JSON text.
+
+Events use `eslams.arena.event.v1`. Core emits `session.started`,
+`human.action.accepted`, `model.action.accepted`, `state.applied`,
+`model.action.requested`, `turn.ready_for_human`, `match.completed`, and
+`turn.failed`; `arena.auto_advanced` is reserved for future automatic Arena
+transitions. Events, descriptors, and display frames are public-safe and never
+include prompts, raw responses, private observations, provider receipts, hidden
+eval material, or private reasoning.
+
+Large action sets use `legal_actions_page(session_state, player_id, query,
+limit, cursor)`, which returns `total_legal_actions`,
+`total_matching_actions`, `has_more`, `next_cursor`, and descriptor rows.
+Limits are bounded to 200 rows per page.
 
 `deserialize_state(payload, strict_hash=True)` is strict by default and raises
 on stale hashes for artifact and replay validation. Trusted server-owned
@@ -239,17 +298,18 @@ They use `eslams.publication.bundle.v1`; validation emits
 `eslams.publication.validation.v1` and checks object hashes, projection hashes,
 public replay validity, aggregate usage shape, and proof-row publication policy.
 
-## Release v0.2.0
+## Release v0.3.0
 
-`v0.2.0` is the named Core contract release. The package version is `0.2.0`.
+`v0.3.0` is the named Core Arena transport contract release. The package
+version is `0.3.0`.
 After validation, tag and publish from main:
 
 ```bash
 python3 -m pytest -q
 python3 -m ruff check .
 python3 -m mypy src
-git tag -a v0.2.0 -m "eSlams Core v0.2.0"
-git push origin main v0.2.0
+git tag -a v0.3.0 -m "eSlams Core v0.3.0"
+git push origin main v0.3.0
 ```
 
 ## Fixtures
