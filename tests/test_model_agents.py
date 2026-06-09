@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from eslams.agents import MockProviderAgent, ModelProviderAgent
+from eslams.agents import HttpAgent, MockProviderAgent, ModelProviderAgent
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
 from eslams.provider_preflight import provider_preflight
@@ -72,6 +72,47 @@ def test_openai_model_agent_parses_legal_json_action(monkeypatch):
     assert response.metadata["provider_receipt"]["estimated_cost"]["status"] == "cost_unavailable"
     assert "raw_output_preview" not in response.metadata["provider_receipt"]
     assert "api_key_env" not in response.metadata["provider_receipt"]
+
+
+def test_http_agent_preserves_provider_receipt_metadata(monkeypatch):
+    receipt = {
+        "schema_version": "eslams.provider.receipt.v1",
+        "provider": "openai",
+        "model": "gpt-test",
+        "outcome": "ok",
+        "usage": {"input_tokens": 3, "output_tokens": 2, "total_tokens": 5},
+        "estimated_cost": {"status": "cost_unavailable"},
+    }
+
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: Any,
+    ) -> httpx.Response:
+        assert url == "https://agent.example/act"
+        assert headers["content-type"] == "application/json"
+        assert json["protocol_version"] == "eslams-act-v1"
+        return httpx.Response(
+            200,
+            json={
+                "action": 1,
+                "confidence": 0.8,
+                "metadata": {"provider_receipt": receipt},
+            },
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    agent = HttpAgent(url="https://agent.example/act")
+    response = agent.act(_request())
+
+    assert response.action == 1
+    assert response.metadata["provider_receipt"]["usage"]["total_tokens"] == 5
+    assert agent.last_receipt == receipt
+    assert agent.attempt_receipts == [receipt]
 
 
 def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):

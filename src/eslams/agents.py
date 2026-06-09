@@ -9,7 +9,7 @@ import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
 from urllib.parse import urlparse
 
@@ -92,8 +92,12 @@ class HttpAgent:
     id: str = "http-agent"
     version: str = "1.0.0"
     bearer_token: str | None = None
+    last_receipt: dict[str, Any] | None = field(default=None, init=False)
+    attempt_receipts: list[dict[str, Any]] = field(default_factory=list, init=False)
 
     def act(self, request: ActRequest) -> ActResponse:
+        self.last_receipt = None
+        self.attempt_receipts = []
         headers = {"content-type": "application/json"}
         if self.bearer_token:
             headers["authorization"] = f"Bearer {self.bearer_token}"
@@ -112,7 +116,12 @@ class HttpAgent:
             raise AgentError(f"agent request failed: {exc}") from exc
         if not isinstance(payload, dict):
             raise ProtocolError("agent response must be a JSON object")
-        return ActResponse.from_mapping(payload)
+        act_response = ActResponse.from_mapping(payload)
+        receipt = act_response.metadata.get("provider_receipt")
+        if isinstance(receipt, dict):
+            self.last_receipt = receipt
+            self.attempt_receipts.append(receipt)
+        return act_response
 
 
 @dataclass
