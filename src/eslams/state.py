@@ -23,6 +23,11 @@ class ArenaState:
     render_hints: dict[str, Any]
     metadata: dict[str, Any] = field(default_factory=dict)
     state_hash: str | None = None
+    rehydration_diagnostics: dict[str, Any] | None = field(
+        default=None,
+        compare=False,
+        repr=False,
+    )
 
     def __post_init__(self) -> None:
         if self.turn < 0:

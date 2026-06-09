@@ -14,9 +14,11 @@ from eslams.artifacts import (
 )
 from eslams.contracts.versions import ARTIFACT_MANIFEST_SCHEMA_VERSION
 from eslams.hashing import canonical_json, sha256_file, sha256_json
+from eslams.replay_projection import display_frame_rows_from_dicts
 
 PUBLIC_EXPORT_MEMBERS: tuple[str, ...] = (
     "replay/replay_events.jsonl",
+    "replay/display_frames.jsonl",
     "replay/replay_manifest.json",
     "public/public_manifest.json",
     "public/public_result_summary.json",
@@ -40,7 +42,9 @@ def export_public_replay(artifact_path: Path, output_dir: Path) -> Path:
             target = output_dir / member
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
+    _ensure_display_frames(output_dir)
     files = _file_entries(output_dir)
+    optional_files = _optional_file_rows(output_dir)
     package_manifest = {
         "manifest_schema_version": ARTIFACT_MANIFEST_SCHEMA_VERSION,
         "artifact_version": ARTIFACT_VERSION,
@@ -51,10 +55,12 @@ def export_public_replay(artifact_path: Path, output_dir: Path) -> Path:
         "run_id": _optional_str(manifest.get("run_id")) or "unknown-run",
         "created_at": _optional_str(manifest.get("created_at")),
         "files": files,
+        "optional_files": optional_files,
         "hash_algorithm": "sha256",
         "public_exports": {
             "public_replay_manifest": "replay/replay_manifest.json",
             "public_replay_events": "replay/replay_events.jsonl",
+            "public_display_frames": "replay/display_frames.jsonl",
             "public_manifest": "public/public_manifest.json",
             "public_result_summary": "public/public_result_summary.json",
             "public_reasoning": "public_reasoning/reasoning.jsonl",
@@ -104,6 +110,10 @@ def create_uploaded_smoke_fixture(output_dir: Path) -> Path:
         "markers": [],
     }
     _write_jsonl(output_dir / "replay/replay_events.jsonl", [replay_event])
+    _write_jsonl(
+        output_dir / "replay/display_frames.jsonl",
+        display_frame_rows_from_dicts([replay_event]),
+    )
     _write_json(
         output_dir / "replay/replay_manifest.json",
         {
@@ -141,6 +151,7 @@ def create_uploaded_smoke_fixture(output_dir: Path) -> Path:
             "artifact_id": sha256_json(files),
             "run_id": "uploaded-smoke",
             "files": files,
+            "optional_files": _optional_file_rows(output_dir),
             "hash_algorithm": "sha256",
         },
     )
@@ -171,6 +182,56 @@ def _file_entries(root: Path) -> list[dict[str, Any]]:
                 continue
             entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
     return entries
+
+
+def _optional_file_rows(root: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for rel, kind in (("public_reasoning/reasoning.jsonl", "public_reasoning"),):
+        path = root / rel
+        if path.exists():
+            rows.append(
+                {
+                    "path": rel,
+                    "kind": kind,
+                    "present": True,
+                    "sha256": sha256_file(path),
+                    "size_bytes": path.stat().st_size,
+                    "absent_reason": None,
+                }
+            )
+        else:
+            rows.append(
+                {
+                    "path": rel,
+                    "kind": kind,
+                    "present": False,
+                    "sha256": None,
+                    "size_bytes": None,
+                    "absent_reason": "not_emitted_by_source_artifact",
+                }
+            )
+    return rows
+
+
+def _ensure_display_frames(root: Path) -> None:
+    display_path = root / "replay/display_frames.jsonl"
+    if display_path.exists():
+        return
+    replay_path = root / "replay/replay_events.jsonl"
+    if not replay_path.exists():
+        return
+    _write_jsonl(display_path, display_frame_rows_from_dicts(_read_jsonl(replay_path)))
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        value = json.loads(line)
+        if isinstance(value, dict):
+            rows.append(value)
+    return rows
 
 
 def _optional_str(value: Any) -> str | None:

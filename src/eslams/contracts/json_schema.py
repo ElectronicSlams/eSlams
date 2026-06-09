@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
 from eslams.contracts.versions import (
     ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ARTIFACT_VALIDATION_SCHEMA_VERSION,
+    CATALOGUE_AVAILABILITY_SCHEMA_VERSION,
     CATALOGUE_GAME_SCHEMA_VERSION,
     CATALOGUE_MODEL_SCHEMA_VERSION,
+    CATALOGUE_RENDERER_SCHEMA_VERSION,
+    CORE_PACKAGE_VERSION,
     EVAL_PLAN_SCHEMA_VERSION,
     EVAL_PROGRESS_SCHEMA_VERSION,
     EVAL_RESUME_CHECKPOINT_SCHEMA_VERSION,
@@ -17,12 +21,18 @@ from eslams.contracts.versions import (
     PROVIDER_RECEIPT_SCHEMA_VERSION,
     PUBLICATION_BUNDLE_SCHEMA_VERSION,
     PUBLICATION_VALIDATION_SCHEMA_VERSION,
+    REPLAY_DISPLAY_FRAME_SCHEMA_VERSION,
     REPLAY_MANIFEST_SCHEMA_VERSION,
     REPLAY_PUBLIC_SCHEMA_VERSION,
     RUNNER_JOB_SCHEMA_VERSION,
+    SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION,
+    SCHEMA_BUNDLE_VERSION,
     schema_versions,
 )
-from eslams.hashing import canonical_json
+from eslams.hashing import canonical_json, sha256_file, sha256_json
+
+SCHEMA_BUNDLE_MANIFEST_FILENAME = "schema_bundle_manifest.json"
+SCHEMA_BUNDLE_BUILD_ID = "1970-01-01T00:00:00Z"
 
 
 def export_schemas(output_dir: Path) -> list[Path]:
@@ -34,6 +44,12 @@ def export_schemas(output_dir: Path) -> list[Path]:
         path = output_dir / schema_filename(version)
         path.write_text(canonical_json(schema_for_version(version)) + "\n", encoding="utf-8")
         written.append(path)
+    manifest_path = output_dir / SCHEMA_BUNDLE_MANIFEST_FILENAME
+    manifest_path.write_text(
+        canonical_json(schema_bundle_manifest(written)) + "\n",
+        encoding="utf-8",
+    )
+    written.append(manifest_path)
     return written
 
 
@@ -48,6 +64,58 @@ def schema_for_version(version: str) -> dict[str, Any]:
     return schemas[version]
 
 
+def schema_bundle_manifest(schema_paths: list[Path]) -> dict[str, Any]:
+    schema_rows = []
+    for path in sorted(schema_paths, key=lambda item: item.name):
+        if path.name == SCHEMA_BUNDLE_MANIFEST_FILENAME:
+            continue
+        version = path.name.removesuffix(".schema.json")
+        schema_rows.append(
+            {
+                "name": path.name,
+                "schema_version": version,
+                "sha256": sha256_file(path),
+                "bytes": path.stat().st_size,
+            }
+        )
+    return {
+        "schema_version": SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION,
+        "core_package_version": CORE_PACKAGE_VERSION,
+        "core_commit": _git_commit(),
+        "schema_bundle_version": SCHEMA_BUNDLE_VERSION,
+        "deterministic_build_id": sha256_json(
+            {
+                "core_package_version": CORE_PACKAGE_VERSION,
+                "schema_bundle_version": SCHEMA_BUNDLE_VERSION,
+                "schemas": schema_rows,
+            }
+        ),
+        "generated_at": SCHEMA_BUNDLE_BUILD_ID,
+        "schemas": schema_rows,
+    }
+
+
+def no_secret_examples() -> dict[str, dict[str, Any]]:
+    return {
+        SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION: {
+            "schema_version": SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION,
+            "core_package_version": CORE_PACKAGE_VERSION,
+            "core_commit": "abcdef1234567890",
+            "schema_bundle_version": SCHEMA_BUNDLE_VERSION,
+            "deterministic_build_id": "sha256:example",
+            "generated_at": SCHEMA_BUNDLE_BUILD_ID,
+            "schemas": [
+                {
+                    "name": "eslams.artifact.validation.v1.schema.json",
+                    "schema_version": ARTIFACT_VALIDATION_SCHEMA_VERSION,
+                    "sha256": "sha256:example",
+                    "bytes": 123,
+                }
+            ],
+        }
+    }
+
+
 def _schemas() -> dict[str, dict[str, Any]]:
     return {
         ARTIFACT_MANIFEST_SCHEMA_VERSION: _object_schema(
@@ -59,6 +127,17 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "artifact_kind": {"type": "string"},
                 "run_id": {"type": "string"},
                 "artifact_id": {"type": "string"},
+                "verification_level_key": {"type": "string"},
+                "verification_level_label": {"type": "string"},
+                "artifact_profile_key": {"type": "string"},
+                "artifact_profile_label": {"type": "string"},
+                "scoring_policy_key": {"type": "string"},
+                "scoring_policy_label": {"type": "string"},
+                "per_case_run_valid": {"type": "boolean"},
+                "per_case_scoring_eligible": {"type": "boolean"},
+                "proof_row_publication_eligible": {"type": "boolean"},
+                "aggregate_leaderboard_eligible": {"type": "boolean"},
+                "aggregate_ineligibility_reason": {"type": ["string", "null"]},
                 "files": {"type": "array"},
             },
         ),
@@ -72,6 +151,13 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "valid": {"type": "boolean"},
                 "validation_status": {"type": "string"},
                 "errors": {"type": "array", "items": {"type": "string"}},
+                "signature": {"type": "object"},
+                "deterministic_replay": {"type": "object"},
+                "per_case_run_valid": {"type": ["boolean", "null"]},
+                "per_case_scoring_eligible": {"type": ["boolean", "null"]},
+                "proof_row_publication_eligible": {"type": ["boolean", "null"]},
+                "aggregate_leaderboard_eligible": {"type": ["boolean", "null"]},
+                "aggregate_ineligibility_reason": {"type": ["string", "null"]},
             },
         ),
         REPLAY_PUBLIC_SCHEMA_VERSION: _object_schema(
@@ -98,6 +184,27 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "event_count": {"type": "integer"},
                 "timeline_completeness": {"type": "string"},
                 "participants": {"type": "array"},
+            },
+        ),
+        REPLAY_DISPLAY_FRAME_SCHEMA_VERSION: _object_schema(
+            REPLAY_DISPLAY_FRAME_SCHEMA_VERSION,
+            required=[
+                "schema_version",
+                "frame_id",
+                "renderer_family",
+                "visibility",
+                "source_replay_event_id",
+            ],
+            properties={
+                "schema_version": {"const": REPLAY_DISPLAY_FRAME_SCHEMA_VERSION},
+                "frame_id": {"type": "string"},
+                "renderer_family": {"type": "string"},
+                "visibility": {"type": "string"},
+                "actor_player": {"type": ["string", "null"]},
+                "action_label": {"type": ["string", "null"]},
+                "display_cells": {"type": "array"},
+                "summary": {"type": "object"},
+                "source_replay_event_id": {"type": "string"},
             },
         ),
         PROVIDER_RECEIPT_SCHEMA_VERSION: _object_schema(
@@ -157,13 +264,18 @@ def _schemas() -> dict[str, dict[str, Any]]:
         ),
         OFFICIAL_RESULT_SCHEMA_VERSION: _object_schema(
             OFFICIAL_RESULT_SCHEMA_VERSION,
-            required=["schema_version", "run_id", "arena_id", "valid_for_scoring"],
+            required=["schema_version"],
             properties={
                 "schema_version": {"const": OFFICIAL_RESULT_SCHEMA_VERSION},
                 "run_id": {"type": "string"},
                 "arena_id": {"type": "string"},
                 "winner": {"type": ["string", "null"]},
                 "valid_for_scoring": {"type": "boolean"},
+                "per_case_run_valid": {"type": "boolean"},
+                "per_case_scoring_eligible": {"type": "boolean"},
+                "proof_row_publication_eligible": {"type": "boolean"},
+                "aggregate_leaderboard_eligible": {"type": "boolean"},
+                "aggregate_ineligibility_reason": {"type": ["string", "null"]},
             },
         ),
         PUBLICATION_BUNDLE_SCHEMA_VERSION: _object_schema(
@@ -178,6 +290,8 @@ def _schemas() -> dict[str, dict[str, Any]]:
             properties={
                 "schema_version": {"const": PUBLICATION_BUNDLE_SCHEMA_VERSION},
                 "kind": {"type": "string"},
+                "publication_kind_key": {"type": "string"},
+                "publication_kind_label": {"type": "string"},
                 "plan_hash": {"type": ["string", "null"]},
                 "suite_fingerprint": {"type": ["string", "null"]},
                 "object_manifest_hash": {"type": "string"},
@@ -185,6 +299,8 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "completed_object_count": {"type": "integer"},
                 "completed_projection_chunk_count": {"type": "integer"},
                 "artifact_count": {"type": "integer"},
+                "aggregate_leaderboard_eligible": {"type": "boolean"},
+                "aggregate_ineligibility_reason": {"type": ["string", "null"]},
             },
         ),
         PUBLICATION_VALIDATION_SCHEMA_VERSION: _object_schema(
@@ -209,6 +325,63 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "job_id": {"type": "string"},
                 "arena_id": {"type": "string"},
                 "artifact_output": {"type": "object"},
+                "runner_completed": {"type": "boolean"},
+                "scoring_eligible": {"type": "boolean"},
+                "artifact_uri": {"type": ["string", "null"]},
+                "validation_status": {"type": ["string", "null"]},
+            },
+        ),
+        CATALOGUE_RENDERER_SCHEMA_VERSION: _object_schema(
+            CATALOGUE_RENDERER_SCHEMA_VERSION,
+            required=[
+                "schema_version",
+                "game_id",
+                "renderer_family",
+                "timeline_completeness",
+                "public_safe",
+            ],
+            properties={
+                "schema_version": {"const": CATALOGUE_RENDERER_SCHEMA_VERSION},
+                "game_id": {"type": "string"},
+                "renderer_family": {"type": "string"},
+                "renderer_kind": {"type": "string"},
+                "timeline_completeness": {"type": "string"},
+                "replay_availability": {"type": "string"},
+                "visible_frame_count": {"type": "integer"},
+                "state_frame_count": {"type": "integer"},
+                "move_frame_count": {"type": "integer"},
+                "public_safe": {"type": "boolean"},
+                "state_hash_valid": {"type": ["boolean", "null"]},
+            },
+        ),
+        CATALOGUE_AVAILABILITY_SCHEMA_VERSION: _object_schema(
+            CATALOGUE_AVAILABILITY_SCHEMA_VERSION,
+            required=["schema_version", "provider", "model", "game_id", "status", "reason"],
+            properties={
+                "schema_version": {"const": CATALOGUE_AVAILABILITY_SCHEMA_VERSION},
+                "provider": {"type": "string"},
+                "model": {"type": "string"},
+                "game_id": {"type": "string"},
+                "status": {"type": "string"},
+                "reason": {"type": ["string", "null"]},
+            },
+        ),
+        SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION: _object_schema(
+            SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION,
+            required=[
+                "schema_version",
+                "core_package_version",
+                "schema_bundle_version",
+                "schemas",
+            ],
+            properties={
+                "schema_version": {"const": SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION},
+                "core_package_version": {"type": "string"},
+                "core_commit": {"type": ["string", "null"]},
+                "schema_bundle_version": {"type": "string"},
+                "deterministic_build_id": {"type": "string"},
+                "generated_at": {"type": "string"},
+                "schemas": {"type": "array"},
             },
         ),
         CATALOGUE_GAME_SCHEMA_VERSION: _object_schema(
@@ -229,9 +402,31 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "provider": {"type": "string"},
                 "model": {"type": "string"},
                 "launch_status": {"type": "string"},
+                "supported_reasoning_modes": {"type": "array"},
+                "accepted_control_fields": {"type": "array"},
+                "default_reasoning_track": {"type": ["string", "null"]},
+                "reasoning_track_kind": {"type": "string"},
+                "unsupported_reasoning_control_reason": {"type": ["string", "null"]},
+                "http_agent_payload_guidance": {"type": "object"},
             },
         ),
     }
+
+
+def _git_commit() -> str | None:
+    root = Path(__file__).resolve().parents[3]
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    value = result.stdout.strip()
+    return value or None
 
 
 def _object_schema(

@@ -30,7 +30,10 @@ from eslams.contracts.versions import (
 )
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json, sha256_file, sha256_json
+from eslams.policy import artifact_profile_label as policy_artifact_profile_label
+from eslams.policy import policy_key, policy_label
 from eslams.replay import render_replay_html
+from eslams.replay_projection import display_frame_rows
 
 ARTIFACT_VERSION = "eslams-artifact-v1"
 RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v1"
@@ -46,6 +49,7 @@ REQUIRED_FILES = {
     "traces/private_judge_trace.jsonl",
     "traces/auditor_trace.jsonl",
     "replay/replay_events.jsonl",
+    "replay/display_frames.jsonl",
     "replay/replay_manifest.json",
     "scores/score.json",
     "scores/metrics.json",
@@ -62,6 +66,7 @@ REQUIRED_FILES = {
 PUBLIC_REPLAY_PACKAGE_REQUIRED_FILES = {
     "manifest.json",
     "replay/replay_events.jsonl",
+    "replay/display_frames.jsonl",
     "replay/replay_manifest.json",
 }
 PUBLIC_SUMMARY_FILES = {
@@ -103,9 +108,20 @@ class ArtifactManifest:
     scoring_policy_version: str
     runner_version: str
     verification_level: str
+    verification_level_key: str
+    verification_level_label: str
+    artifact_profile_key: str
+    artifact_profile_label: str
+    scoring_policy_key: str
+    scoring_policy_label: str
     deterministic_replay: dict[str, Any]
     match_valid_for_scoring: bool
     invalid_reason: str | None
+    per_case_run_valid: bool
+    per_case_scoring_eligible: bool
+    proof_row_publication_eligible: bool
+    aggregate_leaderboard_eligible: bool
+    aggregate_ineligibility_reason: str | None
     agent_error_count_by_player: dict[str, int]
     illegal_action_count_by_player: dict[str, int]
     fallback_action_count_by_player: dict[str, int]
@@ -141,9 +157,20 @@ class ArtifactManifest:
             "scoring_policy_version": self.scoring_policy_version,
             "runner_version": self.runner_version,
             "verification_level": self.verification_level,
+            "verification_level_key": self.verification_level_key,
+            "verification_level_label": self.verification_level_label,
+            "artifact_profile_key": self.artifact_profile_key,
+            "artifact_profile_label": self.artifact_profile_label,
+            "scoring_policy_key": self.scoring_policy_key,
+            "scoring_policy_label": self.scoring_policy_label,
             "deterministic_replay": self.deterministic_replay,
             "match_valid_for_scoring": self.match_valid_for_scoring,
             "invalid_reason": self.invalid_reason,
+            "per_case_run_valid": self.per_case_run_valid,
+            "per_case_scoring_eligible": self.per_case_scoring_eligible,
+            "proof_row_publication_eligible": self.proof_row_publication_eligible,
+            "aggregate_leaderboard_eligible": self.aggregate_leaderboard_eligible,
+            "aggregate_ineligibility_reason": self.aggregate_ineligibility_reason,
             "agent_error_count_by_player": self.agent_error_count_by_player,
             "illegal_action_count_by_player": self.illegal_action_count_by_player,
             "fallback_action_count_by_player": self.fallback_action_count_by_player,
@@ -175,7 +202,7 @@ class ArtifactBuildInput:
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str = "standard-score:1.0.0"
-    runner_version: str = "eslams-runner:0.1.0"
+    runner_version: str = "eslams-runner:0.2.0"
     verification_level: str = "Local Artifact"
 
 
@@ -236,6 +263,15 @@ class ArtifactValidationReport:
     scoring_eligible: bool | None = None
     archive_sha256: str | None = None
     artifact_size_bytes: int | None = None
+    verification_level_key: str | None = None
+    verification_level_label: str | None = None
+    artifact_profile_key: str | None = None
+    artifact_profile_label: str | None = None
+    per_case_run_valid: bool | None = None
+    per_case_scoring_eligible: bool | None = None
+    proof_row_publication_eligible: bool | None = None
+    aggregate_leaderboard_eligible: bool | None = None
+    aggregate_ineligibility_reason: str | None = None
     schema_version: str = ARTIFACT_VALIDATION_SCHEMA_VERSION
 
     @property
@@ -255,6 +291,15 @@ class ArtifactValidationReport:
             "scoring_eligible": self.scoring_eligible,
             "archive_sha256": self.archive_sha256,
             "artifact_size_bytes": self.artifact_size_bytes,
+            "verification_level_key": self.verification_level_key,
+            "verification_level_label": self.verification_level_label,
+            "artifact_profile_key": self.artifact_profile_key,
+            "artifact_profile_label": self.artifact_profile_label,
+            "per_case_run_valid": self.per_case_run_valid,
+            "per_case_scoring_eligible": self.per_case_scoring_eligible,
+            "proof_row_publication_eligible": self.proof_row_publication_eligible,
+            "aggregate_leaderboard_eligible": self.aggregate_leaderboard_eligible,
+            "aggregate_ineligibility_reason": self.aggregate_ineligibility_reason,
             "signature": self.signature.to_dict(),
             "runner_signature_status": self.signature.status,
             "deterministic_replay": self.deterministic_replay.to_dict(),
@@ -300,6 +345,10 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         artifact_dir / "replay/replay_events.jsonl",
         (event.to_dict() for event in build.replay_events),
     )
+    _write_jsonl(
+        artifact_dir / "replay/display_frames.jsonl",
+        display_frame_rows(build.replay_events),
+    )
     arena_id = _arena_id_from_version(build.arena_version)
     replay_manifest = _public_replay_manifest(build, arena_id)
     _write_json(artifact_dir / "replay/replay_manifest.json", replay_manifest)
@@ -326,7 +375,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         "local-development\n",
         encoding="utf-8",
     )
-    _write_json(artifact_dir / "environment/package_versions.json", {"eslams-core": "0.1.0"})
+    _write_json(artifact_dir / "environment/package_versions.json", {"eslams-core": "0.2.0"})
     _write_json(
         artifact_dir / "broadcast/broadcast_manifest.json",
         {
@@ -357,6 +406,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
             artifact_kind="local_match",
             replay_manifest_path="replay/replay_manifest.json",
             replay_events_path="replay/replay_events.jsonl",
+            display_frames_path="replay/display_frames.jsonl",
             public_result_summary_path="public/public_result_summary.json",
             notes=["Artifact id is recorded in manifest.json to avoid recursive hashing."],
         ).to_dict(),
@@ -367,14 +417,26 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
             "schema_version": ARTIFACT_VALIDATION_SCHEMA_VERSION,
             "artifact": str(output_path),
             "profile": "runner_bundle",
+            "artifact_profile_key": "runner_bundle",
+            "artifact_profile_label": "Runner Bundle",
             "valid": True,
             "validation_status": "not_validated_at_write_time",
             "errors": [],
             "run_id": build.run_id,
             "artifact_id": "see-manifest",
             "verification_level": build.verification_level,
+            "verification_level_key": policy_key(
+                build.verification_level,
+                fallback="local_artifact",
+            ),
+            "verification_level_label": build.verification_level,
             "replay_status": "recorded",
             "scoring_eligible": build.score.match_valid_for_scoring,
+            "per_case_run_valid": build.score.match_valid_for_scoring,
+            "per_case_scoring_eligible": build.score.match_valid_for_scoring,
+            "proof_row_publication_eligible": True,
+            "aggregate_leaderboard_eligible": False,
+            "aggregate_ineligibility_reason": "single_case_not_full_suite",
             "runner_signature_status": "pending",
         },
     )
@@ -394,6 +456,12 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         scoring_policy_version=build.scoring_policy_version,
         runner_version=build.runner_version,
         verification_level=build.verification_level,
+        verification_level_key=policy_key(build.verification_level, fallback="local_artifact"),
+        verification_level_label=build.verification_level,
+        artifact_profile_key="runner_bundle",
+        artifact_profile_label=policy_artifact_profile_label("runner_bundle"),
+        scoring_policy_key=policy_key(build.scoring_policy_version, fallback="standard_score"),
+        scoring_policy_label=policy_label(build.scoring_policy_version, fallback="Standard Score"),
         deterministic_replay={
             "version": DETERMINISTIC_REPLAY_VERSION,
             "status": "recorded",
@@ -408,6 +476,11 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         },
         match_valid_for_scoring=build.score.match_valid_for_scoring,
         invalid_reason=build.score.invalid_reason,
+        per_case_run_valid=build.score.match_valid_for_scoring,
+        per_case_scoring_eligible=build.score.match_valid_for_scoring,
+        proof_row_publication_eligible=True,
+        aggregate_leaderboard_eligible=False,
+        aggregate_ineligibility_reason="single_case_not_full_suite",
         agent_error_count_by_player=build.score.agent_error_count_by_player,
         illegal_action_count_by_player=build.score.illegal_action_count_by_player,
         fallback_action_count_by_player=build.score.fallback_action_count_by_player,
@@ -425,6 +498,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
             "public_result_summary": "public/public_result_summary.json",
             "public_replay_manifest": "replay/replay_manifest.json",
             "public_replay_events": "replay/replay_events.jsonl",
+            "public_display_frames": "replay/display_frames.jsonl",
             "public_reasoning": "public_reasoning/reasoning.jsonl",
         },
         validation_summary_path="validation/validation_summary.json",
@@ -749,6 +823,7 @@ def _public_safety_errors(artifact_dir: Path, profile: str) -> list[str]:
     candidates = [
         "replay/replay_events.jsonl",
         "replay/replay_manifest.json",
+        "replay/display_frames.jsonl",
         "public/public_manifest.json",
         "public/public_result_summary.json",
         "public_reasoning/reasoning.jsonl",
@@ -840,6 +915,28 @@ def _validation_report(
         scoring_eligible=_optional_manifest_bool(manifest, "match_valid_for_scoring"),
         archive_sha256=_artifact_source_hash(source_path, artifact_dir),
         artifact_size_bytes=_artifact_source_size(source_path, artifact_dir),
+        verification_level_key=_optional_manifest_str(manifest, "verification_level_key"),
+        verification_level_label=_optional_manifest_str(manifest, "verification_level_label"),
+        artifact_profile_key=_optional_manifest_str(manifest, "artifact_profile_key") or profile,
+        artifact_profile_label=_optional_manifest_str(manifest, "artifact_profile_label")
+        or policy_artifact_profile_label(profile),
+        per_case_run_valid=_optional_manifest_bool(manifest, "per_case_run_valid"),
+        per_case_scoring_eligible=_optional_manifest_bool(
+            manifest,
+            "per_case_scoring_eligible",
+        ),
+        proof_row_publication_eligible=_optional_manifest_bool(
+            manifest,
+            "proof_row_publication_eligible",
+        ),
+        aggregate_leaderboard_eligible=_optional_manifest_bool(
+            manifest,
+            "aggregate_leaderboard_eligible",
+        ),
+        aggregate_ineligibility_reason=_optional_manifest_str(
+            manifest,
+            "aggregate_ineligibility_reason",
+        ),
     )
 
 
@@ -980,6 +1077,11 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
         reason=reason,
         valid_for_scoring=score.match_valid_for_scoring,
         scoring_safety_reason=score.scoring_safety_reason,
+        per_case_run_valid=score.match_valid_for_scoring,
+        per_case_scoring_eligible=score.match_valid_for_scoring,
+        proof_row_publication_eligible=True,
+        aggregate_leaderboard_eligible=False,
+        aggregate_ineligibility_reason="single_case_not_full_suite",
     )
 
 

@@ -111,8 +111,12 @@ def test_http_agent_preserves_provider_receipt_metadata(monkeypatch):
 
     assert response.action == 1
     assert response.metadata["provider_receipt"]["usage"]["total_tokens"] == 5
-    assert agent.last_receipt == receipt
-    assert agent.attempt_receipts == [receipt]
+    assert agent.last_receipt is not None
+    assert agent.last_receipt["schema_version"] == "eslams.provider.receipt.v1"
+    assert agent.last_receipt["provider"] == "openai"
+    assert agent.last_receipt["model"] == "gpt-test"
+    assert agent.last_receipt["usage"]["total_tokens"] == 5
+    assert agent.attempt_receipts == [agent.last_receipt]
 
 
 def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):

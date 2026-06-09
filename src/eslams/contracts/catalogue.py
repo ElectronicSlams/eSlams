@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from eslams.contracts.versions import CATALOGUE_GAME_SCHEMA_VERSION, CATALOGUE_MODEL_SCHEMA_VERSION
+from eslams.contracts.versions import (
+    CATALOGUE_AVAILABILITY_SCHEMA_VERSION,
+    CATALOGUE_GAME_SCHEMA_VERSION,
+    CATALOGUE_MODEL_SCHEMA_VERSION,
+    CATALOGUE_RENDERER_SCHEMA_VERSION,
+)
 
 
 @dataclass(frozen=True)
@@ -89,4 +94,25 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
                 "official_eval": CapabilityFlag(False, "not_evaluated"),
             },
         ).to_dict(),
+        CATALOGUE_RENDERER_SCHEMA_VERSION: {
+            "schema_version": CATALOGUE_RENDERER_SCHEMA_VERSION,
+            "game_id": "tic-tac-toe",
+            "renderer_family": "grid",
+            "renderer_kind": "grid",
+            "timeline_completeness": "playable",
+            "replay_availability": "playable",
+            "visible_frame_count": 2,
+            "state_frame_count": 2,
+            "move_frame_count": 1,
+            "public_safe": True,
+            "state_hash_valid": True,
+        },
+        CATALOGUE_AVAILABILITY_SCHEMA_VERSION: {
+            "schema_version": CATALOGUE_AVAILABILITY_SCHEMA_VERSION,
+            "provider": "mock",
+            "model": "legal-action",
+            "game_id": "tic-tac-toe",
+            "status": "ready",
+            "reason": None,
+        },
     }

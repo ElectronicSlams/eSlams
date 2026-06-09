@@ -32,6 +32,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.2.0](#release-v020)
 - [Contribute](#contribute)
 - [Support eSlams](#support-eslams)
 
@@ -206,6 +207,7 @@ Every Core run can produce:
 - private judge trace
 - auditor trace with deterministic before/after state snapshots
 - replay events
+- public display frames
 - local replay HTML
 - score and metrics files
 - model provider receipts
@@ -219,11 +221,20 @@ Every Core run can produce:
 Score and manifest metadata include:
 
 - `match_valid_for_scoring`
+- `per_case_run_valid`
+- `per_case_scoring_eligible`
+- `proof_row_publication_eligible`
+- `aggregate_leaderboard_eligible`
+- `aggregate_ineligibility_reason`
 - `invalid_reason`
 - `agent_error_count_by_player`
 - `illegal_action_count_by_player`
 - `fallback_action_count_by_player`
 - `provider_status_by_player`
+
+Provider status values are normalized as `provider_ok`,
+`provider_receipt_missing`, `provider_usage_unavailable`, `local_agent`, or
+`agent_error`.
 
 Validate an artifact:
 
@@ -257,6 +268,7 @@ eslams schemas export --out schemas/
 eslams validate runs/latest.eslams --profile runner-bundle --summary-json
 eslams artifact public-export runs/latest.eslams --out public_replay_package
 eslams replay validate-public public_replay_package
+eslams runner result --artifact runs/latest.eslams --artifact-uri URI --job-id JOB
 eslams providers preflight --provider openai --model gpt-5-mini --arena tic-tac-toe
 eslams plan official --suite public-smoke --providers openai --arenas tic-tac-toe --json
 eslams publish export --kind uploaded-replay --artifact runs/latest.eslams --out bundle
@@ -394,8 +406,10 @@ Core has direct first-party HTTP adapters for:
 
 The model capability registry covers a broader provider landscape so Core can
 track API availability, text-game support, endpoints, modalities, temperature
-support, reasoning support, Google thinking config support, context windows,
-output limits, verification timestamps, and source metadata.
+support, reasoning support, provider-controlled reasoning fields such as
+OpenAI `reasoning_effort`, Gemini `thinkingBudget`/`thinkingLevel`, Anthropic
+adaptive thinking, context windows, output limits, verification timestamps, and
+source metadata.
 
 Inspect supported game-agent models:
 
@@ -499,6 +513,7 @@ run_<id>.eslams.d/
   traces/private_judge_trace.jsonl
   traces/auditor_trace.jsonl
   replay/replay_events.jsonl
+  replay/display_frames.jsonl
   replay/replay_manifest.json
   replay/index.html
   scores/score.json
@@ -522,6 +537,8 @@ run_<id>.eslams.d/
 - creation timestamp
 - arena, agent, wrapper, eval suite, scoring policy, and runner versions
 - verification level
+- stable machine keys and public labels for verification level, artifact
+  profile, scoring policy, and publication kind
 - deterministic replay metadata
 - match validity metadata
 - file table with SHA-256 hashes
@@ -557,6 +574,23 @@ eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
 ```
+
+## Release v0.2.0
+
+Core v0.2.0 is the named Platform contract release. Release from a clean main
+checkout after tests pass:
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check .
+python3 -m mypy src
+git tag -a v0.2.0 -m "eSlams Core v0.2.0"
+git push origin main v0.2.0
+```
+
+`eslams schemas export --out schemas/` writes individual schema files plus
+`schema_bundle_manifest.json` with the Core package version, git commit when
+available, schema bundle version, schema hashes, and deterministic build id.
 
 ## Contribute
 

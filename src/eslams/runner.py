@@ -31,7 +31,7 @@ class RunConfig:
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str | None = None
-    runner_version: str = "eslams-runner:0.1.0"
+    runner_version: str = "eslams-runner:0.2.0"
     suite_id: str | None = None
     case_id: str | None = None
     suite_fingerprint: str | None = None
@@ -91,7 +91,11 @@ class Runner:
         illegal_action_count = dict.fromkeys(arena.players, 0)
         fallback_action_count = dict.fromkeys(arena.players, 0)
         provider_status = {
-            player: ("not_called" if hasattr(agents[player], "provider") else "not_provider")
+            player: (
+                "provider_receipt_missing"
+                if _is_provider_backed_agent(agents[player])
+                else "local_agent"
+            )
             for player in arena.players
         }
         match_valid_for_scoring = True
@@ -119,7 +123,7 @@ class Runner:
             receipt = _last_provider_receipt(agent)
             attempt_receipts = _provider_attempt_receipts(agent, fallback=receipt)
             if attempt_receipts:
-                provider_status[player_id] = "ok"
+                provider_status[player_id] = _provider_receipt_status(attempt_receipts[-1])
                 for attempt_receipt in attempt_receipts:
                     provider_receipts.append(
                         {
@@ -131,6 +135,8 @@ class Runner:
                             "latency_ms": latency_ms,
                         }
                     )
+            elif _is_provider_backed_agent(agent):
+                provider_status[player_id] = "provider_receipt_missing"
             if _has_agent_error(markers):
                 agent_error_count[player_id] += 1
                 provider_status[player_id] = _provider_status(agent, response, markers)
@@ -672,16 +678,30 @@ def _error_row(
 
 
 def _provider_status(agent: Any, response: ActResponse | None, markers: list[str]) -> str:
-    if not hasattr(agent, "provider"):
-        return "not_provider"
-    error = str((response.metadata if response else {}).get("error", "")).lower()
-    if "missing api key" in error:
-        return "missing_api_key"
-    if "provider" in error:
-        return "provider_error"
-    if "timeout" in markers:
-        return "timeout"
+    if not _is_provider_backed_agent(agent):
+        return "local_agent"
     return "agent_error"
+
+
+def _is_provider_backed_agent(agent: Any) -> bool:
+    provider = getattr(agent, "provider", None)
+    model = getattr(agent, "model", None)
+    return isinstance(provider, str) and bool(provider) and isinstance(model, str) and bool(model)
+
+
+def _provider_receipt_status(receipt: dict[str, Any]) -> str:
+    outcome = receipt.get("outcome")
+    if isinstance(outcome, str) and outcome not in {"ok", "parse_error"}:
+        return "agent_error"
+    usage = receipt.get("usage")
+    reason = receipt.get("usage_unavailable_reason")
+    if isinstance(reason, str) and reason:
+        return "provider_usage_unavailable"
+    if not isinstance(usage, dict):
+        return "provider_usage_unavailable"
+    if any(isinstance(value, int) and not isinstance(value, bool) for value in usage.values()):
+        return "provider_ok"
+    return "provider_usage_unavailable"
 
 
 def _forfeit_state(
