@@ -7,6 +7,7 @@ from typing import Any
 
 from eslams.contracts.versions import REPLAY_DISPLAY_FRAME_SCHEMA_VERSION
 from eslams.events import ReplayEvent
+from eslams.state import ArenaState
 
 
 def display_frame_rows(events: Iterable[ReplayEvent]) -> list[dict[str, Any]]:
@@ -43,6 +44,41 @@ def display_frame_rows_from_dicts(events: Iterable[dict[str, Any]]) -> list[dict
             }
         )
     return rows
+
+
+def display_frame_for_state(
+    state: ArenaState,
+    *,
+    run_id: str,
+    event_id: str,
+    actor_player: str | None = None,
+    action: Any | None = None,
+    action_label: str | None = None,
+) -> dict[str, Any]:
+    """Project one live Arena state into the public replay display-frame shape."""
+
+    rows = display_frame_rows_from_dicts(
+        [
+            {
+                "event_id": event_id,
+                "run_id": run_id,
+                "turn_id": state.turn,
+                "actor_player": actor_player,
+                "action": action,
+                "action_label": action_label,
+                "active_player": state.active_player,
+                "terminal": state.terminal,
+                "scores": state.scores,
+                "public_state": state.public_state,
+                "render_hints": state.render_hints,
+                "public_safe": True,
+                "visibility": "public",
+            }
+        ]
+    )
+    if not rows:
+        raise ValueError("live display frame projection produced no rows")
+    return rows[0]
 
 
 def _renderer_family(render_hints: Any, public_state: dict[str, Any]) -> str:

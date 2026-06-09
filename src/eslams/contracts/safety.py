@@ -44,7 +44,7 @@ def _scan(payload: Any, *, root: str, issues: list[SafetyIssue]) -> None:
         for key, value in payload.items():
             key_text = str(key)
             path = f"{root}.{key_text}"
-            if DENIED_KEY_RE.search(key_text):
+            if DENIED_KEY_RE.search(key_text) and not _allowed_public_key(path, key_text):
                 issues.append(
                     SafetyIssue(
                         path=path,
@@ -56,3 +56,19 @@ def _scan(payload: Any, *, root: str, issues: list[SafetyIssue]) -> None:
     elif isinstance(payload, list):
         for index, value in enumerate(payload):
             _scan(value, root=f"{root}[{index}]", issues=issues)
+
+
+def _allowed_public_key(path: str, key: str) -> bool:
+    """Allow action descriptor tokens without allowing auth/provider tokens."""
+
+    if key not in {"token", "prompt_label"}:
+        return False
+    return _looks_like_action_descriptor_path(path)
+
+
+def _looks_like_action_descriptor_path(path: str) -> bool:
+    return (
+        ".legal_action_descriptors[" in path
+        or ".rows[" in path
+        or path.startswith("$.action_descriptor.")
+    )
