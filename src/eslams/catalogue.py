@@ -11,7 +11,9 @@ from eslams.contracts.catalogue import (
     GameCatalogueRecord,
     ModelCatalogueRecord,
 )
+from eslams.contracts.versions import CATALOGUE_AVAILABILITY_SCHEMA_VERSION
 from eslams.providers import load_provider_registry
+from eslams.public_catalogue import PUBLIC_GAME_CATALOGUE_BY_ID
 from eslams.rendering import renderer_vocabulary_rows
 
 
@@ -23,13 +25,14 @@ def game_catalogue_rows() -> list[dict[str, Any]]:
     }
     for game_id in arena_registry.list():
         renderer_row = renderer_rows[game_id]
+        public = PUBLIC_GAME_CATALOGUE_BY_ID[game_id]
         replay_availability = str(renderer_row["replay_availability"])
         rows.append(
             {
                 **GameCatalogueRecord(
                     game_id=game_id,
-                    display_name=_display_name(game_id),
-                    display_group=_display_group(game_id),
+                    display_name=public.name,
+                    display_group=public.category_label,
                     renderer_family=str(renderer_row["renderer_family"]),
                     replay_availability=replay_availability,
                     official_eval_availability="not_evaluated",
@@ -37,7 +40,21 @@ def game_catalogue_rows() -> list[dict[str, Any]]:
                     if replay_availability == "playable"
                     else "setup_only_replay",
                 ).to_dict(),
-                "variant_token": "default",
+                "runtime_display_name": _display_name(game_id),
+                "runtime_display_group": _display_group(game_id),
+                "variant_token": public.variant,
+                "variant_slug": public.variant,
+                "variant_label": public.variant_label,
+                "public_game_label": public.name,
+                "public_display_name": public.name,
+                "public_display_group": public.category_label,
+                "public_category_label": public.category_label,
+                "public_variant_label": public.variant_label,
+                "public_short_description": public.short_description,
+                "public_category_key": public.category,
+                "difficulty": public.difficulty,
+                "maturity": public.maturity,
+                "player_count": public.players,
                 "scenario_levels": ["default"],
                 "action_schema_version": "action-schema-v1",
                 "browser_play_availability": "ready",
@@ -79,6 +96,14 @@ def model_catalogue_rows() -> list[dict[str, Any]]:
             | {
                 "source_model_id": record.source_model_id,
                 "modality_summary": record.modality_summary,
+                "supported_reasoning_modes": list(record.supported_reasoning_modes),
+                "accepted_control_fields": list(record.accepted_control_fields),
+                "default_reasoning_track": record.default_reasoning_track,
+                "reasoning_track_kind": record.reasoning_track_kind,
+                "unsupported_reasoning_control_reason": (
+                    record.unsupported_reasoning_control_reason
+                ),
+                "http_agent_payload_guidance": dict(record.http_agent_payload_guidance),
                 "provider_label": provider_registry.organizations.get(
                     record.provider,
                     record.provider,
@@ -98,6 +123,7 @@ def availability_rows() -> list[dict[str, Any]]:
             allowed = arena_flag.get("enabled") is True
             rows.append(
                 {
+                    "schema_version": CATALOGUE_AVAILABILITY_SCHEMA_VERSION,
                     "model": model["model"],
                     "provider": model["provider"],
                     "game_id": game["game_id"],

@@ -26,6 +26,12 @@ class ModelCapabilities:
     supports_reasoning: bool = False
     reasoning_efforts: list[str] = field(default_factory=list)
     default_reasoning_effort: str | None = None
+    supported_reasoning_modes: list[str] = field(default_factory=list)
+    accepted_control_fields: list[str] = field(default_factory=list)
+    default_reasoning_track: str | None = None
+    reasoning_track_kind: str = "provider_native"
+    unsupported_reasoning_control_reason: str | None = None
+    http_agent_payload_guidance: dict[str, Any] = field(default_factory=dict)
     supports_google_thinking_config: bool = False
     max_output_tokens: int | None = None
     context_window: int | None = None
@@ -48,8 +54,35 @@ class ModelCapabilities:
         if not isinstance(modalities, dict):
             modalities = {"input": ["text"], "output": ["text"]}
         game_agent_supported = bool(value.get("game_agent_supported", False))
+        provider = str(value["provider"]).lower()
+        supports_reasoning = bool(value.get("supports_reasoning", False))
+        reasoning_efforts = _strings(value.get("reasoning_efforts"))
+        default_reasoning_effort = _optional_str(value.get("default_reasoning_effort"))
+        supports_google_thinking_config = bool(value.get("supports_google_thinking_config", False))
+        accepted_control_fields = _strings(value.get("accepted_control_fields")) or (
+            _provider_control_fields(
+                provider,
+                supports_reasoning=supports_reasoning,
+                supports_google_thinking_config=supports_google_thinking_config,
+            )
+        )
+        supported_reasoning_modes = _strings(value.get("supported_reasoning_modes")) or (
+            reasoning_efforts if reasoning_efforts else ["native-default"]
+        )
+        default_reasoning_track = _optional_str(value.get("default_reasoning_track")) or (
+            default_reasoning_effort or supported_reasoning_modes[0]
+        )
+        reasoning_track_kind = _reasoning_track_kind(
+            value.get("reasoning_track_kind"),
+            accepted_control_fields=accepted_control_fields,
+        )
+        unsupported_reasoning_control_reason = _unsupported_control_reason(
+            value.get("unsupported_reasoning_control_reason"),
+            game_agent_supported=game_agent_supported,
+            accepted_control_fields=accepted_control_fields,
+        )
         return cls(
-            provider=str(value["provider"]).lower(),
+            provider=provider,
             model=str(value["model"]),
             available_from_api=_optional_bool(value.get("available_from_api")),
             game_agent_supported=game_agent_supported,
@@ -59,12 +92,22 @@ class ModelCapabilities:
                 "output": _strings(modalities.get("output")),
             },
             supports_temperature=bool(value.get("supports_temperature", False)),
-            supports_reasoning=bool(value.get("supports_reasoning", False)),
-            reasoning_efforts=_strings(value.get("reasoning_efforts")),
-            default_reasoning_effort=_optional_str(value.get("default_reasoning_effort")),
-            supports_google_thinking_config=bool(
-                value.get("supports_google_thinking_config", False)
+            supports_reasoning=supports_reasoning,
+            reasoning_efforts=reasoning_efforts,
+            default_reasoning_effort=default_reasoning_effort,
+            supported_reasoning_modes=supported_reasoning_modes,
+            accepted_control_fields=accepted_control_fields,
+            default_reasoning_track=default_reasoning_track,
+            reasoning_track_kind=reasoning_track_kind,
+            unsupported_reasoning_control_reason=unsupported_reasoning_control_reason,
+            http_agent_payload_guidance=_http_agent_payload_guidance(
+                value.get("http_agent_payload_guidance"),
+                accepted_control_fields=accepted_control_fields,
+                default_reasoning_track=default_reasoning_track,
+                reasoning_track_kind=reasoning_track_kind,
+                unsupported_reasoning_control_reason=unsupported_reasoning_control_reason,
             ),
+            supports_google_thinking_config=supports_google_thinking_config,
             max_output_tokens=_optional_int(value.get("max_output_tokens")),
             context_window=_optional_int(value.get("context_window")),
             last_verified_at=_optional_str(value.get("last_verified_at")),
@@ -96,6 +139,18 @@ class ModelCapabilities:
             endpoints=[],
             supports_temperature=False,
             supports_reasoning=False,
+            supported_reasoning_modes=["native-default"],
+            accepted_control_fields=[],
+            default_reasoning_track="native-default",
+            reasoning_track_kind="provider_native",
+            unsupported_reasoning_control_reason="unknown_model",
+            http_agent_payload_guidance=_http_agent_payload_guidance(
+                None,
+                accepted_control_fields=[],
+                default_reasoning_track="native-default",
+                reasoning_track_kind="provider_native",
+                unsupported_reasoning_control_reason="unknown_model",
+            ),
             supports_google_thinking_config=False,
             sources=["unknown-model"],
             known=False,
@@ -123,6 +178,12 @@ class ModelCapabilities:
             "supports_reasoning": self.supports_reasoning,
             "reasoning_efforts": list(self.reasoning_efforts),
             "default_reasoning_effort": self.default_reasoning_effort,
+            "supported_reasoning_modes": list(self.supported_reasoning_modes),
+            "accepted_control_fields": list(self.accepted_control_fields),
+            "default_reasoning_track": self.default_reasoning_track,
+            "reasoning_track_kind": self.reasoning_track_kind,
+            "unsupported_reasoning_control_reason": self.unsupported_reasoning_control_reason,
+            "http_agent_payload_guidance": dict(self.http_agent_payload_guidance),
             "supports_google_thinking_config": self.supports_google_thinking_config,
             "max_output_tokens": self.max_output_tokens,
             "context_window": self.context_window,
@@ -182,6 +243,59 @@ def _optional_int(value: Any) -> int | None:
     if isinstance(value, int):
         return value
     return None
+
+
+def _provider_control_fields(
+    provider: str,
+    *,
+    supports_reasoning: bool,
+    supports_google_thinking_config: bool,
+) -> list[str]:
+    if provider == "openai" and supports_reasoning:
+        return ["reasoning_effort"]
+    if provider in {"google", "gemini"} and supports_google_thinking_config:
+        return ["thinkingBudget", "thinkingLevel"]
+    if provider == "anthropic" and supports_reasoning:
+        return ["adaptive_thinking"]
+    return []
+
+
+def _reasoning_track_kind(value: Any, *, accepted_control_fields: list[str]) -> str:
+    if isinstance(value, str) and value in {"provider_controlled", "provider_native"}:
+        return value
+    return "provider_controlled" if accepted_control_fields else "provider_native"
+
+
+def _unsupported_control_reason(
+    value: Any,
+    *,
+    game_agent_supported: bool,
+    accepted_control_fields: list[str],
+) -> str | None:
+    if isinstance(value, str) and value:
+        return value
+    if game_agent_supported and not accepted_control_fields:
+        return "provider_control_not_supported"
+    return None
+
+
+def _http_agent_payload_guidance(
+    value: Any,
+    *,
+    accepted_control_fields: list[str],
+    default_reasoning_track: str | None,
+    reasoning_track_kind: str,
+    unsupported_reasoning_control_reason: str | None,
+) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    return {
+        "accepted_control_fields": list(accepted_control_fields),
+        "default_reasoning_track": default_reasoning_track,
+        "reasoning_track_kind": reasoning_track_kind,
+        "unsupported_reasoning_control_reason": unsupported_reasoning_control_reason,
+        "http_agent_rule": "omit unsupported provider controls from /act payloads",
+    }
 
 
 def _capability_flags(

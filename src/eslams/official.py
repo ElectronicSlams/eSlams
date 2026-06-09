@@ -9,6 +9,7 @@ from typing import Any
 from eslams.artifacts import ArtifactValidator, extract_provider_usage, read_member
 from eslams.contracts.versions import OFFICIAL_RESULT_SCHEMA_VERSION
 from eslams.hashing import canonical_json
+from eslams.policy import policy_key, policy_label
 
 
 def merge_official_results(run_dir: Path, output_path: Path) -> Path:
@@ -44,6 +45,9 @@ def merge_official_results(run_dir: Path, output_path: Path) -> Path:
                 "arena_id": summary.get("arena_id") if summary else None,
                 "winner": summary.get("winner") if summary else None,
                 "valid_for_scoring": summary.get("valid_for_scoring") if summary else None,
+                "per_case_run_valid": validation.per_case_run_valid,
+                "per_case_scoring_eligible": validation.per_case_scoring_eligible,
+                "proof_row_publication_eligible": validation.proof_row_publication_eligible,
                 "validation_status": "valid" if validation.valid else "invalid",
                 "runner_signature_status": validation.signature.status,
             }
@@ -56,9 +60,19 @@ def merge_official_results(run_dir: Path, output_path: Path) -> Path:
             "invalid": len(rows) - valid_count,
         },
         "scoring_eligibility": {
-            "eligible": sum(1 for row in rows if row["valid_for_scoring"] is True),
-            "non_scoring": sum(1 for row in rows if row["valid_for_scoring"] is False),
+            "per_case_scoring_eligible": sum(
+                1 for row in rows if row["per_case_scoring_eligible"] is True
+            ),
+            "per_case_non_scoring": sum(
+                1 for row in rows if row["per_case_scoring_eligible"] is False
+            ),
+            "aggregate_leaderboard_eligible": False,
+            "aggregate_ineligibility_reason": "aggregate_leaderboard_not_asserted_by_core",
         },
+        "aggregate_leaderboard_eligible": False,
+        "aggregate_ineligibility_reason": "aggregate_leaderboard_not_asserted_by_core",
+        "publication_kind_key": policy_key("official-proof", fallback="official_proof"),
+        "publication_kind_label": policy_label("official-proof", fallback="Official Proof"),
         "aggregate_usage": aggregate_usage,
         "aggregate_cost": _cost_unavailable(),
         "proof_counts": {

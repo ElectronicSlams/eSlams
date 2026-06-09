@@ -41,6 +41,7 @@ from eslams.rendering import renderer_vocabulary_rows
 from eslams.replay import render_replay_html
 from eslams.runner import FAILURE_POLICIES, RunConfig, Runner
 from eslams.runner_health import current_runner_health
+from eslams.runner_result import runner_job_result_from_artifact
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -163,6 +164,13 @@ def main(argv: list[str] | None = None) -> int:
     runner_sub = runner_cmd.add_subparsers(dest="runner_command", required=True)
     runner_health = runner_sub.add_parser("health", help="Print runner health metadata.")
     runner_health.add_argument("--json", action="store_true")
+    runner_result = runner_sub.add_parser(
+        "result",
+        help="Emit a canonical RunnerJobResult from an artifact.",
+    )
+    runner_result.add_argument("--artifact", type=Path, required=True)
+    runner_result.add_argument("--artifact-uri", required=True)
+    runner_result.add_argument("--job-id", required=True)
 
     models = sub.add_parser("models", help="Inspect or refresh provider model capabilities.")
     models_sub = models.add_subparsers(dest="models_command", required=True)
@@ -223,13 +231,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     run.add_argument("--verification-level", default="Local Artifact")
     run.add_argument("--eval-suite-version", default="public-smoke:1.0.0")
-    run.add_argument("--runner-version", default="eslams-runner:0.1.0")
+    run.add_argument("--runner-version", default="eslams-runner:0.2.0")
     run.add_argument("--suite-id")
     run.add_argument("--case-id")
     run.add_argument("--suite-fingerprint")
     run.add_argument("--plan-hash")
     run.add_argument("--shard-index", type=int)
     run.add_argument("--shard-count", type=int)
+    run.add_argument("--runner-result-json", action="store_true")
+    run.add_argument("--artifact-uri")
 
     validate = sub.add_parser("validate", help="Validate an artifact directory or .eslams zip.")
     validate.add_argument("artifact", type=Path)
@@ -323,6 +333,14 @@ def main(argv: list[str] | None = None) -> int:
                 shard_count=args.shard_count,
             )
         )
+        if args.runner_result_json:
+            job_result = runner_job_result_from_artifact(
+                artifact_path=result.artifact_path,
+                artifact_uri=args.artifact_uri or str(result.artifact_path),
+                job_id=result.run_id,
+            )
+            print(json.dumps(job_result.to_dict(), indent=2))
+            return 0 if job_result.validation_status == "valid" else 1
         print(
             json.dumps(
                 {
@@ -530,6 +548,14 @@ def _runner_command(args: argparse.Namespace) -> int:
                 f"game_count={payload['game_count']}"
             )
         return 0
+    if args.runner_command == "result":
+        result = runner_job_result_from_artifact(
+            artifact_path=args.artifact,
+            artifact_uri=args.artifact_uri,
+            job_id=args.job_id,
+        )
+        print(json.dumps(result.to_dict(), indent=2))
+        return 0 if result.validation_status == "valid" else 1
     raise AssertionError(args.runner_command)
 
 

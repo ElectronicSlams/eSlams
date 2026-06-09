@@ -7,6 +7,7 @@ from typing import Any
 import eslams.arenas  # noqa: F401
 from eslams.arena import registry as arena_registry
 from eslams.contracts.safety import scan_public_payload
+from eslams.contracts.versions import CATALOGUE_RENDERER_SCHEMA_VERSION
 from eslams.hashing import sha256_json
 
 RENDER_HINTS_VERSION = "render-hints-v1"
@@ -45,6 +46,7 @@ def renderer_vocabulary_rows(*, seed: int = 1) -> list[dict[str, Any]]:
         )
         rows.append(
             {
+                "schema_version": CATALOGUE_RENDERER_SCHEMA_VERSION,
                 "game_id": arena_id,
                 "renderer_family": renderer_family(state.render_hints),
                 "renderer_kind": renderer_kind(state.render_hints),

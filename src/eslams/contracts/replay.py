@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from eslams.contracts.versions import REPLAY_MANIFEST_SCHEMA_VERSION, REPLAY_PUBLIC_SCHEMA_VERSION
+from eslams.contracts.versions import (
+    REPLAY_DISPLAY_FRAME_SCHEMA_VERSION,
+    REPLAY_MANIFEST_SCHEMA_VERSION,
+    REPLAY_PUBLIC_SCHEMA_VERSION,
+)
 
 TIMELINE_COMPLETENESS_VALUES: tuple[str, ...] = (
     "playable",
@@ -142,4 +146,15 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
             autoplay_ready=True,
             reasoning_frame_coverage=0.0,
         ).to_dict(),
+        REPLAY_DISPLAY_FRAME_SCHEMA_VERSION: {
+            "schema_version": REPLAY_DISPLAY_FRAME_SCHEMA_VERSION,
+            "frame_id": "run_example:display:000001",
+            "renderer_family": "board",
+            "visibility": "public",
+            "actor_player": "player_1",
+            "action_label": "2",
+            "display_cells": [{"row": 0, "col": 2, "value": "X"}],
+            "summary": {"turn": 1, "terminal": False, "scores": {"player_1": 0.0}},
+            "source_replay_event_id": "run_example:replay:000001",
+        },
     }
