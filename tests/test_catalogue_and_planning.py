@@ -15,6 +15,7 @@ from eslams.eval_runtime import (
 )
 from eslams.planning import official_plan
 from eslams.providers import load_provider_registry
+from eslams.public_catalogue import PUBLIC_CATEGORY_LABELS, PUBLIC_GAME_CATALOGUE_BY_ID
 from eslams.rendering import renderer_vocabulary_hash, renderer_vocabulary_rows
 
 
@@ -30,9 +31,34 @@ def test_catalogue_exports_games_models_and_availability_rows():
     assert all(model["schema_version"] == "eslams.catalogue.model.v1" for model in models)
     assert all("official_eval" in model["capability_flags"] for model in models)
     assert availability
+    assert all(row["schema_version"] == "eslams.catalogue.availability.v1" for row in availability)
     assert all("reason" in row for row in availability)
     assert all("timeline_completeness" in game for game in games)
     assert all("render_hints_version" in game for game in games)
+    by_game = {row["game_id"]: row for row in games}
+    assert by_game["blackjack"]["variant_token"] == "core_hit_stand_s17"
+    assert by_game["blackjack"]["variant_label"] == "Hit Stand S17"
+    assert by_game["cartpole"]["display_name"] == "CartPole"
+    assert by_game["cartpole"]["public_display_group"] == "Control & Arcade"
+    assert by_game["chess"]["public_display_group"] == "Board & Strategy"
+    assert by_game["liars-dice"]["public_display_group"] == "Card & Hidden-Info"
+
+
+def test_game_catalogue_matches_transcribed_platform_identity_for_all_games():
+    games = game_catalogue_rows()
+    by_game = {row["game_id"]: row for row in games}
+
+    assert set(by_game) == set(PUBLIC_GAME_CATALOGUE_BY_ID)
+    for game_id, expected in PUBLIC_GAME_CATALOGUE_BY_ID.items():
+        row = by_game[game_id]
+        assert row["public_display_name"] == expected.name
+        assert row["public_game_label"] == expected.name
+        assert row["public_category_key"] == expected.category
+        assert row["public_category_label"] == PUBLIC_CATEGORY_LABELS[expected.category]
+        assert row["public_display_group"] == PUBLIC_CATEGORY_LABELS[expected.category]
+        assert row["variant_token"] == expected.variant
+        assert row["variant_slug"] == expected.variant
+        assert row["public_variant_label"] == expected.variant_label
 
 
 def test_renderer_vocabulary_classifies_all_arenas_as_safe_or_explicit_absence():
@@ -41,6 +67,7 @@ def test_renderer_vocabulary_classifies_all_arenas_as_safe_or_explicit_absence()
 
     assert len(rows) == 50
     assert renderer_vocabulary_hash()
+    assert all(row["schema_version"] == "eslams.catalogue.renderer.v1" for row in rows)
     assert by_game["tic-tac-toe"]["timeline_completeness"] == "playable"
     assert by_game["connect-four"]["timeline_completeness"] == "playable"
     assert by_game["tic-tac-toe"]["move_frame_count"] >= 1

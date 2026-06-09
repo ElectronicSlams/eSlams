@@ -49,6 +49,11 @@ class PublicResultSummary:
     reason: str | None
     valid_for_scoring: bool
     scoring_safety_reason: str | None
+    per_case_run_valid: bool = True
+    per_case_scoring_eligible: bool = True
+    proof_row_publication_eligible: bool = True
+    aggregate_leaderboard_eligible: bool = False
+    aggregate_ineligibility_reason: str | None = "single_case_not_full_suite"
     schema_version: str = OFFICIAL_RESULT_SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -62,6 +67,11 @@ class PublicResultSummary:
             "reason": self.reason,
             "valid_for_scoring": self.valid_for_scoring,
             "scoring_safety_reason": self.scoring_safety_reason,
+            "per_case_run_valid": self.per_case_run_valid,
+            "per_case_scoring_eligible": self.per_case_scoring_eligible,
+            "proof_row_publication_eligible": self.proof_row_publication_eligible,
+            "aggregate_leaderboard_eligible": self.aggregate_leaderboard_eligible,
+            "aggregate_ineligibility_reason": self.aggregate_ineligibility_reason,
         }
 
 
@@ -74,6 +84,7 @@ class PublicArtifactManifest:
     artifact_kind: str
     replay_manifest_path: str
     replay_events_path: str
+    display_frames_path: str | None
     public_result_summary_path: str
     receipts_public: bool = False
     schema_version: str = ARTIFACT_MANIFEST_SCHEMA_VERSION
@@ -89,6 +100,7 @@ class PublicArtifactManifest:
             "artifact_kind": self.artifact_kind,
             "replay_manifest_path": self.replay_manifest_path,
             "replay_events_path": self.replay_events_path,
+            "display_frames_path": self.display_frames_path,
             "public_result_summary_path": self.public_result_summary_path,
             "receipts_public": self.receipts_public,
             "notes": list(self.notes),
@@ -110,6 +122,15 @@ class ArtifactValidationSummary:
     runner_signature_status: str | None = None
     archive_sha256: str | None = None
     artifact_size_bytes: int | None = None
+    verification_level_key: str | None = None
+    verification_level_label: str | None = None
+    artifact_profile_key: str | None = None
+    artifact_profile_label: str | None = None
+    per_case_run_valid: bool | None = None
+    per_case_scoring_eligible: bool | None = None
+    proof_row_publication_eligible: bool | None = None
+    aggregate_leaderboard_eligible: bool | None = None
+    aggregate_ineligibility_reason: str | None = None
     schema_version: str = ARTIFACT_VALIDATION_SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -128,34 +149,79 @@ class ArtifactValidationSummary:
             "runner_signature_status": self.runner_signature_status,
             "archive_sha256": self.archive_sha256,
             "artifact_size_bytes": self.artifact_size_bytes,
+            "verification_level_key": self.verification_level_key,
+            "verification_level_label": self.verification_level_label,
+            "artifact_profile_key": self.artifact_profile_key,
+            "artifact_profile_label": self.artifact_profile_label,
+            "per_case_run_valid": self.per_case_run_valid,
+            "per_case_scoring_eligible": self.per_case_scoring_eligible,
+            "proof_row_publication_eligible": self.proof_row_publication_eligible,
+            "aggregate_leaderboard_eligible": self.aggregate_leaderboard_eligible,
+            "aggregate_ineligibility_reason": self.aggregate_ineligibility_reason,
         }
 
 
 def no_secret_examples() -> dict[str, dict[str, Any]]:
     """Return small public fixtures used by schema/export tests."""
 
+    validation_example = ArtifactValidationSummary(
+        artifact="example.eslams",
+        profile="runner_bundle",
+        valid=True,
+        validation_status="valid",
+        errors=[],
+        run_id="run_example",
+        artifact_id="sha256-example",
+        verification_level="Local Artifact",
+        verification_level_key="local_artifact",
+        verification_level_label="Local Artifact",
+        artifact_profile_key="runner_bundle",
+        artifact_profile_label="Runner Bundle",
+        replay_status="verified",
+        scoring_eligible=True,
+        runner_signature_status="unsigned",
+        archive_sha256="sha256:example",
+        artifact_size_bytes=12345,
+        per_case_run_valid=True,
+        per_case_scoring_eligible=True,
+        proof_row_publication_eligible=True,
+        aggregate_leaderboard_eligible=False,
+        aggregate_ineligibility_reason="single_case_not_full_suite",
+    ).to_dict()
+    validation_example.update(
+        {
+            "signature": {"status": "unsigned", "verified": False},
+            "deterministic_replay": {
+                "status": "verified",
+                "verified": True,
+                "arena_id": "tic-tac-toe",
+                "action_event_count": 5,
+                "replay_event_count": 6,
+            },
+        }
+    )
     return {
         ARTIFACT_MANIFEST_SCHEMA_VERSION: {
             "manifest_schema_version": ARTIFACT_MANIFEST_SCHEMA_VERSION,
             "artifact_profile": "runner_bundle",
+            "artifact_profile_key": "runner_bundle",
+            "artifact_profile_label": "Runner Bundle",
             "artifact_kind": "local_match",
             "run_id": "run_example",
             "artifact_id": "sha256-example",
+            "verification_level": "Local Artifact",
+            "verification_level_key": "local_artifact",
+            "verification_level_label": "Local Artifact",
+            "scoring_policy_key": "tic_tac_toe_score",
+            "scoring_policy_label": "Tic Tac Toe Score",
+            "per_case_run_valid": True,
+            "per_case_scoring_eligible": True,
+            "proof_row_publication_eligible": True,
+            "aggregate_leaderboard_eligible": False,
+            "aggregate_ineligibility_reason": "single_case_not_full_suite",
             "files": [],
         },
-        ARTIFACT_VALIDATION_SCHEMA_VERSION: ArtifactValidationSummary(
-            artifact="example.eslams",
-            profile="runner_bundle",
-            valid=True,
-            validation_status="valid",
-            errors=[],
-            run_id="run_example",
-            artifact_id="sha256-example",
-            verification_level="Local Artifact",
-            replay_status="verified",
-            scoring_eligible=True,
-            runner_signature_status="unsigned",
-        ).to_dict(),
+        ARTIFACT_VALIDATION_SCHEMA_VERSION: validation_example,
         OFFICIAL_RESULT_SCHEMA_VERSION: PublicResultSummary(
             run_id="run_example",
             arena_id="tic-tac-toe",

@@ -23,9 +23,13 @@ def test_registry_resolves_known_and_unknown_models_safely():
 
     assert known.known is True
     assert known.reasoning_payload() == {"effort": "none"}
+    assert known.accepted_control_fields == ["reasoning_effort"]
+    assert known.default_reasoning_track == "none"
+    assert known.reasoning_track_kind == "provider_controlled"
     assert unknown.known is False
     assert unknown.game_agent_supported is False
     assert unknown.reasoning_payload() is None
+    assert unknown.default_reasoning_track == "native-default"
     assert unknown.supports_temperature is False
     assert unknown.supports_google_thinking_config is False
 
@@ -78,4 +82,23 @@ def test_registry_merges_local_overrides(tmp_path: Path):
 
     assert record.game_agent_supported is True
     assert record.reasoning_payload() == {"effort": "none"}
+    assert record.supported_reasoning_modes == ["none"]
+    assert record.accepted_control_fields == ["reasoning_effort"]
     assert record.sources == ["local-override"]
+
+
+def test_registry_distinguishes_provider_controlled_and_native_reasoning():
+    registry = load_provider_registry()
+    gpt5 = registry.resolve("openai", "gpt-5-mini")
+    gpt41 = registry.resolve("openai", "gpt-4.1")
+
+    assert gpt5.accepted_control_fields == ["reasoning_effort"]
+    assert gpt5.supported_reasoning_modes == ["minimal", "low", "medium", "high"]
+    assert gpt5.reasoning_track_kind == "provider_controlled"
+    assert gpt5.http_agent_payload_guidance["accepted_control_fields"] == [
+        "reasoning_effort"
+    ]
+    assert gpt41.supported_reasoning_modes == ["native-default"]
+    assert gpt41.accepted_control_fields == []
+    assert gpt41.reasoning_track_kind == "provider_native"
+    assert gpt41.unsupported_reasoning_control_reason == "provider_control_not_supported"

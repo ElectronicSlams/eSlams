@@ -14,12 +14,13 @@ from eslams.contracts.artifact import no_secret_examples as artifact_examples
 from eslams.contracts.catalogue import no_secret_examples as catalogue_examples
 from eslams.contracts.eval_plan import no_secret_examples as eval_plan_examples
 from eslams.contracts.json_schema import export_schemas
+from eslams.contracts.json_schema import no_secret_examples as schema_examples
 from eslams.contracts.provider import no_secret_examples as provider_examples
 from eslams.contracts.publication import no_secret_examples as publication_examples
 from eslams.contracts.replay import no_secret_examples as replay_examples
 from eslams.contracts.runner_job import no_secret_examples as runner_job_examples
 from eslams.hashing import canonical_json, sha256_file, sha256_json
-from eslams.public_replay import export_public_replay
+from eslams.public_replay import create_uploaded_smoke_fixture, export_public_replay
 from eslams.runner import RunConfig, Runner
 
 
@@ -33,6 +34,7 @@ def test_schema_versions_have_no_secret_examples_and_export_deterministically(tm
         eval_plan_examples,
         catalogue_examples,
         runner_job_examples,
+        schema_examples,
     ):
         examples.update(provider())
 
@@ -65,23 +67,40 @@ def test_runner_artifact_includes_public_sidecars_and_archive_helpers(tmp_path: 
     assert report.to_dict()["schema_version"] == "eslams.artifact.validation.v1"
     assert validation_summary is not None
     assert validation_summary["schema_version"] == "eslams.artifact.validation.v1"
+    assert validation_summary["verification_level_key"] == "local_artifact"
+    assert validation_summary["per_case_scoring_eligible"] is True
+    assert validation_summary["aggregate_leaderboard_eligible"] is False
     assert public_manifest is not None
     assert public_manifest["replay_events_path"] == "replay/replay_events.jsonl"
+    assert public_manifest["display_frames_path"] == "replay/display_frames.jsonl"
     assert provider_usage["receipt_count"] == 0
 
     manifest = json.loads((result.expanded_path / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["manifest_schema_version"] == "eslams.artifact.manifest.v1"
     assert manifest["artifact_profile"] == "runner_bundle"
     assert manifest["artifact_kind"] == "local_match"
+    assert manifest["verification_level_key"] == "local_artifact"
+    assert manifest["verification_level_label"] == "Local Artifact"
+    assert manifest["artifact_profile_key"] == "runner_bundle"
+    assert manifest["artifact_profile_label"] == "Runner Bundle"
+    assert manifest["scoring_policy_key"] == "tic_tac_toe_score"
+    assert manifest["per_case_run_valid"] is True
+    assert manifest["per_case_scoring_eligible"] is True
+    assert manifest["proof_row_publication_eligible"] is True
+    assert manifest["aggregate_leaderboard_eligible"] is False
     assert manifest["public_exports"]["public_reasoning"] == "public_reasoning/reasoning.jsonl"
+    assert manifest["public_exports"]["public_display_frames"] == "replay/display_frames.jsonl"
     assert manifest["validation_summary_path"] == "validation/validation_summary.json"
 
     replay = _read_jsonl(result.expanded_path / "replay/replay_events.jsonl")
+    display_frames = _read_jsonl(result.expanded_path / "replay/display_frames.jsonl")
     assert replay[1]["actor_player"] == "player_1"
     assert replay[1]["seat"] == "player_1"
     assert replay[1]["state_hash_before"] == replay[0]["state_hash"]
     assert replay[1]["state_hash_after"] == replay[1]["state_hash"]
     assert replay[1]["public_safe"] is True
+    assert display_frames[0]["schema_version"] == "eslams.replay.display_frame.v1"
+    assert display_frames[0]["source_replay_event_id"] == replay[0]["event_id"]
 
 
 def test_validation_profiles_distinguish_runner_public_and_official(tmp_path: Path):
@@ -99,8 +118,14 @@ def test_validation_profiles_distinguish_runner_public_and_official(tmp_path: Pa
         result.artifact_path,
         profile="official-bundle",
     )
+    package_manifest = json.loads((public_dir / "manifest.json").read_text(encoding="utf-8"))
+    optional_reasoning = package_manifest["optional_files"][0]
 
     assert public_report.valid is True
+    assert (public_dir / "replay/display_frames.jsonl").exists()
+    assert optional_reasoning["path"] == "public_reasoning/reasoning.jsonl"
+    assert optional_reasoning["present"] is True
+    assert optional_reasoning["sha256"]
     assert runner_report.valid is False
     assert any(
         item == "missing required file: traces/public_trace.jsonl"
@@ -123,6 +148,19 @@ def test_public_safety_scanner_rejects_nested_raw_provider_response(tmp_path: Pa
 
     assert report.valid is False
     assert any("raw_provider_response" in error for error in report.errors)
+
+
+def test_public_replay_optional_file_rows_record_absence(tmp_path: Path):
+    source = create_uploaded_smoke_fixture(tmp_path / "uploaded")
+    exported = export_public_replay(source, tmp_path / "exported")
+    manifest = json.loads((exported / "manifest.json").read_text(encoding="utf-8"))
+    optional_reasoning = manifest["optional_files"][0]
+
+    assert optional_reasoning["path"] == "public_reasoning/reasoning.jsonl"
+    assert optional_reasoning["present"] is False
+    assert optional_reasoning["sha256"] is None
+    assert optional_reasoning["size_bytes"] is None
+    assert optional_reasoning["absent_reason"] == "not_emitted_by_source_artifact"
 
 
 def test_failed_provider_attempt_writes_redacted_receipt(tmp_path: Path, monkeypatch):
@@ -270,7 +308,91 @@ def test_runner_persists_http_agent_provider_receipts(tmp_path: Path, monkeypatc
     assert receipts[0]["provider"] == "openai"
     assert receipts[0]["usage"]["total_tokens"] == 5
     assert receipts[0]["run_id"] == result.run_id
-    assert metrics["provider_status_by_player"]["player_1"] == "ok"
+    assert metrics["provider_status_by_player"]["player_1"] == "provider_ok"
+
+
+def test_runner_provider_status_cases(tmp_path: Path, monkeypatch):
+    import httpx
+
+    responses = [
+        {"action": 0},
+        {
+            "action": 0,
+            "metadata": {
+                "provider_receipt": {
+                    "schema_version": "eslams.provider.receipt.v1",
+                    "provider": "openai",
+                    "model": "gpt-test",
+                    "outcome": "ok",
+                    "usage": {},
+                }
+            },
+        },
+    ]
+
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, object],
+        timeout: int,
+    ) -> httpx.Response:
+        payload = responses.pop(0)
+        return httpx.Response(200, json=payload, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    missing_receipt = Runner().run(
+        RunConfig(
+            arena_id="tic-tac-toe",
+            agents={
+                "player_1": HttpAgent(
+                    url="https://agent.example/act",
+                    provider="openai",
+                    model="gpt-test",
+                )
+            },
+            seed=15,
+            max_turns=1,
+            output_dir=tmp_path / "missing",
+        )
+    )
+    usage_missing = Runner().run(
+        RunConfig(
+            arena_id="tic-tac-toe",
+            agents={
+                "player_1": HttpAgent(
+                    url="https://agent.example/act",
+                    provider="openai",
+                    model="gpt-test",
+                )
+            },
+            seed=16,
+            max_turns=1,
+            output_dir=tmp_path / "usage",
+        )
+    )
+    local = Runner().run(
+        RunConfig(arena_id="tic-tac-toe", seed=17, max_turns=1, output_dir=tmp_path / "local")
+    )
+    error = Runner().run(
+        RunConfig(
+            arena_id="tic-tac-toe",
+            agents={"player_1": MockProviderAgent(scenario="provider_error")},
+            seed=18,
+            max_turns=1,
+            output_dir=tmp_path / "error",
+        )
+    )
+
+    assert _metrics(missing_receipt)["provider_status_by_player"]["player_1"] == (
+        "provider_receipt_missing"
+    )
+    assert _metrics(usage_missing)["provider_status_by_player"]["player_1"] == (
+        "provider_usage_unavailable"
+    )
+    assert _metrics(local)["provider_status_by_player"]["player_1"] == "local_agent"
+    assert _metrics(error)["provider_status_by_player"]["player_1"] == "agent_error"
 
 
 def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, capsys):
@@ -278,6 +400,20 @@ def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, c
 
     assert main(["schemas", "export", "--out", str(tmp_path / "schemas")]) == 0
     assert (tmp_path / "schemas" / "eslams.artifact.validation.v1.schema.json").exists()
+    manifest = json.loads(
+        (tmp_path / "schemas" / "schema_bundle_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["schema_version"] == "eslams.schema.bundle_manifest.v1"
+    assert manifest["core_package_version"] == "0.2.0"
+    assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v1"
+    assert any(
+        row["schema_version"] == "eslams.catalogue.renderer.v1"
+        for row in manifest["schemas"]
+    )
+    assert any(
+        row["schema_version"] == "eslams.replay.display_frame.v1"
+        for row in manifest["schemas"]
+    )
 
     assert main(["validate", str(result.artifact_path), "--profile", "runner-bundle"]) == 0
     assert main(["validate", str(result.artifact_path), "--summary-json"]) == 0
@@ -321,6 +457,11 @@ def _read_jsonl(path: Path) -> list[dict[str, object]]:
 
 def _write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
     path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
+
+
+def _metrics(result: object) -> dict[str, object]:
+    artifact_path = result.artifact_path
+    return json.loads((artifact_path / "scores/metrics.json").read_text(encoding="utf-8"))
 
 
 def _refresh_public_manifest_hashes(public_dir: Path) -> None:

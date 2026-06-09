@@ -92,6 +92,9 @@ class HttpAgent:
     id: str = "http-agent"
     version: str = "1.0.0"
     bearer_token: str | None = None
+    provider: str | None = None
+    model: str | None = None
+    endpoint_metadata: dict[str, Any] = field(default_factory=dict)
     last_receipt: dict[str, Any] | None = field(default=None, init=False)
     attempt_receipts: list[dict[str, Any]] = field(default_factory=list, init=False)
 
@@ -119,8 +122,15 @@ class HttpAgent:
         act_response = ActResponse.from_mapping(payload)
         receipt = act_response.metadata.get("provider_receipt")
         if isinstance(receipt, dict):
-            self.last_receipt = receipt
-            self.attempt_receipts.append(receipt)
+            normalized_receipt = _http_provider_receipt(
+                receipt,
+                provider=self.provider,
+                model=self.model,
+                endpoint_metadata=self.endpoint_metadata,
+            )
+            self.last_receipt = normalized_receipt
+            self.attempt_receipts.append(normalized_receipt)
+            act_response.metadata["provider_receipt"] = normalized_receipt
         return act_response
 
 
@@ -775,6 +785,98 @@ def _mock_receipt(
         },
         "redaction_version": "provider-receipt-redaction-v1",
     }
+
+
+def _http_provider_receipt(
+    receipt: dict[str, Any],
+    *,
+    provider: str | None,
+    model: str | None,
+    endpoint_metadata: dict[str, Any],
+) -> dict[str, Any]:
+    receipt_provider = _optional_str_value(receipt.get("provider")) or provider or "unknown"
+    receipt_model = _optional_str_value(receipt.get("model")) or model or "unknown"
+    usage = receipt.get("usage")
+    normalized_usage = _normalize_usage(receipt_provider, usage)
+    has_usage = any(value is not None for value in normalized_usage.values())
+    usage_unavailable_reason = _optional_str_value(receipt.get("usage_unavailable_reason"))
+    if not has_usage and usage_unavailable_reason is None:
+        usage_unavailable_reason = "provider_usage_absent"
+    allowed = {
+        "schema_version",
+        "provider",
+        "model",
+        "locked_model_id",
+        "provider_response_id",
+        "request_id",
+        "gateway_request_id",
+        "status_code",
+        "outcome",
+        "finish_reason",
+        "finish_status",
+        "latency_ms",
+        "pricing",
+        "estimated_cost",
+        "pricing_provenance",
+    }
+    normalized = {
+        key: value
+        for key, value in receipt.items()
+        if key in allowed and _safe_receipt_value(value)
+    }
+    normalized.update(
+        {
+            "schema_version": PROVIDER_RECEIPT_SCHEMA_VERSION,
+            "provider": receipt_provider,
+            "model": receipt_model,
+            "locked_model_id": _optional_str_value(receipt.get("locked_model_id"))
+            or _optional_str_value(receipt.get("provider_response_id")),
+            "outcome": _optional_str_value(receipt.get("outcome")) or "ok",
+            "usage": normalized_usage if has_usage else {},
+            "usage_unavailable_reason": usage_unavailable_reason,
+            "pricing": _receipt_dict(
+                receipt.get("pricing"),
+                fallback={
+                    "status": "cost_unavailable",
+                    "source": "http_agent_metadata",
+                    "unavailable_reason": "pricing_not_configured",
+                },
+            ),
+            "estimated_cost": _receipt_dict(
+                receipt.get("estimated_cost"),
+                fallback={
+                    "status": "cost_unavailable",
+                    "unavailable_reason": "pricing_not_configured",
+                },
+            ),
+            "endpoint_metadata": _receipt_dict(endpoint_metadata, fallback={}),
+            "redaction_version": "provider-receipt-redaction-v1",
+        }
+    )
+    return normalized
+
+
+def _receipt_dict(value: Any, *, fallback: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return dict(fallback)
+    return {str(key): item for key, item in value.items() if _safe_receipt_value(item)}
+
+
+def _safe_receipt_value(value: Any) -> bool:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return True
+    if isinstance(value, list):
+        return all(_safe_receipt_value(item) for item in value)
+    if isinstance(value, dict):
+        return all(
+            isinstance(key, str) and _safe_receipt_value(item)
+            for key, item in value.items()
+        )
+    return False
+
+
+def _optional_str_value(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
 
 
 def _provider_endpoint(

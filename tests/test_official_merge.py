@@ -17,7 +17,12 @@ def test_official_merge_writes_leaderboard_ready_summary(tmp_path: Path):
     assert payload["case_counts"]["total"] == 2
     assert payload["proof_counts"]["artifacts"] == 2
     assert payload["aggregate_cost"]["status"] == "cost_unavailable"
+    assert payload["publication_kind_key"] == "official_proof"
+    assert payload["aggregate_leaderboard_eligible"] is False
+    assert payload["scoring_eligibility"]["per_case_scoring_eligible"] == 2
+    assert payload["scoring_eligibility"]["aggregate_leaderboard_eligible"] is False
     assert len(payload["rows"]) == 2
+    assert payload["rows"][0]["proof_row_publication_eligible"] is True
 
 
 def test_cli_official_merge(tmp_path: Path):
