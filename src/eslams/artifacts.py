@@ -202,7 +202,7 @@ class ArtifactBuildInput:
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str = "standard-score:1.0.0"
-    runner_version: str = "eslams-runner:0.2.0"
+    runner_version: str = "eslams-runner:0.3.0"
     verification_level: str = "Local Artifact"
 
 
@@ -375,7 +375,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         "local-development\n",
         encoding="utf-8",
     )
-    _write_json(artifact_dir / "environment/package_versions.json", {"eslams-core": "0.2.0"})
+    _write_json(artifact_dir / "environment/package_versions.json", {"eslams-core": "0.3.0"})
     _write_json(
         artifact_dir / "broadcast/broadcast_manifest.json",
         {

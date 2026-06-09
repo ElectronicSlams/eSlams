@@ -13,7 +13,7 @@ from eslams.hashing import canonical_json
 from eslams.providers import load_provider_registry
 from eslams.rendering import renderer_vocabulary_rows
 
-CORE_VERSION = "0.2.0"
+CORE_VERSION = "0.3.0"
 
 
 def current_runner_health() -> dict[str, Any]:

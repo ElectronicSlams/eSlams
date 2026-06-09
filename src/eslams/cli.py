@@ -14,7 +14,7 @@ from typing import Any
 import eslams.arenas  # noqa: F401
 from eslams.agents import HttpAgent, ModelProviderAgent
 from eslams.arena import registry
-from eslams.arena_transport import smoke_all_arenas
+from eslams.arena_transport import legal_actions_page, smoke_all_arenas, start_session, step_session
 from eslams.artifacts import ArtifactValidator
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
 from eslams.contracts.json_schema import export_schemas
@@ -60,6 +60,25 @@ def main(argv: list[str] | None = None) -> int:
     arena_smoke = arena_sub.add_parser("smoke", help="Smoke-test stateless arena transport.")
     arena_smoke.add_argument("--all", action="store_true", dest="all_arenas")
     arena_smoke.add_argument("--json", action="store_true")
+    arena_start = arena_sub.add_parser("start", help="Start an interactive Arena session.")
+    arena_start.add_argument("--game", required=True, choices=registry.list())
+    arena_start.add_argument("--variant")
+    arena_start.add_argument("--seed", type=int, default=1)
+    arena_start.add_argument("--players-json", required=True)
+    arena_start.add_argument("--options-json", default="{}")
+    arena_step = arena_sub.add_parser("step", help="Apply one action token to a session.")
+    arena_step.add_argument("--state", type=Path, required=True)
+    arena_step.add_argument("--player-id", required=True)
+    arena_step.add_argument("--action-token", required=True)
+    arena_page = arena_sub.add_parser(
+        "legal-actions-page",
+        help="Page/search legal action descriptors for a session.",
+    )
+    arena_page.add_argument("--state", type=Path, required=True)
+    arena_page.add_argument("--player-id", required=True)
+    arena_page.add_argument("--query")
+    arena_page.add_argument("--limit", type=int, default=50)
+    arena_page.add_argument("--cursor")
 
     schemas = sub.add_parser("schemas", help="Export versioned contract schemas.")
     schemas_sub = schemas.add_subparsers(dest="schemas_command", required=True)
@@ -231,7 +250,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     run.add_argument("--verification-level", default="Local Artifact")
     run.add_argument("--eval-suite-version", default="public-smoke:1.0.0")
-    run.add_argument("--runner-version", default="eslams-runner:0.2.0")
+    run.add_argument("--runner-version", default="eslams-runner:0.3.0")
     run.add_argument("--suite-id")
     run.add_argument("--case-id")
     run.add_argument("--suite-fingerprint")
@@ -408,6 +427,34 @@ def _arena_command(args: argparse.Namespace) -> int:
                 f"game_count={payload['game_count']}"
             )
         return 0 if payload["ok"] is True else 1
+    if args.arena_command == "start":
+        payload = start_session(
+            game_slug=args.game,
+            variant=args.variant,
+            seed=args.seed,
+            players=_json_arg(args.players_json, "players-json"),
+            options=_json_arg(args.options_json, "options-json"),
+        )
+        print(json.dumps(payload, indent=2))
+        return 0
+    if args.arena_command == "step":
+        payload = step_session(
+            session_state=_read_json_file(args.state),
+            player_id=args.player_id,
+            action_token=args.action_token,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0 if payload.get("accepted") is True else 1
+    if args.arena_command == "legal-actions-page":
+        payload = legal_actions_page(
+            session_state=_read_json_file(args.state),
+            player_id=args.player_id,
+            query=args.query,
+            limit=args.limit,
+            cursor=args.cursor,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0
     raise AssertionError(args.arena_command)
 
 
@@ -649,6 +696,13 @@ def _read_json_file(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return value
+
+
+def _json_arg(value: str, name: str) -> dict[str, Any]:
+    parsed = json.loads(value)
+    if not isinstance(parsed, dict):
+        raise ValueError(f"--{name} must be a JSON object")
+    return parsed
 
 
 def _print_run_preflight(

@@ -1,5 +1,44 @@
 # Changelog
 
+## v0.3.0 - 2026-06-09
+
+### Added
+
+- Added lightweight live Arena session APIs:
+  `start_session`, `step_session`, and `legal_actions_page`.
+- Added public JSON schemas for Arena start results, step results, legal-action
+  pages, action descriptors, and live Arena events.
+- Added CLI commands for live Arena transport:
+  `eslams arena start`, `eslams arena step`, and
+  `eslams arena legal-actions-page`.
+- Added public-safe legal action descriptors for all 50 registered games,
+  including stable action tokens, labels, groups, categories, prompt labels,
+  and deterministic sort keys.
+- Added canonical live `display_frame` projection using the same display-frame
+  shape as public replay packages.
+- Added public-safe live Arena events for session start, action acceptance,
+  state application, model-turn requests, human-turn readiness, completion, and
+  failure cases.
+- Added paged/searchable legal-action descriptor output for large action sets.
+- Added all-50 Arena start/step contract tests, public-safety checks, paging
+  tests, failure tests, CLI tests, timing assertions, and representative golden
+  fixtures.
+
+### Changed
+
+- Bumped Core package/version metadata to `0.3.0` and runner defaults to
+  `eslams-runner:0.3.0`.
+- Documented the v0.3.0 Arena transport contract, server-owned
+  `session_state` boundary, browser-safe fields, and release/tag instructions.
+- Narrowed public safety scanning so action descriptor `token` and
+  `prompt_label` are allowed only inside action descriptor rows.
+
+### Validation
+
+- `python3 -m pytest -q`
+- `python3 -m ruff check .`
+- `python3 -m mypy src`
+
 ## v0.2.0 - 2026-06-09
 
 ### Added

@@ -31,7 +31,7 @@ class RunConfig:
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str | None = None
-    runner_version: str = "eslams-runner:0.2.0"
+    runner_version: str = "eslams-runner:0.3.0"
     suite_id: str | None = None
     case_id: str | None = None
     suite_fingerprint: str | None = None

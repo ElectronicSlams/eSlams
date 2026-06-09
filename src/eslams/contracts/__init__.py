@@ -14,6 +14,11 @@ from eslams.contracts.provider import ProviderReceipt, ProviderRuntimeConfig
 from eslams.contracts.publication import ObjectManifestEntry, PublicationBundleManifest
 from eslams.contracts.replay import PublicReasoningRow, PublicReplayManifest, ReplayParticipant
 from eslams.contracts.versions import (
+    ARENA_ACTION_DESCRIPTOR_SCHEMA_VERSION,
+    ARENA_EVENT_SCHEMA_VERSION,
+    ARENA_LEGAL_ACTIONS_PAGE_SCHEMA_VERSION,
+    ARENA_START_RESULT_SCHEMA_VERSION,
+    ARENA_STEP_RESULT_SCHEMA_VERSION,
     ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ARTIFACT_VALIDATION_SCHEMA_VERSION,
     CATALOGUE_AVAILABILITY_SCHEMA_VERSION,
@@ -41,6 +46,11 @@ __all__ = [
     "ARTIFACT_MANIFEST_SCHEMA_VERSION",
     "ARTIFACT_PROFILES",
     "ARTIFACT_VALIDATION_SCHEMA_VERSION",
+    "ARENA_ACTION_DESCRIPTOR_SCHEMA_VERSION",
+    "ARENA_EVENT_SCHEMA_VERSION",
+    "ARENA_LEGAL_ACTIONS_PAGE_SCHEMA_VERSION",
+    "ARENA_START_RESULT_SCHEMA_VERSION",
+    "ARENA_STEP_RESULT_SCHEMA_VERSION",
     "ArtifactValidationSummary",
     "CATALOGUE_GAME_SCHEMA_VERSION",
     "CATALOGUE_MODEL_SCHEMA_VERSION",
