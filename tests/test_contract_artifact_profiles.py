@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from eslams.agents import MockProviderAgent, ModelProviderAgent
+from eslams.agents import HttpAgent, MockProviderAgent, ModelProviderAgent
 from eslams.artifacts import (
     ArtifactValidator,
     extract_provider_usage,
@@ -224,6 +224,53 @@ def test_runner_persists_each_provider_retry_receipt(tmp_path: Path, monkeypatch
     assert calls["count"] == 2
     assert [receipt["attempt"] for receipt in receipts] == [1, 2]
     assert [receipt["outcome"] for receipt in receipts] == ["provider_error", "ok"]
+
+
+def test_runner_persists_http_agent_provider_receipts(tmp_path: Path, monkeypatch):
+    import httpx
+
+    receipt = {
+        "schema_version": "eslams.provider.receipt.v1",
+        "provider": "openai",
+        "model": "gpt-test",
+        "outcome": "ok",
+        "usage": {"input_tokens": 4, "output_tokens": 1, "total_tokens": 5},
+        "estimated_cost": {"status": "cost_unavailable"},
+    }
+
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, object],
+        timeout: int,
+    ) -> httpx.Response:
+        assert url == "https://agent.example/act"
+        return httpx.Response(
+            200,
+            json={"action": 0, "metadata": {"provider_receipt": receipt}},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    result = Runner().run(
+        RunConfig(
+            arena_id="tic-tac-toe",
+            agents={"player_1": HttpAgent(url="https://agent.example/act")},
+            seed=14,
+            max_turns=1,
+            output_dir=tmp_path,
+        )
+    )
+    receipts = _read_jsonl(result.artifact_path / "receipts/provider_receipts.jsonl")
+    metrics = json.loads((result.artifact_path / "scores/metrics.json").read_text())
+
+    assert receipts
+    assert receipts[0]["provider"] == "openai"
+    assert receipts[0]["usage"]["total_tokens"] == 5
+    assert receipts[0]["run_id"] == result.run_id
+    assert metrics["provider_status_by_player"]["player_1"] == "ok"
 
 
 def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, capsys):
