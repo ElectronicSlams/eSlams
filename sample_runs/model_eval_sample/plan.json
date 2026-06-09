@@ -2,11 +2,10 @@
   "schema_version": "eslams.eval.plan.v1",
   "kind": "official",
   "generated_at": "1970-01-01T00:00:00Z",
-  "plan_hash": "fixture-plan",
   "suite_fingerprint": "fixture-suite",
-  "core_version": "0.1.0",
-  "runner_version": "eslams-runner:0.1.0",
-  "registry_hash": "fixture-registry",
+  "core_version": "0.2.0",
+  "runner_version": "eslams-runner:0.2.0",
+  "registry_hash": "sha256:4abc93b089ac4a14b9505131afd15ac2ea659482f41c21c96d2c99f8722c2c78",
   "selected_providers": [
     "builtin"
   ],
@@ -36,5 +35,6 @@
   ],
   "policy_ids": [
     "official-eval-v1"
-  ]
+  ],
+  "plan_hash": "sha256:5a15f20209fb097886896a2d2f8a11d926fc3cc43c7ddea552b39c4027457bbd"
 }
