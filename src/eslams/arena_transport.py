@@ -9,12 +9,29 @@ from eslams.arena import registry
 from eslams.state import ArenaState
 
 
+class StateHashMismatch(ValueError):
+    """Raised when serialized state carries a stale canonical hash."""
+
+    def __init__(self, *, provided: str, canonical: str) -> None:
+        self.provided = provided
+        self.canonical = canonical
+        super().__init__("state_hash does not match canonical state")
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "status": "state_hash_mismatch",
+            "provided_state_hash": self.provided,
+            "canonical_state_hash": self.canonical,
+        }
+
+
 def serialize_state(state: ArenaState) -> dict[str, Any]:
     return state.to_dict()
 
 
-def deserialize_state(payload: dict[str, Any]) -> ArenaState:
-    return ArenaState(
+def deserialize_state(payload: dict[str, Any], strict_hash: bool = True) -> ArenaState:
+    provided_hash = str(payload["state_hash"]) if payload.get("state_hash") else None
+    state = ArenaState(
         state_id=str(payload["state_id"]),
         turn=int(payload["turn"]),
         active_player=str(payload["active_player"]),
@@ -33,8 +50,20 @@ def deserialize_state(payload: dict[str, Any]) -> ArenaState:
         rng_commitment=str(payload["rng_commitment"]),
         render_hints=_dict(payload["render_hints"]),
         metadata=_dict(payload.get("metadata", {})),
-        state_hash=str(payload["state_hash"]) if payload.get("state_hash") else None,
+        state_hash=None,
     )
+    canonical_hash = str(state.state_hash)
+    if provided_hash is None or provided_hash == canonical_hash:
+        return state
+    diagnostics = {
+        "status": "state_hash_repaired",
+        "provided_state_hash": provided_hash,
+        "canonical_state_hash": canonical_hash,
+    }
+    if strict_hash:
+        raise StateHashMismatch(provided=provided_hash, canonical=canonical_hash)
+    object.__setattr__(state, "rehydration_diagnostics", diagnostics)
+    return state
 
 
 def initial_state(arena_id: str, *, seed: int = 1) -> dict[str, Any]:

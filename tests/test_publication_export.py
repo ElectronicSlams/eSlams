@@ -41,13 +41,18 @@ def test_publication_bundle_export_is_deterministic_and_storage_free(tmp_path: P
     assert validation["valid"] is True
     assert first_manifest["schema_version"] == "eslams.publication.bundle.v1"
     assert first_manifest["kind"] == "battlefield-sample"
+    assert first_manifest["publication_kind_key"] == "battlefield_sample"
+    assert first_manifest["publication_kind_label"] == "Battlefield Sample"
     assert first_manifest["plan_hash"] == plan["plan_hash"]
     assert first_manifest["suite_fingerprint"] == plan["suite_fingerprint"]
     assert first_manifest["statement_projection_hash"]
     assert checkpoint["statement_projection_hash"] == first_manifest["statement_projection_hash"]
     assert first_manifest["artifact_count"] == 1
+    assert first_manifest["aggregate_leaderboard_eligible"] is False
     assert proof_rows[0]["evidence_row"] is True
     assert proof_rows[0]["leaderboard_predicate"] is False
+    assert proof_rows[0]["proof_row_publication_eligible"] is True
+    assert proof_rows[0]["aggregate_leaderboard_eligible"] is False
     assert (first / "checkpoint_manifest.json").exists()
     assert (first / "signature_readback_manifest.json").exists()
 

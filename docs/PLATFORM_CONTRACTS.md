@@ -17,6 +17,11 @@ public replay events and manifests, provider receipts, eval plans, official
 progress events, resume checkpoints, official results, publication bundle and
 validation payloads, runner jobs, and catalogue rows.
 
+The export also writes `schema_bundle_manifest.json`. The manifest is
+deterministic and records Core package version, git commit when available,
+schema bundle version, schema filenames, schema versions, SHA-256 hashes, byte
+sizes, and a deterministic build id.
+
 ## Artifact Validation
 
 Validate runner bundles, official bundles, Battlefield bundles, or public
@@ -31,6 +36,51 @@ Validation emits `eslams.artifact.validation.v1` with artifact hash, size,
 artifact id, run id, verification level, replay status, scoring eligibility,
 runner signature status, and safe high-level errors.
 
+Canonical validation summary shape:
+
+```json
+{
+  "schema_version": "eslams.artifact.validation.v1",
+  "artifact": "runs/run_example.eslams",
+  "profile": "runner_bundle",
+  "valid": true,
+  "validation_status": "valid",
+  "errors": [],
+  "artifact_id": "sha256:artifact",
+  "run_id": "run_example",
+  "verification_level": "Local Artifact",
+  "verification_level_key": "local_artifact",
+  "verification_level_label": "Local Artifact",
+  "artifact_profile_key": "runner_bundle",
+  "artifact_profile_label": "Runner Bundle",
+  "archive_sha256": "sha256:archive",
+  "artifact_size_bytes": 12345,
+  "replay_status": "verified",
+  "scoring_eligible": true,
+  "per_case_run_valid": true,
+  "per_case_scoring_eligible": true,
+  "proof_row_publication_eligible": true,
+  "aggregate_leaderboard_eligible": false,
+  "aggregate_ineligibility_reason": "single_case_not_full_suite",
+  "runner_signature_status": "unsigned",
+  "signature": { "status": "unsigned", "verified": false },
+  "deterministic_replay": {
+    "status": "verified",
+    "verified": true,
+    "arena_id": "tic-tac-toe",
+    "action_event_count": 5,
+    "replay_event_count": 6
+  }
+}
+```
+
+Machine keys ending in `_key` are lowercase, version-stable policy inputs.
+Labels ending in `_label` are display text and may change for presentation.
+Core separates per-case run validity, per-case scoring eligibility, proof-row
+publication eligibility, and aggregate leaderboard eligibility. A valid
+one-case proof row is evidence by default; it does not imply public ranked
+leaderboard eligibility.
+
 ## Public Replay Export
 
 Export a no-secret public replay package:
@@ -40,10 +90,19 @@ eslams artifact public-export runs/latest.eslams --out public_replay_package
 eslams replay validate-public public_replay_package
 ```
 
-Public packages include replay events, replay manifest, public result summary,
-public manifest, and optional public reasoning. They do not include
-`logs/agent_io.jsonl`, private traces, provider prompts, raw model responses,
-request headers, tokens, or debug payloads.
+Public packages include replay events, `display_frames.jsonl`, replay manifest,
+public result summary, public manifest, and optional public reasoning. The
+package manifest includes optional-file rows with `path`, `kind`, `present`,
+`sha256`, `size_bytes`, and `absent_reason`; `public_reasoning/reasoning.jsonl`
+is explicitly present or absent.
+
+Display frames include frame id, renderer family, visibility, actor, action
+label, public display cells/summary, and source replay event id. They do not
+include prompts, raw responses, private observations, provider receipts, hidden
+eval material, or private reasoning.
+
+Public packages do not include `logs/agent_io.jsonl`, private traces, provider
+prompts, raw model responses, request headers, tokens, or debug payloads.
 
 ## Provider Runtime
 
@@ -71,6 +130,20 @@ not import Cloudflare packages or own gateway auth.
 
 Local CI can use `MockProviderAgent` to simulate success, timeout, parse error,
 provider error, missing usage, and gateway auth failure.
+
+Runner metrics normalize provider status as:
+
+- `provider_ok`
+- `provider_receipt_missing`
+- `provider_usage_unavailable`
+- `local_agent`
+- `agent_error`
+
+HTTP agents are classified as provider-backed when configured with provider and
+model endpoint metadata. Provider receipts preserve no-secret summaries for
+model id, provider id, request ids, finish status, latency, usage, and
+cost/pricing provenance. Missing, stripped, or redacted usage always carries an
+unavailable reason.
 
 ## Plans, Resume, and Progress
 
@@ -107,12 +180,18 @@ Core can smoke-test all registered arenas over JSON-serializable transport:
 ```bash
 eslams arena smoke --all --json
 eslams runner health --json
+eslams runner result --artifact runs/latest.eslams --artifact-uri URI --job-id JOB
 ```
 
 The stateless Arena helpers expose initial state, legal actions, step, public
 state, state hash, serialize, and deserialize functions. Browser start/resume
 contracts include idempotency key fields and response metadata, but Core does
 not store browser sessions.
+
+`deserialize_state(payload, strict_hash=True)` is strict by default and raises
+on stale hashes for artifact and replay validation. Trusted server-owned
+interactive state may use `strict_hash=False` to repair the canonical hash and
+inspect safe mismatch diagnostics on the returned state object.
 
 ## Catalogue
 
@@ -131,6 +210,16 @@ Renderer rows classify all 50 arenas by renderer family, timeline
 completeness, public safety, visible frames, state frames, move frames, and
 state-hash status.
 
+Game rows transcribe Platform public identity fields: display names, category
+labels, variants, difficulty, maturity, and player counts. Category labels are:
+`board` -> `Board & Strategy`, `card` -> `Card & Hidden-Info`, `gametheory` ->
+`Social & Economic`, and `rl` -> `Control & Arcade`.
+
+Model rows expose provider-control capabilities, supported reasoning modes,
+accepted control fields, default reasoning track, whether the track is
+provider-controlled or provider-native, unsupported-control reasons, and HTTP
+agent payload guidance.
+
 ## Publication Bundles
 
 Core produces deterministic publication inputs only:
@@ -145,9 +234,23 @@ Bundles include public manifests, public replay files, proof index rows,
 leaderboard rows, provider/model rows, aggregate usage, object manifests,
 checkpoint manifests, and signature/readback manifests. Proof rows are marked
 as evidence rows and are not leaderboard predicates by default. Bundle manifests
-use `eslams.publication.bundle.v1`; validation emits
+also carry publication kind key/label and aggregate leaderboard eligibility.
+They use `eslams.publication.bundle.v1`; validation emits
 `eslams.publication.validation.v1` and checks object hashes, projection hashes,
 public replay validity, aggregate usage shape, and proof-row publication policy.
+
+## Release v0.2.0
+
+`v0.2.0` is the named Core contract release. The package version is `0.2.0`.
+After validation, tag and publish from main:
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check .
+python3 -m mypy src
+git tag -a v0.2.0 -m "eSlams Core v0.2.0"
+git push origin main v0.2.0
+```
 
 ## Fixtures
 

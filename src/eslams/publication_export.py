@@ -18,6 +18,7 @@ from eslams.contracts.versions import (
     PUBLICATION_VALIDATION_SCHEMA_VERSION,
 )
 from eslams.hashing import canonical_json, sha256_file, sha256_json
+from eslams.policy import policy_key, publication_kind_label
 from eslams.public_replay import export_public_replay, validate_public_replay
 
 PUBLICATION_KINDS = ("official-proof", "battlefield-sample", "uploaded-replay")
@@ -56,6 +57,8 @@ def export_publication_bundle(
     suite_fingerprint = (
         plan_payload.get("suite_fingerprint") if isinstance(plan_payload, dict) else None
     )
+    publication_kind_key = policy_key(kind, fallback="uploaded_replay")
+    publication_kind_display = publication_kind_label(kind)
     proof_rows: list[dict[str, Any]] = []
     leaderboard_rows: list[dict[str, Any]] = []
     public_manifest_rows: list[dict[str, Any]] = []
@@ -83,6 +86,10 @@ def export_publication_bundle(
                     "arena_id": summary.get("arena_id"),
                     "winner": summary.get("winner"),
                     "valid_for_scoring": summary.get("valid_for_scoring"),
+                    "per_case_run_valid": summary.get("per_case_run_valid"),
+                    "per_case_scoring_eligible": summary.get("per_case_scoring_eligible"),
+                    "aggregate_leaderboard_eligible": False,
+                    "aggregate_ineligibility_reason": "publication_bundle_evidence_only",
                     "source": "artifact_public_summary",
                     "proof_row": False,
                 }
@@ -98,6 +105,11 @@ def export_publication_bundle(
                 "artifact_id": validation.artifact_id,
                 "run_id": validation.run_id,
                 "validation_status": "valid" if validation.valid else "invalid",
+                "per_case_run_valid": validation.per_case_run_valid,
+                "per_case_scoring_eligible": validation.per_case_scoring_eligible,
+                "proof_row_publication_eligible": validation.proof_row_publication_eligible,
+                "aggregate_leaderboard_eligible": False,
+                "aggregate_ineligibility_reason": "publication_bundle_evidence_only",
                 "public_replay_path": public_dir.relative_to(output_dir).as_posix(),
                 "evidence_row": True,
                 "leaderboard_predicate": False,
@@ -121,6 +133,8 @@ def export_publication_bundle(
         {
             "usage": aggregate_usage,
             "pricing": _cost_unavailable(),
+            "aggregate_leaderboard_eligible": False,
+            "aggregate_ineligibility_reason": "publication_bundle_evidence_only",
         },
     )
     object_manifest = _object_manifest(output_dir)
@@ -136,6 +150,8 @@ def export_publication_bundle(
     bundle_manifest = {
         "schema_version": PUBLICATION_BUNDLE_SCHEMA_VERSION,
         "kind": kind,
+        "publication_kind_key": publication_kind_key,
+        "publication_kind_label": publication_kind_display,
         "plan_hash": plan_hash,
         "suite_fingerprint": suite_fingerprint,
         "object_manifest_hash": checkpoint["object_manifest_hash"],
@@ -143,6 +159,8 @@ def export_publication_bundle(
         "completed_object_count": checkpoint["completed_object_count"],
         "completed_projection_chunk_count": checkpoint["completed_projection_chunk_count"],
         "artifact_count": len(artifacts),
+        "aggregate_leaderboard_eligible": False,
+        "aggregate_ineligibility_reason": "publication_bundle_evidence_only",
     }
     _write_json(output_dir / "bundle_manifest.json", bundle_manifest)
     return output_dir
@@ -398,6 +416,10 @@ def _validate_proof_rows(
     for index, row in enumerate(proof_rows):
         if row.get("evidence_row") is not True:
             errors.append(f"proof row {index} must be marked as evidence_row")
+        if row.get("proof_row_publication_eligible") is not True:
+            errors.append(f"proof row {index} must be publication eligible evidence")
+        if row.get("aggregate_leaderboard_eligible") is True:
+            errors.append(f"proof row {index} cannot be aggregate leaderboard eligible")
         if row.get("leaderboard_predicate") is True and row.get(
             "leaderboard_predicate_configured"
         ) is not True:
