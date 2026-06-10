@@ -56,28 +56,30 @@ def create_artifact_fixture(kind: str, output_path: Path) -> Path:
 
 @contextmanager
 def _temporary_signing_env() -> Iterator[None]:
-    previous_key = os.environ.get("RUNNER_SIGNING_KEY")
-    previous_key_id = os.environ.get("RUNNER_SIGNING_KEY_ID")
-    os.environ["RUNNER_SIGNING_KEY"] = "fixture-signing-key"
-    os.environ["RUNNER_SIGNING_KEY_ID"] = "fixture-key"
+    previous_key = os.environ.get("RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY")
+    previous_key_id = os.environ.get("RUNNER_ARTIFACT_SIGNING_KEY_ID")
+    os.environ["RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY"] = (
+        "base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+    )
+    os.environ["RUNNER_ARTIFACT_SIGNING_KEY_ID"] = "fixture-key"
     try:
         yield
     finally:
-        _restore_env("RUNNER_SIGNING_KEY", previous_key)
-        _restore_env("RUNNER_SIGNING_KEY_ID", previous_key_id)
+        _restore_env("RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY", previous_key)
+        _restore_env("RUNNER_ARTIFACT_SIGNING_KEY_ID", previous_key_id)
 
 
 @contextmanager
 def _without_signing_env() -> Iterator[None]:
-    previous_key = os.environ.get("RUNNER_SIGNING_KEY")
-    previous_key_id = os.environ.get("RUNNER_SIGNING_KEY_ID")
-    os.environ.pop("RUNNER_SIGNING_KEY", None)
-    os.environ.pop("RUNNER_SIGNING_KEY_ID", None)
+    previous_key = os.environ.get("RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY")
+    previous_key_id = os.environ.get("RUNNER_ARTIFACT_SIGNING_KEY_ID")
+    os.environ.pop("RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY", None)
+    os.environ.pop("RUNNER_ARTIFACT_SIGNING_KEY_ID", None)
     try:
         yield
     finally:
-        _restore_env("RUNNER_SIGNING_KEY", previous_key)
-        _restore_env("RUNNER_SIGNING_KEY_ID", previous_key_id)
+        _restore_env("RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY", previous_key)
+        _restore_env("RUNNER_ARTIFACT_SIGNING_KEY_ID", previous_key_id)
 
 
 def _restore_env(name: str, value: str | None) -> None:

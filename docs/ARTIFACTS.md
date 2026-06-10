@@ -123,18 +123,21 @@ mistaken for fully audited replay packages.
 
 ## Runner Signatures
 
-When `RUNNER_SIGNING_KEY` is set, Core writes `signatures/runner_signature.json`.
-The signature uses HMAC-SHA256 over a canonical JSON payload containing the
-artifact id, artifact version, run id, and SHA-256 hash of `manifest.json`.
+When `RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY` is set, Core writes
+`signatures/runner_signature.json`. The v2 signature uses Ed25519 over a
+canonical JSON payload containing the artifact id, artifact version, run id, and
+SHA-256 hash of `manifest.json`.
 
-The signing key is never written to the artifact. `RUNNER_SIGNING_KEY_ID` may be
-set to include a non-secret key identifier; otherwise Core records
-`runner-env-key`.
+The private key is never written to the artifact. Set
+`RUNNER_ARTIFACT_SIGNING_KEY_ID` to include a non-secret key identifier;
+otherwise Core records `runner-artifact-env-key`.
 
-`eslams validate` verifies the signature when `RUNNER_SIGNING_KEY` is available.
-Without the key, validation still checks artifact hashes and reports the
-signature as unverified. Unsigned local artifacts remain portable and report
-`unsigned`.
+`eslams validate` verifies the signature when
+`RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY` is available. If only the private signing
+key is available locally, validation derives the public key for developer
+convenience. Unsigned local artifacts remain portable and report `unsigned`.
+Legacy v1 HMAC artifacts are still readable as `legacy_hmac`, but official
+bundle validation rejects them as untrusted.
 
 ## Publication Bundles
 

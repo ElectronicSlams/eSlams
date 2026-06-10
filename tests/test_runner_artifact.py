@@ -1,4 +1,7 @@
+import hashlib
+import hmac
 import json
+import time
 import zipfile
 from pathlib import Path
 
@@ -10,8 +13,10 @@ from eslams.artifacts import ArtifactValidator
 from eslams.cli import main
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 from eslams.replay import render_replay_html
-from eslams.runner import RunConfig, Runner, _agents_for_arena
+from eslams.runner import RunConfig, Runner, _agents_for_arena, _forfeit_state, _score_summary
 from eslams.state import ArenaState
+
+TEST_ED25519_PRIVATE_KEY = "base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
 
 
 def test_runner_generates_valid_connect_four_artifact(tmp_path: Path):
@@ -155,8 +160,7 @@ def test_validator_rejects_zip_slip_archive_members(tmp_path: Path):
 
 
 def test_runner_signs_artifact_when_key_is_configured(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("RUNNER_SIGNING_KEY", "test-runner-signing-key")
-    monkeypatch.setenv("RUNNER_SIGNING_KEY_ID", "test-key")
+    _set_ed25519_artifact_signing_env(monkeypatch, key_id="test-key")
 
     result = Runner().run(RunConfig(arena_id="connect-four", seed=11, output_dir=tmp_path))
 
@@ -164,9 +168,10 @@ def test_runner_signs_artifact_when_key_is_configured(tmp_path: Path, monkeypatc
     signature_text = signature_path.read_text(encoding="utf-8")
     signature = json.loads(signature_text)
     assert signature["status"] == "signed"
-    assert signature["algorithm"] == "hmac-sha256"
+    assert signature["signature_version"] == "eslams-runner-signature-v2"
+    assert signature["algorithm"] == "ed25519"
     assert signature["key_id"] == "test-key"
-    assert "test-runner-signing-key" not in signature_text
+    assert TEST_ED25519_PRIVATE_KEY not in signature_text
 
     report = ArtifactValidator().validate_report(result.artifact_path)
     assert report.errors == []
@@ -175,8 +180,7 @@ def test_runner_signs_artifact_when_key_is_configured(tmp_path: Path, monkeypatc
 
 
 def test_runner_stamps_platform_verified_artifact_metadata(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("RUNNER_SIGNING_KEY", "test-platform-signing-key")
-    monkeypatch.setenv("RUNNER_SIGNING_KEY_ID", "platform-ci-key")
+    _set_ed25519_artifact_signing_env(monkeypatch, key_id="platform-ci-key")
 
     result = Runner().run(
         RunConfig(
@@ -202,8 +206,7 @@ def test_runner_stamps_platform_verified_artifact_metadata(tmp_path: Path, monke
 
 
 def test_cli_run_accepts_artifact_provenance_metadata(tmp_path: Path, monkeypatch, capsys):
-    monkeypatch.setenv("RUNNER_SIGNING_KEY", "test-gateway-signing-key")
-    monkeypatch.setenv("RUNNER_SIGNING_KEY_ID", "gateway-ci-key")
+    _set_ed25519_artifact_signing_env(monkeypatch, key_id="gateway-ci-key")
 
     status = main(
         [
@@ -282,6 +285,90 @@ def test_runner_records_suite_context_and_timeout_metadata(tmp_path: Path):
     assert trace[0]["effective_time_budget_ms"] == 12_345
 
 
+def test_runner_enforces_in_process_agent_timeout(tmp_path: Path):
+    result = Runner().run(
+        RunConfig(
+            arena_id="tic-tac-toe",
+            agents={"player_1": FunctionAgent(_slow_agent, id="slow-agent")},
+            output_dir=tmp_path,
+            max_turns=1,
+            time_budget_ms=1,
+        )
+    )
+
+    trace = _read_jsonl(result.artifact_path / "traces" / "public_trace.jsonl")
+    agent_io = _read_jsonl(result.artifact_path / "logs" / "agent_io.jsonl")
+
+    assert ArtifactValidator().validate(result.artifact_path) == []
+    assert "timeout" in trace[0]["markers"]
+    assert agent_io[0]["response"]["metadata"]["error_kind"] == "timeout"
+    assert result.score.agent_error_count_by_player["player_1"] == 1
+
+
+def test_runner_honors_zero_max_turns(tmp_path: Path):
+    result = Runner().run(
+        RunConfig(
+            arena_id="tic-tac-toe",
+            output_dir=tmp_path,
+            max_turns=0,
+        )
+    )
+    manifest = json.loads((result.artifact_path / "manifest.json").read_text(encoding="utf-8"))
+
+    assert result.trace_events == []
+    assert manifest["run_metadata"]["max_turns"] == 0
+
+
+def test_score_summary_primary_score_tracks_player_one():
+    arena = ThreePlayerArena()
+    state = _three_player_state(scores={"player_1": 0.25, "player_2": 0.9, "player_3": 0.6})
+
+    summary = _score_summary(
+        "run-primary",
+        arena,
+        state,
+        [],
+        12,
+        verification_level="Local Artifact",
+        match_valid_for_scoring=True,
+        invalid_reason=None,
+        agent_error_count_by_player={"player_1": 0, "player_2": 0, "player_3": 0},
+        illegal_action_count_by_player={"player_1": 0, "player_2": 0, "player_3": 0},
+        fallback_action_count_by_player={"player_1": 0, "player_2": 0, "player_3": 0},
+        provider_status_by_player={
+            "player_1": "local_agent",
+            "player_2": "local_agent",
+            "player_3": "local_agent",
+        },
+        suite_context={},
+        requested_time_budget_ms=1000,
+        effective_time_budget_ms=1000,
+    )
+
+    assert summary.primary_score == 0.25
+    assert summary.metrics["best_score"] == 0.9
+
+
+def test_multi_player_forfeit_preserves_remaining_scores():
+    state = _three_player_state(scores={"player_1": 0.2, "player_2": 0.5, "player_3": 0.4})
+
+    forfeited = _forfeit_state(
+        state,
+        forfeited_player="player_1",
+        reason="player_1:illegal_action:illegal_action",
+    )
+
+    assert forfeited.terminal is True
+    assert forfeited.scores == {"player_1": 0.0, "player_2": 0.5, "player_3": 0.4}
+    assert forfeited.outcome == {
+        "winner": "player_2",
+        "reason": "forfeit",
+        "invalid_reason": "player_1:illegal_action:illegal_action",
+        "forfeited_player": "player_1",
+        "remaining_players": ["player_2", "player_3"],
+    }
+
+
 def test_cli_models_list_can_emit_supported_registry_json(capsys):
     status = main(["models", "list", "--provider", "openai", "--game-agent-supported", "--json"])
 
@@ -292,8 +379,7 @@ def test_cli_models_list_can_emit_supported_registry_json(capsys):
 
 
 def test_validator_detects_signed_manifest_tamper(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("RUNNER_SIGNING_KEY", "test-runner-signing-key")
-    monkeypatch.setenv("RUNNER_SIGNING_KEY_ID", "test-key")
+    _set_ed25519_artifact_signing_env(monkeypatch, key_id="test-key")
     result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=13, output_dir=tmp_path))
 
     manifest_path = result.artifact_path / "manifest.json"
@@ -305,6 +391,66 @@ def test_validator_detects_signed_manifest_tamper(tmp_path: Path, monkeypatch):
 
     assert report.signature.status == "invalid"
     assert "runner signature payload does not match manifest" in report.errors
+
+
+def test_validator_reads_legacy_hmac_artifact_as_untrusted(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY", raising=False)
+    monkeypatch.delenv("RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY", raising=False)
+    monkeypatch.setenv("RUNNER_SIGNING_KEY", "legacy-runner-key")
+    result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=14, output_dir=tmp_path))
+    manifest_path = result.artifact_path / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["signature"] = {
+        "level": "Runner Signed",
+        "status": "signed",
+        "algorithm": "hmac-sha256",
+        "signature_path": "signatures/runner_signature.json",
+        "covers": ["manifest_sha256", "artifact_id", "artifact_version", "run_id"],
+    }
+    manifest["runner_signature_status"] = "signed"
+    manifest_path.write_text(canonical_json(manifest) + "\n", encoding="utf-8")
+    signed_payload = {
+        "signature_version": "eslams-runner-signature-v1",
+        "algorithm": "hmac-sha256",
+        "key_id": "legacy-key",
+        "signed_at": "2026-06-10T00:00:00Z",
+        "artifact_version": manifest["artifact_version"],
+        "artifact_id": manifest["artifact_id"],
+        "run_id": manifest["run_id"],
+        "manifest_sha256": sha256_file(manifest_path),
+    }
+    signature = hmac.new(
+        b"legacy-runner-key",
+        canonical_json(signed_payload).encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    signature_path = result.artifact_path / "signatures" / "runner_signature.json"
+    signature_path.parent.mkdir(parents=True, exist_ok=True)
+    signature_path.write_text(
+        canonical_json(
+            {
+                "signature_version": "eslams-runner-signature-v1",
+                "status": "signed",
+                "algorithm": "hmac-sha256",
+                "key_id": "legacy-key",
+                "signed_at": "2026-06-10T00:00:00Z",
+                "signed_payload": signed_payload,
+                "signature": f"hmac-sha256:{signature}",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = ArtifactValidator().validate_report(result.artifact_path)
+    official_report = ArtifactValidator().validate_report(
+        result.artifact_path,
+        profile="official_bundle",
+    )
+
+    assert report.signature.status == "legacy_hmac"
+    assert report.signature.verified is False
+    assert "runner_signature_legacy_untrusted" in official_report.errors
 
 
 def test_runner_marks_agent_error_invalid_match_artifacts(tmp_path: Path):
@@ -400,6 +546,36 @@ def _raise_agent_error(_request):
     raise RuntimeError("intentional crash")
 
 
+def _slow_agent(_request):
+    time.sleep(0.05)
+    return 0
+
+
+def _set_ed25519_artifact_signing_env(monkeypatch, *, key_id: str) -> None:
+    monkeypatch.setenv("RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY", TEST_ED25519_PRIVATE_KEY)
+    monkeypatch.setenv("RUNNER_ARTIFACT_SIGNING_KEY_ID", key_id)
+    monkeypatch.delenv("RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY", raising=False)
+
+
+def _three_player_state(*, scores: dict[str, float]) -> ArenaState:
+    return ArenaState(
+        state_id="three-player-state",
+        turn=0,
+        active_player="player_1",
+        public_state={
+            "status": "active",
+            "final_validation": {"score": scores},
+        },
+        private_state_by_player={player: {} for player in scores},
+        legal_actions_by_player={player: [0] for player in scores},
+        scores=scores,
+        terminal=False,
+        outcome=None,
+        rng_commitment={"seed": 1},
+        render_hints={},
+    )
+
+
 class ThreePlayerArena(Arena):
     id = "three-player"
     version = "1.0.0"
@@ -417,7 +593,7 @@ class ThreePlayerArena(Arena):
         raise NotImplementedError
 
     def score(self, state: ArenaState) -> dict[str, float]:
-        raise NotImplementedError
+        return dict(state.scores)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:

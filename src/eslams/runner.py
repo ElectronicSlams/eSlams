@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import shutil
+import signal
+import threading
 import time
 import uuid
-from contextlib import suppress
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -101,7 +104,7 @@ class Runner:
         }
         match_valid_for_scoring = True
         invalid_reason: str | None = None
-        max_turns = config.max_turns or arena.max_turns
+        max_turns = config.max_turns if config.max_turns is not None else arena.max_turns
         effective_time_budget_ms = max(1, config.time_budget_ms)
         suite_context = _suite_context(config)
         start = time.perf_counter()
@@ -120,7 +123,11 @@ class Runner:
                 history=history,
                 memory_policy=self.memory_policy,
             )
-            response, markers, latency_ms = _call_agent(agent, request)
+            response, markers, latency_ms = _call_agent(
+                agent,
+                request,
+                time_budget_ms=effective_time_budget_ms,
+            )
             receipt = _last_provider_receipt(agent)
             attempt_receipts = _provider_attempt_receipts(agent, fallback=receipt)
             if attempt_receipts:
@@ -450,11 +457,17 @@ def _suite_context(config: RunConfig) -> dict[str, Any]:
     }
 
 
-def _call_agent(agent: Any, request: ActRequest) -> tuple[ActResponse | None, list[str], int]:
+def _call_agent(
+    agent: Any,
+    request: ActRequest,
+    *,
+    time_budget_ms: int,
+) -> tuple[ActResponse | None, list[str], int]:
     start = time.perf_counter()
     markers: list[str] = []
     try:
-        response = agent.act(request)
+        with _agent_time_limit(time_budget_ms):
+            response = agent.act(request)
         if not isinstance(response, ActResponse):
             if isinstance(response, dict):
                 response = ActResponse.from_mapping(response)
@@ -470,9 +483,44 @@ def _call_agent(agent: Any, request: ActRequest) -> tuple[ActResponse | None, li
             metadata={"error": str(exc), "error_kind": "agent_crash"},
         )
     latency_ms = int((time.perf_counter() - start) * 1000)
+    if latency_ms > time_budget_ms and "timeout" not in markers:
+        markers.append("timeout")
+        response = ActResponse(
+            action=None,
+            metadata={
+                "error": f"agent exceeded time budget of {time_budget_ms}ms",
+                "error_kind": "timeout",
+            },
+        )
     if response is None or response.action is None:
         markers.append("no_action")
     return response, markers, latency_ms
+
+
+@contextmanager
+def _agent_time_limit(time_budget_ms: int) -> Iterator[None]:
+    if threading.current_thread() is not threading.main_thread() or not hasattr(
+        signal,
+        "setitimer",
+    ):
+        yield
+        return
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    previous_timer = signal.getitimer(signal.ITIMER_REAL)
+
+    def _raise_timeout(_signum: int, _frame: Any) -> None:
+        raise TimeoutError(f"agent exceeded time budget of {time_budget_ms}ms")
+
+    signal.signal(signal.SIGALRM, _raise_timeout)
+    signal.setitimer(signal.ITIMER_REAL, max(time_budget_ms / 1000, 0.001))
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+        if previous_timer[0] > 0:
+            signal.setitimer(signal.ITIMER_REAL, previous_timer[0], previous_timer[1])
 
 
 def _trace_event(
@@ -591,7 +639,8 @@ def _score_summary(
 ) -> ScoreSummary:
     scores = arena.score(state)
     winner = str(state.outcome["winner"]) if state.outcome and state.outcome.get("winner") else None
-    primary = max(scores.values()) if scores else 0.0
+    primary = float(scores.get("player_1", 0.0)) if scores else 0.0
+    best_score = max(scores.values()) if scores else 0.0
     total_turns = max(1, len(trace_events))
     illegal = sum(
         1 for event in trace_events if "illegal_action" in event.public.get("markers", [])
@@ -620,6 +669,8 @@ def _score_summary(
             "effective_time_budget_ms": effective_time_budget_ms,
             "sample_size": 1,
             "confidence_interval": [primary, primary],
+            "evaluated_player": "player_1",
+            "best_score": best_score,
             "estimated_cost": {"status": "cost_unavailable"},
         },
         verification_level=verification_level,
@@ -710,12 +761,25 @@ def _forfeit_state(
     forfeited_player: str,
     reason: str,
 ) -> ArenaState:
-    winner = next((player for player in state.scores if player != forfeited_player), None)
-    outcome = {"winner": winner, "reason": "forfeit", "invalid_reason": reason}
-    scores = {
-        player: (1.0 if player == winner else 0.0)
-        for player in state.scores
-    }
+    players = list(state.scores)
+    remaining_players = [player for player in players if player != forfeited_player]
+    outcome: dict[str, Any]
+    if len(players) <= 2:
+        winner = remaining_players[0] if remaining_players else None
+        scores = {player: (1.0 if player == winner else 0.0) for player in players}
+        outcome = {"winner": winner, "reason": "forfeit", "invalid_reason": reason}
+    else:
+        scores = dict(state.scores)
+        if forfeited_player in scores:
+            scores[forfeited_player] = 0.0
+        winner = _unique_high_score_winner(scores, remaining_players)
+        outcome = {
+            "winner": winner,
+            "reason": "forfeit",
+            "invalid_reason": reason,
+            "forfeited_player": forfeited_player,
+            "remaining_players": remaining_players,
+        }
     public_state = {
         **state.public_state,
         "terminal_reason": "forfeit",
@@ -740,3 +804,14 @@ def _forfeit_state(
         render_hints=state.render_hints,
         metadata={**state.metadata, "forfeited_player": forfeited_player},
     )
+
+
+def _unique_high_score_winner(scores: dict[str, float], players: list[str]) -> str | None:
+    if not players:
+        return None
+    ranked = sorted(players, key=lambda player: scores.get(player, 0.0), reverse=True)
+    if len(ranked) == 1:
+        return ranked[0]
+    best = scores.get(ranked[0], 0.0)
+    second = scores.get(ranked[1], 0.0)
+    return ranked[0] if best > second else None

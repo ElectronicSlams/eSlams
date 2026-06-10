@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.3.2 - 2026-06-10
+
+### Security
+
+- Replaced runner artifact HMAC signatures with Ed25519 signature v2 for
+  official-publication trust. Legacy HMAC signatures remain readable as
+  `legacy_hmac` history, but they no longer satisfy official bundle validation.
+- Added in-process agent timeout enforcement so local agents cannot exceed
+  `time_budget_ms` without a timeout marker.
+
+### Fixed
+
+- Preserved `max_turns=0` as an explicit zero-turn run instead of falling back
+  to arena defaults.
+- Fixed primary scores to track the evaluated player (`player_1`) rather than
+  the highest seat score.
+- Fixed multi-player forfeit scoring so remaining seats keep their scores and
+  the forfeiting seat is isolated.
+
+### Changed
+
+- Bumped Core package/version metadata to `0.3.2` and runner defaults to
+  `eslams-runner:0.3.2`.
+- Added GitHub Actions CI for pytest, Ruff, and mypy.
+
 ## v0.3.1 - 2026-06-10
 
 ### Security

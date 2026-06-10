@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -15,6 +17,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
+
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from eslams.contracts.artifact import (
     ARTIFACT_PROFILES,
@@ -39,11 +44,15 @@ from eslams.replay import render_replay_html
 from eslams.replay_projection import display_frame_rows
 
 ARTIFACT_VERSION = "eslams-artifact-v1"
-RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v1"
-RUNNER_SIGNATURE_ALGORITHM = "hmac-sha256"
+RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v2"
+RUNNER_SIGNATURE_ALGORITHM = "ed25519"
+LEGACY_RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v1"
+LEGACY_RUNNER_SIGNATURE_ALGORITHM = "hmac-sha256"
 RUNNER_SIGNATURE_PATH = "signatures/runner_signature.json"
-RUNNER_SIGNING_KEY_ENV = "RUNNER_SIGNING_KEY"
-RUNNER_SIGNING_KEY_ID_ENV = "RUNNER_SIGNING_KEY_ID"
+RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY_ENV = "RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY"
+RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY_ENV = "RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY"
+RUNNER_ARTIFACT_SIGNING_KEY_ID_ENV = "RUNNER_ARTIFACT_SIGNING_KEY_ID"
+LEGACY_RUNNER_SIGNING_KEY_ENV = "RUNNER_SIGNING_KEY"
 DETERMINISTIC_REPLAY_VERSION = "eslams-deterministic-replay-v1"
 REQUIRED_FILES = {
     "manifest.json",
@@ -447,7 +456,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         },
     )
 
-    signing_key = _runner_signing_key()
+    signing_key = _runner_artifact_signing_key()
     files = _file_entries(artifact_dir)
     artifact_id = sha256_json(files)
     manifest = ArtifactManifest(
@@ -815,6 +824,11 @@ def _profile_specific_errors(
     if profile == "official_bundle":
         if signature.status in {"unsigned", "missing", "not_checked"}:
             errors.append("runner_signature_missing")
+        elif not signature.verified or signature.algorithm != RUNNER_SIGNATURE_ALGORITHM:
+            if signature.algorithm == LEGACY_RUNNER_SIGNATURE_ALGORITHM:
+                errors.append("runner_signature_legacy_untrusted")
+            else:
+                errors.append("runner_signature_untrusted")
         if not (artifact_dir / "scores/official_result.json").exists():
             errors.append("missing required file: scores/official_result.json")
     if profile == "public_replay_package":
@@ -1442,10 +1456,10 @@ def _manifest_signature_metadata(*, signed: bool) -> dict[str, Any]:
 def _runner_signature(
     manifest_path: Path,
     manifest: dict[str, Any],
-    signing_key: str,
+    signing_key: Ed25519PrivateKey,
 ) -> dict[str, Any]:
     signed_at = utc_now_iso()
-    key_id = os.environ.get(RUNNER_SIGNING_KEY_ID_ENV, "runner-env-key")
+    key_id = os.environ.get(RUNNER_ARTIFACT_SIGNING_KEY_ID_ENV, "runner-artifact-env-key")
     signed_payload = _signature_payload(
         manifest=manifest,
         manifest_sha256=sha256_file(manifest_path),
@@ -1459,7 +1473,7 @@ def _runner_signature(
         "key_id": key_id,
         "signed_at": signed_at,
         "signed_payload": signed_payload,
-        "signature": _hmac_sha256(signing_key, signed_payload),
+        "signature": _ed25519_signature(signing_key, signed_payload),
     }
 
 
@@ -1469,10 +1483,12 @@ def _signature_payload(
     manifest_sha256: str,
     signed_at: str,
     key_id: str,
+    signature_version: str = RUNNER_SIGNATURE_VERSION,
+    algorithm: str = RUNNER_SIGNATURE_ALGORITHM,
 ) -> dict[str, Any]:
     return {
-        "signature_version": RUNNER_SIGNATURE_VERSION,
-        "algorithm": RUNNER_SIGNATURE_ALGORITHM,
+        "signature_version": signature_version,
+        "algorithm": algorithm,
         "key_id": key_id,
         "signed_at": signed_at,
         "artifact_version": manifest.get("artifact_version"),
@@ -1482,11 +1498,67 @@ def _signature_payload(
     }
 
 
-def _runner_signing_key() -> str | None:
-    value = os.environ.get(RUNNER_SIGNING_KEY_ENV)
-    if value == "":
+def _runner_artifact_signing_key() -> Ed25519PrivateKey | None:
+    value = os.environ.get(RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY_ENV)
+    if value is None or value.strip() == "":
+        return None
+    return Ed25519PrivateKey.from_private_bytes(
+        _decode_key_material(value, expected_len=32, label=RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY_ENV)
+    )
+
+
+def _runner_artifact_verify_key() -> Ed25519PublicKey | None:
+    value = os.environ.get(RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY_ENV)
+    if value is not None and value.strip() != "":
+        return Ed25519PublicKey.from_public_bytes(
+            _decode_key_material(
+                value,
+                expected_len=32,
+                label=RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY_ENV,
+            )
+        )
+    signing_key = _runner_artifact_signing_key()
+    if signing_key is None:
+        return None
+    return signing_key.public_key()
+
+
+def _decode_key_material(value: str, *, expected_len: int, label: str) -> bytes:
+    raw = value.strip()
+    decoders = []
+    if raw.startswith("base64:"):
+        decoders.append(("base64", raw.removeprefix("base64:")))
+    elif raw.startswith("hex:"):
+        decoders.append(("hex", raw.removeprefix("hex:")))
+    else:
+        decoders.extend((("base64", raw), ("hex", raw)))
+
+    last_error: Exception | None = None
+    for encoding, payload in decoders:
+        try:
+            if encoding == "base64":
+                decoded = base64.b64decode(payload, validate=True)
+            else:
+                decoded = bytes.fromhex(payload)
+        except (binascii.Error, ValueError) as exc:
+            last_error = exc
+            continue
+        if len(decoded) == expected_len:
+            return decoded
+        last_error = ValueError(f"decoded length {len(decoded)}")
+    raise ValueError(f"{label} must decode to {expected_len} bytes") from last_error
+
+
+def _legacy_runner_signing_key() -> str | None:
+    value = os.environ.get(LEGACY_RUNNER_SIGNING_KEY_ENV)
+    if value is None or value == "":
         return None
     return value
+
+
+def _ed25519_signature(signing_key: Ed25519PrivateKey, payload: dict[str, Any]) -> str:
+    signature = signing_key.sign(canonical_json(payload).encode("utf-8")).hex()
+    return f"{RUNNER_SIGNATURE_ALGORITHM}:{signature}"
 
 
 def _hmac_sha256(signing_key: str, payload: dict[str, Any]) -> str:
@@ -1495,7 +1567,7 @@ def _hmac_sha256(signing_key: str, payload: dict[str, Any]) -> str:
         canonical_json(payload).encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
-    return f"{RUNNER_SIGNATURE_ALGORITHM}:{digest}"
+    return f"{LEGACY_RUNNER_SIGNATURE_ALGORITHM}:{digest}"
 
 
 def _validate_runner_signature(
@@ -1580,6 +1652,17 @@ def _validate_signed_runner_signature(
     signed_payload = signature_record.get("signed_payload")
     signature_value = signature_record.get("signature")
 
+    if (
+        signature_version == LEGACY_RUNNER_SIGNATURE_VERSION
+        or algorithm == LEGACY_RUNNER_SIGNATURE_ALGORITHM
+    ):
+        return _validate_legacy_runner_signature(
+            signature_record=signature_record,
+            signature_rel=signature_rel,
+            manifest=manifest,
+            manifest_path=manifest_path,
+        )
+
     if signature_version != RUNNER_SIGNATURE_VERSION:
         errors.append("runner signature version is unsupported")
     if algorithm != RUNNER_SIGNATURE_ALGORITHM:
@@ -1616,8 +1699,11 @@ def _validate_signed_runner_signature(
     if signed_payload_dict != expected_payload:
         return status, ["runner signature payload does not match manifest"]
 
-    signing_key = _runner_signing_key()
-    if signing_key is None:
+    try:
+        verify_key = _runner_artifact_verify_key()
+    except ValueError as exc:
+        return status, [f"runner signature verify key is invalid: {exc}"]
+    if verify_key is None:
         return (
             SignatureValidationStatus(
                 status="unverified_missing_key",
@@ -1628,8 +1714,14 @@ def _validate_signed_runner_signature(
             [],
         )
 
-    expected_signature = _hmac_sha256(signing_key, signed_payload_dict)
-    if not hmac.compare_digest(cast(str, signature_value), expected_signature):
+    try:
+        signature_hex = cast(str, signature_value).split(":", 1)[1]
+        signature_bytes = bytes.fromhex(signature_hex)
+    except ValueError:
+        return status, ["runner signature value is missing or unsupported"]
+    try:
+        verify_key.verify(signature_bytes, canonical_json(signed_payload_dict).encode("utf-8"))
+    except InvalidSignature:
         return status, ["runner signature verification failed"]
     return (
         SignatureValidationStatus(
@@ -1638,6 +1730,69 @@ def _validate_signed_runner_signature(
             algorithm=RUNNER_SIGNATURE_ALGORITHM,
             key_id=cast(str, key_id),
             verified=True,
+        ),
+        [],
+    )
+
+
+def _validate_legacy_runner_signature(
+    *,
+    signature_record: dict[str, Any],
+    signature_rel: str,
+    manifest: dict[str, Any],
+    manifest_path: Path,
+) -> tuple[SignatureValidationStatus, list[str]]:
+    errors: list[str] = []
+    key_id = signature_record.get("key_id")
+    signed_at = signature_record.get("signed_at")
+    signed_payload = signature_record.get("signed_payload")
+    signature_value = signature_record.get("signature")
+    if not isinstance(key_id, str) or not key_id:
+        errors.append("runner signature key_id must be a non-empty string")
+        key_id = None
+    if not isinstance(signed_at, str) or not signed_at:
+        errors.append("runner signature signed_at must be a non-empty string")
+        signed_at = None
+    if not isinstance(signed_payload, dict):
+        errors.append("runner signature signed_payload must be a JSON object")
+    if not isinstance(signature_value, str) or not signature_value.startswith(
+        f"{LEGACY_RUNNER_SIGNATURE_ALGORITHM}:"
+    ):
+        errors.append("runner signature value is missing or unsupported")
+
+    status = SignatureValidationStatus(
+        status="invalid",
+        path=signature_rel,
+        algorithm=LEGACY_RUNNER_SIGNATURE_ALGORITHM,
+        key_id=key_id if isinstance(key_id, str) else None,
+    )
+    if errors:
+        return status, errors
+
+    expected_payload = _signature_payload(
+        manifest=manifest,
+        manifest_sha256=sha256_file(manifest_path),
+        signed_at=cast(str, signed_at),
+        key_id=cast(str, key_id),
+        signature_version=LEGACY_RUNNER_SIGNATURE_VERSION,
+        algorithm=LEGACY_RUNNER_SIGNATURE_ALGORITHM,
+    )
+    signed_payload_dict = cast(dict[str, Any], signed_payload)
+    if signed_payload_dict != expected_payload:
+        return status, ["runner signature payload does not match manifest"]
+
+    legacy_key = _legacy_runner_signing_key()
+    if legacy_key is not None:
+        expected_signature = _hmac_sha256(legacy_key, signed_payload_dict)
+        if not hmac.compare_digest(cast(str, signature_value), expected_signature):
+            return status, ["runner signature verification failed"]
+    return (
+        SignatureValidationStatus(
+            status="legacy_hmac",
+            path=signature_rel,
+            algorithm=LEGACY_RUNNER_SIGNATURE_ALGORITHM,
+            key_id=cast(str, key_id),
+            verified=False,
         ),
         [],
     )

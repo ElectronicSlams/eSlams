@@ -33,6 +33,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.3.2](#release-v032)
 - [Release v0.3.1](#release-v031)
 - [Release v0.3.0](#release-v030)
 - [Contribute](#contribute)
@@ -599,16 +600,19 @@ run_<id>.eslams.d/
 - file table with SHA-256 hashes
 - signature metadata
 
-When `RUNNER_SIGNING_KEY` is set, Core writes a runner signature:
+When `RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY` is set, Core writes an Ed25519 runner
+signature:
 
 ```bash
-export RUNNER_SIGNING_KEY=...
-export RUNNER_SIGNING_KEY_ID=local-ci-key
+export RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY=base64:...
+export RUNNER_ARTIFACT_SIGNING_KEY_ID=local-ci-key
 eslams run --arena connect-four --agent random
 eslams validate runs/latest.eslams
 ```
 
-The signing key is never written to the artifact.
+The private signing key is never written to the artifact. Legacy HMAC
+signatures remain readable for old artifacts, but only Ed25519 v2 signatures can
+satisfy official bundle trust.
 
 ## Local Development
 
@@ -628,6 +632,19 @@ eslams run --arena chess --agent first-legal --opponent first-legal --max-turns 
 eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
+```
+
+## Release v0.3.2
+
+Core v0.3.2 is the follow-up security and correctness patch release for the
+v0.3 Arena transport line. Release from a clean main checkout after tests pass:
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check .
+python3 -m mypy src
+git tag -a v0.3.2 -m "eSlams Core v0.3.2"
+git push origin main v0.3.2
 ```
 
 ## Release v0.3.1

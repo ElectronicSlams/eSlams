@@ -6,6 +6,7 @@ from eslams.contracts.safety import scan_public_payload
 from eslams.fixtures import create_artifact_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURE_ED25519_PUBLIC_KEY = "base64:G6QHW3fJ4/s+zeFc2vUiHzwQNz5iP3sOHvdjZrCvcTc="
 
 
 def test_provider_fixtures_are_redacted_and_cover_mock_scenarios():
@@ -58,7 +59,8 @@ def test_publication_plan_fixture_is_no_secret_plan_envelope():
     assert payload["required_environment_names"] == []
 
 
-def test_artifact_fixture_generation_covers_signed_and_unsigned(tmp_path: Path):
+def test_artifact_fixture_generation_covers_signed_and_unsigned(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY", FIXTURE_ED25519_PUBLIC_KEY)
     local = create_artifact_fixture("local-tic-tac-toe", tmp_path / "local_tic_tac_toe.eslams")
     signed = create_artifact_fixture("official-signed", tmp_path / "official_signed.eslams")
     unsigned = create_artifact_fixture("official-unsigned", tmp_path / "official_unsigned.eslams")
@@ -68,12 +70,13 @@ def test_artifact_fixture_generation_covers_signed_and_unsigned(tmp_path: Path):
     unsigned_report = ArtifactValidator().validate_report(unsigned, profile="official-bundle")
 
     assert signed_report.valid is True
-    assert signed_report.signature.status == "unverified_missing_key"
+    assert signed_report.signature.status == "verified"
     assert unsigned_report.valid is False
     assert "runner_signature_missing" in unsigned_report.errors
 
 
-def test_materialized_artifact_fixtures_validate_when_present():
+def test_materialized_artifact_fixtures_validate_when_present(monkeypatch):
+    monkeypatch.setenv("RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY", FIXTURE_ED25519_PUBLIC_KEY)
     artifacts_dir = ROOT / "fixtures/artifacts"
     expected = {
         "local_tic_tac_toe.eslams",
