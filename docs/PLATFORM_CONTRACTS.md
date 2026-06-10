@@ -298,6 +298,19 @@ They use `eslams.publication.bundle.v1`; validation emits
 `eslams.publication.validation.v1` and checks object hashes, projection hashes,
 public replay validity, aggregate usage shape, and proof-row publication policy.
 
+## Release v0.3.1
+
+`v0.3.1` is the patch release for the Core Arena transport contract line. The
+package version is `0.3.1`, and runner defaults emit `eslams-runner:0.3.1`.
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check .
+python3 -m mypy src
+git tag -a v0.3.1 -m "eSlams Core v0.3.1"
+git push origin main v0.3.1
+```
+
 ## Release v0.3.0
 
 `v0.3.0` is the named Core Arena transport contract release. The package

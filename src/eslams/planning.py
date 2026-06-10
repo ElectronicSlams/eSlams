@@ -9,11 +9,11 @@ from typing import Any
 import eslams.arenas  # noqa: F401
 from eslams.arena import registry as arena_registry
 from eslams.contracts.eval_plan import EvalPlanEnvelope
+from eslams.contracts.versions import CORE_PACKAGE_VERSION, RUNNER_VERSION
 from eslams.hashing import sha256_json
 from eslams.providers import load_provider_registry
 
-CORE_VERSION = "0.3.0"
-RUNNER_VERSION = "eslams-runner:0.3.0"
+CORE_VERSION = CORE_PACKAGE_VERSION
 PLAN_GENERATED_AT = "1970-01-01T00:00:00Z"
 
 

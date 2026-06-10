@@ -57,8 +57,7 @@ class ArenaRegistry:
         self._arenas: dict[str, type[Arena]] = {}
 
     def register(self, arena_type: type[Arena]) -> None:
-        probe = arena_type()
-        self._arenas[probe.id] = arena_type
+        self._arenas[arena_type.id] = arena_type
 
     def create(self, arena_id: str) -> Arena:
         if arena_id not in self._arenas:

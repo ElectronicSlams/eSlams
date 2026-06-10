@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from datetime import datetime, timezone
 from time import perf_counter_ns
@@ -25,6 +26,7 @@ SESSION_METADATA_KEY = "arena_session"
 DEFAULT_SESSION_ACTION_LIMIT = 200
 DEFAULT_PAGE_LIMIT = 50
 MAX_ACTION_LIMIT = 200
+log = logging.getLogger(__name__)
 
 
 class StateHashMismatch(ValueError):
@@ -244,8 +246,9 @@ def step_session(
     apply_start = perf_counter_ns()
     try:
         next_state = arena.apply_action(state, player_id, raw_action)
-    except Exception:
+    except Exception as exc:
         timing["apply_ms"] = _elapsed_ms(apply_start)
+        log.warning("transition_error in %s: %s", game_slug, exc, exc_info=True)
         return _failure_result(
             state=state,
             players=players,
@@ -413,9 +416,9 @@ def _normalize_players(arena_players: tuple[str, ...], players: dict[str, Any]) 
 
 
 def _normalize_options(options: dict[str, Any] | None) -> dict[str, Any]:
-    value = {} if options is None else _dict(options)
     if options is not None and not isinstance(options, dict):
         raise ValueError("options must be a JSON object")
+    value = {} if options is None else _dict(options)
     assert_public_payload_safe(value, root="arena.options")
     return value
 

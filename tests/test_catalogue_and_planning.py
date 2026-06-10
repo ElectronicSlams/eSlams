@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import eslams.catalogue as catalogue_module
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
 from eslams.cli import main
 from eslams.eval_runtime import (
@@ -42,6 +43,12 @@ def test_catalogue_exports_games_models_and_availability_rows():
     assert by_game["cartpole"]["public_display_group"] == "Control & Arcade"
     assert by_game["chess"]["public_display_group"] == "Board & Strategy"
     assert by_game["liars-dice"]["public_display_group"] == "Card & Hidden-Info"
+
+
+def test_game_catalogue_skips_missing_renderer_rows(monkeypatch):
+    monkeypatch.setattr(catalogue_module, "renderer_vocabulary_rows", lambda: [])
+
+    assert catalogue_module.game_catalogue_rows() == []
 
 
 def test_game_catalogue_matches_transcribed_platform_identity_for_all_games():

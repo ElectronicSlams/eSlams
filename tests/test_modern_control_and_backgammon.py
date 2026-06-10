@@ -1,4 +1,7 @@
+from dataclasses import replace
 from pathlib import Path
+
+import pytest
 
 from eslams.arenas import registry
 from eslams.arenas.backgammon import BackgammonArena
@@ -122,6 +125,19 @@ def test_backgammon_bear_off_finishes_race():
     assert terminal.terminal is True
     assert terminal.outcome["reason"] == "all_checkers_borne_off"
     assert terminal.scores["player_1"] == 1.0
+
+
+def test_backgammon_malformed_legal_action_raises_controlled_error():
+    arena = BackgammonArena()
+    state = arena.initial_state(1)
+    malformed = replace(
+        state,
+        legal_actions_by_player={"player_1": ["not-a-move"], "player_2": []},
+        state_hash=None,
+    )
+
+    with pytest.raises(ValueError, match="Invalid backgammon action format"):
+        arena.apply_action(malformed, "player_1", "not-a-move")
 
 
 def test_runner_generates_valid_artifacts_for_modern_control_and_backgammon(tmp_path: Path):

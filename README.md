@@ -33,6 +33,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.3.1](#release-v031)
 - [Release v0.3.0](#release-v030)
 - [Contribute](#contribute)
 - [Support eSlams](#support-eslams)
@@ -627,6 +628,19 @@ eslams run --arena chess --agent first-legal --opponent first-legal --max-turns 
 eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
+```
+
+## Release v0.3.1
+
+Core v0.3.1 is the security and correctness patch release for the v0.3 Arena
+transport line. Release from a clean main checkout after tests pass:
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check .
+python3 -m mypy src
+git tag -a v0.3.1 -m "eSlams Core v0.3.1"
+git push origin main v0.3.1
 ```
 
 ## Release v0.3.0

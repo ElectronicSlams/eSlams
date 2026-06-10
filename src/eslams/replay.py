@@ -108,6 +108,12 @@ def _html(events_json: str) -> str:
       align-items: stretch;
       min-height: calc(100vh - 124px);
     }
+    .agent-column {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+      min-width: 0;
+    }
     .agent, .stage {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -364,11 +370,7 @@ def _html(events_json: str) -> str:
     <div class="muted" id="sourceLabel">Generated from public replay events</div>
   </header>
   <section class="shell">
-    <aside class="agent" id="panel-player_1">
-      <p class="agent-label">Agent 1</p>
-      <p class="agent-name">player_1</p>
-      <div class="move-list" id="moves-player_1"></div>
-    </aside>
+    <div class="agent-column" id="leftAgents"></div>
     <section class="stage">
       <div class="status">
         <div class="turn" id="turnStatus"></div>
@@ -381,11 +383,7 @@ def _html(events_json: str) -> str:
       <div class="board-host" id="board"></div>
       <div class="details" id="details"></div>
     </section>
-    <aside class="agent" id="panel-player_2">
-      <p class="agent-label">Agent 2</p>
-      <p class="agent-name">player_2</p>
-      <div class="move-list" id="moves-player_2"></div>
-    </aside>
+    <div class="agent-column" id="rightAgents"></div>
   </section>
 </main>
 <script type="application/json" id="events">""" + events_json + """</script>
@@ -393,6 +391,7 @@ def _html(events_json: str) -> str:
 const events = JSON.parse(document.getElementById('events').textContent);
 let selected = 0;
 let timer = null;
+let players = [];
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 const glyphs = {
@@ -404,6 +403,44 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[char]);
+}
+
+function replayPlayers() {
+  const seen = new Set();
+  for (const event of events) {
+    for (const candidate of [event.active_player, event.actor_player, event.seat]) {
+      if (candidate) seen.add(String(candidate));
+    }
+    if (event.scores && typeof event.scores === 'object') {
+      Object.keys(event.scores).forEach((player) => seen.add(player));
+    }
+  }
+  for (const move of moveEntries()) {
+    if (move.mover) seen.add(String(move.mover));
+  }
+  return [...seen].sort();
+}
+
+function renderPlayerPanels() {
+  players = replayPlayers();
+  if (players.length === 0) players = ['player_1', 'player_2'];
+  const midpoint = Math.ceil(players.length / 2);
+  const columns = [
+    [document.getElementById('leftAgents'), players.slice(0, midpoint)],
+    [document.getElementById('rightAgents'), players.slice(midpoint)],
+  ];
+  for (const [column, columnPlayers] of columns) {
+    column.innerHTML = columnPlayers.map((player) => {
+      const index = players.indexOf(player) + 1;
+      return `
+        <aside class="agent" id="panel-${escapeHtml(player)}">
+          <p class="agent-label">Agent ${escapeHtml(index)}</p>
+          <p class="agent-name">${escapeHtml(player)}</p>
+          <div class="move-list" id="moves-${escapeHtml(player)}"></div>
+        </aside>
+      `;
+    }).join('');
+  }
 }
 
 function shortHash(value) {
@@ -456,6 +493,7 @@ function togglePlay() {
 
 function renderMoves(player) {
   const list = document.getElementById(`moves-${player}`);
+  if (!list) return;
   const items = moveEntries().filter((item) => item.mover === player);
   list.innerHTML = items.map((item) => `
     <button class="move" type="button" aria-current="${item.index === selected}" onclick="setSelected(${item.index})">
@@ -576,12 +614,14 @@ function render() {
   document.getElementById('next').disabled = selected >= events.length - 1;
   document.getElementById('board').innerHTML = renderBoard(event);
   document.getElementById('details').innerHTML = renderDetails(event, move);
-  for (const player of ['player_1', 'player_2']) {
-    document.getElementById(`panel-${player}`).classList.toggle('active', move?.mover === player);
+  for (const player of players) {
+    const panel = document.getElementById(`panel-${player}`);
+    if (panel) panel.classList.toggle('active', move?.mover === player);
     renderMoves(player);
   }
 }
 
+renderPlayerPanels();
 document.getElementById('prev').addEventListener('click', () => setSelected(selected - 1));
 document.getElementById('next').addEventListener('click', () => setSelected(selected + 1));
 document.getElementById('play').addEventListener('click', togglePlay);

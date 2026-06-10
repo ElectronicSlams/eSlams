@@ -18,6 +18,7 @@ from eslams.arena_transport import legal_actions_page, smoke_all_arenas, start_s
 from eslams.artifacts import ArtifactValidator
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
 from eslams.contracts.json_schema import export_schemas
+from eslams.contracts.versions import RUNNER_VERSION
 from eslams.eval_runtime import (
     ResumeInvariant,
     append_progress_event,
@@ -250,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     run.add_argument("--verification-level", default="Local Artifact")
     run.add_argument("--eval-suite-version", default="public-smoke:1.0.0")
-    run.add_argument("--runner-version", default="eslams-runner:0.3.0")
+    run.add_argument("--runner-version", default=RUNNER_VERSION)
     run.add_argument("--suite-id")
     run.add_argument("--case-id")
     run.add_argument("--suite-fingerprint")

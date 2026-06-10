@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.3.1 - 2026-06-10
+
+### Security
+
+- Hardened `.eslams` archive validation against zip path traversal and
+  concurrent validation races by validating every archive member before
+  extracting into a unique temporary directory.
+
+### Fixed
+
+- Logged Arena transition exceptions while keeping public transport failures
+  generic.
+- Fixed Checkers multi-jump continuation, including forced-piece legal actions.
+- Rejected missing explicit agents for arenas with more than two players.
+- Preserved literal edge backticks when parsing fenced JSON model responses.
+- Guarded malformed Backgammon move parsing and corrupt public replay JSONL rows.
+- Made catalogue export skip and warn on missing metadata rows instead of
+  crashing.
+- Generated replay HTML player panels from replay data instead of hardcoding two
+  player IDs.
+
+### Changed
+
+- Bumped Core package/version metadata to `0.3.1` and runner defaults to
+  `eslams-runner:0.3.1`.
+
 ## v0.3.0 - 2026-06-09
 
 ### Added

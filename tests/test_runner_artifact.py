@@ -1,14 +1,17 @@
 import json
+import zipfile
 from pathlib import Path
 
 import pytest
 
 from eslams.agents import FunctionAgent
+from eslams.arena import Arena
 from eslams.artifacts import ArtifactValidator
 from eslams.cli import main
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 from eslams.replay import render_replay_html
-from eslams.runner import RunConfig, Runner
+from eslams.runner import RunConfig, Runner, _agents_for_arena
+from eslams.state import ArenaState
 
 
 def test_runner_generates_valid_connect_four_artifact(tmp_path: Path):
@@ -23,6 +26,21 @@ def test_runner_generates_replay_events(tmp_path: Path):
     result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=3, output_dir=tmp_path))
     assert result.replay_events[0].action is None
     assert result.replay_events[-1].terminal is True
+
+
+def test_runner_requires_explicit_agents_for_more_than_two_players():
+    with pytest.raises(ValueError, match="player_3"):
+        _agents_for_arena(ThreePlayerArena(), RunConfig(arena_id="three-player"))
+
+    agents = _agents_for_arena(
+        ThreePlayerArena(),
+        RunConfig(
+            arena_id="three-player",
+            agents={"player_3": "first-legal"},
+        ),
+    )
+
+    assert set(agents) == {"player_1", "player_2", "player_3"}
 
 
 def test_validator_verifies_deterministic_replay_contract(tmp_path: Path):
@@ -82,8 +100,9 @@ def test_chess_replay_html_has_coordinates_side_colored_pieces_and_split_moves(t
     assert "piece-white" in replay_text
     assert "piece-black" in replay_text
     assert 'id="play"' in replay_text
-    assert 'id="moves-player_1"' in replay_text
-    assert 'id="moves-player_2"' in replay_text
+    assert 'id="leftAgents"' in replay_text
+    assert 'id="rightAgents"' in replay_text
+    assert "renderPlayerPanels()" in replay_text
 
 
 def test_replay_renderer_can_materialize_archive_artifacts(tmp_path: Path):
@@ -121,6 +140,18 @@ def test_runner_archive_writes_archive_expanded_copy_and_latest_links(tmp_path: 
     assert (tmp_path / "latest.eslams.d").resolve() == result.expanded_path.resolve()
     assert ArtifactValidator().validate(result.artifact_path) == []
     assert ArtifactValidator().validate(result.expanded_path) == []
+    assert not any(tmp_path.glob(".*.validate"))
+
+
+def test_validator_rejects_zip_slip_archive_members(tmp_path: Path):
+    archive = tmp_path / "malicious.eslams"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("../outside.txt", "nope")
+
+    with pytest.raises(ValueError, match="unsafe artifact archive path"):
+        ArtifactValidator().validate(archive)
+
+    assert not (tmp_path / "outside.txt").exists()
 
 
 def test_runner_signs_artifact_when_key_is_configured(tmp_path: Path, monkeypatch):
@@ -367,6 +398,26 @@ def test_runner_rejects_unknown_failure_policy(tmp_path: Path):
 
 def _raise_agent_error(_request):
     raise RuntimeError("intentional crash")
+
+
+class ThreePlayerArena(Arena):
+    id = "three-player"
+    version = "1.0.0"
+    players = ("player_1", "player_2", "player_3")
+    action_schema = {"type": "string"}
+    max_turns = 1
+
+    def initial_state(self, seed: int) -> ArenaState:
+        raise NotImplementedError
+
+    def observation_for(self, state: ArenaState, player_id: str) -> dict[str, object]:
+        raise NotImplementedError
+
+    def apply_action(self, state: ArenaState, player_id: str, action: object) -> ArenaState:
+        raise NotImplementedError
+
+    def score(self, state: ArenaState) -> dict[str, float]:
+        raise NotImplementedError
 
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:

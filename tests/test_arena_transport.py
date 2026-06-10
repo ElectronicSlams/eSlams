@@ -141,6 +141,17 @@ def test_arena_session_failures_are_safe_and_do_not_transition():
     assert _public_issues(illegal) == []
 
 
+def test_arena_session_rejects_non_object_options():
+    with pytest.raises(ValueError, match="options must be a JSON object"):
+        start_session(
+            "tic-tac-toe",
+            "standard",
+            1,
+            _players_for(("player_1", "player_2")),
+            ["not", "an", "object"],  # type: ignore[arg-type]
+        )
+
+
 def test_arena_legal_actions_page_large_games_and_search():
     for game_id in ("pentago", "gomoku", "hex", "go", "ultimate-tic-tac-toe"):
         arena = registry.create(game_id)

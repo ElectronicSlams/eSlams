@@ -14,6 +14,7 @@ from eslams.agents import create_builtin_agent
 from eslams.arena import Arena
 from eslams.arenas import registry
 from eslams.artifacts import ArtifactBuildInput, expanded_artifact_path, write_artifact
+from eslams.contracts.versions import RUNNER_VERSION
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.protocol import ActRequest, ActResponse, make_act_request
 from eslams.state import ArenaState
@@ -31,7 +32,7 @@ class RunConfig:
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str | None = None
-    runner_version: str = "eslams-runner:0.3.0"
+    runner_version: str = RUNNER_VERSION
     suite_id: str | None = None
     case_id: str | None = None
     suite_fingerprint: str | None = None
@@ -159,11 +160,7 @@ class Runner:
                             reason=invalid_reason,
                         )
                     break
-            action = (
-                response.action
-                if response
-                else arena.failure_action(state, player_id, ",".join(markers))
-            )
+            action = response.action if response else None
             if action is None:
                 action = arena.failure_action(state, player_id, ",".join(markers))
                 if action is not None:
@@ -348,7 +345,10 @@ def _agents_for_arena(arena: Arena, config: RunConfig) -> dict[str, Any]:
         elif player_id == "player_2":
             value = config.agent_2
         else:
-            value = config.agent_1
+            raise ValueError(
+                f"Arena {arena.id} requires an explicit agent for {player_id}; "
+                "pass RunConfig.agents for arenas with more than two players."
+            )
         agents[player_id] = _agent(value, seed=config.seed + index)
     return agents
 

@@ -7,6 +7,7 @@ import hmac
 import json
 import os
 import shutil
+import tempfile
 import zipfile
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
@@ -25,8 +26,10 @@ from eslams.contracts.safety import scan_public_payload
 from eslams.contracts.versions import (
     ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ARTIFACT_VALIDATION_SCHEMA_VERSION,
+    CORE_PACKAGE_VERSION,
     OFFICIAL_RESULT_SCHEMA_VERSION,
     REPLAY_MANIFEST_SCHEMA_VERSION,
+    RUNNER_VERSION,
 )
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json, sha256_file, sha256_json
@@ -202,7 +205,7 @@ class ArtifactBuildInput:
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
     scoring_policy_version: str = "standard-score:1.0.0"
-    runner_version: str = "eslams-runner:0.3.0"
+    runner_version: str = RUNNER_VERSION
     verification_level: str = "Local Artifact"
 
 
@@ -375,7 +378,10 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         "local-development\n",
         encoding="utf-8",
     )
-    _write_json(artifact_dir / "environment/package_versions.json", {"eslams-core": "0.3.0"})
+    _write_json(
+        artifact_dir / "environment/package_versions.json",
+        {"eslams-core": CORE_PACKAGE_VERSION},
+    )
     _write_json(
         artifact_dir / "broadcast/broadcast_manifest.json",
         {
@@ -1649,11 +1655,16 @@ def _materialize(path: Path) -> tuple[Path, bool]:
     if path.is_dir():
         return path, False
     if zipfile.is_zipfile(path):
-        tmp = path.parent / f".{path.stem}.validate"
-        if tmp.exists():
-            shutil.rmtree(tmp)
-        tmp.mkdir(parents=True)
+        tmp = Path(tempfile.mkdtemp(prefix=f"{path.stem}.validate."))
+        tmp_root = tmp.resolve()
         with zipfile.ZipFile(path) as zf:
+            for member in zf.infolist():
+                member_path = (tmp / member.filename).resolve()
+                try:
+                    member_path.relative_to(tmp_root)
+                except ValueError as exc:
+                    shutil.rmtree(tmp)
+                    raise ValueError(f"unsafe artifact archive path: {member.filename}") from exc
             zf.extractall(tmp)
         return tmp, True
     raise FileNotFoundError(path)

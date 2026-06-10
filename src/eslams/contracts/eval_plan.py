@@ -6,9 +6,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from eslams.contracts.versions import (
+    CORE_PACKAGE_VERSION,
     EVAL_PLAN_SCHEMA_VERSION,
     EVAL_PROGRESS_SCHEMA_VERSION,
     EVAL_RESUME_CHECKPOINT_SCHEMA_VERSION,
+    RUNNER_VERSION,
 )
 from eslams.hashing import sha256_json
 
@@ -58,8 +60,8 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
         kind="official",
         generated_at="1970-01-01T00:00:00Z",
         suite_fingerprint="suite-example",
-        core_version="0.3.0",
-        runner_version="eslams-runner:0.3.0",
+        core_version=CORE_PACKAGE_VERSION,
+        runner_version=RUNNER_VERSION,
         registry_hash="registry-example",
         selected_providers=["mock"],
         selected_models=["mock:legal-action"],
@@ -94,7 +96,7 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
                     "artifact_digest": "artifact-digest-example",
                     "model_id": "mock:legal-action",
                     "suite_fingerprint": "suite-example",
-                    "runner_version": "eslams-runner:0.3.0",
+                    "runner_version": RUNNER_VERSION,
                     "plan_hash": plan["plan_hash"],
                 },
                 "artifact_path": "runs/case-example.eslams",

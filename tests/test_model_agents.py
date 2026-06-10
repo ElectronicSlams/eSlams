@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from eslams.agents import HttpAgent, MockProviderAgent, ModelProviderAgent
+from eslams.agents import HttpAgent, MockProviderAgent, ModelProviderAgent, _extract_json
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
 from eslams.provider_preflight import provider_preflight
@@ -27,6 +27,13 @@ def _request() -> ActRequest:
         time_budget_ms=1000,
         memory_policy="current_observation_plus_public_history",
     )
+
+
+def test_json_extraction_strips_only_complete_code_fences():
+    payload = '```json\n{"action": "use `backtick`"}\n```'
+
+    assert _extract_json(payload) == {"action": "use `backtick`"}
+    assert _extract_json('{"action": "literal`"}') == {"action": "literal`"}
 
 
 def test_openai_model_agent_parses_legal_json_action(monkeypatch):

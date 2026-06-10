@@ -9,11 +9,12 @@ from typing import Any
 import eslams.arenas  # noqa: F401
 from eslams.arena import registry as arena_registry
 from eslams.contracts.runner_job import runner_health_payload
+from eslams.contracts.versions import CORE_PACKAGE_VERSION
 from eslams.hashing import canonical_json
 from eslams.providers import load_provider_registry
 from eslams.rendering import renderer_vocabulary_rows
 
-CORE_VERSION = "0.3.0"
+CORE_VERSION = CORE_PACKAGE_VERSION
 
 
 def current_runner_health() -> dict[str, Any]:
@@ -39,15 +40,20 @@ def current_runner_health() -> dict[str, Any]:
 
 def _git_commit() -> str | None:
     root = Path(__file__).resolve().parents[2]
+    if not (root / ".git").is_dir():
+        return None
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             cwd=root,
-            check=True,
+            check=False,
             capture_output=True,
             text=True,
+            timeout=2,
         )
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
         return None
     value = result.stdout.strip()
     return value or None

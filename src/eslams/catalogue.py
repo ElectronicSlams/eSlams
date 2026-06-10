@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import eslams.arenas  # noqa: F401
@@ -16,6 +17,8 @@ from eslams.providers import load_provider_registry
 from eslams.public_catalogue import PUBLIC_GAME_CATALOGUE_BY_ID
 from eslams.rendering import renderer_vocabulary_rows
 
+log = logging.getLogger(__name__)
+
 
 def game_catalogue_rows() -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -24,8 +27,14 @@ def game_catalogue_rows() -> list[dict[str, Any]]:
         for row in renderer_vocabulary_rows()
     }
     for game_id in arena_registry.list():
-        renderer_row = renderer_rows[game_id]
-        public = PUBLIC_GAME_CATALOGUE_BY_ID[game_id]
+        renderer_row = renderer_rows.get(game_id)
+        if renderer_row is None:
+            log.warning("arena %s has no renderer catalogue row; skipping", game_id)
+            continue
+        public = PUBLIC_GAME_CATALOGUE_BY_ID.get(game_id)
+        if public is None:
+            log.warning("arena %s has no public catalogue row; skipping", game_id)
+            continue
         replay_availability = str(renderer_row["replay_availability"])
         rows.append(
             {

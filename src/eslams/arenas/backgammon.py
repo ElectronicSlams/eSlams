@@ -62,7 +62,11 @@ class BackgammonArena(Arena):
         bar = dict(state.public_state["bar"])
         borne_off = dict(state.public_state["borne_off"])
         dice = list(state.public_state["dice"])
-        source_text, target_text = action.split(":", 1)[1].split("-", 1)
+        try:
+            _, move_part = action.split(":", 1)
+            source_text, target_text = move_part.split("-", 1)
+        except (ValueError, IndexError) as exc:
+            raise ValueError(f"Invalid backgammon action format: {action!r}") from exc
         die = _move_distance(player_id, source_text, target_text)
         dice.remove(die)
         _apply_backgammon_move(board, bar, borne_off, player_id, source_text, target_text)

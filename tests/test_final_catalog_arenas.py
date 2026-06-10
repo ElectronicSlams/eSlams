@@ -114,8 +114,19 @@ def test_bridge_follow_suit_state_uses_public_trick_and_private_hands() -> None:
 def test_runner_generates_valid_artifacts_for_final_catalog_arenas(tmp_path: Path) -> None:
     for arena_id in sorted(FINAL_CATALOG_ARENAS):
         output_dir = tmp_path / arena_id
+        arena = registry.create(arena_id)
+        agents = {
+            player_id: "random" if player_id == "player_1" else "first-legal"
+            for player_id in arena.players
+        }
         result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=17, max_turns=18, output_dir=output_dir)
+            RunConfig(
+                arena_id=arena_id,
+                agents=agents,
+                seed=17,
+                max_turns=18,
+                output_dir=output_dir,
+            )
         )
 
         assert result.artifact_path.exists()

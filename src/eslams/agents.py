@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import threading
 import time
 from collections.abc import Iterator
@@ -968,10 +969,9 @@ def _parse_model_action(
 
 def _extract_json(text: str) -> Any:
     stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = stripped.strip("`")
-        if stripped.startswith("json"):
-            stripped = stripped[4:]
+    fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", stripped, re.DOTALL)
+    if fenced:
+        stripped = fenced.group(1)
     try:
         return json.loads(stripped)
     except json.JSONDecodeError:
