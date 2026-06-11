@@ -21,6 +21,7 @@ from eslams.artifacts import (
     write_artifact,
 )
 from eslams.contracts import schema_versions
+from eslams.core_contract import core_step, engine_capabilities, prompt_package
 from eslams.protocol import ActRequest, ActResponse
 from eslams.runner import RunConfig, Runner
 from eslams.state import ArenaState
@@ -36,13 +37,16 @@ __all__ = [
     "RunConfig",
     "Runner",
     "SignatureValidationStatus",
+    "core_step",
+    "engine_capabilities",
     "extract_provider_usage",
     "extract_public_manifest",
     "extract_validation_summary",
     "open_artifact",
+    "prompt_package",
     "read_member",
     "schema_versions",
     "write_artifact",
 ]
 
-__version__ = "0.3.2"
+__version__ = "0.4.0"

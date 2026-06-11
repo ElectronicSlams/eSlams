@@ -33,6 +33,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.4.0](#release-v040)
 - [Release v0.3.2](#release-v032)
 - [Release v0.3.1](#release-v031)
 - [Release v0.3.0](#release-v030)
@@ -277,7 +278,19 @@ eslams plan official --suite public-smoke --providers openai --arenas tic-tac-to
 eslams publish export --kind uploaded-replay --artifact runs/latest.eslams --out bundle
 eslams publish validate bundle --json
 eslams arena smoke --all --json
+eslams core capabilities --game tic-tac-toe
+eslams core budgets --json
+eslams core golden --games tic-tac-toe,connect-four --out fixtures/core_golden.json
+eslams bench arena-step --games tic-tac-toe,connect-four --iterations 100
 ```
+
+Core v0.4.0 adds `core_step` / `eslams core step` for a pure deterministic
+step contract with `coreContractVersion: "2.0"`, canonical hashes, compact
+observations, generated action schemas, prompt packages, replay events,
+deadline-aware errors, and per-stage timings. The package also ships
+Platform-facing TypeScript contracts in `packages/core-contracts` and a gated
+`packages/core-lite` TypeScript runtime for tic-tac-toe and connect-four
+parity work.
 
 ## Arena Session Transport
 
@@ -632,6 +645,20 @@ eslams run --arena chess --agent first-legal --opponent first-legal --max-turns 
 eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
+```
+
+## Release v0.4.0
+
+`v0.4.0` is the fast interactive Core substrate release. The package version is
+`0.4.0`, runner defaults emit `eslams-runner:0.4.0`, and schema exports include
+Core step v2, prompt package, replay event, runner-session, and observability
+schemas.
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check .
+python3 -m mypy src
+python3 -m eslams_core.bench arena-step --games tic-tac-toe --iterations 10 --json out/core-step-bench.json
 ```
 
 ## Release v0.3.2

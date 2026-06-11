@@ -23,6 +23,165 @@ deterministic and records Core package version, git commit when available,
 schema bundle version, schema filenames, schema versions, SHA-256 hashes, byte
 sizes, and a deterministic build id.
 
+## Core Step v2
+
+Core v0.4.0 exposes a pure step contract for Platform hot paths. It is additive
+to the older Arena transport helpers and uses `coreContractVersion: "2.0"`.
+
+```python
+from eslams.arena import registry
+from eslams.arena_transport import serialize_state
+from eslams.core_contract import CORE_CONTRACT_VERSION, core_step
+
+arena = registry.create("tic-tac-toe")
+state = arena.initial_state(seed=1)
+
+response = core_step({
+    "coreContractVersion": CORE_CONTRACT_VERSION,
+    "gameId": "tic-tac-toe",
+    "rulesetVersion": "standard",
+    "state": serialize_state(state),
+    "action": {"actionId": "4"},
+    "actorId": "player_1",
+    "requestId": "arena-turn-1",
+    "deadlineMs": 2000,
+    "includeObservation": True,
+    "includeLegalActions": "compact",
+    "includeReplayEvent": True,
+})
+```
+
+Responses include `coreVersion`, `coreContractVersion`, `rulesetVersion`,
+`promptVersion`, `actionSchemaVersion`, `replaySchemaVersion`, canonical
+`previousStateHash`, `actionHash`, `nextStateHash`,
+`legalActionHashBefore`, `legalActionHashAfter`, optional state,
+observation, compact/full legal-action views, replay event, terminal summary,
+structured error, and `timingsMs`.
+
+`timingsMs` always includes `receivedAt` and `totalMs`; successful responses
+also report stage timings such as `initMs`, `deserializeMs`, `legalActionsMs`,
+`validateMs`, `applyMs`, `scoringMs`, `observationMs`, `replayEventMs`, and
+`serializeMs`.
+
+CLI equivalent:
+
+```bash
+eslams core step --request core_step_request.json
+```
+
+## Prompt and Model Action Contract
+
+Core owns game-specific prompt packaging, but not provider routing:
+
+```python
+from eslams.core_contract import prompt_package
+
+package = prompt_package(arena=arena, state=state, actor_id=state.active_player)
+```
+
+The package has cache-friendly `stablePrefix` blocks first, then dynamic
+`moveHistory`, `currentObservation`, and `legalActions` blocks. It also carries
+the per-turn `outputSchema`, parser version, `promptHash`, and approximate
+`tokenEstimate`.
+
+Shared model-action helpers live in `eslams.model_actions`:
+
+- `parse_model_action(text, legal_actions)` accepts both
+  `{"action": {"action_id": "..."}}` and legacy `{"action": ...}`.
+- `action_output_schema(legal_actions)` generates the structured-output JSON
+  schema with `action` as the first required field.
+- `streaming_action_status(buffer, legal_actions)` reports `action_ready`
+  before the public explanation has finished streaming.
+- `invalid_action_retry_prompt(...)` gives Arena and official evals the same
+  one-retry invalid-action repair behavior.
+
+Invalid action taxonomy values are:
+`invalid_json`, `schema_mismatch`, `unknown_action_id`,
+`illegal_action_for_state`, `action_valid_but_wrong_actor`, `empty_output`,
+`timeout_before_action`, and `provider_error`.
+
+## Persistent Runner Sessions
+
+For heavier games where Python Core stays in the hot path, v0.4.0 provides a
+session-affine runner store and FastAPI app:
+
+```python
+from eslams.runner_session import RunnerSessionStore
+
+store = RunnerSessionStore()
+store.create(game_id="chess", session_id="arena_123", initial_seed=1)
+store.step(session_id="arena_123", action={"actionId": "e2e4"})
+store.snapshot("arena_123")
+store.ping()
+store.close("arena_123")
+```
+
+FastAPI routes are available from `eslams.runner_server:app`:
+
+- `POST /runner/session/create`
+- `POST /runner/session/{id}/step`
+- `POST /runner/session/{id}/snapshot`
+- `POST /runner/session/{id}/ping`
+- `POST /runner/session/{id}/close`
+- `GET /runner/session/ping`
+
+`eslams runner health --json` now includes `ok`, `loadedGames`, `warm`, and
+`uptimeMs` in addition to the existing registry/action/renderer hashes.
+
+## Benchmarks, Budgets, and Golden Fixtures
+
+Core v0.4.0 adds a repeatable benchmark harness:
+
+```bash
+python -m eslams_core.bench arena-step --games all --positions fixture --iterations 1000 --json out/core-step-bench.json
+eslams bench arena-step --games tic-tac-toe,connect-four --iterations 100 --json out/smoke-bench.json
+```
+
+The report captures stage p95 timings, state bytes, compact observation bytes,
+legal-action bytes, and approximate prompt tokens. Use
+`eslams core budgets --json` to check compact observation and prompt budgets,
+and `eslams core golden --games tic-tac-toe,connect-four --out fixtures/core_golden.json`
+to write deterministic state/action/observation hash fixtures.
+
+## Generated TypeScript and Core-lite
+
+Platform-facing TypeScript artifacts are checked in under:
+
+- `packages/core-contracts/src/generated/core-step.ts`
+- `packages/core-contracts/src/generated/actions.ts`
+- `packages/core-contracts/src/generated/replay.ts`
+- `packages/core-contracts/src/generated/prompt.ts`
+
+`packages/core-lite` contains a small TypeScript runtime for tic-tac-toe and
+connect-four. Python Core remains the official authority; Core-lite promotion
+is gated by Python parity fixtures and engine capability metadata from
+`eslams core capabilities --game GAME`.
+
+## Seed and Request Security
+
+`eslams.contracts.security.derive_seed(...)` fails closed in production when a
+secret is missing. Development public fallback must be explicitly enabled and
+returns a `mode` that should be recorded in replay metadata.
+
+Runner request signing helpers canonicalize method, path, body SHA-256,
+timestamp, nonce, and request id:
+
+```python
+from eslams.contracts.security import sign_runner_request, verify_runner_request_signature
+
+signature = sign_runner_request(
+    secret="runner-secret",
+    method="POST",
+    path="/runner/session/arena_123/step",
+    body={"action": {"actionId": "4"}},
+    timestamp="2026-06-11T00:00:00Z",
+    nonce="nonce",
+    request_id="req_123",
+    key_id="runner-key-1",
+)
+assert verify_runner_request_signature(secret="runner-secret", signature_payload=signature)
+```
+
 ## Artifact Validation
 
 Validate runner bundles, official bundles, Battlefield bundles, or public

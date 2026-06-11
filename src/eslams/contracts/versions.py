@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-CORE_PACKAGE_VERSION = "0.3.2"
+CORE_PACKAGE_VERSION = "0.4.0"
 RUNNER_VERSION = f"eslams-runner:{CORE_PACKAGE_VERSION}"
 PROTOCOL_VERSION = "eslams-act-v1"
-SCHEMA_BUNDLE_VERSION = "eslams-schema-bundle-v1"
+SCHEMA_BUNDLE_VERSION = "eslams-schema-bundle-v2"
+CORE_CONTRACT_VERSION = "2.0"
+CORE_PROMPT_VERSION = "eslams.core.prompt.v2"
+CORE_ACTION_SCHEMA_VERSION = "eslams.core.action_schema.v2"
 
 ARTIFACT_MANIFEST_SCHEMA_VERSION = "eslams.artifact.manifest.v1"
 ARTIFACT_VALIDATION_SCHEMA_VERSION = "eslams.artifact.validation.v1"
@@ -30,6 +33,12 @@ ARENA_EVENT_SCHEMA_VERSION = "eslams.arena.event.v1"
 ARENA_LEGAL_ACTIONS_PAGE_SCHEMA_VERSION = "eslams.arena.legal_actions_page.v1"
 ARENA_START_RESULT_SCHEMA_VERSION = "eslams.arena.start_result.v1"
 ARENA_STEP_RESULT_SCHEMA_VERSION = "eslams.arena.step_result.v1"
+CORE_STEP_REQUEST_SCHEMA_VERSION = "eslams.core.step_request.v2"
+CORE_STEP_RESPONSE_SCHEMA_VERSION = "eslams.core.step_response.v2"
+CORE_PROMPT_PACKAGE_SCHEMA_VERSION = "eslams.core.prompt_package.v2"
+CORE_REPLAY_EVENT_SCHEMA_VERSION = "eslams.core.replay_event.v2"
+CORE_RUNNER_SESSION_SCHEMA_VERSION = "eslams.core.runner_session.v1"
+CORE_OBSERVABILITY_SCHEMA_VERSION = "eslams.core.observability.v1"
 
 SCHEMA_VERSIONS: tuple[str, ...] = (
     ARTIFACT_MANIFEST_SCHEMA_VERSION,
@@ -55,6 +64,12 @@ SCHEMA_VERSIONS: tuple[str, ...] = (
     ARENA_LEGAL_ACTIONS_PAGE_SCHEMA_VERSION,
     ARENA_START_RESULT_SCHEMA_VERSION,
     ARENA_STEP_RESULT_SCHEMA_VERSION,
+    CORE_STEP_REQUEST_SCHEMA_VERSION,
+    CORE_STEP_RESPONSE_SCHEMA_VERSION,
+    CORE_PROMPT_PACKAGE_SCHEMA_VERSION,
+    CORE_REPLAY_EVENT_SCHEMA_VERSION,
+    CORE_RUNNER_SESSION_SCHEMA_VERSION,
+    CORE_OBSERVABILITY_SCHEMA_VERSION,
 )
 
 

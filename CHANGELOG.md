@@ -1,5 +1,46 @@
 # Changelog
 
+## v0.4.0 - 2026-06-11
+
+### Added
+
+- Added Core step contract v2 with deterministic `coreStep` request/response
+  semantics, canonical state/action/legal-action/observation hashes, compact
+  legal-action views, replay events, terminal summaries, and per-stage timings.
+- Added compact observation and prompt package generation with stable prefix
+  blocks, per-turn dynamic blocks, action output JSON schemas, prompt hashes,
+  and approximate token estimates.
+- Added shared model-action parsing with invalid-action taxonomy, corrective
+  retry prompts, `action_id` support, and streaming `action_ready` detection.
+- Added persistent runner-session support with hot in-memory state,
+  create/step/snapshot/ping/close APIs, and FastAPI route wiring for runner
+  containers.
+- Added `python -m eslams_core.bench arena-step ...` and `eslams bench
+  arena-step` benchmark harnesses for Core step timings and payload sizes.
+- Added observation budget reports, golden Core fixture generation, engine
+  capability metadata, and speculative-precompute eligibility metadata.
+- Added production-fail-closed seed derivation and runner request signing
+  helpers.
+- Added Platform TypeScript contract artifacts under `packages/core-contracts`
+  and a gated `@eslams/core-lite` TypeScript package for tic-tac-toe and
+  connect-four parity work.
+
+### Changed
+
+- Bumped Core package/version metadata to `0.4.0`, runner defaults to
+  `eslams-runner:0.4.0`, and schema bundle metadata to
+  `eslams-schema-bundle-v2`.
+- Extended schema export with Core step request/response, prompt package,
+  replay event, runner-session, and observability schemas.
+- Enriched runner health output with warm status, loaded game count, and
+  uptime while preserving existing hash fields.
+
+### Validation
+
+- Added v0.4.0 tests for Core step v2, prompt packages, shared model-action
+  parsing, runner sessions, seed/signing security, budgets, golden fixtures,
+  schema export, generated contract artifacts, and engine capability gates.
+
 ## v0.3.2 - 2026-06-10
 
 ### Security

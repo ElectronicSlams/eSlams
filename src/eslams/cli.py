@@ -14,11 +14,19 @@ from typing import Any
 import eslams.arenas  # noqa: F401
 from eslams.agents import HttpAgent, ModelProviderAgent
 from eslams.arena import registry
-from eslams.arena_transport import legal_actions_page, smoke_all_arenas, start_session, step_session
+from eslams.arena_transport import (
+    deserialize_state,
+    legal_actions_page,
+    smoke_all_arenas,
+    start_session,
+    step_session,
+)
 from eslams.artifacts import ArtifactValidator
+from eslams.bench import arena_step_benchmark
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
 from eslams.contracts.json_schema import export_schemas
 from eslams.contracts.versions import RUNNER_VERSION
+from eslams.core_contract import core_step, engine_capabilities, prompt_package
 from eslams.eval_runtime import (
     ResumeInvariant,
     append_progress_event,
@@ -27,6 +35,8 @@ from eslams.eval_runtime import (
     should_skip_case,
 )
 from eslams.fixtures import ARTIFACT_FIXTURE_KINDS, create_artifact_fixture
+from eslams.golden import golden_fixture_bundle
+from eslams.observation_budgets import all_observation_budget_reports
 from eslams.official import merge_official_results
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
@@ -43,6 +53,7 @@ from eslams.replay import render_replay_html
 from eslams.runner import FAILURE_POLICIES, RunConfig, Runner
 from eslams.runner_health import current_runner_health
 from eslams.runner_result import runner_job_result_from_artifact
+from eslams.runner_session import default_runner_session_store
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -80,6 +91,32 @@ def main(argv: list[str] | None = None) -> int:
     arena_page.add_argument("--query")
     arena_page.add_argument("--limit", type=int, default=50)
     arena_page.add_argument("--cursor")
+
+    core = sub.add_parser("core", help="Core v2 contract helper commands.")
+    core_sub = core.add_subparsers(dest="core_command", required=True)
+    core_step_cmd = core_sub.add_parser("step", help="Apply one CoreStepRequest v2.")
+    core_step_cmd.add_argument("--request", type=Path, required=True)
+    core_prompt = core_sub.add_parser("prompt", help="Generate a prompt package for a state.")
+    core_prompt.add_argument("--game", required=True, choices=registry.list())
+    core_prompt.add_argument("--state", type=Path, required=True)
+    core_prompt.add_argument("--actor-id")
+    core_capabilities = core_sub.add_parser(
+        "capabilities",
+        help="Emit engine and speculative-precompute capabilities.",
+    )
+    core_capabilities.add_argument("--game", choices=registry.list())
+    core_budgets = core_sub.add_parser("budgets", help="Report compact observation budgets.")
+    core_budgets.add_argument("--json", action="store_true")
+    core_golden = core_sub.add_parser("golden", help="Emit Core golden fixtures.")
+    core_golden.add_argument("--games", default="tic-tac-toe,connect-four")
+    core_golden.add_argument("--out", type=Path)
+
+    bench = sub.add_parser("bench", help="Core benchmark helper commands.")
+    bench_sub = bench.add_subparsers(dest="bench_command", required=True)
+    bench_arena_step = bench_sub.add_parser("arena-step", help="Benchmark Core arena steps.")
+    bench_arena_step.add_argument("--games", default="tic-tac-toe,connect-four")
+    bench_arena_step.add_argument("--iterations", type=int, default=100)
+    bench_arena_step.add_argument("--json", type=Path)
 
     schemas = sub.add_parser("schemas", help="Export versioned contract schemas.")
     schemas_sub = schemas.add_subparsers(dest="schemas_command", required=True)
@@ -191,6 +228,28 @@ def main(argv: list[str] | None = None) -> int:
     runner_result.add_argument("--artifact", type=Path, required=True)
     runner_result.add_argument("--artifact-uri", required=True)
     runner_result.add_argument("--job-id", required=True)
+    runner_session_create = runner_sub.add_parser(
+        "session-create",
+        help="Create a hot runner session.",
+    )
+    runner_session_create.add_argument("--game", required=True, choices=registry.list())
+    runner_session_create.add_argument("--session-id")
+    runner_session_create.add_argument("--seed", type=int, default=1)
+    runner_session_step = runner_sub.add_parser("session-step", help="Step a hot runner session.")
+    runner_session_step.add_argument("--session-id", required=True)
+    runner_session_step.add_argument("--action", required=True)
+    runner_session_step.add_argument("--actor-id")
+    runner_session_step.add_argument("--deadline-ms", type=int)
+    runner_session_snapshot = runner_sub.add_parser(
+        "session-snapshot",
+        help="Snapshot a hot runner session.",
+    )
+    runner_session_snapshot.add_argument("--session-id", required=True)
+    runner_session_close = runner_sub.add_parser(
+        "session-close",
+        help="Close a hot runner session.",
+    )
+    runner_session_close.add_argument("--session-id", required=True)
 
     models = sub.add_parser("models", help="Inspect or refresh provider model capabilities.")
     models_sub = models.add_subparsers(dest="models_command", required=True)
@@ -306,6 +365,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "arena":
         return _arena_command(args)
+    if args.command == "core":
+        return _core_command(args)
+    if args.command == "bench":
+        return _bench_command(args)
     if args.command == "schemas":
         return _schemas_command(args)
     if args.command == "artifact":
@@ -412,6 +475,79 @@ def _schemas_command(args: argparse.Namespace) -> int:
         print(json.dumps({"schemas": [str(path) for path in written]}, indent=2))
         return 0
     raise AssertionError(args.schemas_command)
+
+
+def _core_command(args: argparse.Namespace) -> int:
+    if args.core_command == "step":
+        step_payload = core_step(_read_json_file(args.request))
+        print(json.dumps(step_payload, indent=2))
+        return 0 if step_payload.get("ok") is True else 1
+    if args.core_command == "prompt":
+        arena = registry.create(args.game)
+        state = deserialize_state(_read_json_file(args.state))
+        prompt_payload = prompt_package(
+            arena=arena,
+            state=state,
+            actor_id=args.actor_id or state.active_player,
+        )
+        print(json.dumps(prompt_payload, indent=2))
+        return 0
+    if args.core_command == "capabilities":
+        if args.game:
+            capabilities_payload: Any = engine_capabilities(args.game)
+        else:
+            capabilities_payload = [engine_capabilities(game_id) for game_id in registry.list()]
+        print(json.dumps(capabilities_payload, indent=2))
+        return 0
+    if args.core_command == "budgets":
+        budget_rows = all_observation_budget_reports()
+        if args.json:
+            print(json.dumps(budget_rows, indent=2))
+        else:
+            for row in budget_rows:
+                status = "ok" if row["ok"] else "over-budget"
+                print(
+                    f"{row['gameId']} {status} "
+                    f"observation_bytes={row['observationBytes']} "
+                    f"prompt_tokens={row['promptTokensApprox']}"
+                )
+        return 0 if all(row["ok"] for row in budget_rows) else 1
+    if args.core_command == "golden":
+        games = _comma_list(args.games)
+        golden_payload = golden_fixture_bundle(game_ids=games)
+        if args.out is not None:
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(
+                json.dumps(golden_payload, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(json.dumps({"fixture": str(args.out)}, indent=2))
+        else:
+            print(json.dumps(golden_payload, indent=2))
+        return 0
+    raise AssertionError(args.core_command)
+
+
+def _bench_command(args: argparse.Namespace) -> int:
+    if args.bench_command == "arena-step":
+        games = ["all"] if args.games == "all" else _comma_list(args.games)
+        rows = arena_step_benchmark(games=games, iterations=max(1, args.iterations))
+        payload = {
+            "schemaVersion": "eslams.core.benchmark.v1",
+            "iterations": max(1, args.iterations),
+            "results": rows,
+        }
+        if args.json is not None:
+            args.json.parent.mkdir(parents=True, exist_ok=True)
+            args.json.write_text(
+                json.dumps(payload, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(json.dumps({"benchmark": str(args.json)}, indent=2))
+        else:
+            print(json.dumps(payload, indent=2))
+        return 0
+    raise AssertionError(args.bench_command)
 
 
 def _arena_command(args: argparse.Namespace) -> int:
@@ -604,6 +740,31 @@ def _runner_command(args: argparse.Namespace) -> int:
         )
         print(json.dumps(result.to_dict(), indent=2))
         return 0 if result.validation_status == "valid" else 1
+    if args.runner_command == "session-create":
+        payload = default_runner_session_store.create(
+            game_id=args.game,
+            session_id=args.session_id,
+            initial_seed=args.seed,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0
+    if args.runner_command == "session-step":
+        payload = default_runner_session_store.step(
+            session_id=args.session_id,
+            action=_action_arg(args.action),
+            actor_id=args.actor_id,
+            deadline_ms=args.deadline_ms,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0 if payload.get("ok") is True else 1
+    if args.runner_command == "session-snapshot":
+        payload = default_runner_session_store.snapshot(args.session_id)
+        print(json.dumps(payload, indent=2))
+        return 0
+    if args.runner_command == "session-close":
+        payload = default_runner_session_store.close(args.session_id)
+        print(json.dumps(payload, indent=2))
+        return 0
     raise AssertionError(args.runner_command)
 
 
@@ -704,6 +865,13 @@ def _json_arg(value: str, name: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise ValueError(f"--{name} must be a JSON object")
     return parsed
+
+
+def _action_arg(value: str) -> Any:
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value
 
 
 def _print_run_preflight(

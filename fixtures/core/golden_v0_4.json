@@ -1,0 +1,56 @@
+{
+  "coreVersion": "0.4.0",
+  "fixtures": [
+    {
+      "coreContractVersion": "2.0",
+      "coreVersion": "0.4.0",
+      "expectedNextStateHash": "sha256:eeebacba4f17043df34a8790d082c6f383f635612e71982caf91a60adc92c894",
+      "expectedScores": {
+        "player_1": 0.0,
+        "player_2": 0.0
+      },
+      "expectedTerminal": false,
+      "fixture": "initial",
+      "gameId": "tic-tac-toe",
+      "legalActionHash": "sha256:a6258a3beb0cb0ba39049655ac9cee3da3b47580fc59856a66ccea7a02b2c3dd",
+      "observationHash": "sha256:72e7a8130f6e71d5fe182ee5496484829404d7d37146b6a72f786a5da78f7ed7",
+      "stateHash": "sha256:d824f10ae6ebd62bf8409b21a0a8b458953573cf3053d656d54ea456653d5f6f",
+      "validActions": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    {
+      "coreContractVersion": "2.0",
+      "coreVersion": "0.4.0",
+      "expectedNextStateHash": "sha256:6be280dec54231157764f576c42d0c132bb079467318c50628113e26763e427b",
+      "expectedScores": {
+        "player_1": 0.0,
+        "player_2": 0.0
+      },
+      "expectedTerminal": false,
+      "fixture": "initial",
+      "gameId": "connect-four",
+      "legalActionHash": "sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7",
+      "observationHash": "sha256:63f7f143841158d7c44d07c716d0c4d06686125f26485767ff431b8520350220",
+      "stateHash": "sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9",
+      "validActions": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    }
+  ],
+  "schemaVersion": "eslams.core.golden_fixtures.v1"
+}

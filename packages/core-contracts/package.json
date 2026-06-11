@@ -1,0 +1,9 @@
+{
+  "name": "@eslams/core-contracts",
+  "version": "0.4.0",
+  "type": "module",
+  "private": false,
+  "exports": {
+    ".": "./src/generated/index.ts"
+  }
+}

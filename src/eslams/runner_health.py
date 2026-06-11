@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from eslams.providers import load_provider_registry
 from eslams.rendering import renderer_vocabulary_rows
 
 CORE_VERSION = CORE_PACKAGE_VERSION
+_STARTED_AT = time.monotonic()
 
 
 def current_runner_health() -> dict[str, Any]:
@@ -28,7 +30,7 @@ def current_runner_health() -> dict[str, Any]:
         record.to_dict()
         for record in load_provider_registry().list_models()
     ]
-    return runner_health_payload(
+    payload = runner_health_payload(
         core_commit=_git_commit(),
         core_version=CORE_VERSION,
         registry_rows=registry_rows,
@@ -36,6 +38,15 @@ def current_runner_health() -> dict[str, Any]:
         renderer_vocabulary=[canonical_json(row) for row in renderer_vocabulary],
         action_schemas=action_schemas,
     ).to_dict()
+    payload.update(
+        {
+            "ok": True,
+            "loadedGames": len(game_ids),
+            "warm": True,
+            "uptimeMs": int((time.monotonic() - _STARTED_AT) * 1000),
+        }
+    )
+    return payload
 
 
 def _git_commit() -> str | None:

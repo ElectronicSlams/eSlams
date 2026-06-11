@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import random
-import re
 import threading
 import time
 from collections.abc import Iterator
@@ -18,6 +17,13 @@ import httpx
 
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.contracts.versions import PROVIDER_RECEIPT_SCHEMA_VERSION
+from eslams.model_actions import (
+    coerce_action,
+    extract_json,
+    find_legal_action,
+    invalid_action_retry_prompt,
+    parse_model_action,
+)
 from eslams.protocol import ActRequest, ActResponse, ProtocolError
 from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
@@ -545,11 +551,7 @@ def _provider_prompt(request: ActRequest) -> str:
 
 
 def _retry_prompt(prompt: str, legal_actions: list[Any], parse_error: ProtocolError | None) -> str:
-    return (
-        f"{prompt}\n\nYour previous answer was invalid: {parse_error}.\n"
-        f"Return exactly one JSON object. The action must equal one of these values: "
-        f"{json.dumps(legal_actions, ensure_ascii=False)}. No markdown. No prose."
-    )
+    return invalid_action_retry_prompt(prompt, legal_actions, parse_error)
 
 
 def _post_json(
@@ -953,51 +955,20 @@ def _parse_model_action(
     text: str,
     legal_actions: list[Any],
 ) -> tuple[Any, float | None, str | None]:
-    payload = _extract_json(text)
-    if not isinstance(payload, dict) or "action" not in payload:
-        action = _find_legal_action(text, legal_actions)
-        return action, None, "Selected a legal action from the model response."
-    action = _coerce_action(payload["action"], legal_actions)
-    confidence = payload.get("confidence")
-    if isinstance(confidence, (int, float)) and not isinstance(confidence, bool):
-        confidence_value: float | None = max(0.0, min(1.0, float(confidence)))
-    else:
-        confidence_value = None
-    explanation = payload.get("public_explanation")
-    return action, confidence_value, explanation if isinstance(explanation, str) else None
+    parsed = parse_model_action(text, legal_actions)
+    return parsed.action, parsed.confidence, parsed.public_explanation
 
 
 def _extract_json(text: str) -> Any:
-    stripped = text.strip()
-    fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", stripped, re.DOTALL)
-    if fenced:
-        stripped = fenced.group(1)
-    try:
-        return json.loads(stripped)
-    except json.JSONDecodeError:
-        start = stripped.find("{")
-        end = stripped.rfind("}")
-        if start != -1 and end > start:
-            with_json = stripped[start : end + 1]
-            try:
-                return json.loads(with_json)
-            except json.JSONDecodeError:
-                return None
-    return None
+    return extract_json(text)
 
 
 def _coerce_action(value: Any, legal_actions: list[Any]) -> Any:
-    for action in legal_actions:
-        if value == action or str(value) == str(action):
-            return action
-    raise ProtocolError(f"model returned illegal action {value!r}")
+    return coerce_action(value, legal_actions)
 
 
 def _find_legal_action(text: str, legal_actions: list[Any]) -> Any:
-    for action in legal_actions:
-        if str(action) in text:
-            return action
-    raise ProtocolError("model response did not contain a legal action")
+    return find_legal_action(text, legal_actions)
 
 
 def create_builtin_agent(name: str, *, seed: int = 0) -> FirstLegalAgent | RandomAgent:

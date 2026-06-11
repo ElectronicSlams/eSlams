@@ -23,6 +23,44 @@ def sha256_json(value: Any) -> str:
     return sha256_text(canonical_json(value))
 
 
+def state_hash(state: Any) -> str:
+    """Return the canonical Core state hash for an ArenaState or state snapshot."""
+
+    if hasattr(state, "state_hash"):
+        value = state.state_hash
+        if isinstance(value, str):
+            return value
+    if isinstance(state, Mapping):
+        snapshot = dict(state)
+        snapshot.pop("state_hash", None)
+        return sha256_json(snapshot)
+    return sha256_json(state)
+
+
+def action_hash(action: Any) -> str:
+    """Return a deterministic hash for a Core action payload."""
+
+    return sha256_json({"action": action})
+
+
+def legal_action_hash(actions: list[Any]) -> str:
+    """Return a deterministic hash for an ordered legal-action set."""
+
+    return sha256_json({"legal_actions": actions})
+
+
+def observation_hash(observation: Any) -> str:
+    """Return a deterministic hash for an observation view."""
+
+    return sha256_json({"observation": observation})
+
+
+def prompt_hash(prompt_package: Any) -> str:
+    """Return a deterministic hash for a generated prompt package."""
+
+    return sha256_json({"prompt_package": prompt_package})
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
