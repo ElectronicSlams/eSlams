@@ -63,6 +63,12 @@ ADVANCED_HEAD_TO_HEAD_GAMES = {
     "liars-dice",
     "bargaining",
     "negotiation",
+    "crazy-eights",
+    "euchre",
+    "hanabi",
+    "hearts",
+    "shedding-card-game",
+    "spades",
 }
 
 MULTI_SEAT_GAMES = {
@@ -72,12 +78,6 @@ MULTI_SEAT_GAMES = {
     "mahjong",
     "dou-dizhu",
     "bridge",
-    "hearts",
-    "spades",
-    "euchre",
-    "crazy-eights",
-    "hanabi",
-    "shedding-card-game",
 }
 
 HIDDEN_INFO_GAMES = {

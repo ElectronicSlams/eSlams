@@ -113,7 +113,6 @@ PUBLIC_GAME_CATALOGUE: tuple[PublicGameMetadata, ...] = (
         "core_rank_suit_shedding",
         "easy",
         "playable",
-        4,
     ),
     PublicGameMetadata(
         "gin-rummy",
@@ -150,9 +149,9 @@ PUBLIC_GAME_CATALOGUE: tuple[PublicGameMetadata, ...] = (
         "playable",
         4,
     ),
-    PublicGameMetadata("hearts", "Hearts", "card", "core_penalty_tricks", "medium", "playable", 4),
-    PublicGameMetadata("spades", "Spades", "card", "core_trump_tricks", "medium", "playable", 4),
-    PublicGameMetadata("euchre", "Euchre", "card", "core_call_and_play", "medium", "playable", 4),
+    PublicGameMetadata("hearts", "Hearts", "card", "core_penalty_tricks", "medium", "playable"),
+    PublicGameMetadata("spades", "Spades", "card", "core_trump_tricks", "medium", "playable"),
+    PublicGameMetadata("euchre", "Euchre", "card", "core_call_and_play", "medium", "playable"),
     PublicGameMetadata(
         "cribbage",
         "Cribbage",
@@ -168,9 +167,8 @@ PUBLIC_GAME_CATALOGUE: tuple[PublicGameMetadata, ...] = (
         "core_wild_eight_shedding",
         "easy",
         "playable",
-        4,
     ),
-    PublicGameMetadata("hanabi", "Hanabi", "card", "core_compact_hanabi", "hard", "playable", 4),
+    PublicGameMetadata("hanabi", "Hanabi", "card", "core_compact_hanabi", "hard", "playable"),
     PublicGameMetadata(
         "prisoners-dilemma",
         "Prisoner's Dilemma",

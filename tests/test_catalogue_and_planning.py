@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import eslams.catalogue as catalogue_module
+from eslams.arenas import registry
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
 from eslams.cli import main
 from eslams.eval_runtime import (
@@ -66,6 +67,21 @@ def test_game_catalogue_matches_transcribed_platform_identity_for_all_games():
         assert row["variant_token"] == expected.variant
         assert row["variant_slug"] == expected.variant
         assert row["public_variant_label"] == expected.variant_label
+
+
+def test_game_catalogue_non_solo_topology_matches_registered_arena_players():
+    for row in game_catalogue_rows():
+        arena = registry.create(row["game_id"])
+        topology = row["topology"]
+        controlled_players = tuple(topology["controlledPlayers"])
+        if topology["mode"] == "solo_score":
+            assert controlled_players == ("player_1",)
+            assert controlled_players[0] in arena.players
+            continue
+
+        assert controlled_players == arena.players
+        assert row["default_players"] == len(arena.players)
+        assert row["player_count"] == len(arena.players)
 
 
 def test_renderer_vocabulary_classifies_all_arenas_as_safe_or_explicit_absence():
