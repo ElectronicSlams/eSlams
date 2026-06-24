@@ -74,15 +74,14 @@ def game_catalogue_rows() -> list[dict[str, Any]]:
                 "arena_surface": surface["arena"],
                 "battlefield_surface": surface["battlefield"],
                 "benchmark_surface": surface["benchmark"],
-                "playable_in_arena": surface["arena"] in {"main_arena", "advanced_arena"},
+                "playable_in_arena": surface["arena"]
+                in {"main_arena", "advanced_arena", "table_mode_pending"},
                 "playable_in_battlefield": surface["battlefield"] != "disabled",
                 "playable_as_benchmark": surface["benchmark"] == "enabled",
                 "disabled_reason": surface["publicReason"]
                 if surface["arena"] == "disabled"
                 else None,
-                "coming_soon_reason": surface["publicReason"]
-                if surface["arena"] == "table_mode_pending"
-                else None,
+                "coming_soon_reason": None,
                 "core_0_5_validation_errors": metadata["validationErrors"],
                 "runtime_display_name": _display_name(game_id),
                 "runtime_display_group": _display_group(game_id),
@@ -211,10 +210,8 @@ def _capability_flag(model: dict[str, Any], capability: str) -> dict[str, Any]:
 
 def _browser_play_availability(surface: dict[str, Any]) -> str:
     arena_surface = surface.get("arena")
-    if arena_surface in {"main_arena", "advanced_arena"}:
+    if arena_surface in {"main_arena", "advanced_arena", "table_mode_pending"}:
         return "ready"
-    if arena_surface == "table_mode_pending":
-        return "table_mode_pending"
     if surface.get("battlefield") == "solo_benchmark":
         return "benchmark_only"
     return "disabled"

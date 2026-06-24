@@ -63,12 +63,12 @@ ADVANCED_HEAD_TO_HEAD_GAMES = {
     "liars-dice",
     "bargaining",
     "negotiation",
-    "leduc-holdem",
-    "limit-texas-holdem",
-    "no-limit-texas-holdem",
 }
 
 MULTI_SEAT_GAMES = {
+    "leduc-holdem",
+    "limit-texas-holdem",
+    "no-limit-texas-holdem",
     "mahjong",
     "dou-dizhu",
     "bridge",
@@ -231,7 +231,6 @@ def surface_for_game(game_id: str) -> GameSurface:
         battlefield="multi_seat",
         benchmark="disabled",
         official="eligible",
-        public_reason="This game needs multi-seat table setup before public Arena play.",
     )
 
 

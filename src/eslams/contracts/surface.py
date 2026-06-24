@@ -43,10 +43,8 @@ def validate_surface(payload: dict[str, Any]) -> list[str]:
         errors.append("surface.benchmark is unsupported")
     if payload.get("official") not in OFFICIAL_SURFACES:
         errors.append("surface.official is unsupported")
-    if payload.get("arena") in {"disabled", "table_mode_pending"} and not payload.get(
-        "publicReason"
-    ):
-        errors.append("surface.publicReason is required when Arena is disabled or pending")
+    if payload.get("arena") == "disabled" and not payload.get("publicReason"):
+        errors.append("surface.publicReason is required when Arena is disabled")
     return errors
 
 
