@@ -13,6 +13,7 @@ from eslams.contracts.catalogue import (
     ModelCatalogueRecord,
 )
 from eslams.contracts.versions import CATALOGUE_AVAILABILITY_SCHEMA_VERSION
+from eslams.game_metadata import core_0_5_metadata
 from eslams.providers import load_provider_registry
 from eslams.public_catalogue import PUBLIC_GAME_CATALOGUE_BY_ID
 from eslams.rendering import renderer_vocabulary_rows
@@ -36,6 +37,14 @@ def game_catalogue_rows() -> list[dict[str, Any]]:
             log.warning("arena %s has no public catalogue row; skipping", game_id)
             continue
         replay_availability = str(renderer_row["replay_availability"])
+        metadata = core_0_5_metadata(
+            public,
+            renderer_family=str(renderer_row["renderer_family"]),
+            replay_available=replay_availability == "playable",
+        )
+        topology = metadata["topology"]
+        surface = metadata["surface"]
+        help_payload = metadata["help"]
         rows.append(
             {
                 **GameCatalogueRecord(
@@ -48,7 +57,33 @@ def game_catalogue_rows() -> list[dict[str, Any]]:
                     coming_soon_reason=None
                     if replay_availability == "playable"
                     else "setup_only_replay",
+                    topology=topology,
+                    surface=surface,
+                    result_contract=metadata["resultContract"],
+                    help=help_payload,
+                    render_spec=metadata["renderSpec"],
+                    animation_spec=metadata["animationSpec"],
                 ).to_dict(),
+                "topology_mode": topology["mode"],
+                "controlled_players": topology["controlledPlayers"],
+                "environment_players": topology["environmentPlayers"],
+                "min_players": topology["minPlayers"],
+                "max_players": topology["maxPlayers"],
+                "default_players": topology["defaultPlayers"],
+                "evaluated_player": topology.get("evaluatedPlayer"),
+                "arena_surface": surface["arena"],
+                "battlefield_surface": surface["battlefield"],
+                "benchmark_surface": surface["benchmark"],
+                "playable_in_arena": surface["arena"] in {"main_arena", "advanced_arena"},
+                "playable_in_battlefield": surface["battlefield"] != "disabled",
+                "playable_as_benchmark": surface["benchmark"] == "enabled",
+                "disabled_reason": surface["publicReason"]
+                if surface["arena"] == "disabled"
+                else None,
+                "coming_soon_reason": surface["publicReason"]
+                if surface["arena"] == "table_mode_pending"
+                else None,
+                "core_0_5_validation_errors": metadata["validationErrors"],
                 "runtime_display_name": _display_name(game_id),
                 "runtime_display_group": _display_group(game_id),
                 "variant_token": public.variant,
@@ -63,12 +98,12 @@ def game_catalogue_rows() -> list[dict[str, Any]]:
                 "public_category_key": public.category,
                 "difficulty": public.difficulty,
                 "maturity": public.maturity,
-                "player_count": public.players,
+                "player_count": topology["defaultPlayers"],
                 "scenario_levels": ["default"],
                 "action_schema_version": "action-schema-v1",
-                "browser_play_availability": "ready",
-                "public_rules": f"Play {_display_name(game_id)} using legal actions only.",
-                "public_scoring_summary": "Scores are reported by the arena state.",
+                "browser_play_availability": _browser_play_availability(surface),
+                "public_rules": help_payload["objective"],
+                "public_scoring_summary": help_payload["scoringSummary"],
                 "timeline_completeness": renderer_row["timeline_completeness"],
                 "render_hints_version": renderer_row["render_hints_version"],
                 "public_state_shape_version": renderer_row["public_state_shape_version"],
@@ -172,6 +207,17 @@ def _capability_flag(model: dict[str, Any], capability: str) -> dict[str, Any]:
         if isinstance(value, dict):
             return value
     return {"enabled": False, "reason": "not_evaluated"}
+
+
+def _browser_play_availability(surface: dict[str, Any]) -> str:
+    arena_surface = surface.get("arena")
+    if arena_surface in {"main_arena", "advanced_arena"}:
+        return "ready"
+    if arena_surface == "table_mode_pending":
+        return "table_mode_pending"
+    if surface.get("battlefield") == "solo_benchmark":
+        return "benchmark_only"
+    return "disabled"
 
 
 def _reason(value: dict[str, bool | str | None]) -> str | None:

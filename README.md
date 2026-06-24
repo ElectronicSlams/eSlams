@@ -33,6 +33,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.5.0](#release-v050)
 - [Release v0.4.0](#release-v040)
 - [Release v0.3.2](#release-v032)
 - [Release v0.3.1](#release-v031)
@@ -645,6 +646,18 @@ eslams run --arena chess --agent first-legal --opponent first-legal --max-turns 
 eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
+```
+
+## Release v0.5.0
+
+`v0.5.0` is the explicit game contract release. The package version is
+`0.5.0`, runner defaults emit `eslams-runner:0.5.0`, and schema exports include
+game topology, surface, result, help, render, animation, and usage contracts.
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check .
+python3 -m mypy src
 ```
 
 ## Release v0.4.0

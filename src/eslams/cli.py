@@ -146,6 +146,10 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("games", "models", "availability", "renderers"):
         command = catalogue_sub.add_parser(name, help=f"Export {name} catalogue rows.")
         command.add_argument("--json", action="store_true")
+        if name == "games":
+            command.add_argument("--include-help", action="store_true")
+            command.add_argument("--include-render", action="store_true")
+            command.add_argument("--include-animation", action="store_true")
 
     plan = sub.add_parser("plan", help="Create deterministic no-secret eval plans.")
     plan_sub = plan.add_subparsers(dest="plan_command", required=True)

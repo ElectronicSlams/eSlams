@@ -31,10 +31,16 @@ class GameCatalogueRecord:
     replay_availability: str
     official_eval_availability: str
     coming_soon_reason: str | None = None
+    topology: dict[str, Any] | None = None
+    surface: dict[str, Any] | None = None
+    result_contract: dict[str, Any] | None = None
+    help: dict[str, Any] | None = None
+    render_spec: dict[str, Any] | None = None
+    animation_spec: dict[str, Any] | None = None
     schema_version: str = CATALOGUE_GAME_SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "schema_version": self.schema_version,
             "game_id": self.game_id,
             "display_name": self.display_name,
@@ -44,6 +50,19 @@ class GameCatalogueRecord:
             "official_eval_availability": self.official_eval_availability,
             "coming_soon_reason": self.coming_soon_reason,
         }
+        if self.topology is not None:
+            payload["topology"] = self.topology
+        if self.surface is not None:
+            payload["surface"] = self.surface
+        if self.result_contract is not None:
+            payload["resultContract"] = self.result_contract
+        if self.help is not None:
+            payload["help"] = self.help
+        if self.render_spec is not None:
+            payload["renderSpec"] = self.render_spec
+        if self.animation_spec is not None:
+            payload["animationSpec"] = self.animation_spec
+        return payload
 
 
 @dataclass(frozen=True)
@@ -81,6 +100,36 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
             renderer_family="grid",
             replay_availability="playable",
             official_eval_availability="ready",
+            topology={
+                "schemaVersion": "eslams.game.topology.v1",
+                "mode": "head_to_head",
+                "controlledPlayers": ["player_1", "player_2"],
+                "environmentPlayers": [],
+                "minPlayers": 2,
+                "maxPlayers": 2,
+                "defaultPlayers": 2,
+                "winnerRequired": True,
+                "drawAllowed": True,
+                "placementsAllowed": False,
+                "scoreType": "win_loss_draw",
+            },
+            surface={
+                "schemaVersion": "eslams.game.surface.v1",
+                "arena": "main_arena",
+                "battlefield": "head_to_head",
+                "benchmark": "disabled",
+                "official": "eligible",
+                "publicReason": None,
+            },
+            result_contract={
+                "schemaVersion": "eslams.game.result.v1",
+                "mode": "head_to_head",
+                "resultTypes": ["winner", "draw", "points"],
+                "scoreType": "win_loss_draw",
+                "winnerRequired": True,
+                "drawAllowed": True,
+                "placementsAllowed": False,
+            },
         ).to_dict(),
         CATALOGUE_MODEL_SCHEMA_VERSION: ModelCatalogueRecord(
             provider="mock",
@@ -114,5 +163,83 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
             "game_id": "tic-tac-toe",
             "status": "ready",
             "reason": None,
+        },
+        "eslams.game.topology.v1": {
+            "schemaVersion": "eslams.game.topology.v1",
+            "mode": "head_to_head",
+            "controlledPlayers": ["player_1", "player_2"],
+            "environmentPlayers": [],
+            "minPlayers": 2,
+            "maxPlayers": 2,
+            "defaultPlayers": 2,
+            "winnerRequired": True,
+            "drawAllowed": True,
+            "placementsAllowed": False,
+            "scoreType": "win_loss_draw",
+        },
+        "eslams.game.surface.v1": {
+            "schemaVersion": "eslams.game.surface.v1",
+            "arena": "main_arena",
+            "battlefield": "head_to_head",
+            "benchmark": "disabled",
+            "official": "eligible",
+            "publicReason": None,
+        },
+        "eslams.game.result.v1": {
+            "schemaVersion": "eslams.game.result.v1",
+            "mode": "head_to_head",
+            "terminal": True,
+            "winner": "player_1",
+            "draw": False,
+            "scores": {"player_1": 1, "player_2": 0},
+            "resultType": "winner",
+        },
+        "eslams.game.help.v1": {
+            "schemaVersion": "eslams.game.help.v1",
+            "objective": "Place three marks in a row before the opponent does.",
+            "turnRules": ["Players alternate turns."],
+            "legalActionSummary": "Choose any empty cell.",
+            "scoringSummary": "Three in a row wins; a full board without three is a draw.",
+            "winLossDrawSummary": "The result is a win, loss, or draw.",
+            "hiddenInfoSummary": None,
+            "firstMoveTip": "The center and corners give the most future lines.",
+            "exampleActions": [
+                {
+                    "token": "4",
+                    "label": "Center cell",
+                    "explanation": "Places your mark in the center cell.",
+                }
+            ],
+            "detailSections": [],
+        },
+        "eslams.game.render.v1": {
+            "schemaVersion": "eslams.game.render.v1",
+            "rendererFamily": "grid_3x3",
+            "boardSize": {"rows": 3, "cols": 3},
+            "seatLayout": "two_sides",
+            "hiddenInfo": False,
+            "supportsReplay": True,
+            "supportsLiveFrame": True,
+        },
+        "eslams.game.animation.v1": {
+            "schemaVersion": "eslams.game.animation.v1",
+            "family": "tic_tac_toe_mark",
+            "defaultMoveMs": 220,
+            "defaultRevealMs": 180,
+            "defaultResultMs": 520,
+            "reducedMotionBehavior": "static_final_state",
+            "events": {"move": {"kind": "tic_tac_toe_mark"}},
+        },
+        "eslams.usage.v1": {
+            "schemaVersion": "eslams.usage.summary.v1",
+            "totalInputTokens": 10,
+            "totalOutputTokens": 5,
+            "totalTokens": 15,
+            "totalCostUsd": None,
+            "usageComplete": True,
+            "costComplete": False,
+            "bySeat": {"player_1": {"totalTokens": 15, "costUsd": None}},
+            "byAgent": {},
+            "byModel": {},
         },
     }

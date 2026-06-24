@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.5.0 - 2026-06-24
+
+### Added
+
+- Added explicit Core 0.5 game topology, surface, result, help, render,
+  animation, and usage contracts.
+- Classified the 50-game catalogue into 12 solo-score benchmarks, 29
+  head-to-head Arena/Battlefield games, and 9 multi-seat table games.
+- Exported Core 0.5 schemas and enriched game catalogue rows with machine
+  readable playability, seat, result, renderer, and help metadata.
+
+### Changed
+
+- Bumped Core package/version metadata to `0.5.0`, runner defaults to
+  `eslams-runner:0.5.0`, and schema bundle metadata to
+  `eslams-schema-bundle-v3`.
+
+### Validation
+
+- Added Core/Platform catalogue alignment coverage for topology, surfaces,
+  and browser play availability.
+
 ## v0.4.0 - 2026-06-11
 
 ### Added
