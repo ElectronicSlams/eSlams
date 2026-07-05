@@ -67,3 +67,7 @@ python_version = "3.9"
 strict = true
 warn_unused_ignores = true
 exclude = ["build", "dist"]
+
+[[tool.mypy.overrides]]
+module = ["anyio.*"]
+follow_imports = "skip"
