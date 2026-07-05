@@ -17,6 +17,7 @@ jobs:
   pypi:
     name: Build and publish eslams-core
     runs-on: ubuntu-latest
+    environment: pypi
     permissions:
       contents: read
       id-token: write
