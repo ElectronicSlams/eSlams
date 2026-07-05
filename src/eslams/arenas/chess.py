@@ -61,7 +61,7 @@ class ChessArena(Arena):
             raise ValueError("chess action must be UCI string")
         if not self.is_legal(state, player_id, action):
             raise ValueError("illegal chess move")
-        board = chess.Board(state.public_state["fen"])
+        board = _board_from_state(state)
         move = chess.Move.from_uci(action)
         move_san = board.san(move)
         board.push(move)
@@ -155,6 +155,20 @@ def _chess_outcome(board: Any) -> dict[str, Any] | None:
     elif outcome.winner is False:
         winner = "player_2"
     return {"winner": winner, "reason": outcome.termination.name.lower()}
+
+
+def _board_from_state(state: ArenaState) -> Any:
+    history = state.public_state.get("san_history")
+    if isinstance(history, list):
+        board = chess.Board()
+        try:
+            for san in history:
+                board.push_san(str(san))
+            if board.fen() == state.public_state.get("fen"):
+                return board
+        except ValueError:
+            pass
+    return chess.Board(state.public_state["fen"])
 
 
 def _legal_move_details(board: Any) -> list[dict[str, Any]]:

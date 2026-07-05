@@ -66,6 +66,25 @@ def test_crazy_eights_allows_eight_as_wild_card():
     assert terminal.scores["player_1"] == 1.0
 
 
+def test_crazy_eights_pass_does_not_block_when_opponent_has_wild_eight():
+    arena = CrazyEightsArena()
+    state = arena._state(
+        hands={"player_1": ["KC"], "player_2": ["8C"]},
+        deck=[],
+        discard="9H",
+        active="player_1",
+        turn=0,
+        seed=1,
+        history=[],
+        outcome=None,
+    )
+
+    next_state = arena.apply_action(state, "player_1", "pass")
+
+    assert next_state.terminal is False
+    assert next_state.legal_actions_by_player["player_2"] == ["play:8C"]
+
+
 def test_hearts_follow_suit_and_assign_penalty_to_trick_winner():
     arena = HeartsArena()
     state = arena._state(
@@ -90,6 +109,27 @@ def test_hearts_follow_suit_and_assign_penalty_to_trick_winner():
     assert terminal.outcome["winner"] == "player_1"
 
 
+def test_hearts_treats_ace_as_high_card():
+    arena = HeartsArena()
+    state = arena._state(
+        hands={"player_1": ["AH"], "player_2": ["KH"]},
+        active="player_1",
+        turn=0,
+        seed=1,
+        current_trick=[],
+        penalties={"player_1": 0, "player_2": 0},
+        history=[],
+        outcome=None,
+    )
+
+    state = arena.apply_action(state, "player_1", "play:AH")
+    terminal = arena.apply_action(state, "player_2", "play:KH")
+
+    assert terminal.public_state["trick_history"][0]["winner"] == "player_1"
+    assert terminal.public_state["penalties"]["player_1"] == 2
+    assert terminal.outcome["winner"] == "player_2"
+
+
 def test_spades_trump_wins_trick():
     arena = SpadesArena()
     state = arena._state(
@@ -107,6 +147,26 @@ def test_spades_trump_wins_trick():
     terminal = arena.apply_action(state, "player_2", "play:2S")
 
     assert terminal.terminal is True
+    assert terminal.public_state["tricks"]["player_2"] == 1
+    assert terminal.scores["player_2"] == 1.0
+
+
+def test_spades_treats_ace_as_high_card():
+    arena = SpadesArena()
+    state = arena._state(
+        hands={"player_1": ["KS"], "player_2": ["AS"]},
+        active="player_1",
+        turn=0,
+        seed=1,
+        current_trick=[],
+        tricks={"player_1": 0, "player_2": 0},
+        history=[],
+        outcome=None,
+    )
+
+    state = arena.apply_action(state, "player_1", "play:KS")
+    terminal = arena.apply_action(state, "player_2", "play:AS")
+
     assert terminal.public_state["tricks"]["player_2"] == 1
     assert terminal.scores["player_2"] == 1.0
 

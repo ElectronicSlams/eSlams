@@ -127,6 +127,48 @@ def test_backgammon_bear_off_finishes_race():
     assert terminal.scores["player_1"] == 1.0
 
 
+def test_backgammon_bear_off_uses_overshoot_die_that_made_move_legal():
+    arena = BackgammonArena()
+    board = [None] * 24
+    board[22] = {"player": "player_1", "count": 1}
+    state = arena._state(
+        board=board,
+        bar={"player_1": 0, "player_2": 0},
+        borne_off={"player_1": 4, "player_2": 0},
+        active="player_1",
+        dice=[6],
+        turn=0,
+        seed=1,
+        history=[],
+        outcome=None,
+    )
+
+    assert state.legal_actions_by_player["player_1"] == ["move:22-off"]
+    terminal = arena.apply_action(state, "player_1", "move:22-off")
+
+    assert terminal.terminal is True
+    assert terminal.outcome["winner"] == "player_1"
+
+
+def test_backgammon_dedupes_legal_actions_from_multiple_dice():
+    arena = BackgammonArena()
+    board = [None] * 24
+    board[22] = {"player": "player_1", "count": 1}
+    state = arena._state(
+        board=board,
+        bar={"player_1": 0, "player_2": 0},
+        borne_off={"player_1": 3, "player_2": 0},
+        active="player_1",
+        dice=[2, 6],
+        turn=0,
+        seed=1,
+        history=[],
+        outcome=None,
+    )
+
+    assert state.legal_actions_by_player["player_1"].count("move:22-off") == 1
+
+
 def test_backgammon_malformed_legal_action_raises_controlled_error():
     arena = BackgammonArena()
     state = arena.initial_state(1)

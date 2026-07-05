@@ -61,6 +61,7 @@ class ReplayEvent:
     public_state: dict[str, Any]
     scores: dict[str, float]
     terminal: bool
+    outcome: dict[str, Any] | None
     render_hints: dict[str, Any]
     markers: list[str] = field(default_factory=list)
     schema_version: str = "eslams.replay.public.v1"
@@ -98,6 +99,7 @@ class ReplayEvent:
             "public_state": self.public_state,
             "scores": self.scores,
             "terminal": self.terminal,
+            "outcome": self.outcome,
             "render_hints": self.render_hints,
             "markers": self.markers,
         }

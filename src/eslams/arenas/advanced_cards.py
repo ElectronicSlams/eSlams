@@ -8,12 +8,19 @@ from collections import Counter
 from typing import Any
 
 from eslams.arena import Arena
+from eslams.arenas.card_utils import (
+    RANKS,
+    SUITS,
+    card_rank,
+    card_sort_key,
+    card_suit,
+    rank_value,
+    standard_deck,
+)
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
 PLAYERS = ("player_1", "player_2")
-RANKS = ("A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K")
-SUITS = ("C", "D", "H", "S")
 EUCHRE_RANKS = ("9", "10", "J", "Q", "K", "A")
 HANABI_COLORS = ("R", "B")
 HANABI_RANKS = (1, 2, 3)
@@ -576,9 +583,7 @@ def _table_state(
 
 
 def _deck(seed: int) -> list[str]:
-    cards = [f"{rank}{suit}" for suit in SUITS for rank in RANKS]
-    random.Random(seed).shuffle(cards)
-    return cards
+    return standard_deck(seed)
 
 
 def _euchre_deck(seed: int) -> list[str]:
@@ -895,15 +900,15 @@ def _winner_scores(outcome: dict[str, Any] | None) -> dict[str, float]:
 
 
 def _rank(card: str) -> str:
-    return card[:-1]
+    return card_rank(card)
 
 
 def _suit(card: str) -> str:
-    return card[-1]
+    return card_suit(card)
 
 
 def _rank_value(card: str) -> int:
-    return RANKS.index(_rank(card))
+    return rank_value(card)
 
 
 def _deadwood_value(card: str) -> int:
@@ -920,7 +925,7 @@ def _crib_value(card: str) -> int:
 
 
 def _card_sort_key(card: str) -> tuple[int, int]:
-    return (SUITS.index(_suit(card)), _rank_value(card))
+    return card_sort_key(card)
 
 
 def _other(player_id: str) -> str:

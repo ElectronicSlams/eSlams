@@ -4,11 +4,19 @@ from contextlib import suppress
 from typing import Any
 
 import httpx
+import pytest
 
-from eslams.agents import HttpAgent, MockProviderAgent, ModelProviderAgent, _extract_json
+from eslams.agents import (
+    HttpAgent,
+    MockProviderAgent,
+    ModelProviderAgent,
+    ProviderCallError,
+    _extract_json,
+)
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
 from eslams.provider_preflight import provider_preflight
+from eslams.providers.capabilities import ModelCapabilities
 
 
 def _request() -> ActRequest:
@@ -237,6 +245,60 @@ def test_gemini_model_agent_receipt_does_not_include_key(monkeypatch):
     assert "gemini-key" not in str(agent.last_receipt)
 
 
+def test_google_provider_uses_gemini_endpoint_and_configurable_thinking(monkeypatch):
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: Any,
+    ) -> httpx.Response:
+        assert "gemini-thinking:generateContent" in url
+        assert headers["x-goog-api-key"] == "gemini-key"
+        assert json["generationConfig"] == {
+            "maxOutputTokens": 4096,
+            "thinkingConfig": {"thinkingBudget": 256},
+        }
+        return httpx.Response(
+            200,
+            json={
+                "responseId": "google-response",
+                "candidates": [{"content": {"parts": [{"text": '{"action": 1}'}]}}],
+                "usageMetadata": {
+                    "promptTokenCount": 11,
+                    "candidatesTokenCount": 7,
+                    "thoughtsTokenCount": 3,
+                    "cachedContentTokenCount": 2,
+                },
+            },
+        )
+
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    agent = ModelProviderAgent(
+        provider="google",
+        model="gemini-thinking",
+        api_key_env="GEMINI_API_KEY",
+        runtime_config=ProviderRuntimeConfig(gemini_thinking_budget=256),
+    )
+    agent.capabilities = ModelCapabilities(
+        provider="google",
+        model="gemini-thinking",
+        game_agent_supported=True,
+        supports_reasoning=True,
+        supports_google_thinking_config=True,
+        max_output_tokens=8192,
+    )
+
+    response = agent.act(_request())
+
+    assert response.action == 1
+    assert agent.last_receipt["provider"] == "google"
+    assert agent.last_receipt["usage"]["cached_input_tokens"] == 2
+    assert agent.last_receipt["usage"]["reasoning_tokens"] == 3
+
+
 def test_gemma_model_agent_omits_thinking_config(monkeypatch):
     def fake_post(
         url: str,
@@ -265,6 +327,55 @@ def test_gemma_model_agent_omits_thinking_config(monkeypatch):
     ).act(_request())
 
     assert response.action == 2
+
+
+def test_anthropic_model_agent_sends_thinking_budget(monkeypatch):
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: Any,
+    ) -> httpx.Response:
+        assert url == "https://api.anthropic.com/v1/messages"
+        assert headers["x-api-key"] == "anthropic-key"
+        assert json["max_tokens"] == 4096
+        assert json["thinking"] == {"type": "enabled", "budget_tokens": 512}
+        return httpx.Response(
+            200,
+            json={
+                "id": "msg_123",
+                "content": [{"type": "text", "text": '{"action": 2}'}],
+                "usage": {
+                    "input_tokens": 12,
+                    "output_tokens": 4,
+                    "cache_creation_input_tokens": 1,
+                    "cache_read_input_tokens": 2,
+                },
+            },
+        )
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    agent = ModelProviderAgent(
+        provider="anthropic",
+        model="claude-thinking",
+        api_key_env="ANTHROPIC_API_KEY",
+        runtime_config=ProviderRuntimeConfig(reasoning_budget_tokens=512),
+    )
+    agent.capabilities = ModelCapabilities(
+        provider="anthropic",
+        model="claude-thinking",
+        game_agent_supported=True,
+        supports_reasoning=True,
+        max_output_tokens=8192,
+    )
+
+    response = agent.act(_request())
+
+    assert response.action == 2
+    assert agent.last_receipt["usage"]["cached_input_tokens"] == 3
 
 
 def test_provider_agent_uses_generic_gateway_base_url(monkeypatch):
@@ -348,6 +459,129 @@ def test_provider_agent_retries_and_records_every_attempt(monkeypatch):
         "provider_error",
         "ok",
     ]
+
+
+def test_provider_agent_does_not_retry_non_rate_limited_4xx(monkeypatch):
+    calls = {"count": 0}
+
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: Any,
+    ) -> httpx.Response:
+        calls["count"] += 1
+        return httpx.Response(400, text="bad request")
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    agent = ModelProviderAgent(
+        provider="openai",
+        model="gpt-test",
+        api_key_env="OPENAI_API_KEY",
+        runtime_config=ProviderRuntimeConfig(max_retries=2, retry_backoff_ms=0),
+    )
+
+    with pytest.raises(ProviderCallError):
+        agent.act(_request())
+
+    assert calls["count"] == 1
+    assert agent.last_receipt["outcome"] == "provider_invalid_request"
+    assert agent.last_receipt["status_code"] == 400
+
+
+def test_provider_agent_retries_429_and_honors_retry_after(monkeypatch):
+    calls = {"count": 0}
+    sleeps: list[float] = []
+
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: Any,
+    ) -> httpx.Response:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return httpx.Response(429, text="slow down", headers={"Retry-After": "2"})
+        return httpx.Response(200, json={"id": "resp_429", "output_text": '{"action": 1}'})
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.time.sleep", lambda seconds: sleeps.append(seconds))
+
+    agent = ModelProviderAgent(
+        provider="openai",
+        model="gpt-test",
+        api_key_env="OPENAI_API_KEY",
+        runtime_config=ProviderRuntimeConfig(max_retries=1, retry_backoff_ms=0),
+    )
+
+    response = agent.act(_request())
+
+    assert response.action == 1
+    assert calls["count"] == 2
+    assert sleeps == [2.0]
+    assert [receipt["outcome"] for receipt in agent.attempt_receipts] == [
+        "provider_rate_limited",
+        "ok",
+    ]
+
+
+def test_provider_receipt_extracts_nested_usage_and_prices_cost(monkeypatch):
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: Any,
+    ) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "resp_usage",
+                "output_text": '{"action": 1}',
+                "usage": {
+                    "input_tokens": 100,
+                    "output_tokens": 20,
+                    "input_tokens_details": {"cached_tokens": 25},
+                    "output_tokens_details": {"reasoning_tokens": 5},
+                },
+            },
+        )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    agent = ModelProviderAgent(
+        provider="openai",
+        model="gpt-priced",
+        api_key_env="OPENAI_API_KEY",
+    )
+    agent.capabilities = ModelCapabilities(
+        provider="openai",
+        model="gpt-priced",
+        game_agent_supported=True,
+        pricing={
+            "input_cost_per_token": 0.001,
+            "output_cost_per_token": 0.002,
+            "cache_read_input_token_cost": 0.00025,
+            "output_cost_per_reasoning_token": 0.003,
+            "currency": "USD",
+            "source": "test-pricing",
+        },
+    )
+
+    response = agent.act(_request())
+    receipt = response.metadata["provider_receipt"]
+
+    assert receipt["usage"]["cached_input_tokens"] == 25
+    assert receipt["usage"]["reasoning_tokens"] == 5
+    assert receipt["pricing"]["status"] == "ok"
+    assert receipt["estimated_cost"]["status"] == "ok"
+    assert receipt["estimated_cost"]["cost_usd"] == 0.13625
 
 
 def test_provider_agent_applies_rate_limit(monkeypatch):

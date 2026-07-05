@@ -73,3 +73,15 @@ def test_chess_terminal_summary_exposes_checkmate_reason_and_final_validation():
         "legal_move_count": 0,
         "score": {"player_2": 1.0, "player_1": 0.0},
     }
+
+
+def test_chess_threefold_repetition_survives_fen_rebuilds():
+    arena = ChessArena()
+    state = arena.initial_state(seed=1)
+
+    for action in ("g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1"):
+        state = arena.apply_action(state, state.active_player, action)
+
+    assert state.terminal is True
+    assert state.outcome == {"winner": None, "reason": "threefold_repetition"}
+    assert state.scores == {"player_1": 0.5, "player_2": 0.5}

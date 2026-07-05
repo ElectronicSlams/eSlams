@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.5.1 - 2026-07-05
+
+### Fixed
+
+- Fixed result-corrupting arena bugs in card rank ordering, Backgammon bear-off
+  die consumption, Chess repetition handling, forfeit terminal replay events,
+  and strict model action parsing.
+- Made artifact IDs reproducible for identical seeded runs by moving volatile
+  timing data to an unhashed sidecar and tightening validator checks for
+  terminal score/replay consistency, unlisted files, and unverified signatures.
+- Hardened live Arena session transport with signed opaque session envelopes
+  and env-gated debug observations.
+- Corrected compact arena semantics for Blackjack, Bargaining, Prisoner's
+  Dilemma, and Crazy Eights.
+- Improved provider receipts, retry behavior, reasoning controls, Google/Gemini
+  identity handling, usage extraction, and pricing metadata.
+
 ## v0.5.0 - 2026-06-24
 
 ### Added

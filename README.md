@@ -33,6 +33,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.5.1](#release-v051)
 - [Release v0.5.0](#release-v050)
 - [Release v0.4.0](#release-v040)
 - [Release v0.3.2](#release-v032)
@@ -328,11 +329,11 @@ eslams arena start \
 Start and step responses include `public_state`, a canonical live
 `display_frame`, active/next actor metadata, legal action tokens, polished
 `legal_action_descriptors`, public-safe Arena events, strict state hash status,
-paging metadata, and Core timing fields. `session_state` is trusted server
-state and may contain hidden/private game state; Platform must not forward it
-to browsers. Browser-streamable fields are `public_state`, `display_frame`,
-`legal_action_descriptors`, `events`, actor metadata, terminal/outcome fields,
-and timing.
+paging metadata, and Core timing fields. `session_state` is a signed opaque
+server envelope, verified with `ESLAMS_ARENA_SESSION_SECRET`, and must still be
+kept on the server. Browser-streamable fields are `public_state`,
+`display_frame`, `legal_action_descriptors`, `events`, actor metadata,
+terminal/outcome fields, and timing.
 
 Descriptor rows are available for every registered game and include stable
 `token`, `label`, `short_label`, `verb`, `object`, `category`, `group`,
@@ -381,60 +382,61 @@ archive is the portable upload artifact.
 ## Full Arena Catalogue
 
 Core supports all 50 arenas below. The variant label is the public Core ruleset
-identifier used for local and artifact-backed runs.
+identifier used for local and artifact-backed runs; fidelity is explicit so
+compact/lite arenas do not overclaim full game coverage.
 
-| Arena | Public Core Variant |
-| --- | --- |
-| `chess` | `standard` |
-| `go` | `board_9x9` |
-| `connect-four` | `standard` |
-| `tic-tac-toe` | `standard` |
-| `othello` | `standard` |
-| `checkers` | `standard` |
-| `shogi` | `standard` |
-| `xiangqi` | `standard` |
-| `gomoku` | `standard` |
-| `hex` | `standard` |
-| `mancala` | `standard` |
-| `nine-mens-morris` | `standard` |
-| `pentago` | `standard` |
-| `ultimate-tic-tac-toe` | `standard` |
-| `battleship` | `standard` |
-| `blackjack` | `core_hit_stand_s17` |
-| `leduc-holdem` | `core_standard_leduc` |
-| `limit-texas-holdem` | `core_heads_up_limit` |
-| `no-limit-texas-holdem` | `core_profiled_no_limit` |
-| `shedding-card-game` | `core_rank_suit_shedding` |
-| `gin-rummy` | `core_compact_gin` |
-| `mahjong` | `core_compact_draw_discard` |
-| `dou-dizhu` | `core_landlord_shedding` |
-| `bridge` | `core_contract_play` |
-| `hearts` | `core_penalty_tricks` |
-| `spades` | `core_trump_tricks` |
-| `euchre` | `core_call_and_play` |
-| `cribbage` | `core_discard_showdown` |
-| `crazy-eights` | `core_wild_eight_shedding` |
-| `hanabi` | `core_compact_hanabi` |
-| `prisoners-dilemma` | `core_one_shot_matrix` |
-| `bargaining` | `core_bilateral_split` |
-| `negotiation` | `core_price_delivery_grid` |
-| `first-price-sealed-bid-auction` | `core_two_bidder_private_values` |
-| `liars-dice` | `core_single_round` |
-| `goofspiel` | `core_five_card_goofspiel` |
-| `rock-paper-scissors` | `core_one_shot_hidden_commit` |
-| `taxi` | `standard` |
-| `frozen-lake` | `standard` |
-| `cliff-walking` | `standard` |
-| `cartpole` | `standard` |
-| `mountain-car` | `standard` |
-| `lunar-lander` | `standard` |
-| `car-racing` | `standard` |
-| `bipedal-walker` | `standard` |
-| `paddle-ball` | `standard` |
-| `alien-shooter` | `standard` |
-| `boxing-style-arena` | `standard` |
-| `ice-hockey-style-arena` | `standard` |
-| `backgammon` | `standard` |
+| Arena | Public Core Variant | Fidelity |
+| --- | --- | --- |
+| `chess` | `standard` | faithful |
+| `go` | `board_9x9` | faithful |
+| `connect-four` | `standard` | faithful |
+| `tic-tac-toe` | `standard` | faithful |
+| `othello` | `standard` | faithful |
+| `checkers` | `standard` | faithful |
+| `shogi` | `standard` | faithful |
+| `xiangqi` | `standard` | faithful |
+| `gomoku` | `standard` | faithful |
+| `hex` | `standard` | faithful |
+| `mancala` | `standard` | faithful |
+| `nine-mens-morris` | `standard` | faithful |
+| `pentago` | `standard` | faithful |
+| `ultimate-tic-tac-toe` | `standard` | faithful |
+| `battleship` | `standard` | faithful |
+| `blackjack` | `core_hit_stand_s17` | compact |
+| `leduc-holdem` | `core_compact_leduc_fixed_menu` | compact |
+| `limit-texas-holdem` | `core_compact_holdem_fixed_menu_limit` | compact |
+| `no-limit-texas-holdem` | `core_compact_holdem_fixed_menu_no_limit` | compact |
+| `shedding-card-game` | `core_rank_suit_shedding` | compact |
+| `gin-rummy` | `core_compact_gin` | compact |
+| `mahjong` | `core_compact_draw_discard` | compact |
+| `dou-dizhu` | `core_landlord_shedding` | compact |
+| `bridge` | `core_compact_bridge_play_phase` | compact |
+| `hearts` | `core_penalty_tricks` | compact |
+| `spades` | `core_trump_tricks` | compact |
+| `euchre` | `core_call_and_play` | compact |
+| `cribbage` | `core_discard_showdown` | compact |
+| `crazy-eights` | `core_wild_eight_shedding` | faithful |
+| `hanabi` | `core_compact_hanabi` | compact |
+| `prisoners-dilemma` | `core_one_shot_matrix` | faithful |
+| `bargaining` | `core_bilateral_split` | compact |
+| `negotiation` | `core_price_delivery_grid` | compact |
+| `first-price-sealed-bid-auction` | `core_two_bidder_private_values` | faithful |
+| `liars-dice` | `core_single_round` | compact |
+| `goofspiel` | `core_five_card_goofspiel` | compact |
+| `rock-paper-scissors` | `core_one_shot_hidden_commit` | faithful |
+| `taxi` | `standard` | inspired-by |
+| `frozen-lake` | `standard` | inspired-by |
+| `cliff-walking` | `standard` | inspired-by |
+| `cartpole` | `standard` | inspired-by |
+| `mountain-car` | `standard` | inspired-by |
+| `lunar-lander` | `lander-lite` | inspired-by |
+| `car-racing` | `standard` | inspired-by |
+| `bipedal-walker` | `standard` | inspired-by |
+| `paddle-ball` | `standard` | inspired-by |
+| `alien-shooter` | `standard` | inspired-by |
+| `boxing-style-arena` | `standard` | inspired-by |
+| `ice-hockey-style-arena` | `standard` | inspired-by |
+| `backgammon` | `standard` | faithful |
 
 List arenas from your installed copy:
 
@@ -645,6 +647,19 @@ eslams run --arena chess --agent first-legal --opponent first-legal --max-turns 
 eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
+```
+
+## Release v0.5.1
+
+`v0.5.1` is the trust and correctness patch for the Core 0.5 contract release.
+The package version is `0.5.1`, runner defaults emit `eslams-runner:0.5.1`,
+and release artifacts include the deterministic artifact, live-session,
+provider receipt, and compact-arena fixes listed in `CHANGELOG.md`.
+
+```bash
+python3 -m pytest -q
+python3 -m ruff check .
+python3 -m mypy src
 ```
 
 ## Release v0.5.0

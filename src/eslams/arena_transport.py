@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import base64
+import json
 import logging
+import os
 from dataclasses import replace
 from datetime import datetime, timezone
 from time import perf_counter_ns
@@ -12,6 +15,11 @@ import eslams.arenas  # noqa: F401
 from eslams.action_descriptors import action_descriptors, action_token
 from eslams.arena import registry
 from eslams.contracts.safety import assert_public_payload_safe
+from eslams.contracts.security import (
+    sign_runner_request,
+    signing_payload,
+    verify_runner_request_signature,
+)
 from eslams.contracts.versions import (
     ARENA_EVENT_SCHEMA_VERSION,
     ARENA_LEGAL_ACTIONS_PAGE_SCHEMA_VERSION,
@@ -23,6 +31,11 @@ from eslams.replay_projection import display_frame_for_state
 from eslams.state import ArenaState
 
 SESSION_METADATA_KEY = "arena_session"
+SESSION_STATE_SCHEMA_VERSION = "eslams.arena.session_state.v1"
+SESSION_SECRET_ENV = "ESLAMS_ARENA_SESSION_SECRET"
+SESSION_KEY_ID_ENV = "ESLAMS_ARENA_SESSION_KEY_ID"
+SESSION_SIGNATURE_PATH = "/arena/session-state"
+DEVELOPMENT_SESSION_SECRET = "development-only-eslams-arena-session-secret"
 DEFAULT_SESSION_ACTION_LIMIT = 200
 DEFAULT_PAGE_LIMIT = 50
 MAX_ACTION_LIMIT = 200
@@ -45,8 +58,46 @@ class StateHashMismatch(ValueError):
         }
 
 
+class SessionStateEnvelopeError(ValueError):
+    """Raised when an Arena session_state envelope cannot be trusted."""
+
+    def __init__(self, *, reason: str, message: str, diagnostics: dict[str, Any]) -> None:
+        self.reason = reason
+        self.diagnostics = diagnostics
+        super().__init__(message)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"status": self.reason, **self.diagnostics}
+
+
 def serialize_state(state: ArenaState) -> dict[str, Any]:
     return state.to_dict()
+
+
+def serialize_session_state(state: ArenaState) -> dict[str, Any]:
+    payload = _encode_payload(serialize_state(state))
+    signature = sign_runner_request(
+        secret=_session_secret(),
+        method="POST",
+        path=SESSION_SIGNATURE_PATH,
+        body={"payload": payload},
+        timestamp=_utc_now(),
+        nonce=str(state.state_hash),
+        request_id=_session_run_id(state),
+        key_id=_session_key_id(),
+    )
+    return {
+        "schema_version": SESSION_STATE_SCHEMA_VERSION,
+        "encoding": "base64url-json",
+        "payload": payload,
+        "signature": signature,
+    }
+
+
+def deserialize_session_state(payload: dict[str, Any], strict_hash: bool = True) -> ArenaState:
+    if _is_session_envelope(payload):
+        return deserialize_state(_decode_session_envelope(payload), strict_hash=strict_hash)
+    return deserialize_state(payload, strict_hash=strict_hash)
 
 
 def deserialize_state(payload: dict[str, Any], strict_hash: bool = True) -> ArenaState:
@@ -84,6 +135,85 @@ def deserialize_state(payload: dict[str, Any], strict_hash: bool = True) -> Aren
         raise StateHashMismatch(provided=provided_hash, canonical=canonical_hash)
     object.__setattr__(state, "rehydration_diagnostics", diagnostics)
     return state
+
+
+def _is_session_envelope(payload: dict[str, Any]) -> bool:
+    return payload.get("schema_version") == SESSION_STATE_SCHEMA_VERSION
+
+
+def _decode_session_envelope(envelope: dict[str, Any]) -> dict[str, Any]:
+    token = envelope.get("payload")
+    if not isinstance(token, str) or not token:
+        raise SessionStateEnvelopeError(
+            reason="session_state_payload_missing",
+            message="session_state envelope is missing payload",
+            diagnostics={},
+        )
+    signature = _dict(envelope.get("signature"))
+    if not signature:
+        raise SessionStateEnvelopeError(
+            reason="session_state_signature_missing",
+            message="session_state envelope is missing signature",
+            diagnostics={},
+        )
+    expected = signing_payload(
+        method="POST",
+        path=SESSION_SIGNATURE_PATH,
+        body={"payload": token},
+        timestamp=str(signature.get("timestamp", "")),
+        nonce=str(signature.get("nonce", "")),
+        request_id=str(signature.get("requestId", "")),
+    )
+    if any(signature.get(key) != value for key, value in expected.items()):
+        raise SessionStateEnvelopeError(
+            reason="session_state_signature_invalid",
+            message="session_state envelope body does not match signature payload",
+            diagnostics={"signature_status": "body_hash_mismatch"},
+        )
+    if not verify_runner_request_signature(
+        secret=_session_secret(),
+        signature_payload={str(key): str(value) for key, value in signature.items()},
+    ):
+        raise SessionStateEnvelopeError(
+            reason="session_state_signature_invalid",
+            message="session_state envelope signature is invalid",
+            diagnostics={"signature_status": "hmac_mismatch"},
+        )
+    try:
+        decoded = json.loads(_decode_payload(token))
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise SessionStateEnvelopeError(
+            reason="session_state_payload_invalid",
+            message="session_state envelope payload is invalid",
+            diagnostics={"error": type(exc).__name__},
+        ) from exc
+    if not isinstance(decoded, dict):
+        raise SessionStateEnvelopeError(
+            reason="session_state_payload_invalid",
+            message="session_state envelope payload must decode to an object",
+            diagnostics={},
+        )
+    return decoded
+
+
+def _encode_payload(payload: dict[str, Any]) -> str:
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii").rstrip("=")
+
+
+def _decode_payload(token: str) -> str:
+    padded = token + ("=" * (-len(token) % 4))
+    return base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
+
+
+def _session_secret() -> str:
+    return os.getenv(SESSION_SECRET_ENV) or DEVELOPMENT_SESSION_SECRET
+
+
+def _session_key_id() -> str:
+    return os.getenv(SESSION_KEY_ID_ENV) or (
+        "configured" if os.getenv(SESSION_SECRET_ENV) else "development-unconfigured"
+    )
 
 
 def start_session(
@@ -163,7 +293,7 @@ def step_session(
 
     deserialize_start = perf_counter_ns()
     try:
-        state = deserialize_state(session_state, strict_hash=True)
+        state = deserialize_session_state(session_state, strict_hash=True)
     except StateHashMismatch as exc:
         timing["deserialize_ms"] = _elapsed_ms(deserialize_start)
         timing.update(
@@ -176,6 +306,18 @@ def step_session(
             }
         )
         return _mismatch_payload(session_state, exc, timing)
+    except SessionStateEnvelopeError as exc:
+        timing["deserialize_ms"] = _elapsed_ms(deserialize_start)
+        timing.update(
+            {
+                "legality_ms": 0,
+                "apply_ms": 0,
+                "display_ms": 0,
+                "legal_actions_ms": 0,
+                "total_core_ms": _elapsed_ms(total_start),
+            }
+        )
+        return _bad_session_payload(session_state, exc, timing)
     timing["deserialize_ms"] = _elapsed_ms(deserialize_start)
 
     session = _session_metadata(state)
@@ -311,7 +453,7 @@ def legal_actions_page(
     limit: int = DEFAULT_PAGE_LIMIT,
     cursor: str | None = None,
 ) -> dict[str, Any]:
-    state = deserialize_state(session_state, strict_hash=True)
+    state = deserialize_session_state(session_state, strict_hash=True)
     session = _session_metadata(state)
     game_slug = str(session["game_slug"])
     return _legal_action_page(
@@ -336,11 +478,11 @@ def legal_actions(arena_id: str, state_payload: dict[str, Any], player_id: str) 
 
 
 def public_state(state_payload: dict[str, Any]) -> dict[str, Any]:
-    return deserialize_state(state_payload).public_view()
+    return deserialize_session_state(state_payload).public_view()
 
 
 def state_hash(state_payload: dict[str, Any]) -> str:
-    return str(deserialize_state(state_payload).state_hash)
+    return str(deserialize_session_state(state_payload).state_hash)
 
 
 def step(
@@ -564,7 +706,7 @@ def _result_payload(
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_version": schema_version,
-        "session_state": serialize_state(state),
+        "session_state": serialize_session_state(state),
         "state_hash": state.state_hash,
         "state_hash_status": state_hash_status,
         "public_state": state.public_state,
@@ -630,6 +772,49 @@ def _mismatch_payload(
         "events": [event],
         "timing": timing,
         "error": {"reason": "state_hash_mismatch", "diagnostics": exc.to_dict()},
+    }
+
+
+def _bad_session_payload(
+    session_state: dict[str, Any],
+    exc: SessionStateEnvelopeError,
+    timing: dict[str, int],
+) -> dict[str, Any]:
+    event = _arena_event(
+        event_type="turn.failed",
+        event_id="arena:session_state:invalid:000",
+        turn_id=_safe_int(session_state.get("turn"), 0),
+        actor=None,
+        action=None,
+        action_label=str(exc),
+        display_frame={},
+        state_hash=None,
+    )
+    return {
+        "schema_version": ARENA_STEP_RESULT_SCHEMA_VERSION,
+        "accepted": False,
+        "turn_id": 0,
+        "session_state": session_state,
+        "state_hash": None,
+        "state_hash_status": "signature_mismatch"
+        if exc.reason == "session_state_signature_invalid"
+        else "invalid_session_state",
+        "public_state": {},
+        "display_frame": {},
+        "active_player": None,
+        "next_actor_kind": None,
+        "terminal": False,
+        "outcome": None,
+        "scores": None,
+        "legal_actions": [],
+        "legal_action_descriptors": [],
+        "total_legal_actions": 0,
+        "total_matching_legal_actions": 0,
+        "has_more_legal_actions": False,
+        "legal_actions_cursor": None,
+        "events": [event],
+        "timing": timing,
+        "error": {"reason": exc.reason, "diagnostics": exc.to_dict()},
     }
 
 

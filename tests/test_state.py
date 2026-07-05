@@ -28,3 +28,12 @@ def test_state_hash_rejects_tampering():
             render_hints=state.render_hints,
             metadata=state.metadata,
         )
+
+
+def test_public_view_does_not_expose_private_metadata_seed():
+    state = ConnectFourArena().initial_state(1)
+
+    public = state.public_view()
+
+    assert "metadata" not in public
+    assert "seed" not in str(public)

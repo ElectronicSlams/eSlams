@@ -19,6 +19,7 @@ from eslams.contracts.topology import (
 from eslams.public_catalogue import PublicGameMetadata
 
 SOLO_SCORE_GAMES = {
+    "blackjack",
     "taxi",
     "frozen-lake",
     "cliff-walking",
@@ -57,7 +58,6 @@ ADVANCED_HEAD_TO_HEAD_GAMES = {
     "nine-mens-morris",
     "pentago",
     "backgammon",
-    "blackjack",
     "gin-rummy",
     "cribbage",
     "liars-dice",

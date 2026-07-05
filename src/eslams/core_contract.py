@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from time import perf_counter_ns
@@ -646,7 +647,7 @@ def _observation_view(value: Any) -> ObservationView:
         return "private_actor"
     if value == "ui_delta":
         return "ui_delta"
-    if value == "debug":
+    if value == "debug" and os.getenv("ESLAMS_ENABLE_DEBUG_OBSERVATION") == "1":
         return "debug"
     return "public_compact"
 
@@ -677,4 +678,3 @@ def _optional_positive_int(value: Any) -> int | None:
 
 def _elapsed_ms(start_ns: int) -> int:
     return max(0, round((perf_counter_ns() - start_ns) / 1_000_000))
-

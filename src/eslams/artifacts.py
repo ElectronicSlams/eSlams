@@ -87,6 +87,8 @@ PUBLIC_SUMMARY_FILES = {
     "validation/validation_summary.json",
     "scores/official_result.json",
 }
+UNHASHED_FILE_PATHS = {"timings/timings.json"}
+HASH_EXCLUDED_TIMING_KEYS = {"created_at", "latency_ms", "elapsed_ms"}
 PROFILE_REQUIRED_FILES = {
     "runner_bundle": REQUIRED_FILES,
     "official_bundle": REQUIRED_FILES | {"scores/official_result.json"},
@@ -141,6 +143,7 @@ class ArtifactManifest:
     files: list[dict[str, Any]]
     hash_algorithm: str
     signature: dict[str, Any]
+    unhashed_files: list[dict[str, Any]] = field(default_factory=list)
     manifest_schema_version: str = ARTIFACT_MANIFEST_SCHEMA_VERSION
     artifact_profile: str = "runner_bundle"
     artifact_kind: str = "local_match"
@@ -192,6 +195,7 @@ class ArtifactManifest:
             "public_exports": self.public_exports,
             "validation_summary_path": self.validation_summary_path,
             "files": self.files,
+            "unhashed_files": self.unhashed_files,
             "hash_algorithm": self.hash_algorithm,
             "signature": self.signature,
         }
@@ -339,19 +343,19 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
 
     _write_jsonl(
         artifact_dir / "traces/public_trace.jsonl",
-        (event.view("public") for event in build.trace_events),
+        (_canonical_hashed_payload(event.view("public")) for event in build.trace_events),
     )
     _write_jsonl(
         artifact_dir / "traces/agent_visible_trace.jsonl",
-        (event.view("agent_visible") for event in build.trace_events),
+        (_canonical_hashed_payload(event.view("agent_visible")) for event in build.trace_events),
     )
     _write_jsonl(
         artifact_dir / "traces/private_judge_trace.jsonl",
-        (event.view("private_judge") for event in build.trace_events),
+        (_canonical_hashed_payload(event.view("private_judge")) for event in build.trace_events),
     )
     _write_jsonl(
         artifact_dir / "traces/auditor_trace.jsonl",
-        (event.view("auditor") for event in build.trace_events),
+        (_canonical_hashed_payload(event.view("auditor")) for event in build.trace_events),
     )
     _write_jsonl(
         artifact_dir / "replay/replay_events.jsonl",
@@ -369,16 +373,23 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         _public_reasoning_rows(build.replay_events),
     )
     render_replay_html(artifact_dir)
-    _write_json(artifact_dir / "scores/score.json", build.score.to_dict())
+    _write_json(artifact_dir / "scores/score.json", _canonical_score_summary(build.score))
     _write_json(
         artifact_dir / "scores/official_result.json",
         _official_result_summary(build.score, arena_id),
     )
-    _write_json(artifact_dir / "scores/metrics.json", build.metrics)
+    _write_json(artifact_dir / "scores/metrics.json", _canonical_hashed_payload(build.metrics))
     (artifact_dir / "logs/runner.log").write_text(build.runner_log, encoding="utf-8")
-    _write_jsonl(artifact_dir / "logs/agent_io.jsonl", build.agent_io)
+    _write_jsonl(
+        artifact_dir / "logs/agent_io.jsonl",
+        (_canonical_hashed_payload(row) for row in build.agent_io),
+    )
     _write_jsonl(artifact_dir / "logs/errors.jsonl", build.errors)
-    _write_jsonl(artifact_dir / "receipts/provider_receipts.jsonl", build.provider_receipts)
+    _write_jsonl(
+        artifact_dir / "receipts/provider_receipts.jsonl",
+        (_canonical_hashed_payload(row) for row in build.provider_receipts),
+    )
+    _write_json(artifact_dir / "timings/timings.json", _timings_sidecar(build))
     _write_json(
         artifact_dir / "environment/lockfile.json",
         {"python": ">=3.9", "package": "eslams-core"},
@@ -430,7 +441,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         artifact_dir / "validation/validation_summary.json",
         {
             "schema_version": ARTIFACT_VALIDATION_SCHEMA_VERSION,
-            "artifact": str(output_path),
+            "artifact": "see-manifest",
             "profile": "runner_bundle",
             "artifact_profile_key": "runner_bundle",
             "artifact_profile_label": "Runner Bundle",
@@ -458,6 +469,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
 
     signing_key = _runner_artifact_signing_key()
     files = _file_entries(artifact_dir)
+    unhashed_files = _unhashed_file_entries(artifact_dir)
     artifact_id = sha256_json(files)
     manifest = ArtifactManifest(
         artifact_version=ARTIFACT_VERSION,
@@ -518,6 +530,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         },
         validation_summary_path="validation/validation_summary.json",
         files=files,
+        unhashed_files=unhashed_files,
         hash_algorithm="sha256",
         signature=_manifest_signature_metadata(signed=signing_key is not None),
     )
@@ -764,11 +777,13 @@ def _validate_file_table(
 ) -> list[str]:
     errors: list[str] = []
     valid_entries: list[dict[str, Any]] = []
+    listed_paths: set[str] = set()
     for entry in file_entries:
         if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
             errors.append("manifest.files contains invalid entry")
             continue
         valid_entries.append(entry)
+        listed_paths.add(entry["path"])
         file_path = artifact_dir / entry["path"]
         if not file_path.exists():
             errors.append(f"manifest file missing on disk: {entry['path']}")
@@ -777,10 +792,56 @@ def _validate_file_table(
         actual = sha256_file(file_path)
         if expected != actual:
             errors.append(f"hash mismatch for {entry['path']}")
+    unhashed_paths = _validate_unhashed_file_table(artifact_dir, manifest, errors)
+    actual_paths = {
+        path.relative_to(artifact_dir).as_posix()
+        for path in artifact_dir.rglob("*")
+        if path.is_file()
+    }
+    actual_payload_paths = {
+        rel
+        for rel in actual_paths
+        if rel != "manifest.json" and not rel.startswith("signatures/")
+    }
+    for rel in sorted(actual_payload_paths - listed_paths - unhashed_paths):
+        errors.append(f"unlisted artifact file: {rel}")
     expected_artifact_id = sha256_json(sorted(valid_entries, key=lambda item: item["path"]))
     if manifest.get("artifact_id") != expected_artifact_id:
         errors.append("manifest.artifact_id does not match file table")
     return errors
+
+
+def _validate_unhashed_file_table(
+    artifact_dir: Path,
+    manifest: dict[str, Any],
+    errors: list[str],
+) -> set[str]:
+    entries = manifest.get("unhashed_files", [])
+    if entries in (None, []):
+        return set()
+    if not isinstance(entries, list):
+        errors.append("manifest.unhashed_files must be a list")
+        return set()
+    paths: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            errors.append("manifest.unhashed_files contains invalid entry")
+            continue
+        rel = entry["path"]
+        paths.add(rel)
+        if rel not in UNHASHED_FILE_PATHS:
+            errors.append(f"unsupported unhashed artifact file: {rel}")
+        file_path = artifact_dir / rel
+        if not file_path.exists():
+            errors.append(f"manifest unhashed file missing on disk: {rel}")
+            continue
+        expected = entry.get("sha256")
+        if expected is not None and expected != sha256_file(file_path):
+            errors.append(f"hash mismatch for unhashed file {rel}")
+        expected_bytes = entry.get("bytes")
+        if isinstance(expected_bytes, int) and expected_bytes != file_path.stat().st_size:
+            errors.append(f"byte count mismatch for unhashed file {rel}")
+    return paths
 
 
 def _profile_replay_validation(
@@ -1000,6 +1061,58 @@ def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
     path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
 
 
+def _canonical_hashed_payload(payload: Any) -> Any:
+    if isinstance(payload, dict):
+        return {
+            key: _canonical_hashed_payload(value)
+            for key, value in payload.items()
+            if key not in HASH_EXCLUDED_TIMING_KEYS
+        }
+    if isinstance(payload, list):
+        return [_canonical_hashed_payload(item) for item in payload]
+    return payload
+
+
+def _canonical_score_summary(score: ScoreSummary) -> dict[str, Any]:
+    return cast(dict[str, Any], _canonical_hashed_payload(score.to_dict()))
+
+
+def _timings_sidecar(build: ArtifactBuildInput) -> dict[str, Any]:
+    return {
+        "schema_version": "eslams.timings.v1",
+        "run_id": build.run_id,
+        "score_metrics": {
+            "elapsed_ms": build.score.metrics.get("elapsed_ms"),
+        },
+        "trace_events": [
+            {
+                "event_id": event.event_id,
+                "turn_id": event.turn_id,
+                "event_type": event.event_type,
+                "created_at": event.created_at,
+                "latency_ms": event.public.get("latency_ms"),
+            }
+            for event in build.trace_events
+        ],
+        "agent_io": [
+            {
+                "turn_id": row.get("turn_id"),
+                "agent_id": row.get("agent_id"),
+                "latency_ms": row.get("latency_ms"),
+            }
+            for row in build.agent_io
+        ],
+        "provider_receipts": [
+            {
+                "turn_id": row.get("turn_id"),
+                "active_player": row.get("active_player"),
+                "latency_ms": row.get("latency_ms"),
+            }
+            for row in build.provider_receipts
+        ],
+    }
+
+
 def _arena_id_from_version(arena_version: str) -> str:
     return arena_version.split(":", 1)[0] if ":" in arena_version else arena_version
 
@@ -1155,12 +1268,14 @@ def _validate_deterministic_replay(
             errors,
         )
 
-    action_rows = [row for row in auditor_rows if row.get("event_type") == "action"]
+    transition_rows = [
+        row for row in auditor_rows if row.get("event_type") in {"action", "forfeit"}
+    ]
     has_state_snapshots = all(
         isinstance(row.get("state_before"), dict) and isinstance(row.get("state_after"), dict)
-        for row in action_rows
+        for row in transition_rows
     )
-    if not action_rows and not required:
+    if not transition_rows and not required:
         return (
             DeterministicReplayValidationStatus(
                 status="not_recorded",
@@ -1168,14 +1283,14 @@ def _validate_deterministic_replay(
                 replay_event_count=len(replay_rows),
             ),
             errors,
-        )
+    )
     if not has_state_snapshots:
         if required:
             errors.append("deterministic replay audit is missing auditor state snapshots")
             return (
                 DeterministicReplayValidationStatus(
                     status="invalid",
-                    action_event_count=len(action_rows),
+                    action_event_count=len(transition_rows),
                     replay_event_count=len(replay_rows),
                 ),
                 errors,
@@ -1183,7 +1298,7 @@ def _validate_deterministic_replay(
         return (
             DeterministicReplayValidationStatus(
                 status="not_recorded",
-                action_event_count=len(action_rows),
+                action_event_count=len(transition_rows),
                 replay_event_count=len(replay_rows),
             ),
             errors,
@@ -1194,7 +1309,7 @@ def _validate_deterministic_replay(
         return (
             DeterministicReplayValidationStatus(
                 status="invalid",
-                action_event_count=len(action_rows),
+                action_event_count=len(transition_rows),
                 replay_event_count=len(replay_rows),
             ),
             errors,
@@ -1210,7 +1325,7 @@ def _validate_deterministic_replay(
             DeterministicReplayValidationStatus(
                 status="invalid",
                 arena_id=arena_id,
-                action_event_count=len(action_rows),
+                action_event_count=len(transition_rows),
                 replay_event_count=len(replay_rows),
             ),
             errors,
@@ -1218,15 +1333,16 @@ def _validate_deterministic_replay(
 
     _validate_deterministic_replay_counts(
         deterministic_metadata,
-        action_rows,
+        transition_rows,
         replay_rows,
         errors,
     )
-    if len(replay_rows) != len(action_rows) + 1:
+    if len(replay_rows) != len(transition_rows) + 1:
         errors.append("deterministic replay event count does not match action trace length")
+    _validate_score_terminal_matches_last_replay(artifact_dir, replay_rows, errors)
 
     previous_state = None
-    for index, row in enumerate(action_rows):
+    for index, row in enumerate(transition_rows):
         state_before = _arena_state_from_payload(
             row.get("state_before"),
             f"auditor trace event {index} state_before",
@@ -1260,6 +1376,20 @@ def _validate_deterministic_replay(
             )
 
         _compare_replay_snapshot(replay_rows, index, state_before, errors)
+        if row.get("event_type") == "forfeit":
+            if not state_after.terminal:
+                errors.append(f"auditor trace event {index} forfeit state_after is not terminal")
+            if (
+                not isinstance(state_after.outcome, dict)
+                or state_after.outcome.get("reason") != "forfeit"
+            ):
+                errors.append(
+                    f"auditor trace event {index} forfeit state_after has no forfeit outcome"
+                )
+            _compare_replay_snapshot(replay_rows, index + 1, state_after, errors)
+            previous_state = state_after
+            continue
+
         recorded_action = row.get("action")
         action = _resolve_recorded_action(
             legal_actions=arena.legal_actions_for(state_before, state_before.active_player),
@@ -1293,7 +1423,7 @@ def _validate_deterministic_replay(
             status=status,
             verified=not errors,
             arena_id=arena_id,
-            action_event_count=len(action_rows),
+            action_event_count=len(transition_rows),
             replay_event_count=len(replay_rows),
         ),
         errors,
@@ -1340,6 +1470,36 @@ def _artifact_arena_id(
         return arena_version.split(":", 1)[0]
     errors.append("deterministic replay arena_id is missing")
     return None
+
+
+def _validate_score_terminal_matches_last_replay(
+    artifact_dir: Path,
+    replay_rows: list[dict[str, Any]],
+    errors: list[str],
+) -> None:
+    if not replay_rows:
+        errors.append("deterministic replay has no replay events")
+        return
+    score_path = artifact_dir / "scores/score.json"
+    try:
+        score = json.loads(score_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"scores/score.json cannot be read for terminal replay check: {exc}")
+        return
+    if not isinstance(score, dict):
+        errors.append("scores/score.json must be a JSON object for terminal replay check")
+        return
+    score_outcome = score.get("outcome")
+    last_replay = replay_rows[-1]
+    replay_outcome = last_replay.get("outcome")
+    if score_outcome is None:
+        if last_replay.get("terminal") and replay_outcome is not None:
+            errors.append("last replay terminal outcome does not match score.json")
+        return
+    if last_replay.get("terminal") is not True:
+        errors.append("score.json has terminal outcome but last replay event is not terminal")
+    if not _canonical_equal(score_outcome, replay_outcome):
+        errors.append("score.json terminal outcome does not match last replay event")
 
 
 def _validate_deterministic_replay_counts(
@@ -1421,6 +1581,7 @@ def _compare_replay_snapshot(
         "public_state": state.public_state,
         "scores": state.scores,
         "terminal": state.terminal,
+        "outcome": state.outcome,
         "render_hints": state.render_hints,
     }
     for key, value in expected.items():
@@ -1435,10 +1596,23 @@ def _file_entries(artifact_dir: Path) -> list[dict[str, Any]]:
     for path in sorted(artifact_dir.rglob("*")):
         if path.is_file():
             rel = path.relative_to(artifact_dir).as_posix()
-            if rel == "manifest.json" or rel.startswith("signatures/"):
+            if (
+                rel == "manifest.json"
+                or rel.startswith("signatures/")
+                or rel in UNHASHED_FILE_PATHS
+            ):
                 continue
             entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
     return sorted(entries, key=lambda item: item["path"])
+
+
+def _unhashed_file_entries(artifact_dir: Path) -> list[dict[str, Any]]:
+    entries = []
+    for rel in sorted(UNHASHED_FILE_PATHS):
+        path = artifact_dir / rel
+        if path.is_file():
+            entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
+    return entries
 
 
 def _manifest_signature_metadata(*, signed: bool) -> dict[str, Any]:
@@ -1711,7 +1885,7 @@ def _validate_signed_runner_signature(
                 algorithm=RUNNER_SIGNATURE_ALGORITHM,
                 key_id=cast(str, key_id),
             ),
-            [],
+            ["runner_signature_unverified"],
         )
 
     try:

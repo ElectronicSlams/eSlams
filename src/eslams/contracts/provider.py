@@ -10,6 +10,10 @@ from eslams.contracts.versions import PROVIDER_RECEIPT_SCHEMA_VERSION
 PROVIDER_OUTCOMES: tuple[str, ...] = (
     "ok",
     "provider_error",
+    "provider_network_error",
+    "provider_auth_error",
+    "provider_rate_limited",
+    "provider_invalid_request",
     "provider_timeout",
     "parse_error",
     "no_action",
@@ -44,6 +48,8 @@ class ProviderRuntimeConfig:
     gateway_base_url: str | None = None
     gateway_mode: str = "direct_provider"
     gateway_auth_mode: str = "disabled"
+    reasoning_budget_tokens: int | None = None
+    gemini_thinking_budget: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -57,6 +63,8 @@ class ProviderRuntimeConfig:
             "gateway_base_url": self.gateway_base_url,
             "gateway_mode": self.gateway_mode,
             "gateway_auth_mode": self.gateway_auth_mode,
+            "reasoning_budget_tokens": self.reasoning_budget_tokens,
+            "gemini_thinking_budget": self.gemini_thinking_budget,
         }
 
 

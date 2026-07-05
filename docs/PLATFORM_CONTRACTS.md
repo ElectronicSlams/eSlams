@@ -372,7 +372,7 @@ eslams arena legal-actions-page --state session_state.json --player-id player_1 
 
 Start and step results emit:
 
-- trusted `session_state` JSON object for Platform-owned storage only
+- signed opaque `session_state` envelope for Platform/server storage only
 - `state_hash` and `state_hash_status`
 - browser-safe `public_state`
 - canonical live `display_frame` in the same shape as replay display frames
@@ -382,10 +382,12 @@ Start and step results emit:
 - public-safe Arena events
 - phase timing fields and `total_core_ms`
 
-`session_state` may include private or hidden game state. Platform must not
-forward it to browsers or public streams. Browser-streamable fields are the
-public state, display frame, action descriptors for the active actor, events,
-actor metadata, terminal/outcome fields, and timing.
+`session_state` is verified with `ESLAMS_ARENA_SESSION_SECRET`; set that secret
+in every production runner/container that creates or steps live Arena sessions.
+Platform must not forward the envelope to browsers or public streams.
+Browser-streamable fields are the public state, display frame, action
+descriptors for the active actor, events, actor metadata, terminal/outcome
+fields, and timing.
 
 Action descriptor rows use `eslams.arena.action_descriptor.v1` and include
 stable `token`, `label`, `short_label`, `verb`, `object`, `category`, `group`,

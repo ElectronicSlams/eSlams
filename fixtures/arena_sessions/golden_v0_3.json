@@ -38,7 +38,7 @@
       "first_token": "hit",
       "first_label": "Hit",
       "first_category": "action",
-      "start_event_types": ["session.started", "turn.ready_for_human"],
+      "start_event_types": ["session.started", "model.action.requested"],
       "renderer_family": "card-table"
     },
     {

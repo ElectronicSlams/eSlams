@@ -52,12 +52,9 @@ def parse_model_action(text: str, legal_actions: list[Any]) -> ParsedModelAction
     token_to_action = {action_token(action): action for action in legal_actions}
     payload = extract_json(text)
     if not isinstance(payload, dict):
-        action = find_legal_action(text, legal_actions)
-        return ParsedModelAction(
-            action=action,
-            action_id=action_token(action),
-            confidence=None,
-            public_explanation="Selected a legal action from the model response.",
+        raise InvalidModelAction(
+            "invalid_json",
+            "model response must be a JSON object with action",
         )
 
     action_value = _action_value(payload)
@@ -116,13 +113,9 @@ def coerce_action(
 
 
 def find_legal_action(text: str, legal_actions: list[Any]) -> Any:
-    for action in legal_actions:
-        token = action_token(action)
-        if token in text or str(action) in text:
-            return action
     raise InvalidModelAction(
         "invalid_json",
-        "model response did not contain JSON or a legal action",
+        "model response must be a JSON object with action",
     )
 
 

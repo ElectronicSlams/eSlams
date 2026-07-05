@@ -78,6 +78,47 @@ def test_validator_detects_replay_tamper_after_manifest_refresh(tmp_path: Path):
     assert report.deterministic_replay.status == "invalid"
 
 
+def test_validator_detects_score_replay_terminal_outcome_mismatch(tmp_path: Path):
+    result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=3, output_dir=tmp_path))
+    replay_path = result.artifact_path / "replay/replay_events.jsonl"
+    replay_events = _read_jsonl(replay_path)
+    replay_events[-1]["outcome"] = {"winner": "player_1", "reason": "tampered"}
+    _write_jsonl(replay_path, replay_events)
+    _refresh_manifest_hashes(result.artifact_path)
+
+    report = ArtifactValidator().validate_report(result.artifact_path)
+
+    assert "score.json terminal outcome does not match last replay event" in report.errors
+    assert report.deterministic_replay.status == "invalid"
+
+
+def test_runner_artifact_id_is_stable_for_same_seed(tmp_path: Path):
+    first = Runner().run(
+        RunConfig(arena_id="tic-tac-toe", seed=23, output_dir=tmp_path / "first")
+    )
+    second = Runner().run(
+        RunConfig(arena_id="tic-tac-toe", seed=23, output_dir=tmp_path / "second")
+    )
+    first_manifest = json.loads((first.artifact_path / "manifest.json").read_text("utf-8"))
+    second_manifest = json.loads((second.artifact_path / "manifest.json").read_text("utf-8"))
+
+    assert first.run_id == second.run_id
+    assert first_manifest["artifact_id"] == second_manifest["artifact_id"]
+    assert "timings/timings.json" not in {row["path"] for row in first_manifest["files"]}
+    assert first_manifest["unhashed_files"][0]["path"] == "timings/timings.json"
+
+
+def test_validator_rejects_unlisted_artifact_files(tmp_path: Path):
+    result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=24, output_dir=tmp_path))
+    extra = result.artifact_path / "logs" / "surprise.txt"
+    extra.write_text("not declared\n", encoding="utf-8")
+
+    report = ArtifactValidator().validate_report(result.artifact_path)
+
+    assert "unlisted artifact file: logs/surprise.txt" in report.errors
+    assert report.valid is False
+
+
 def test_runner_generates_replay_html(tmp_path: Path):
     result = Runner().run(RunConfig(arena_id="hex", seed=5, output_dir=tmp_path, max_turns=2))
     replay_path = result.artifact_path / "replay" / "index.html"
@@ -177,6 +218,19 @@ def test_runner_signs_artifact_when_key_is_configured(tmp_path: Path, monkeypatc
     assert report.errors == []
     assert report.signature.status == "verified"
     assert report.signature.verified is True
+
+
+def test_signed_artifact_without_verify_key_is_not_valid(tmp_path: Path, monkeypatch):
+    _set_ed25519_artifact_signing_env(monkeypatch, key_id="test-key")
+    result = Runner().run(RunConfig(arena_id="connect-four", seed=12, output_dir=tmp_path))
+    monkeypatch.delenv("RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY")
+    monkeypatch.delenv("RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY", raising=False)
+
+    report = ArtifactValidator().validate_report(result.artifact_path)
+
+    assert report.valid is False
+    assert report.signature.status == "unverified_missing_key"
+    assert "runner_signature_unverified" in report.errors
 
 
 def test_runner_stamps_platform_verified_artifact_metadata(tmp_path: Path, monkeypatch):
@@ -527,7 +581,10 @@ def test_runner_can_forfeit_after_illegal_action(tmp_path: Path):
     }
     assert result.score.illegal_action_count_by_player == {"player_1": 1, "player_2": 0}
     assert result.score.fallback_action_count_by_player == {"player_1": 0, "player_2": 0}
-    assert result.trace_events == []
+    assert len(result.trace_events) == 1
+    assert result.trace_events[0].event_type == "forfeit"
+    assert result.replay_events[-1].terminal is True
+    assert result.replay_events[-1].outcome == result.score.outcome
     assert errors[0]["policy"] == "forfeit"
 
 

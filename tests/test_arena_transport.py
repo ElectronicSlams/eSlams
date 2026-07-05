@@ -88,6 +88,8 @@ def test_arena_session_start_and_one_step_all_games_are_public_safe():
         start = start_session(game_id, variant, 1, players)
         assert start["schema_version"] == "eslams.arena.start_result.v1"
         assert start["state_hash_status"] == "verified"
+        assert start["session_state"]["schema_version"] == "eslams.arena.session_state.v1"
+        assert "private_state_by_player" not in start["session_state"]
         assert start["display_frame"]["schema_version"] == "eslams.replay.display_frame.v1"
         assert start["timing"]["total_core_ms"] <= 50
         assert _public_issues(start) == []
@@ -112,7 +114,8 @@ def test_arena_session_start_and_one_step_all_games_are_public_safe():
             assert stepped["state_hash_status"] == "verified"
             assert stepped["display_frame"]["schema_version"] == "eslams.replay.display_frame.v1"
             assert stepped["timing"]["total_core_ms"] <= 50
-            assert deserialize_state(stepped["session_state"]).state_hash == stepped["state_hash"]
+            assert state_hash(stepped["session_state"]) == stepped["state_hash"]
+            assert "private_state_by_player" not in stepped["session_state"]
             assert _public_issues(stepped) == []
             assert "state.applied" in [event["type"] for event in stepped["events"]]
 
@@ -121,11 +124,15 @@ def test_arena_session_failures_are_safe_and_do_not_transition():
     players = _players_for(("player_1", "player_2"))
     start = start_session("tic-tac-toe", "standard", 1, players)
 
-    stale = {**start["session_state"], "state_hash": "stale-hash"}
-    mismatch = step_session(stale, "player_1", "0")
+    payload = str(start["session_state"]["payload"])
+    tampered = {
+        **start["session_state"],
+        "payload": payload[:-1] + ("A" if payload[-1] != "A" else "B"),
+    }
+    mismatch = step_session(tampered, "player_1", "0")
     assert mismatch["accepted"] is False
-    assert mismatch["state_hash_status"] == "mismatch"
-    assert mismatch["error"]["reason"] == "state_hash_mismatch"
+    assert mismatch["state_hash_status"] == "signature_mismatch"
+    assert mismatch["error"]["reason"] == "session_state_signature_invalid"
     assert mismatch["events"][0]["type"] == "turn.failed"
 
     wrong_actor = step_session(start["session_state"], "player_2", "0")

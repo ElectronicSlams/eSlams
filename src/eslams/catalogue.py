@@ -97,6 +97,7 @@ def game_catalogue_rows() -> list[dict[str, Any]]:
                 "public_category_key": public.category,
                 "difficulty": public.difficulty,
                 "maturity": public.maturity,
+                "fidelity": _fidelity(public),
                 "player_count": topology["defaultPlayers"],
                 "scenario_levels": ["default"],
                 "action_schema_version": "action-schema-v1",
@@ -154,6 +155,30 @@ def model_catalogue_rows() -> list[dict[str, Any]]:
             }
         )
     return rows
+
+
+def _fidelity(public: Any) -> str:
+    if public.fidelity != "faithful":
+        return str(public.fidelity)
+    if public.category == "rl":
+        return "inspired-by"
+    if public.variant.startswith("core_compact_"):
+        return "compact"
+    if public.game_id in {
+        "blackjack",
+        "shedding-card-game",
+        "dou-dizhu",
+        "hearts",
+        "spades",
+        "euchre",
+        "cribbage",
+        "bargaining",
+        "negotiation",
+        "liars-dice",
+        "goofspiel",
+    }:
+        return "compact"
+    return str(public.fidelity)
 
 
 def availability_rows() -> list[dict[str, Any]]:

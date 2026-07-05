@@ -92,10 +92,12 @@ artifacts, export replay packages, persist sessions, store secrets, or know
 about Cloudflare. They own legality, state transition, hash verification,
 public display frames, public-safe events, and legal action descriptors.
 
-`session_state` is trusted Platform/server state and may contain hidden cards or
-other private state. Browser-safe fields are `public_state`, `display_frame`,
-`legal_action_descriptors`, `events`, actor metadata, terminal/outcome fields,
-and timing. Live `display_frame` uses the same projection shape as
+`session_state` is a signed opaque Platform/server envelope. Set
+`ESLAMS_ARENA_SESSION_SECRET` in production so tampering fails by HMAC, and do
+not forward the envelope to browsers. Browser-safe fields are `public_state`,
+`display_frame`, `legal_action_descriptors`, `events`, actor metadata,
+terminal/outcome fields, and timing. Live `display_frame` uses the same
+projection shape as
 `replay/display_frames.jsonl`, so Platform can render live play and replay with
 one UI contract.
 

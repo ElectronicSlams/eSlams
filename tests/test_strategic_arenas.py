@@ -31,11 +31,14 @@ def test_blackjack_reveals_dealer_hand_only_on_terminal():
     state = arena.initial_state(3)
 
     assert len(state.public_state["dealer_hand"]) == 1
+    assert set(state.scores) == {"player_1"}
+    assert set(state.private_state_by_player) == {"player_1"}
 
     terminal = arena.apply_action(state, "player_1", "stand")
 
     assert terminal.terminal is True
     assert len(terminal.public_state["dealer_hand"]) >= 2
+    assert set(terminal.scores) == {"player_1"}
 
 
 def test_sealed_bid_hides_first_bid_until_terminal():
@@ -90,6 +93,15 @@ def test_bargaining_and_negotiation_accept_offers():
 
     assert negotiation_state.terminal is True
     assert negotiation_state.outcome["price"] == 60
+
+
+def test_bargaining_reserves_control_accept_legality():
+    arena = BargainingArena()
+    state = arena.initial_state(1)
+    state = arena.apply_action(state, "player_1", "offer:90")
+
+    assert "accept" not in state.legal_actions_by_player["player_2"]
+    assert "reject" in state.legal_actions_by_player["player_2"]
 
 
 def test_runner_generates_valid_artifacts_for_strategic_arenas(tmp_path: Path):

@@ -26,6 +26,7 @@ class PublicGameMetadata:
     difficulty: str
     maturity: str
     players: int = 2
+    fidelity: str = "faithful"
 
     @property
     def category_label(self) -> str:
@@ -83,28 +84,31 @@ PUBLIC_GAME_CATALOGUE: tuple[PublicGameMetadata, ...] = (
         "leduc-holdem",
         "Leduc Hold'em",
         "card",
-        "core_standard_leduc",
+        "core_compact_leduc_fixed_menu",
         "medium",
         "playable",
         4,
+        "compact",
     ),
     PublicGameMetadata(
         "limit-texas-holdem",
         "Limit Texas Hold'em",
         "card",
-        "core_table_limit",
+        "core_compact_holdem_fixed_menu_limit",
         "hard",
         "playable",
         4,
+        "compact",
     ),
     PublicGameMetadata(
         "no-limit-texas-holdem",
         "No-Limit Texas Hold'em",
         "card",
-        "core_profiled_table_no_limit",
+        "core_compact_holdem_fixed_menu_no_limit",
         "hard",
         "playable",
         4,
+        "compact",
     ),
     PublicGameMetadata(
         "shedding-card-game",
@@ -144,10 +148,11 @@ PUBLIC_GAME_CATALOGUE: tuple[PublicGameMetadata, ...] = (
         "bridge",
         "Bridge",
         "card",
-        "core_contract_play",
+        "core_compact_bridge_play_phase",
         "hard",
         "playable",
         4,
+        "compact",
     ),
     PublicGameMetadata("hearts", "Hearts", "card", "core_penalty_tricks", "medium", "playable"),
     PublicGameMetadata("spades", "Spades", "card", "core_trump_tricks", "medium", "playable"),
@@ -230,7 +235,16 @@ PUBLIC_GAME_CATALOGUE: tuple[PublicGameMetadata, ...] = (
     PublicGameMetadata("cliff-walking", "Cliff Walking", "rl", "standard", "easy", "playable", 1),
     PublicGameMetadata("cartpole", "CartPole", "rl", "standard", "easy", "playable", 1),
     PublicGameMetadata("mountain-car", "Mountain Car", "rl", "standard", "medium", "playable", 1),
-    PublicGameMetadata("lunar-lander", "Lunar Lander", "rl", "standard", "medium", "playable", 1),
+    PublicGameMetadata(
+        "lunar-lander",
+        "Lunar Lander",
+        "rl",
+        "lander-lite",
+        "medium",
+        "playable",
+        1,
+        "inspired-by",
+    ),
     PublicGameMetadata("car-racing", "Car Racing", "rl", "standard", "hard", "playable", 1),
     PublicGameMetadata("bipedal-walker", "Bipedal Walker", "rl", "standard", "hard", "playable", 1),
     PublicGameMetadata("paddle-ball", "Paddle Ball", "rl", "standard", "easy", "playable", 1),

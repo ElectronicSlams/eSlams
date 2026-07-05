@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
-import random
 from typing import Any
 
 from eslams.arena import Arena
+from eslams.arenas.card_utils import (
+    card_rank,
+    card_sort_key,
+    card_suit,
+    rank_value,
+    standard_deck,
+)
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
-RANKS = ("A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K")
-SUITS = ("C", "D", "H", "S")
 PLAYERS = ("player_1", "player_2")
 
 
@@ -58,7 +62,9 @@ class SheddingCardGameArena(Arena):
             hands[player_id].sort(key=_card_sort_key)
         history.append({"player": player_id, "action": action, "discard": discard})
         outcome = _empty_hand_outcome(hands, player_id)
-        opponent_has_no_play = not any(_playable_cards(hands[_other(player_id)], discard))
+        opponent_has_no_play = not any(
+            self._playable_cards_for_blocked(hands[_other(player_id)], discard)
+        )
         if outcome is None and action == "pass" and opponent_has_no_play:
             outcome = _fewest_cards_outcome(hands, "blocked")
         return self._state(
@@ -109,6 +115,9 @@ class SheddingCardGameArena(Arena):
             outcome=outcome,
             renderer="card-table",
         )
+
+    def _playable_cards_for_blocked(self, hand: list[str], discard: str) -> list[str]:
+        return _playable_cards(hand, discard)
 
 
 class CrazyEightsArena(SheddingCardGameArena):
@@ -172,6 +181,9 @@ class CrazyEightsArena(SheddingCardGameArena):
             outcome=outcome,
             renderer="card-table",
         )
+
+    def _playable_cards_for_blocked(self, hand: list[str], discard: str) -> list[str]:
+        return _crazy_eights_playable_cards(hand, discard)
 
 
 class HeartsArena(Arena):
@@ -345,9 +357,7 @@ class SpadesArena(Arena):
 
 
 def _deck(seed: int) -> list[str]:
-    cards = [f"{rank}{suit}" for suit in SUITS for rank in RANKS]
-    random.Random(seed).shuffle(cards)
-    return cards
+    return standard_deck(seed)
 
 
 def _card_state(
@@ -470,14 +480,18 @@ def _shedding_legal(hand: list[str], discard: str, deck: list[str]) -> list[str]
 
 
 def _crazy_eights_legal(hand: list[str], discard: str, deck: list[str]) -> list[str]:
-    playable = [
-        f"play:{card}"
-        for card in hand
-        if _rank(card) == "8" or _rank(card) == _rank(discard) or _suit(card) == _suit(discard)
-    ]
+    playable = [f"play:{card}" for card in _crazy_eights_playable_cards(hand, discard)]
     if playable:
         return playable
     return ["draw"] if deck else ["pass"]
+
+
+def _crazy_eights_playable_cards(hand: list[str], discard: str) -> list[str]:
+    return [
+        card
+        for card in hand
+        if _rank(card) == "8" or _rank(card) == _rank(discard) or _suit(card) == _suit(discard)
+    ]
 
 
 def _playable_cards(hand: list[str], discard: str) -> list[str]:
@@ -558,19 +572,19 @@ def _heart_penalty(card: str) -> int:
 
 
 def _rank(card: str) -> str:
-    return card[:-1]
+    return card_rank(card)
 
 
 def _suit(card: str) -> str:
-    return card[-1]
+    return card_suit(card)
 
 
 def _rank_value(card: str) -> int:
-    return RANKS.index(_rank(card))
+    return rank_value(card)
 
 
 def _card_sort_key(card: str) -> tuple[int, int]:
-    return (SUITS.index(_suit(card)), RANKS.index(_rank(card)))
+    return card_sort_key(card)
 
 
 def _other(player_id: str) -> str:

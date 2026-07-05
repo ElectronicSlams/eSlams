@@ -13,7 +13,7 @@ from eslams.state import ArenaState
 class BlackjackArena(Arena):
     id = "blackjack"
     version = "1.0.0"
-    players = ("player_1", "player_2")
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["hit", "stand"],
@@ -50,14 +50,14 @@ class BlackjackArena(Arena):
         if not isinstance(action, str) or not self.is_legal(state, player_id, action):
             raise ValueError("illegal blackjack action")
         player_hand = list(state.public_state["player_hand"])
-        dealer_hand = list(state.private_state_by_player["player_2"]["dealer_hand"])
-        deck = list(state.private_state_by_player["player_2"]["deck"])
+        dealer_hand = list(state.private_state_by_player["player_1"]["dealer_hand"])
+        deck = list(state.private_state_by_player["player_1"]["deck"])
         outcome = None
         if action == "hit":
             player_hand.append(deck.pop())
             if _hand_value(player_hand) > 21:
                 outcome = {
-                    "winner": "player_2",
+                    "winner": "dealer",
                     "reason": "player_bust",
                     "dealer_hand": dealer_hand,
                 }
@@ -102,11 +102,10 @@ class BlackjackArena(Arena):
                 "dealer_hand": public_dealer,
             },
             private_state_by_player={
-                "player_1": {},
-                "player_2": {"dealer_hand": dealer_hand, "deck": deck},
+                "player_1": {"dealer_hand": dealer_hand, "deck": deck},
             },
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores=_win_scores(outcome),
+            legal_actions_by_player={"player_1": legal},
+            scores=_blackjack_scores(outcome),
             terminal=terminal,
             outcome=outcome,
             rng_commitment=sha256_text(f"blackjack:{seed}"),
@@ -527,7 +526,11 @@ class BargainingArena(Arena):
         transcript = list(state.public_state["transcript"])
         outcome = None
         if action == "accept" and isinstance(last_offer, dict):
-            outcome = _split_outcome(int(last_offer["player_1_share"]), "accepted")
+            outcome = _split_outcome(
+                int(last_offer["player_1_share"]),
+                "accepted",
+                reserves=reserves,
+            )
         elif action == "reject":
             outcome = _no_deal_outcome("rejected")
         else:
@@ -564,7 +567,10 @@ class BargainingArena(Arena):
         terminal = outcome is not None
         legal = [] if terminal else [f"offer:{share}" for share in range(0, 101, 10)]
         if not terminal and last_offer and last_offer.get("player") != active:
-            legal = ["accept", "reject", *legal]
+            accept_actions = (
+                ["accept"] if _offer_meets_reserve(last_offer, active, reserves) else []
+            )
+            legal = [*accept_actions, "reject", *legal]
         return ArenaState(
             state_id=f"state_{turn:06d}",
             turn=turn,
@@ -712,7 +718,7 @@ def _blackjack_outcome(
     if dealer_total > 21 or player_total > dealer_total:
         winner = "player_1"
     elif dealer_total > player_total:
-        winner = "player_2"
+        winner = "dealer"
     return {
         "winner": winner,
         "reason": "dealer_bust" if dealer_total > 21 else reason,
@@ -720,6 +726,17 @@ def _blackjack_outcome(
         "dealer_total": dealer_total,
         "dealer_hand": dealer_hand,
     }
+
+
+def _blackjack_scores(outcome: dict[str, Any] | None) -> dict[str, float]:
+    if outcome is None:
+        return {"player_1": 0.0}
+    winner = outcome.get("winner")
+    if winner == "player_1":
+        return {"player_1": 1.0}
+    if winner is None:
+        return {"player_1": 0.5}
+    return {"player_1": 0.0}
 
 
 def _liars_dice_legal_actions(current_bid: dict[str, Any] | None) -> list[str]:
@@ -747,11 +764,40 @@ def _parse_bid(action: str) -> tuple[int, int]:
     return count, face
 
 
-def _split_outcome(player_1_share: int, reason: str) -> dict[str, Any]:
+def _offer_meets_reserve(
+    offer: dict[str, Any],
+    player: str,
+    reserves: dict[str, int],
+) -> bool:
+    share = int(offer["player_1_share"])
+    player_share = share if player == "player_1" else 100 - share
+    return player_share >= reserves[player]
+
+
+def _split_outcome(
+    player_1_share: int,
+    reason: str,
+    *,
+    reserves: dict[str, int] | None = None,
+) -> dict[str, Any]:
     utilities = {
         "player_1": float(player_1_share),
         "player_2": float(100 - player_1_share),
     }
+    if reserves is not None:
+        unmet = {
+            player: utilities[player] < float(reserve)
+            for player, reserve in reserves.items()
+        }
+        if any(unmet.values()):
+            return {
+                "winner": None,
+                "reason": "reserve_not_met",
+                "utilities": {"player_1": 0.0, "player_2": 0.0},
+                "player_1_share": player_1_share,
+                "reserves": reserves,
+                "unmet_reserves": unmet,
+            }
     winner = None
     if utilities["player_1"] > utilities["player_2"]:
         winner = "player_1"

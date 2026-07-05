@@ -203,6 +203,7 @@ def _records_from_litellm(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 "context_window": _int(
                     model_payload.get("max_input_tokens") or model_payload.get("max_tokens")
                 ),
+                "pricing": _pricing_from_litellm(model_payload),
                 "last_verified_at": None,
                 "sources": ["litellm"],
             }
@@ -328,6 +329,37 @@ def _strings(value: Any) -> list[str]:
 
 def _int(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _number(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _pricing_from_litellm(payload: dict[str, Any]) -> dict[str, Any]:
+    fields = {
+        "input_cost_per_token": payload.get("input_cost_per_token"),
+        "output_cost_per_token": payload.get("output_cost_per_token"),
+        "cache_creation_input_token_cost": payload.get("cache_creation_input_token_cost"),
+        "cache_read_input_token_cost": payload.get("cache_read_input_token_cost"),
+        "output_cost_per_reasoning_token": payload.get("output_cost_per_reasoning_token"),
+    }
+    pricing = {
+        name: value
+        for name, raw in fields.items()
+        if (value := _number(raw)) is not None
+    }
+    if not pricing:
+        return {}
+    return {
+        **pricing,
+        "currency": "USD",
+        "unit": "token",
+        "source": "litellm",
+    }
 
 
 if __name__ == "__main__":

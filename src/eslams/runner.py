@@ -6,7 +6,6 @@ import shutil
 import signal
 import threading
 import time
-import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
@@ -19,6 +18,7 @@ from eslams.arenas import registry
 from eslams.artifacts import ArtifactBuildInput, expanded_artifact_path, write_artifact
 from eslams.contracts.versions import RUNNER_VERSION
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
+from eslams.hashing import sha256_json
 from eslams.protocol import ActRequest, ActResponse, make_act_request
 from eslams.state import ArenaState
 
@@ -72,7 +72,10 @@ class Runner:
         _validate_failure_policy("on_illegal_action", config.on_illegal_action)
         arena = registry.create(config.arena_id)
         agents = _agents_for_arena(arena, config)
-        run_id = config.run_id or f"run_{uuid.uuid4().hex[:16]}"
+        max_turns = config.max_turns if config.max_turns is not None else arena.max_turns
+        effective_time_budget_ms = max(1, config.time_budget_ms)
+        suite_context = _suite_context(config)
+        run_id = config.run_id or _default_run_id(arena, config, agents, max_turns)
         episode_id = "episode_001"
         state = arena.initial_state(config.seed)
         trace_events: list[TraceEvent] = []
@@ -104,9 +107,6 @@ class Runner:
         }
         match_valid_for_scoring = True
         invalid_reason: str | None = None
-        max_turns = config.max_turns if config.max_turns is not None else arena.max_turns
-        effective_time_budget_ms = max(1, config.time_budget_ms)
-        suite_context = _suite_context(config)
         start = time.perf_counter()
 
         while not state.terminal and state.turn < max_turns:
@@ -161,11 +161,40 @@ class Runner:
                         )
                     )
                     if config.on_agent_error == "forfeit":
-                        state = _forfeit_state(
+                        next_state = _forfeit_state(
                             state,
                             forfeited_player=player_id,
                             reason=invalid_reason,
                         )
+                        trace_events.append(
+                            _trace_event(
+                                run_id=run_id,
+                                episode_id=episode_id,
+                                state=state,
+                                next_state=next_state,
+                                request=request,
+                                response=response,
+                                action=response.action if response else None,
+                                latency_ms=latency_ms,
+                                markers=markers,
+                                requested_time_budget_ms=config.time_budget_ms,
+                                effective_time_budget_ms=effective_time_budget_ms,
+                                suite_context=suite_context,
+                                event_type="forfeit",
+                            )
+                        )
+                        replay_events.append(
+                            _replay_event(
+                                run_id,
+                                episode_id,
+                                next_state,
+                                response.action if response else None,
+                                markers,
+                                actor_player=player_id,
+                                state_hash_before=state.state_hash,
+                            )
+                        )
+                        state = next_state
                     break
             action = response.action if response else None
             if action is None:
@@ -190,11 +219,40 @@ class Runner:
                         )
                     )
                     if config.on_illegal_action == "forfeit":
-                        state = _forfeit_state(
+                        next_state = _forfeit_state(
                             state,
                             forfeited_player=player_id,
                             reason=invalid_reason,
                         )
+                        trace_events.append(
+                            _trace_event(
+                                run_id=run_id,
+                                episode_id=episode_id,
+                                state=state,
+                                next_state=next_state,
+                                request=request,
+                                response=response,
+                                action=action,
+                                latency_ms=latency_ms,
+                                markers=markers,
+                                requested_time_budget_ms=config.time_budget_ms,
+                                effective_time_budget_ms=effective_time_budget_ms,
+                                suite_context=suite_context,
+                                event_type="forfeit",
+                            )
+                        )
+                        replay_events.append(
+                            _replay_event(
+                                run_id,
+                                episode_id,
+                                next_state,
+                                action,
+                                markers,
+                                actor_player=player_id,
+                                state_hash_before=state.state_hash,
+                            )
+                        )
+                        state = next_state
                     break
                 fallback = arena.failure_action(state, player_id, "illegal_action")
                 if fallback is None or not arena.is_legal(state, player_id, fallback):
@@ -300,7 +358,7 @@ class Runner:
             trace_events=trace_events,
             replay_events=replay_events,
             metrics=score.metrics,
-            runner_log=f"run_id={run_id} arena={arena.id} elapsed_ms={elapsed_ms}\n",
+            runner_log=f"run_id={run_id} arena={arena.id}\n",
             agent_io=agent_io,
             errors=errors,
             provider_receipts=provider_receipts,
@@ -413,6 +471,30 @@ def _agent_versions(agents: dict[str, Any]) -> str:
         f"{player_id}:{getattr(agent, 'id', 'agent')}:{getattr(agent, 'version', '1')}"
         for player_id, agent in sorted(agents.items())
     )
+
+
+def _default_run_id(
+    arena: Arena,
+    config: RunConfig,
+    agents: dict[str, Any],
+    max_turns: int,
+) -> str:
+    digest = sha256_json(
+        {
+            "arena_id": arena.id,
+            "seed": config.seed,
+            "max_turns": max_turns,
+            "agent_version": _agent_versions(agents),
+            "failure_policies": {
+                "on_agent_error": config.on_agent_error,
+                "on_illegal_action": config.on_illegal_action,
+            },
+            "suite": _suite_context(config),
+            "model_id_by_player": dict(config.model_id_by_player or {}),
+        }
+    ).removeprefix("sha256:")[:16]
+    safe_arena_id = "".join(char if char.isalnum() else "-" for char in arena.id).strip("-")
+    return f"run_{safe_arena_id}_{digest}"
 
 
 def _request(
@@ -537,6 +619,7 @@ def _trace_event(
     requested_time_budget_ms: int,
     effective_time_budget_ms: int,
     suite_context: dict[str, Any],
+    event_type: str = "action",
 ) -> TraceEvent:
     event_id = f"{run_id}:{state.turn:06d}"
     public = {
@@ -559,7 +642,7 @@ def _trace_event(
         run_id=run_id,
         episode_id=episode_id,
         turn_id=state.turn,
-        event_type="action",
+        event_type=event_type,
         public=public,
         agent_visible={
             **public,
@@ -614,6 +697,7 @@ def _replay_event(
         public_state=state.public_state,
         scores=state.scores,
         terminal=state.terminal,
+        outcome=state.outcome,
         render_hints=state.render_hints,
         markers=markers,
     )
@@ -791,8 +875,8 @@ def _forfeit_state(
             "score": scores,
         }
     return ArenaState(
-        state_id=f"{state.state_id}_forfeit",
-        turn=state.turn,
+        state_id=f"state_{state.turn + 1:06d}_forfeit",
+        turn=state.turn + 1,
         active_player=state.active_player,
         public_state=public_state,
         private_state_by_player=state.private_state_by_player,

@@ -47,6 +47,7 @@ class ModelCapabilities:
     public_slug: str | None = None
     display_name: str | None = None
     modality_summary: str | None = None
+    pricing: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_mapping(cls, value: dict[str, Any]) -> ModelCapabilities:
@@ -127,6 +128,7 @@ class ModelCapabilities:
             display_name=_optional_str(value.get("display_name")) or str(value["model"]),
             modality_summary=_optional_str(value.get("modality_summary"))
             or _modality_summary(modalities),
+            pricing=_safe_mapping(value.get("pricing")),
         )
 
     @classmethod
@@ -161,6 +163,7 @@ class ModelCapabilities:
             public_slug=_public_slug(provider, model),
             display_name=model,
             modality_summary="unknown",
+            pricing={},
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -201,6 +204,7 @@ class ModelCapabilities:
             "public_slug": self.public_slug,
             "display_name": self.display_name,
             "modality_summary": self.modality_summary,
+            "pricing": dict(self.pricing),
         }
 
     def allows_text_game_agent(self) -> bool:
@@ -243,6 +247,16 @@ def _optional_int(value: Any) -> int | None:
     if isinstance(value, int):
         return value
     return None
+
+
+def _safe_mapping(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(key): item
+        for key, item in value.items()
+        if isinstance(item, (str, int, float, bool)) or item is None
+    }
 
 
 def _provider_control_fields(

@@ -232,10 +232,8 @@ def _dilemma_scores(outcome: dict[str, Any] | None) -> dict[str, float]:
     payoff = outcome.get("payoff")
     if not isinstance(payoff, dict):
         return {"player_1": 0.0, "player_2": 0.0}
-    total = float(payoff["player_1"]) + float(payoff["player_2"])
-    if total <= 0:
-        return {"player_1": 0.5, "player_2": 0.5}
+    max_payoff = 5.0
     return {
-        "player_1": float(payoff["player_1"]) / total,
-        "player_2": float(payoff["player_2"]) / total,
+        "player_1": float(payoff["player_1"]) / max_payoff,
+        "player_2": float(payoff["player_2"]) / max_payoff,
     }

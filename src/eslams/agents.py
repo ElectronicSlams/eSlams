@@ -10,6 +10,8 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, Callable
 from urllib.parse import urlparse
 
@@ -36,7 +38,18 @@ class AgentError(RuntimeError):
 
 
 class ProviderCallError(AgentError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        error_kind: str = "provider_error",
+        retry_after_seconds: float | None = None,
+    ) -> None:
+        self.status_code = status_code
+        self.error_kind = error_kind
+        self.retry_after_seconds = retry_after_seconds
+        super().__init__(message)
 
 
 _PROVIDER_CONTROL_LOCK = threading.Lock()
@@ -217,7 +230,7 @@ class ModelProviderAgent:
                         _sleep_before_retry(self.runtime_config)
                         continue
                     raise
-                except ProviderCallError:
+                except ProviderCallError as exc:
                     self._remember_receipt(
                         _failure_receipt(
                             provider=self.provider,
@@ -225,15 +238,23 @@ class ModelProviderAgent:
                             agent_id=str(self.id),
                             agent_version=self.version,
                             turn_id=request.turn_id,
-                            outcome="provider_error",
-                            usage_unavailable_reason="provider_error",
+                            outcome=exc.error_kind,
+                            usage_unavailable_reason=exc.error_kind,
                             runtime_config=self.runtime_config,
                             attempt=provider_attempt,
+                            status_code=exc.status_code,
+                            retry_after_seconds=exc.retry_after_seconds,
                         )
                     )
-                    if retry_index < _max_retries(self.runtime_config):
+                    if (
+                        retry_index < _max_retries(self.runtime_config)
+                        and _provider_error_is_retryable(exc)
+                    ):
                         retry_index += 1
-                        _sleep_before_retry(self.runtime_config)
+                        _sleep_before_retry(
+                            self.runtime_config,
+                            retry_after_seconds=exc.retry_after_seconds,
+                        )
                         continue
                     raise
                 self._remember_receipt(
@@ -289,7 +310,7 @@ class ModelProviderAgent:
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
             return self._call_anthropic(api_key, prompt)
-        if self.provider == "gemini":
+        if self.provider in {"gemini", "google"}:
             return self._call_gemini(api_key, prompt)
         raise ProviderCallError(f"unsupported provider {self.provider!r}")
 
@@ -300,7 +321,7 @@ class ModelProviderAgent:
                 {"role": "developer", "content": _SYSTEM_INSTRUCTIONS},
                 {"role": "user", "content": prompt},
             ],
-            "max_output_tokens": self.max_output_tokens,
+            "max_output_tokens": self._effective_max_output_tokens(),
         }
         reasoning = self.capabilities.reasoning_payload()
         if reasoning:
@@ -330,12 +351,17 @@ class ModelProviderAgent:
     def _call_anthropic(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         payload = {
             "model": self.model,
-            "max_tokens": self.max_output_tokens,
+            "max_tokens": self._effective_max_output_tokens(),
             "system": _SYSTEM_INSTRUCTIONS,
             "messages": [{"role": "user", "content": prompt}],
         }
         if self.capabilities.supports_temperature:
             payload["temperature"] = self.temperature
+        if self.capabilities.supports_reasoning:
+            payload["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": self._reasoning_budget_tokens(),
+            }
         response = _post_json(
             _provider_endpoint(MESSAGES_ENDPOINT, self.runtime_config),
             headers={
@@ -364,11 +390,15 @@ class ModelProviderAgent:
         )
 
     def _call_gemini(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
-        generation_config: dict[str, Any] = {"maxOutputTokens": self.max_output_tokens}
+        generation_config: dict[str, Any] = {
+            "maxOutputTokens": self._effective_max_output_tokens()
+        }
         if self.capabilities.supports_temperature:
             generation_config["temperature"] = self.temperature
         if self.capabilities.supports_google_thinking_config:
-            generation_config["thinkingConfig"] = {"thinkingBudget": 0}
+            thinking_budget = self._gemini_thinking_budget()
+            if thinking_budget is not None:
+                generation_config["thinkingConfig"] = {"thinkingBudget": thinking_budget}
         payload = {
             "contents": [
                 {
@@ -400,7 +430,7 @@ class ModelProviderAgent:
             if isinstance(part, dict)
         )
         return text, _receipt(
-            provider="gemini",
+            provider=self.provider,
             model=self.model,
             response=response,
             provider_id=data.get("responseId"),
@@ -408,6 +438,24 @@ class ModelProviderAgent:
             capabilities=self.capabilities,
             runtime_config=self.runtime_config,
         )
+
+    def _effective_max_output_tokens(self) -> int:
+        if not self.capabilities.supports_reasoning or self.max_output_tokens > 1024:
+            return self.max_output_tokens
+        capability_limit = self.capabilities.max_output_tokens or 4096
+        return max(self.max_output_tokens, min(capability_limit, 4096))
+
+    def _reasoning_budget_tokens(self) -> int:
+        configured = self.runtime_config.reasoning_budget_tokens if self.runtime_config else None
+        if configured is not None:
+            return max(1, configured)
+        return min(1024, self._effective_max_output_tokens())
+
+    def _gemini_thinking_budget(self) -> int | None:
+        if self.runtime_config is None:
+            return None
+        configured = self.runtime_config.gemini_thinking_budget
+        return None if configured is None else max(0, configured)
 
 
 @dataclass
@@ -573,11 +621,54 @@ def _post_json(
         except httpx.TimeoutException as exc:
             raise TimeoutError("provider timed out") from exc
         except httpx.HTTPError as exc:
-            raise ProviderCallError(f"provider request failed: {exc}") from exc
+            raise ProviderCallError(
+                f"provider request failed: {exc}",
+                error_kind="provider_network_error",
+            ) from exc
     if response.status_code >= 400:
         body = response.text[:500].replace("\n", " ")
-        raise ProviderCallError(f"provider returned {response.status_code}: {body}")
+        raise ProviderCallError(
+            f"provider returned {response.status_code}: {body}",
+            status_code=response.status_code,
+            error_kind=_provider_error_kind(response.status_code),
+            retry_after_seconds=_retry_after_seconds(response),
+        )
     return response
+
+
+def _provider_error_kind(status_code: int | None) -> str:
+    if status_code in {401, 403}:
+        return "provider_auth_error"
+    if status_code == 429:
+        return "provider_rate_limited"
+    if status_code is not None and 400 <= status_code < 500:
+        return "provider_invalid_request"
+    return "provider_error"
+
+
+def _provider_error_is_retryable(exc: ProviderCallError) -> bool:
+    if exc.status_code == 429:
+        return True
+    if exc.status_code is not None:
+        return exc.status_code >= 500
+    return exc.error_kind in {"provider_network_error", "provider_error"}
+
+
+def _retry_after_seconds(response: httpx.Response) -> float | None:
+    value = response.headers.get("Retry-After") or response.headers.get("retry-after")
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        pass
+    try:
+        parsed = parsedate_to_datetime(value)
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return max(0.0, (parsed - datetime.now(timezone.utc)).total_seconds())
 
 
 @contextmanager
@@ -640,7 +731,14 @@ def _max_retries(runtime_config: ProviderRuntimeConfig | None) -> int:
     return max(0, runtime_config.max_retries)
 
 
-def _sleep_before_retry(runtime_config: ProviderRuntimeConfig | None) -> None:
+def _sleep_before_retry(
+    runtime_config: ProviderRuntimeConfig | None,
+    *,
+    retry_after_seconds: float | None = None,
+) -> None:
+    if retry_after_seconds is not None:
+        time.sleep(retry_after_seconds)
+        return
     if runtime_config is None or runtime_config.retry_backoff_ms <= 0:
         return
     time.sleep(runtime_config.retry_backoff_ms / 1000)
@@ -658,6 +756,15 @@ def _receipt(
 ) -> dict[str, Any]:
     normalized_usage = _normalize_usage(provider, usage)
     has_usage = any(value is not None for value in normalized_usage.values())
+    pricing = _pricing_summary(capabilities)
+    estimated_cost = (
+        _estimated_cost(normalized_usage, pricing)
+        if has_usage
+        else {
+            "status": "cost_unavailable",
+            "unavailable_reason": "provider_usage_absent",
+        }
+    )
     return {
         "schema_version": PROVIDER_RECEIPT_SCHEMA_VERSION,
         "provider": provider,
@@ -677,18 +784,8 @@ def _receipt(
         or response.headers.get("x-gateway-request-id"),
         "usage": normalized_usage if has_usage else {},
         "usage_unavailable_reason": None if has_usage else "provider_usage_absent",
-        "pricing": {
-            "status": "cost_unavailable",
-            "pricing_table_version": None,
-            "currency": "USD",
-            "billable_token_categories": [],
-            "source": "not_configured",
-            "unavailable_reason": "pricing_not_configured",
-        },
-        "estimated_cost": {
-            "status": "cost_unavailable",
-            "unavailable_reason": "pricing_not_configured",
-        },
+        "pricing": pricing,
+        "estimated_cost": estimated_cost,
         "redaction_version": "provider-receipt-redaction-v1",
     }
 
@@ -721,6 +818,8 @@ def _failure_receipt(
     usage_unavailable_reason: str,
     runtime_config: ProviderRuntimeConfig | None,
     attempt: int = 1,
+    status_code: int | None = None,
+    retry_after_seconds: float | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": PROVIDER_RECEIPT_SCHEMA_VERSION,
@@ -732,10 +831,13 @@ def _failure_receipt(
         "turn_id": turn_id,
         "attempt": attempt,
         "outcome": outcome,
-        "status_code": None,
+        "status_code": status_code,
         "request_id": None,
         "gateway_mode": runtime_config.gateway_mode if runtime_config else "disabled",
         "gateway_request_id": None,
+        "retry_after_ms": (
+            round(retry_after_seconds * 1000) if retry_after_seconds is not None else None
+        ),
         "usage": {},
         "usage_unavailable_reason": usage_unavailable_reason,
         "pricing": {
@@ -882,6 +984,10 @@ def _optional_str_value(value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def _provider_endpoint(
     default_url: str,
     runtime_config: ProviderRuntimeConfig | None,
@@ -896,18 +1002,43 @@ def _provider_endpoint(
 def _normalize_usage(provider: str, usage: Any) -> dict[str, int | None]:
     if not isinstance(usage, dict):
         return _empty_usage()
-    if provider == "gemini":
+    if provider in {"gemini", "google"}:
         input_tokens = _optional_int(usage.get("promptTokenCount"))
         output_tokens = _optional_int(usage.get("candidatesTokenCount"))
         total_tokens = _optional_int(usage.get("totalTokenCount"))
+        cached_input_tokens = _optional_int(usage.get("cachedContentTokenCount"))
+        reasoning_tokens = _optional_int(
+            usage.get("thoughtsTokenCount") or usage.get("thinkingTokenCount")
+        )
+    elif provider == "anthropic":
+        input_tokens = _optional_int(usage.get("input_tokens"))
+        output_tokens = _optional_int(usage.get("output_tokens"))
+        total_tokens = _optional_int(usage.get("total_tokens"))
+        cache_creation = _optional_int(usage.get("cache_creation_input_tokens")) or 0
+        cache_read = _optional_int(usage.get("cache_read_input_tokens")) or 0
+        cached_input_tokens = cache_creation + cache_read if cache_creation or cache_read else None
+        reasoning_tokens = _optional_int(usage.get("reasoning_tokens"))
     else:
         input_tokens = _optional_int(usage.get("input_tokens") or usage.get("prompt_tokens"))
         output_tokens = _optional_int(
             usage.get("output_tokens") or usage.get("completion_tokens")
         )
         total_tokens = _optional_int(usage.get("total_tokens"))
-    cached_input_tokens = _optional_int(usage.get("cached_input_tokens"))
-    reasoning_tokens = _optional_int(usage.get("reasoning_tokens"))
+        input_details = _dict(usage.get("input_tokens_details")) or _dict(
+            usage.get("prompt_tokens_details")
+        )
+        output_details = _dict(usage.get("output_tokens_details")) or _dict(
+            usage.get("completion_tokens_details")
+        )
+        cached_input_tokens = _optional_int(
+            usage.get("cached_input_tokens")
+            or input_details.get("cached_tokens")
+            or input_details.get("cache_read_input_tokens")
+            or input_details.get("cache_creation_input_tokens")
+        )
+        reasoning_tokens = _optional_int(
+            usage.get("reasoning_tokens") or output_details.get("reasoning_tokens")
+        )
     if total_tokens is None and (input_tokens is not None or output_tokens is not None):
         total_tokens = (input_tokens or 0) + (output_tokens or 0)
     return {
@@ -927,6 +1058,122 @@ def _empty_usage() -> dict[str, int | None]:
         "reasoning_tokens": None,
         "total_tokens": None,
     }
+
+
+def _pricing_summary(capabilities: ModelCapabilities) -> dict[str, Any]:
+    pricing = capabilities.pricing
+    if not pricing:
+        return _cost_unavailable(source="not_configured")
+    categories = [
+        key
+        for key in (
+            "input_cost_per_token",
+            "output_cost_per_token",
+            "cache_creation_input_token_cost",
+            "cache_read_input_token_cost",
+            "output_cost_per_reasoning_token",
+        )
+        if _optional_float(pricing.get(key)) is not None
+    ]
+    if not categories:
+        return _cost_unavailable(source="not_configured")
+    return {
+        "status": "ok",
+        "pricing_table_version": capabilities.last_verified_at,
+        "currency": str(pricing.get("currency") or "USD"),
+        "billable_token_categories": categories,
+        "source": str(pricing.get("source") or "provider_registry"),
+        "unit": str(pricing.get("unit") or "token"),
+        **{
+            key: value
+            for key in categories
+            if (value := _optional_float(pricing.get(key))) is not None
+        },
+    }
+
+
+def _estimated_cost(
+    usage: dict[str, int | None],
+    pricing_summary: dict[str, Any],
+) -> dict[str, Any]:
+    if pricing_summary.get("status") != "ok":
+        return {
+            "status": "cost_unavailable",
+            "unavailable_reason": "pricing_not_configured",
+        }
+    rates = _pricing_rates(pricing_summary)
+    input_tokens = usage.get("input_tokens") or 0
+    output_tokens = usage.get("output_tokens") or 0
+    cached_tokens = usage.get("cached_input_tokens") or 0
+    reasoning_tokens = usage.get("reasoning_tokens") or 0
+    billable_uncached_input = max(0, input_tokens - cached_tokens)
+    total = (
+        billable_uncached_input * rates.get("input_cost_per_token", 0.0)
+        + output_tokens * rates.get("output_cost_per_token", 0.0)
+        + cached_tokens
+        * (
+            rates.get("cache_read_input_token_cost")
+            or rates.get("input_cost_per_token", 0.0)
+        )
+        + reasoning_tokens * rates.get("output_cost_per_reasoning_token", 0.0)
+    )
+    return {
+        "status": "ok",
+        "currency": pricing_summary.get("currency", "USD"),
+        "cost_usd": round(total, 12),
+        "input_cost_usd": round(
+            billable_uncached_input * rates.get("input_cost_per_token", 0.0),
+            12,
+        ),
+        "cached_input_cost_usd": round(
+            cached_tokens
+            * (
+                rates.get("cache_read_input_token_cost")
+                or rates.get("input_cost_per_token", 0.0)
+            ),
+            12,
+        ),
+        "output_cost_usd": round(
+            output_tokens * rates.get("output_cost_per_token", 0.0),
+            12,
+        ),
+        "reasoning_cost_usd": round(
+            reasoning_tokens * rates.get("output_cost_per_reasoning_token", 0.0),
+            12,
+        ),
+    }
+
+
+def _pricing_rates(pricing_summary: dict[str, Any]) -> dict[str, float]:
+    return {
+        key: _optional_float(pricing_summary.get(key)) or 0.0
+        for key in (
+            "input_cost_per_token",
+            "output_cost_per_token",
+            "cache_creation_input_token_cost",
+            "cache_read_input_token_cost",
+            "output_cost_per_reasoning_token",
+        )
+    }
+
+
+def _cost_unavailable(*, source: str) -> dict[str, Any]:
+    return {
+        "status": "cost_unavailable",
+        "pricing_table_version": None,
+        "currency": "USD",
+        "billable_token_categories": [],
+        "source": source,
+        "unavailable_reason": "pricing_not_configured",
+    }
+
+
+def _optional_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
 
 
 def _optional_int(value: Any) -> int | None:

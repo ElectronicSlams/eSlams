@@ -123,6 +123,18 @@ def test_matrix_games_score_terminal_rounds():
     assert dilemma_state.outcome["winner"] == "player_1"
     assert dilemma_state.scores["player_1"] == 1.0
 
+    mutual_cooperate = PrisonersDilemmaArena()
+    cooperate_state = mutual_cooperate.initial_state(1)
+    cooperate_state = mutual_cooperate.apply_action(cooperate_state, "player_1", "cooperate")
+    cooperate_state = mutual_cooperate.apply_action(cooperate_state, "player_2", "cooperate")
+    mutual_defect = PrisonersDilemmaArena()
+    defect_state = mutual_defect.initial_state(1)
+    defect_state = mutual_defect.apply_action(defect_state, "player_1", "defect")
+    defect_state = mutual_defect.apply_action(defect_state, "player_2", "defect")
+
+    assert cooperate_state.scores == {"player_1": 0.6, "player_2": 0.6}
+    assert defect_state.scores == {"player_1": 0.2, "player_2": 0.2}
+
 
 def test_runner_generates_valid_artifacts_for_expanded_arenas(tmp_path: Path):
     for arena_id in sorted(EXPANDED_ARENAS):

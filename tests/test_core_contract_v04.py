@@ -53,7 +53,7 @@ def test_core_step_v2_returns_hashes_timings_and_compact_views():
     )
 
     assert response["ok"] is True
-    assert response["coreVersion"] == "0.5.0"
+    assert response["coreVersion"] == "0.5.1"
     assert response["coreContractVersion"] == "2.0"
     assert response["previousStateHash"] == state.state_hash
     assert response["nextStateHash"] != state.state_hash
@@ -86,6 +86,30 @@ def test_core_step_v2_rejects_wrong_actor_with_taxonomy():
     assert response["ok"] is False
     assert response["error"]["code"] == "action_valid_but_wrong_actor"
     assert response["error"]["recoverable"] is True
+
+
+def test_core_step_debug_observation_requires_env_flag(monkeypatch):
+    monkeypatch.delenv("ESLAMS_ENABLE_DEBUG_OBSERVATION", raising=False)
+    arena = registry.create("tic-tac-toe")
+    state = arena.initial_state(seed=1)
+
+    response = core_step(
+        {
+            "coreContractVersion": CORE_CONTRACT_VERSION,
+            "gameId": "tic-tac-toe",
+            "rulesetVersion": "standard",
+            "state": serialize_state(state),
+            "action": {"actionId": "4"},
+            "actorId": "player_1",
+            "requestId": "req_debug_gate",
+            "includeObservation": True,
+            "observationView": "debug",
+        }
+    )
+
+    assert response["ok"] is True
+    assert response["observation"]["view"] == "public_compact"
+    assert "state" not in response["observation"]
 
 
 def test_prompt_package_is_cache_friendly_and_schema_first():
@@ -124,6 +148,13 @@ def test_shared_model_action_parser_accepts_action_id_and_streaming_status():
         assert exc.code == "unknown_action_id"
     else:
         raise AssertionError("invalid action id should fail")
+
+    try:
+        parse_model_action("I choose action 2.", [0, 1, 2])
+    except InvalidModelAction as exc:
+        assert exc.code == "invalid_json"
+    else:
+        raise AssertionError("non-JSON action guesses should fail")
 
 
 def test_runner_session_store_keeps_hot_state_and_snapshots():

@@ -89,5 +89,4 @@ class ArenaState:
             "outcome": self.outcome,
             "rng_commitment": self.rng_commitment,
             "render_hints": self.render_hints,
-            "metadata": self.metadata,
         }
