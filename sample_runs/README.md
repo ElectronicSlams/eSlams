@@ -16,14 +16,7 @@ Included samples:
 
 - `model_eval_sample/` uses the signed official fixture artifact as a compact
   model-eval publication example.
-- `model_battle_sample/` uses `run_d48ff364a0b949df`, the clean Cursor harness
-  chess battle between `composer-2.5` and `grok-build-0.1`.
+- `model_battle_sample/` uses `run_d48ff364a0b949df`, a curated chess battle
+  between `composer-2.5` and `grok-build-0.1`.
 
-Excluded local runs:
-
-- `run_28d155e78bd744ac` validates structurally, but both players used
-  missing-key fallback actions.
-- `run_e2c6c4618710446d` validates structurally, but both players used
-  missing-key fallback actions.
-- the active Cursor harness folders are scratch harness state; only
-  `cursor-harness-test` completed, producing `run_d48ff364a0b949df`.
+Scratch harness state and exploratory local runs are intentionally omitted.

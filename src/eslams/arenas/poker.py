@@ -36,8 +36,8 @@ class LeducHoldemArena(Arena):
             street="preflop",
             active="player_1",
             pot=len(PLAYERS),
-            committed={player: 1 for player in PLAYERS},
-            stacks={player: 9 for player in PLAYERS},
+            committed=dict.fromkeys(PLAYERS, 1),
+            stacks=dict.fromkeys(PLAYERS, 9),
             folded=[],
             street_actions=[],
             history=[],
@@ -80,8 +80,8 @@ class LimitTexasHoldemArena(Arena):
             street="preflop",
             active="player_1",
             pot=len(PLAYERS),
-            committed={player: 1 for player in PLAYERS},
-            stacks={player: 19 for player in PLAYERS},
+            committed=dict.fromkeys(PLAYERS, 1),
+            stacks=dict.fromkeys(PLAYERS, 19),
             folded=[],
             street_actions=[],
             history=[],
@@ -301,12 +301,20 @@ def _advance_street(
     active: str,
     pot: int,
 ) -> tuple[str, list[str], list[str], dict[str, int], list[str], str, dict[str, Any] | None]:
-    committed = {player: 0 for player in PLAYERS}
+    committed = dict.fromkeys(PLAYERS, 0)
     if arena.id == "leduc-holdem":
         if street == "preflop":
             board = [deck.pop(0)]
             return "board", board, deck, committed, [], active, None
-        return "showdown", board, deck, committed, [], active, _leduc_winner(hole, board, pot, folded=folded)
+        return (
+            "showdown",
+            board,
+            deck,
+            committed,
+            [],
+            active,
+            _leduc_winner(hole, board, pot, folded=folded),
+        )
     if street == "preflop":
         board = [deck.pop(0), deck.pop(0), deck.pop(0)]
         return "flop", board, deck, committed, [], active, None
@@ -316,7 +324,15 @@ def _advance_street(
     if street == "turn":
         board.append(deck.pop(0))
         return "river", board, deck, committed, [], active, None
-    return "showdown", board, deck, committed, [], active, _texas_winner(hole, board, pot, folded=folded)
+    return (
+        "showdown",
+        board,
+        deck,
+        committed,
+        [],
+        active,
+        _texas_winner(hole, board, pot, folded=folded),
+    )
 
 
 def _legal_poker_actions(
@@ -519,7 +535,7 @@ def _compare_values(values: dict[str, Any]) -> str | None:
 
 def _winner_scores(outcome: dict[str, Any] | None) -> dict[str, float]:
     if outcome is None:
-        return {player: 0.0 for player in PLAYERS}
+        return dict.fromkeys(PLAYERS, 0.0)
     folded = [str(player) for player in outcome.get("folded", [])]
     active_players = _active_players(folded)
     if outcome.get("winner") is None:

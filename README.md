@@ -353,12 +353,11 @@ small, repo-backed examples for Platform ingestion and developer inspection.
 
 - `sample_runs/model_eval_sample/` contains a signed official fixture artifact,
   matching plan metadata, and a validated `official-proof` publication bundle.
-- `sample_runs/model_battle_sample/` contains the clean Cursor harness chess
-  battle `run_d48ff364a0b949df`, matching battle plan metadata, and a validated
+- `sample_runs/model_battle_sample/` contains a curated chess battle
+  `run_d48ff364a0b949df`, matching battle plan metadata, and a validated
   `battlefield-sample` publication bundle.
 
-The sample README documents the selection criteria and notes which local runs
-were excluded because they relied on missing-key fallback actions.
+The sample README documents the selection criteria for tracked sample artifacts.
 
 ## Upload to eslams.com
 

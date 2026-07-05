@@ -43,6 +43,31 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Verify tag matches pyproject version
+        shell: bash
+        env:
+          PUBLISH_REF: ${{ steps.publish-ref.outputs.ref }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          import tomllib
+
+          ref = os.environ["PUBLISH_REF"]
+          tag = ref.removeprefix("refs/tags/").split("/")[-1]
+          with open("pyproject.toml", "rb") as project_file:
+              version = tomllib.load(project_file)["project"]["version"]
+
+          expected_tag = f"v{version}"
+          if tag != expected_tag:
+              print(
+                  f"Publish ref {ref!r} does not match pyproject.toml version "
+                  f"{version!r}; expected tag {expected_tag!r}.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          PY
+
       - name: Install build tools
         run: python -m pip install --upgrade build twine
 
