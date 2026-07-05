@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from typing import Any, Callable, cast
+from typing import Any, Callable
 from urllib.parse import urlparse
 
 import httpx
@@ -663,7 +663,7 @@ def _retry_after_seconds(response: httpx.Response) -> float | None:
     except ValueError:
         pass
     try:
-        parsed = cast(datetime, parsedate_to_datetime(value))
+        parsed: datetime = parsedate_to_datetime(value)
     except (TypeError, ValueError, IndexError, OverflowError):
         return None
     if parsed.tzinfo is None:
