@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 
 from eslams.providers.registry import (
+    FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS,
+    PLATFORM_API_DISCOVERED_PROVIDER_KEYS,
     REQUESTED_PROVIDER_ORGANIZATIONS,
     load_provider_registry,
     load_provider_registry_from_paths,
@@ -10,6 +12,19 @@ from eslams.providers.registry import (
 
 def test_registry_includes_requested_provider_organizations():
     registry = load_provider_registry()
+
+    provider_keys = {provider for provider, _ in REQUESTED_PROVIDER_ORGANIZATIONS}
+    discovered_keys = {
+        *FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS,
+        *PLATFORM_API_DISCOVERED_PROVIDER_KEYS,
+    }
+
+    assert len(REQUESTED_PROVIDER_ORGANIZATIONS) == 90
+    assert len(provider_keys) == 90
+    assert len(FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS) == 20
+    assert len(PLATFORM_API_DISCOVERED_PROVIDER_KEYS) == 1
+    assert discovered_keys <= provider_keys
+    assert len(provider_keys - discovered_keys) == 69
 
     for provider, name in REQUESTED_PROVIDER_ORGANIZATIONS:
         assert registry.organizations[provider] == name
@@ -95,9 +110,7 @@ def test_registry_distinguishes_provider_controlled_and_native_reasoning():
     assert gpt5.accepted_control_fields == ["reasoning_effort"]
     assert gpt5.supported_reasoning_modes == ["minimal", "low", "medium", "high"]
     assert gpt5.reasoning_track_kind == "provider_controlled"
-    assert gpt5.http_agent_payload_guidance["accepted_control_fields"] == [
-        "reasoning_effort"
-    ]
+    assert gpt5.http_agent_payload_guidance["accepted_control_fields"] == ["reasoning_effort"]
     assert gpt41.supported_reasoning_modes == ["native-default"]
     assert gpt41.accepted_control_fields == []
     assert gpt41.reasoning_track_kind == "provider_native"

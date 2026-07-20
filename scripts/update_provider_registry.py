@@ -25,17 +25,18 @@ DEFAULT_OVERRIDES = DATA_DIR / "overrides.json"
 sys.path.insert(0, str(ROOT / "src"))
 MODELS_DEV_URL = "https://models.dev/api.json"
 LITELLM_URL = (
-    "https://raw.githubusercontent.com/BerriAI/litellm/main/"
-    "model_prices_and_context_window.json"
+    "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 )
 
 PROVIDER_ALIASES = {
+    "adept": "adept-ai",
+    "ai21": "ai21-labs",
     "google": "google",
     "gemini": "google",
     "vertex_ai": "google",
     "openai": "openai",
     "anthropic": "anthropic",
-    "mistral": "mistral",
+    "mistral": "mistral-ai",
     "cohere": "cohere",
     "xai": "xai",
     "deepseek": "deepseek",
@@ -43,8 +44,9 @@ PROVIDER_ALIASES = {
     "alibaba-cn": "qwen",
     "dashscope": "qwen",
     "meta-llama": "meta",
-    "moonshotai": "moonshot",
-    "moonshotai-cn": "moonshot",
+    "moonshot": "moonshot-ai",
+    "moonshotai": "moonshot-ai",
+    "moonshotai-cn": "moonshot-ai",
     "tencent-coding-plan": "tencent",
     "tencent-tokenhub": "tencent",
     "volcengine": "bytedance",
@@ -53,7 +55,23 @@ PROVIDER_ALIASES = {
     "bailing": "ant-group",
     "inception": "core42",
     "gigachat": "sber",
-    "bedrock": "amazon",
+    "amazon": "amazon-aws",
+    "amazon-bedrock": "amazon-aws",
+    "amazon-nova": "amazon-aws",
+    "bedrock": "amazon-aws",
+    "arcee": "arcee-ai",
+    "baichuan": "baichuan-ai",
+    "character": "character-ai",
+    "contextual": "contextual-ai",
+    "databricks": "databricks-mosaicml",
+    "essential": "essential-ai",
+    "inflection": "inflection-ai",
+    "liquid": "liquid-ai",
+    "nous": "nous-research",
+    "reka": "reka-ai",
+    "samsung": "samsung-research",
+    "sarvam": "sarvam-ai",
+    "xverse": "xverse-ai",
     "azure": "microsoft",
     "azure_ai": "microsoft",
     "watsonx": "ibm",
@@ -73,11 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-public", action="store_true")
     args = parser.parse_args(argv)
 
-    provider_filter = {
-        item.strip().lower()
-        for item in args.providers.split(",")
-        if item.strip()
-    }
+    provider_filter = {item.strip().lower() for item in args.providers.split(",") if item.strip()}
     records: dict[tuple[str, str], dict[str, Any]] = {}
     sources: list[str] = []
 
@@ -285,8 +299,7 @@ def _organizations(overrides: dict[str, Any]) -> list[dict[str, str]]:
                 item.get("name") or item["provider"]
             )
     return [
-        {"provider": provider, "name": name}
-        for provider, name in sorted(organizations.items())
+        {"provider": provider, "name": name} for provider, name in sorted(organizations.items())
     ]
 
 
@@ -347,11 +360,7 @@ def _pricing_from_litellm(payload: dict[str, Any]) -> dict[str, Any]:
         "cache_read_input_token_cost": payload.get("cache_read_input_token_cost"),
         "output_cost_per_reasoning_token": payload.get("output_cost_per_reasoning_token"),
     }
-    pricing = {
-        name: value
-        for name, raw in fields.items()
-        if (value := _number(raw)) is not None
-    }
+    pricing = {name: value for name, raw in fields.items() if (value := _number(raw)) is not None}
     if not pricing:
         return {}
     return {

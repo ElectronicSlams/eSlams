@@ -497,77 +497,107 @@ eslams models update --providers openai,anthropic,google
 
 Provider organizations tracked by the registry:
 
+Core tracks the same **90 canonical provider/author namespaces** as the public
+eSlams model catalog. The count is source-backed: 69 organizations were in the
+original curated Core list, Cursor was added from the platform's API-discovered
+Composer model row, and 20 additional author namespaces come from the
+release-pinned OpenRouter text-model snapshot. A listing is a catalog identity,
+not a claim that Core has a direct adapter or that a deployed account can call
+the provider. See [the generated registry inventory](docs/REGISTRY_AVAILABLE_MODELS.md)
+for the per-model snapshot and verification boundary.
+
 | Provider Key | Organization |
 | --- | --- |
-| `openai` | OpenAI |
+| `qwen` | Alibaba / Qwen |
 | `anthropic` | Anthropic |
+| `cursor` | Cursor |
+| `deepseek` | DeepSeek |
 | `google` | Google / DeepMind |
 | `meta` | Meta AI |
+| `openai` | OpenAI |
 | `xai` | xAI |
-| `mistral` | Mistral AI |
-| `deepseek` | DeepSeek |
-| `qwen` | Alibaba / Qwen |
+| `01-ai` | 01.AI |
+| `ant-group` | Ant Group |
 | `baidu` | Baidu |
-| `tencent` | Tencent |
 | `bytedance` | ByteDance / Seed |
 | `huawei` | Huawei |
-| `zhipu` | Zhipu AI / Z.ai |
-| `moonshot` | Moonshot AI |
-| `minimax` | MiniMax |
-| `01-ai` | 01.AI |
-| `stepfun` | StepFun |
-| `baichuan` | Baichuan AI |
-| `sensetime` | SenseTime |
-| `iflytek` | iFlyTek |
+| `iflytek` | iFlytek |
 | `kuaishou` | Kuaishou |
-| `openbmb` | OpenBMB / ModelBest |
-| `shanghai-ai-lab` | Shanghai AI Lab |
-| `xverse` | XVERSE AI |
-| `xiaomi` | Xiaomi |
 | `meituan` | Meituan |
-| `ant-group` | Ant Group |
-| `apple` | Apple |
-| `amazon` | Amazon / AWS |
-| `microsoft` | Microsoft |
-| `nvidia` | NVIDIA |
-| `ibm` | IBM |
-| `cohere` | Cohere |
-| `ai21` | AI21 Labs |
-| `reka` | Reka AI |
-| `writer` | Writer |
-| `inflection` | Inflection AI |
-| `perplexity` | Perplexity |
-| `liquid` | Liquid AI |
-| `databricks` | Databricks / MosaicML |
-| `snowflake` | Snowflake |
-| `salesforce` | Salesforce AI Research |
-| `contextual` | Contextual AI |
-| `essential` | Essential AI |
-| `adept` | Adept AI |
-| `character` | Character.AI |
-| `nous` | Nous Research |
-| `arcee` | Arcee AI |
-| `tii` | Technology Innovation Institute, UAE |
-| `core42` | Core42 / Inception / G42 |
+| `minimax` | MiniMax |
+| `openbmb` | OpenBMB / ModelBest |
+| `sensetime` | SenseTime |
+| `shanghai-ai-lab` | Shanghai AI Lab |
+| `stepfun` | StepFun |
+| `tencent` | Tencent |
+| `xiaomi` | Xiaomi |
+| `zhipu` | Zhipu AI / Z.ai |
+| `adept-ai` | Adept AI |
+| `ai21-labs` | AI21 Labs |
 | `ai71` | AI71 |
-| `sdaia` | SDAIA / IBM / Saudi ecosystem |
-| `naver` | Naver |
-| `lg` | LG AI Research |
-| `samsung` | Samsung Research |
-| `sk-telecom` | SK Telecom |
-| `kakao` | Kakao |
-| `upstage` | Upstage |
-| `sarvam` | Sarvam AI |
-| `krutrim` | Krutrim |
+| `aion-labs` | Aion Labs |
 | `aleph-alpha` | Aleph Alpha |
-| `lighton` | LightOn |
-| `yandex` | Yandex |
-| `sber` | Sber |
 | `ai2` | Allen Institute for AI, AI2 |
-| `eleutherai` | EleutherAI |
-| `bigscience` | BigScience / Hugging Face community |
-| `bigcode` | BigCode / ServiceNow / Hugging Face |
+| `amazon-aws` | Amazon / AWS |
+| `anthracite-org` | Anthracite Org |
+| `apple` | Apple |
+| `arcee-ai` | Arcee AI |
 | `baai` | BAAI, Beijing Academy of AI |
+| `baichuan-ai` | Baichuan AI |
+| `bigcode` | BigCode / ServiceNow / Hugging Face |
+| `bigscience` | BigScience / Hugging Face community |
+| `character-ai` | Character.AI |
+| `cognitivecomputations` | Cognitive Computations |
+| `cohere` | Cohere |
+| `contextual-ai` | Contextual AI |
+| `core42` | Core42 / Inception / G42 |
+| `databricks-mosaicml` | Databricks / MosaicML |
+| `deepcogito` | DeepCogito |
+| `eleutherai` | EleutherAI |
+| `essential-ai` | Essential AI |
+| `gryphe` | Gryphe |
+| `ibm` | IBM |
+| `ibm-granite` | IBM Granite |
+| `inclusionai` | InclusionAI |
+| `inflection-ai` | Inflection AI |
+| `kakao` | Kakao |
+| `krutrim` | Krutrim |
+| `kwaipilot` | KwaiPilot |
+| `lg` | LG AI Research |
+| `lighton` | LightOn |
+| `liquid-ai` | Liquid AI |
+| `mancer` | Mancer |
+| `microsoft` | Microsoft |
+| `mistral-ai` | Mistral AI |
+| `moonshot-ai` | Moonshot AI |
+| `morph` | Morph |
+| `naver` | Naver |
+| `nex-agi` | Nex AGI |
+| `nous-research` | Nous Research |
+| `nvidia` | NVIDIA |
+| `openrouter` | OpenRouter |
+| `perceptron` | Perceptron |
+| `perplexity` | Perplexity |
+| `poolside` | Poolside |
+| `reka-ai` | Reka AI |
+| `relace` | Relace |
+| `sakana` | Sakana AI |
+| `salesforce` | Salesforce AI Research |
+| `samsung-research` | Samsung Research |
+| `sao10k` | Sao10K |
+| `sarvam-ai` | Sarvam AI |
+| `sber` | Sber |
+| `sdaia` | SDAIA / IBM / Saudi ecosystem |
+| `sk-telecom` | SK Telecom |
+| `snowflake` | Snowflake |
+| `tii` | Technology Innovation Institute, UAE |
+| `thedrummer` | TheDrummer |
+| `thinkingmachines` | Thinking Machines |
+| `undi95` | Undi95 |
+| `upstage` | Upstage |
+| `writer` | Writer |
+| `xverse-ai` | XVERSE AI |
+| `yandex` | Yandex |
 
 You can also connect any provider, hosted model, local model, or custom policy
 through an HTTP `/act` agent.
