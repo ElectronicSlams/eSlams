@@ -1,16 +1,18 @@
-# Supported provider models (registry)
+# Catalogued provider models (registry snapshot)
 
-Models for each organization in `REQUESTED_PROVIDER_ORGANIZATIONS`
-(69 providers). Built with
-`scripts/update_provider_registry.py` (models.dev, LiteLLM, OpenAI/Google list APIs
-when keys are set, plus `overrides.json`), filtered to those provider keys.
+Core tracks **90 canonical provider/author namespaces**. The original 69 curated organizations are joined by Cursor from a platform API-discovered model row and 20 author namespaces from the release-pinned OpenRouter text-model snapshot.
+
+This file describes source-backed catalog identities, not direct-adapter or account availability. A model row means an upstream registry source or checked-in override documented the identity. Only `available_from_api=true` is an API verification signal, and public eSlams availability is controlled separately by the deployed platform catalog.
+
+Generated with `python scripts/render_provider_registry_docs.py` from `models.generated.json`, `overrides.json`, and `REQUESTED_PROVIDER_ORGANIZATIONS`.
 
 Registry snapshot: `2026-06-04T02:52:41Z`
-Sources: models.dev, litellm
-Total rows: **1650** (2 with `available_from_api=true`)
 
-Excludes models marked `available_from_api=false`. Provider aliases map catalog
-slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `bytedance`).
+Sources: models.dev, litellm
+
+Catalogued rows: **2189** (3 with `available_from_api=true`)
+
+Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to the same canonical provider keys used by the public `/models/...` routes.
 
 | Provider | Model |
 | --- | --- |
@@ -26,130 +28,6 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | AI21 Labs | `jamba-large-1.7` |
 | AI21 Labs | `jamba-mini-1.6` |
 | AI21 Labs | `jamba-mini-1.7` |
-| Alibaba / Qwen | `dashscope/qwen-coder` |
-| Alibaba / Qwen | `dashscope/qwen-flash` |
-| Alibaba / Qwen | `dashscope/qwen-flash-2025-07-28` |
-| Alibaba / Qwen | `dashscope/qwen-image-2.0` |
-| Alibaba / Qwen | `dashscope/qwen-image-2.0-pro` |
-| Alibaba / Qwen | `dashscope/qwen-max` |
-| Alibaba / Qwen | `dashscope/qwen-plus` |
-| Alibaba / Qwen | `dashscope/qwen-plus-2025-01-25` |
-| Alibaba / Qwen | `dashscope/qwen-plus-2025-04-28` |
-| Alibaba / Qwen | `dashscope/qwen-plus-2025-07-14` |
-| Alibaba / Qwen | `dashscope/qwen-plus-2025-07-28` |
-| Alibaba / Qwen | `dashscope/qwen-plus-2025-09-11` |
-| Alibaba / Qwen | `dashscope/qwen-plus-latest` |
-| Alibaba / Qwen | `dashscope/qwen-turbo` |
-| Alibaba / Qwen | `dashscope/qwen-turbo-2024-11-01` |
-| Alibaba / Qwen | `dashscope/qwen-turbo-2025-04-28` |
-| Alibaba / Qwen | `dashscope/qwen-turbo-latest` |
-| Alibaba / Qwen | `dashscope/qwen3-30b-a3b` |
-| Alibaba / Qwen | `dashscope/qwen3-coder-flash` |
-| Alibaba / Qwen | `dashscope/qwen3-coder-flash-2025-07-28` |
-| Alibaba / Qwen | `dashscope/qwen3-coder-plus` |
-| Alibaba / Qwen | `dashscope/qwen3-coder-plus-2025-07-22` |
-| Alibaba / Qwen | `dashscope/qwen3-max` |
-| Alibaba / Qwen | `dashscope/qwen3-max-2026-01-23` |
-| Alibaba / Qwen | `dashscope/qwen3-max-preview` |
-| Alibaba / Qwen | `dashscope/qwen3-next-80b-a3b-instruct` |
-| Alibaba / Qwen | `dashscope/qwen3-next-80b-a3b-thinking` |
-| Alibaba / Qwen | `dashscope/qwen3-vl-235b-a22b-instruct` |
-| Alibaba / Qwen | `dashscope/qwen3-vl-235b-a22b-thinking` |
-| Alibaba / Qwen | `dashscope/qwen3-vl-32b-instruct` |
-| Alibaba / Qwen | `dashscope/qwen3-vl-32b-thinking` |
-| Alibaba / Qwen | `dashscope/qwen3-vl-plus` |
-| Alibaba / Qwen | `dashscope/qwen3.5-plus` |
-| Alibaba / Qwen | `dashscope/qwq-plus` |
-| Alibaba / Qwen | `deepseek-r1` |
-| Alibaba / Qwen | `deepseek-r1-0528` |
-| Alibaba / Qwen | `deepseek-r1-distill-llama-70b` |
-| Alibaba / Qwen | `deepseek-r1-distill-llama-8b` |
-| Alibaba / Qwen | `deepseek-r1-distill-qwen-1-5b` |
-| Alibaba / Qwen | `deepseek-r1-distill-qwen-14b` |
-| Alibaba / Qwen | `deepseek-r1-distill-qwen-32b` |
-| Alibaba / Qwen | `deepseek-r1-distill-qwen-7b` |
-| Alibaba / Qwen | `deepseek-v3` |
-| Alibaba / Qwen | `deepseek-v3-1` |
-| Alibaba / Qwen | `deepseek-v3-2-exp` |
-| Alibaba / Qwen | `deepseek-v4-flash` |
-| Alibaba / Qwen | `deepseek-v4-pro` |
-| Alibaba / Qwen | `glm-5` |
-| Alibaba / Qwen | `glm-5.1` |
-| Alibaba / Qwen | `kimi-k2-thinking` |
-| Alibaba / Qwen | `kimi-k2.5` |
-| Alibaba / Qwen | `kimi-k2.6` |
-| Alibaba / Qwen | `kimi/kimi-k2.5` |
-| Alibaba / Qwen | `MiniMax-M2.5` |
-| Alibaba / Qwen | `MiniMax/MiniMax-M2.7` |
-| Alibaba / Qwen | `moonshot-kimi-k2-instruct` |
-| Alibaba / Qwen | `qvq-max` |
-| Alibaba / Qwen | `qwen-deep-research` |
-| Alibaba / Qwen | `qwen-doc-turbo` |
-| Alibaba / Qwen | `qwen-flash` |
-| Alibaba / Qwen | `qwen-long` |
-| Alibaba / Qwen | `qwen-math-plus` |
-| Alibaba / Qwen | `qwen-math-turbo` |
-| Alibaba / Qwen | `qwen-max` |
-| Alibaba / Qwen | `qwen-mt-plus` |
-| Alibaba / Qwen | `qwen-mt-turbo` |
-| Alibaba / Qwen | `qwen-omni-turbo` |
-| Alibaba / Qwen | `qwen-omni-turbo-realtime` |
-| Alibaba / Qwen | `qwen-plus` |
-| Alibaba / Qwen | `qwen-plus-character` |
-| Alibaba / Qwen | `qwen-plus-character-ja` |
-| Alibaba / Qwen | `qwen-turbo` |
-| Alibaba / Qwen | `qwen-vl-max` |
-| Alibaba / Qwen | `qwen-vl-ocr` |
-| Alibaba / Qwen | `qwen-vl-plus` |
-| Alibaba / Qwen | `qwen2-5-14b-instruct` |
-| Alibaba / Qwen | `qwen2-5-32b-instruct` |
-| Alibaba / Qwen | `qwen2-5-72b-instruct` |
-| Alibaba / Qwen | `qwen2-5-7b-instruct` |
-| Alibaba / Qwen | `qwen2-5-coder-32b-instruct` |
-| Alibaba / Qwen | `qwen2-5-coder-7b-instruct` |
-| Alibaba / Qwen | `qwen2-5-math-72b-instruct` |
-| Alibaba / Qwen | `qwen2-5-math-7b-instruct` |
-| Alibaba / Qwen | `qwen2-5-omni-7b` |
-| Alibaba / Qwen | `qwen2-5-vl-72b-instruct` |
-| Alibaba / Qwen | `qwen2-5-vl-7b-instruct` |
-| Alibaba / Qwen | `qwen3-14b` |
-| Alibaba / Qwen | `qwen3-235b-a22b` |
-| Alibaba / Qwen | `qwen3-32b` |
-| Alibaba / Qwen | `qwen3-8b` |
-| Alibaba / Qwen | `qwen3-asr-flash` |
-| Alibaba / Qwen | `qwen3-coder-30b-a3b-instruct` |
-| Alibaba / Qwen | `qwen3-coder-480b-a35b-instruct` |
-| Alibaba / Qwen | `qwen3-coder-flash` |
-| Alibaba / Qwen | `qwen3-coder-plus` |
-| Alibaba / Qwen | `qwen3-livetranslate-flash-realtime` |
-| Alibaba / Qwen | `qwen3-max` |
-| Alibaba / Qwen | `qwen3-next-80b-a3b-instruct` |
-| Alibaba / Qwen | `qwen3-next-80b-a3b-thinking` |
-| Alibaba / Qwen | `qwen3-omni-flash` |
-| Alibaba / Qwen | `qwen3-omni-flash-realtime` |
-| Alibaba / Qwen | `qwen3-vl-235b-a22b` |
-| Alibaba / Qwen | `qwen3-vl-30b-a3b` |
-| Alibaba / Qwen | `qwen3-vl-plus` |
-| Alibaba / Qwen | `qwen3.5-122b-a10b` |
-| Alibaba / Qwen | `qwen3.5-27b` |
-| Alibaba / Qwen | `qwen3.5-35b-a3b` |
-| Alibaba / Qwen | `qwen3.5-397b-a17b` |
-| Alibaba / Qwen | `qwen3.5-flash` |
-| Alibaba / Qwen | `qwen3.5-plus` |
-| Alibaba / Qwen | `qwen3.6-27b` |
-| Alibaba / Qwen | `qwen3.6-35b-a3b` |
-| Alibaba / Qwen | `qwen3.6-flash` |
-| Alibaba / Qwen | `qwen3.6-max-preview` |
-| Alibaba / Qwen | `qwen3.6-plus` |
-| Alibaba / Qwen | `qwen3.7-max` |
-| Alibaba / Qwen | `qwen3.7-plus` |
-| Alibaba / Qwen | `qwq-32b` |
-| Alibaba / Qwen | `qwq-plus` |
-| Alibaba / Qwen | `siliconflow/deepseek-r1-0528` |
-| Alibaba / Qwen | `siliconflow/deepseek-v3-0324` |
-| Alibaba / Qwen | `siliconflow/deepseek-v3.1-terminus` |
-| Alibaba / Qwen | `siliconflow/deepseek-v3.2` |
-| Alibaba / Qwen | `tongyi-intent-detect-v3` |
 | Amazon / AWS | `1024-x-1024/50-steps/bedrock/amazon.nova-canvas-v1:0` |
 | Amazon / AWS | `1024-x-1024/50-steps/stability.stable-diffusion-xl-v1` |
 | Amazon / AWS | `1024-x-1024/max-steps/stability.stable-diffusion-xl-v1` |
@@ -160,8 +38,16 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Amazon / AWS | `ai21.jamba-1-5-large-v1:0` |
 | Amazon / AWS | `ai21.jamba-1-5-mini-v1:0` |
 | Amazon / AWS | `ai21.jamba-instruct-v1:0` |
+| Amazon / AWS | `amazon-nova/nova-lite-v1` |
+| Amazon / AWS | `amazon-nova/nova-micro-v1` |
+| Amazon / AWS | `amazon-nova/nova-premier-v1` |
+| Amazon / AWS | `amazon-nova/nova-pro-v1` |
+| Amazon / AWS | `amazon.nova-2-lite-v1:0` |
 | Amazon / AWS | `amazon.nova-2-multimodal-embeddings-v1:0` |
 | Amazon / AWS | `amazon.nova-canvas-v1:0` |
+| Amazon / AWS | `amazon.nova-lite-v1:0` |
+| Amazon / AWS | `amazon.nova-micro-v1:0` |
+| Amazon / AWS | `amazon.nova-pro-v1:0` |
 | Amazon / AWS | `amazon.rerank-v1:0` |
 | Amazon / AWS | `amazon.titan-embed-image-v1` |
 | Amazon / AWS | `amazon.titan-embed-text-v1` |
@@ -179,14 +65,27 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Amazon / AWS | `anthropic.claude-3-haiku-20240307-v1:0` |
 | Amazon / AWS | `anthropic.claude-3-opus-20240229-v1:0` |
 | Amazon / AWS | `anthropic.claude-3-sonnet-20240229-v1:0` |
+| Amazon / AWS | `anthropic.claude-haiku-4-5-20251001-v1:0` |
 | Amazon / AWS | `anthropic.claude-instant-v1` |
 | Amazon / AWS | `anthropic.claude-mythos-preview` |
+| Amazon / AWS | `anthropic.claude-opus-4-1-20250805-v1:0` |
+| Amazon / AWS | `anthropic.claude-opus-4-5-20251101-v1:0` |
+| Amazon / AWS | `anthropic.claude-opus-4-6-v1` |
+| Amazon / AWS | `anthropic.claude-opus-4-7` |
+| Amazon / AWS | `anthropic.claude-opus-4-8` |
+| Amazon / AWS | `anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| Amazon / AWS | `anthropic.claude-sonnet-4-6` |
 | Amazon / AWS | `anthropic.claude-v1` |
 | Amazon / AWS | `anthropic.claude-v2:1` |
 | Amazon / AWS | `apac.anthropic.claude-3-5-sonnet-20240620-v1:0` |
 | Amazon / AWS | `apac.anthropic.claude-3-5-sonnet-20241022-v2:0` |
 | Amazon / AWS | `apac.anthropic.claude-3-haiku-20240307-v1:0` |
 | Amazon / AWS | `apac.anthropic.claude-3-sonnet-20240229-v1:0` |
+| Amazon / AWS | `au.anthropic.claude-haiku-4-5-20251001-v1:0` |
+| Amazon / AWS | `au.anthropic.claude-opus-4-6-v1` |
+| Amazon / AWS | `au.anthropic.claude-opus-4-8` |
+| Amazon / AWS | `au.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| Amazon / AWS | `au.anthropic.claude-sonnet-4-6` |
 | Amazon / AWS | `bedrock/*/1-month-commitment/cohere.command-light-text-v14` |
 | Amazon / AWS | `bedrock/*/1-month-commitment/cohere.command-text-v14` |
 | Amazon / AWS | `bedrock/*/6-month-commitment/cohere.command-light-text-v14` |
@@ -350,6 +249,9 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Amazon / AWS | `cohere.embed-multilingual-v3` |
 | Amazon / AWS | `cohere.embed-v4:0` |
 | Amazon / AWS | `cohere.rerank-v3-5:0` |
+| Amazon / AWS | `deepseek.r1-v1:0` |
+| Amazon / AWS | `deepseek.v3-v1:0` |
+| Amazon / AWS | `deepseek.v3.2` |
 | Amazon / AWS | `eu.anthropic.claude-3-5-haiku-20241022-v1:0` |
 | Amazon / AWS | `eu.anthropic.claude-3-5-sonnet-20240620-v1:0` |
 | Amazon / AWS | `eu.anthropic.claude-3-5-sonnet-20241022-v2:0` |
@@ -357,10 +259,31 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Amazon / AWS | `eu.anthropic.claude-3-haiku-20240307-v1:0` |
 | Amazon / AWS | `eu.anthropic.claude-3-opus-20240229-v1:0` |
 | Amazon / AWS | `eu.anthropic.claude-3-sonnet-20240229-v1:0` |
+| Amazon / AWS | `eu.anthropic.claude-haiku-4-5-20251001-v1:0` |
+| Amazon / AWS | `eu.anthropic.claude-opus-4-5-20251101-v1:0` |
+| Amazon / AWS | `eu.anthropic.claude-opus-4-6-v1` |
+| Amazon / AWS | `eu.anthropic.claude-opus-4-7` |
+| Amazon / AWS | `eu.anthropic.claude-opus-4-8` |
+| Amazon / AWS | `eu.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| Amazon / AWS | `eu.anthropic.claude-sonnet-4-6` |
 | Amazon / AWS | `eu.meta.llama3-2-1b-instruct-v1:0` |
 | Amazon / AWS | `eu.meta.llama3-2-3b-instruct-v1:0` |
 | Amazon / AWS | `eu.twelvelabs.marengo-embed-2-7-v1:0` |
 | Amazon / AWS | `eu.twelvelabs.pegasus-1-2-v1:0` |
+| Amazon / AWS | `global.anthropic.claude-haiku-4-5-20251001-v1:0` |
+| Amazon / AWS | `global.anthropic.claude-opus-4-5-20251101-v1:0` |
+| Amazon / AWS | `global.anthropic.claude-opus-4-6-v1` |
+| Amazon / AWS | `global.anthropic.claude-opus-4-7` |
+| Amazon / AWS | `global.anthropic.claude-opus-4-8` |
+| Amazon / AWS | `global.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| Amazon / AWS | `global.anthropic.claude-sonnet-4-6` |
+| Amazon / AWS | `google.gemma-3-12b-it` |
+| Amazon / AWS | `google.gemma-3-27b-it` |
+| Amazon / AWS | `google.gemma-3-4b-it` |
+| Amazon / AWS | `jp.anthropic.claude-opus-4-7` |
+| Amazon / AWS | `jp.anthropic.claude-opus-4-8` |
+| Amazon / AWS | `jp.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| Amazon / AWS | `jp.anthropic.claude-sonnet-4-6` |
 | Amazon / AWS | `max-x-max/50-steps/stability.stable-diffusion-xl-v0` |
 | Amazon / AWS | `max-x-max/max-steps/stability.stable-diffusion-xl-v0` |
 | Amazon / AWS | `meta.llama2-13b-chat-v1` |
@@ -372,13 +295,45 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Amazon / AWS | `meta.llama3-2-1b-instruct-v1:0` |
 | Amazon / AWS | `meta.llama3-2-3b-instruct-v1:0` |
 | Amazon / AWS | `meta.llama3-2-90b-instruct-v1:0` |
+| Amazon / AWS | `meta.llama3-3-70b-instruct-v1:0` |
 | Amazon / AWS | `meta.llama3-70b-instruct-v1:0` |
 | Amazon / AWS | `meta.llama3-8b-instruct-v1:0` |
+| Amazon / AWS | `meta.llama4-maverick-17b-instruct-v1:0` |
+| Amazon / AWS | `meta.llama4-scout-17b-instruct-v1:0` |
+| Amazon / AWS | `minimax.minimax-m2` |
+| Amazon / AWS | `minimax.minimax-m2.1` |
+| Amazon / AWS | `minimax.minimax-m2.5` |
+| Amazon / AWS | `mistral.devstral-2-123b` |
+| Amazon / AWS | `mistral.magistral-small-2509` |
+| Amazon / AWS | `mistral.ministral-3-14b-instruct` |
+| Amazon / AWS | `mistral.ministral-3-3b-instruct` |
+| Amazon / AWS | `mistral.ministral-3-8b-instruct` |
 | Amazon / AWS | `mistral.mistral-7b-instruct-v0:2` |
 | Amazon / AWS | `mistral.mistral-large-2402-v1:0` |
 | Amazon / AWS | `mistral.mistral-large-2407-v1:0` |
+| Amazon / AWS | `mistral.mistral-large-3-675b-instruct` |
 | Amazon / AWS | `mistral.mistral-small-2402-v1:0` |
 | Amazon / AWS | `mistral.mixtral-8x7b-instruct-v0:1` |
+| Amazon / AWS | `mistral.pixtral-large-2502-v1:0` |
+| Amazon / AWS | `mistral.voxtral-mini-3b-2507` |
+| Amazon / AWS | `mistral.voxtral-small-24b-2507` |
+| Amazon / AWS | `moonshot.kimi-k2-thinking` |
+| Amazon / AWS | `moonshotai.kimi-k2.5` |
+| Amazon / AWS | `nvidia.nemotron-nano-12b-v2` |
+| Amazon / AWS | `nvidia.nemotron-nano-3-30b` |
+| Amazon / AWS | `nvidia.nemotron-nano-9b-v2` |
+| Amazon / AWS | `nvidia.nemotron-super-3-120b` |
+| Amazon / AWS | `openai.gpt-oss-120b-1:0` |
+| Amazon / AWS | `openai.gpt-oss-20b-1:0` |
+| Amazon / AWS | `openai.gpt-oss-safeguard-120b` |
+| Amazon / AWS | `openai.gpt-oss-safeguard-20b` |
+| Amazon / AWS | `qwen.qwen3-235b-a22b-2507-v1:0` |
+| Amazon / AWS | `qwen.qwen3-32b-v1:0` |
+| Amazon / AWS | `qwen.qwen3-coder-30b-a3b-v1:0` |
+| Amazon / AWS | `qwen.qwen3-coder-480b-a35b-v1:0` |
+| Amazon / AWS | `qwen.qwen3-coder-next` |
+| Amazon / AWS | `qwen.qwen3-next-80b-a3b` |
+| Amazon / AWS | `qwen.qwen3-vl-235b-a22b` |
 | Amazon / AWS | `stability.sd3-5-large-v1:0` |
 | Amazon / AWS | `stability.sd3-large-v1:0` |
 | Amazon / AWS | `stability.stable-conservative-upscale-v1:0` |
@@ -407,6 +362,15 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Amazon / AWS | `us.anthropic.claude-3-haiku-20240307-v1:0` |
 | Amazon / AWS | `us.anthropic.claude-3-opus-20240229-v1:0` |
 | Amazon / AWS | `us.anthropic.claude-3-sonnet-20240229-v1:0` |
+| Amazon / AWS | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
+| Amazon / AWS | `us.anthropic.claude-opus-4-1-20250805-v1:0` |
+| Amazon / AWS | `us.anthropic.claude-opus-4-5-20251101-v1:0` |
+| Amazon / AWS | `us.anthropic.claude-opus-4-6-v1` |
+| Amazon / AWS | `us.anthropic.claude-opus-4-7` |
+| Amazon / AWS | `us.anthropic.claude-opus-4-8` |
+| Amazon / AWS | `us.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| Amazon / AWS | `us.anthropic.claude-sonnet-4-6` |
+| Amazon / AWS | `us.deepseek.r1-v1:0` |
 | Amazon / AWS | `us.meta.llama3-1-405b-instruct-v1:0` |
 | Amazon / AWS | `us.meta.llama3-1-70b-instruct-v1:0` |
 | Amazon / AWS | `us.meta.llama3-1-8b-instruct-v1:0` |
@@ -414,8 +378,15 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Amazon / AWS | `us.meta.llama3-2-1b-instruct-v1:0` |
 | Amazon / AWS | `us.meta.llama3-2-3b-instruct-v1:0` |
 | Amazon / AWS | `us.meta.llama3-2-90b-instruct-v1:0` |
+| Amazon / AWS | `us.meta.llama4-maverick-17b-instruct-v1:0` |
+| Amazon / AWS | `us.meta.llama4-scout-17b-instruct-v1:0` |
 | Amazon / AWS | `us.twelvelabs.marengo-embed-2-7-v1:0` |
 | Amazon / AWS | `us.twelvelabs.pegasus-1-2-v1:0` |
+| Amazon / AWS | `writer.palmyra-x4-v1:0` |
+| Amazon / AWS | `writer.palmyra-x5-v1:0` |
+| Amazon / AWS | `zai.glm-4.7` |
+| Amazon / AWS | `zai.glm-4.7-flash` |
+| Amazon / AWS | `zai.glm-5` |
 | Ant Group | `Ling-1T` |
 | Ant Group | `Ring-1T` |
 | Anthropic | `claude-3-5-haiku-20241022` |
@@ -882,6 +853,34 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Microsoft | `azure/us/o3-mini-2025-01-31` |
 | Microsoft | `azure/us/o4-mini-2025-04-16` |
 | Microsoft | `azure/whisper-1` |
+| Microsoft | `azure_ai/Cohere-embed-v3-english` |
+| Microsoft | `azure_ai/Cohere-embed-v3-multilingual` |
+| Microsoft | `azure_ai/FLUX-1.1-pro` |
+| Microsoft | `azure_ai/FLUX.1-Kontext-pro` |
+| Microsoft | `azure_ai/Llama-3.2-11B-Vision-Instruct` |
+| Microsoft | `azure_ai/Llama-3.2-90B-Vision-Instruct` |
+| Microsoft | `azure_ai/Llama-3.3-70B-Instruct` |
+| Microsoft | `azure_ai/Llama-4-Maverick-17B-128E-Instruct-FP8` |
+| Microsoft | `azure_ai/Llama-4-Scout-17B-16E-Instruct` |
+| Microsoft | `azure_ai/MAI-DS-R1` |
+| Microsoft | `azure_ai/Meta-Llama-3-70B-Instruct` |
+| Microsoft | `azure_ai/Meta-Llama-3.1-405B-Instruct` |
+| Microsoft | `azure_ai/Meta-Llama-3.1-70B-Instruct` |
+| Microsoft | `azure_ai/Meta-Llama-3.1-8B-Instruct` |
+| Microsoft | `azure_ai/Phi-3-medium-128k-instruct` |
+| Microsoft | `azure_ai/Phi-3-medium-4k-instruct` |
+| Microsoft | `azure_ai/Phi-3-mini-128k-instruct` |
+| Microsoft | `azure_ai/Phi-3-mini-4k-instruct` |
+| Microsoft | `azure_ai/Phi-3-small-128k-instruct` |
+| Microsoft | `azure_ai/Phi-3-small-8k-instruct` |
+| Microsoft | `azure_ai/Phi-3.5-MoE-instruct` |
+| Microsoft | `azure_ai/Phi-3.5-mini-instruct` |
+| Microsoft | `azure_ai/Phi-3.5-vision-instruct` |
+| Microsoft | `azure_ai/Phi-4` |
+| Microsoft | `azure_ai/Phi-4-mini-instruct` |
+| Microsoft | `azure_ai/Phi-4-mini-reasoning` |
+| Microsoft | `azure_ai/Phi-4-multimodal-instruct` |
+| Microsoft | `azure_ai/Phi-4-reasoning` |
 | Microsoft | `azure_ai/claude-haiku-4-5` |
 | Microsoft | `azure_ai/claude-opus-4-1` |
 | Microsoft | `azure_ai/claude-opus-4-5` |
@@ -890,8 +889,6 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Microsoft | `azure_ai/claude-opus-4-8` |
 | Microsoft | `azure_ai/claude-sonnet-4-5` |
 | Microsoft | `azure_ai/claude-sonnet-4-6` |
-| Microsoft | `azure_ai/Cohere-embed-v3-english` |
-| Microsoft | `azure_ai/Cohere-embed-v3-multilingual` |
 | Microsoft | `azure_ai/cohere-rerank-v3-english` |
 | Microsoft | `azure_ai/cohere-rerank-v3-multilingual` |
 | Microsoft | `azure_ai/cohere-rerank-v3.5` |
@@ -906,8 +903,6 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Microsoft | `azure_ai/doc-intelligence/prebuilt-layout` |
 | Microsoft | `azure_ai/doc-intelligence/prebuilt-read` |
 | Microsoft | `azure_ai/embed-v-4-0` |
-| Microsoft | `azure_ai/FLUX-1.1-pro` |
-| Microsoft | `azure_ai/FLUX.1-Kontext-pro` |
 | Microsoft | `azure_ai/flux.2-pro` |
 | Microsoft | `azure_ai/global/grok-3` |
 | Microsoft | `azure_ai/global/grok-3-mini` |
@@ -931,16 +926,6 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Microsoft | `azure_ai/jais-30b-chat` |
 | Microsoft | `azure_ai/jamba-instruct` |
 | Microsoft | `azure_ai/kimi-k2.5` |
-| Microsoft | `azure_ai/Llama-3.2-11B-Vision-Instruct` |
-| Microsoft | `azure_ai/Llama-3.2-90B-Vision-Instruct` |
-| Microsoft | `azure_ai/Llama-3.3-70B-Instruct` |
-| Microsoft | `azure_ai/Llama-4-Maverick-17B-128E-Instruct-FP8` |
-| Microsoft | `azure_ai/Llama-4-Scout-17B-16E-Instruct` |
-| Microsoft | `azure_ai/MAI-DS-R1` |
-| Microsoft | `azure_ai/Meta-Llama-3-70B-Instruct` |
-| Microsoft | `azure_ai/Meta-Llama-3.1-405B-Instruct` |
-| Microsoft | `azure_ai/Meta-Llama-3.1-70B-Instruct` |
-| Microsoft | `azure_ai/Meta-Llama-3.1-8B-Instruct` |
 | Microsoft | `azure_ai/ministral-3b` |
 | Microsoft | `azure_ai/mistral-document-ai-2505` |
 | Microsoft | `azure_ai/mistral-document-ai-2512` |
@@ -953,20 +938,6 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Microsoft | `azure_ai/mistral-small` |
 | Microsoft | `azure_ai/mistral-small-2503` |
 | Microsoft | `azure_ai/model_router` |
-| Microsoft | `azure_ai/Phi-3-medium-128k-instruct` |
-| Microsoft | `azure_ai/Phi-3-medium-4k-instruct` |
-| Microsoft | `azure_ai/Phi-3-mini-128k-instruct` |
-| Microsoft | `azure_ai/Phi-3-mini-4k-instruct` |
-| Microsoft | `azure_ai/Phi-3-small-128k-instruct` |
-| Microsoft | `azure_ai/Phi-3-small-8k-instruct` |
-| Microsoft | `azure_ai/Phi-3.5-mini-instruct` |
-| Microsoft | `azure_ai/Phi-3.5-MoE-instruct` |
-| Microsoft | `azure_ai/Phi-3.5-vision-instruct` |
-| Microsoft | `azure_ai/Phi-4` |
-| Microsoft | `azure_ai/Phi-4-mini-instruct` |
-| Microsoft | `azure_ai/Phi-4-mini-reasoning` |
-| Microsoft | `azure_ai/Phi-4-multimodal-instruct` |
-| Microsoft | `azure_ai/Phi-4-reasoning` |
 | Microsoft | `claude-haiku-4-5` |
 | Microsoft | `claude-opus-4-1` |
 | Microsoft | `claude-opus-4-5` |
@@ -1198,6 +1169,11 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Moonshot AI | `moonshot/moonshot-v1-8k-0430` |
 | Moonshot AI | `moonshot/moonshot-v1-8k-vision-preview` |
 | Moonshot AI | `moonshot/moonshot-v1-auto` |
+| Morph | `auto` |
+| Morph | `morph-v3-fast` |
+| Morph | `morph-v3-large` |
+| Morph | `morph/morph-v3-fast` |
+| Morph | `morph/morph-v3-large` |
 | NVIDIA | `abacusai/dracarys-llama-3_1-70b-instruct` |
 | NVIDIA | `baai/bge-m3` |
 | NVIDIA | `black-forest-labs/flux.1-dev` |
@@ -1506,6 +1482,445 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | OpenAI | `tts-1-hd` |
 | OpenAI | `tts-1-hd-1106` |
 | OpenAI | `whisper-1` |
+| OpenRouter | `ai21/jamba-large-1.7` |
+| OpenRouter | `aion-labs/aion-1.0` |
+| OpenRouter | `aion-labs/aion-1.0-mini` |
+| OpenRouter | `aion-labs/aion-2.0` |
+| OpenRouter | `aion-labs/aion-rp-llama-3.1-8b` |
+| OpenRouter | `allenai/olmo-3-32b-think` |
+| OpenRouter | `amazon/nova-2-lite-v1` |
+| OpenRouter | `amazon/nova-lite-v1` |
+| OpenRouter | `amazon/nova-micro-v1` |
+| OpenRouter | `amazon/nova-premier-v1` |
+| OpenRouter | `amazon/nova-pro-v1` |
+| OpenRouter | `anthracite-org/magnum-v4-72b` |
+| OpenRouter | `anthropic/claude-3-haiku` |
+| OpenRouter | `anthropic/claude-3.5-haiku` |
+| OpenRouter | `anthropic/claude-haiku-4.5` |
+| OpenRouter | `anthropic/claude-opus-4` |
+| OpenRouter | `anthropic/claude-opus-4.1` |
+| OpenRouter | `anthropic/claude-opus-4.5` |
+| OpenRouter | `anthropic/claude-opus-4.6` |
+| OpenRouter | `anthropic/claude-opus-4.6-fast` |
+| OpenRouter | `anthropic/claude-opus-4.7` |
+| OpenRouter | `anthropic/claude-opus-4.7-fast` |
+| OpenRouter | `anthropic/claude-opus-4.8` |
+| OpenRouter | `anthropic/claude-opus-4.8-fast` |
+| OpenRouter | `anthropic/claude-sonnet-4` |
+| OpenRouter | `anthropic/claude-sonnet-4.5` |
+| OpenRouter | `anthropic/claude-sonnet-4.6` |
+| OpenRouter | `arcee-ai/coder-large` |
+| OpenRouter | `arcee-ai/maestro-reasoning` |
+| OpenRouter | `arcee-ai/spotlight` |
+| OpenRouter | `arcee-ai/trinity-large-thinking` |
+| OpenRouter | `arcee-ai/trinity-mini` |
+| OpenRouter | `arcee-ai/virtuoso-large` |
+| OpenRouter | `baidu/ernie-4.5-vl-28b-a3b` |
+| OpenRouter | `baidu/ernie-4.5-vl-424b-a47b` |
+| OpenRouter | `bytedance-seed/seed-1.6` |
+| OpenRouter | `bytedance-seed/seed-1.6-flash` |
+| OpenRouter | `bytedance-seed/seed-2.0-lite` |
+| OpenRouter | `bytedance-seed/seed-2.0-mini` |
+| OpenRouter | `bytedance/ui-tars-1.5-7b` |
+| OpenRouter | `cognitivecomputations/dolphin-mistral-24b-venice-edition:free` |
+| OpenRouter | `cohere/command-a` |
+| OpenRouter | `cohere/command-r-08-2024` |
+| OpenRouter | `cohere/command-r-plus-08-2024` |
+| OpenRouter | `cohere/command-r7b-12-2024` |
+| OpenRouter | `deepcogito/cogito-v2.1-671b` |
+| OpenRouter | `deepseek/deepseek-chat` |
+| OpenRouter | `deepseek/deepseek-chat-v3-0324` |
+| OpenRouter | `deepseek/deepseek-chat-v3.1` |
+| OpenRouter | `deepseek/deepseek-r1` |
+| OpenRouter | `deepseek/deepseek-r1-0528` |
+| OpenRouter | `deepseek/deepseek-r1-distill-llama-70b` |
+| OpenRouter | `deepseek/deepseek-r1-distill-qwen-32b` |
+| OpenRouter | `deepseek/deepseek-v3.1-terminus` |
+| OpenRouter | `deepseek/deepseek-v3.2` |
+| OpenRouter | `deepseek/deepseek-v3.2-exp` |
+| OpenRouter | `deepseek/deepseek-v4-flash` |
+| OpenRouter | `deepseek/deepseek-v4-pro` |
+| OpenRouter | `essentialai/rnj-1-instruct` |
+| OpenRouter | `google/gemini-2.5-flash` |
+| OpenRouter | `google/gemini-2.5-flash-image` |
+| OpenRouter | `google/gemini-2.5-flash-lite` |
+| OpenRouter | `google/gemini-2.5-flash-lite-preview-09-2025` |
+| OpenRouter | `google/gemini-2.5-pro` |
+| OpenRouter | `google/gemini-2.5-pro-preview` |
+| OpenRouter | `google/gemini-2.5-pro-preview-05-06` |
+| OpenRouter | `google/gemini-3-flash-preview` |
+| OpenRouter | `google/gemini-3-pro-image-preview` |
+| OpenRouter | `google/gemini-3.1-flash-image-preview` |
+| OpenRouter | `google/gemini-3.1-flash-lite` |
+| OpenRouter | `google/gemini-3.1-flash-lite-preview` |
+| OpenRouter | `google/gemini-3.1-pro-preview` |
+| OpenRouter | `google/gemini-3.1-pro-preview-customtools` |
+| OpenRouter | `google/gemini-3.5-flash` |
+| OpenRouter | `google/gemma-2-27b-it` |
+| OpenRouter | `google/gemma-3-12b-it` |
+| OpenRouter | `google/gemma-3-27b-it` |
+| OpenRouter | `google/gemma-3-4b-it` |
+| OpenRouter | `google/gemma-3n-e4b-it` |
+| OpenRouter | `google/gemma-4-26b-a4b-it` |
+| OpenRouter | `google/gemma-4-26b-a4b-it:free` |
+| OpenRouter | `google/gemma-4-31b-it` |
+| OpenRouter | `google/gemma-4-31b-it:free` |
+| OpenRouter | `google/lyria-3-clip-preview` |
+| OpenRouter | `google/lyria-3-pro-preview` |
+| OpenRouter | `gryphe/mythomax-l2-13b` |
+| OpenRouter | `ibm-granite/granite-4.0-h-micro` |
+| OpenRouter | `ibm-granite/granite-4.1-8b` |
+| OpenRouter | `inception/mercury-2` |
+| OpenRouter | `inclusionai/ling-2.6-1t` |
+| OpenRouter | `inclusionai/ling-2.6-flash` |
+| OpenRouter | `inclusionai/ring-2.6-1t` |
+| OpenRouter | `inflection/inflection-3-pi` |
+| OpenRouter | `inflection/inflection-3-productivity` |
+| OpenRouter | `kwaipilot/kat-coder-pro-v2` |
+| OpenRouter | `liquid/lfm-2-24b-a2b` |
+| OpenRouter | `liquid/lfm-2.5-1.2b-instruct:free` |
+| OpenRouter | `liquid/lfm-2.5-1.2b-thinking:free` |
+| OpenRouter | `mancer/weaver` |
+| OpenRouter | `meta-llama/llama-3-70b-instruct` |
+| OpenRouter | `meta-llama/llama-3-8b-instruct` |
+| OpenRouter | `meta-llama/llama-3.1-70b-instruct` |
+| OpenRouter | `meta-llama/llama-3.1-8b-instruct` |
+| OpenRouter | `meta-llama/llama-3.2-11b-vision-instruct` |
+| OpenRouter | `meta-llama/llama-3.2-1b-instruct` |
+| OpenRouter | `meta-llama/llama-3.2-3b-instruct` |
+| OpenRouter | `meta-llama/llama-3.2-3b-instruct:free` |
+| OpenRouter | `meta-llama/llama-3.3-70b-instruct` |
+| OpenRouter | `meta-llama/llama-3.3-70b-instruct:free` |
+| OpenRouter | `meta-llama/llama-4-maverick` |
+| OpenRouter | `meta-llama/llama-4-scout` |
+| OpenRouter | `meta-llama/llama-guard-3-8b` |
+| OpenRouter | `meta-llama/llama-guard-4-12b` |
+| OpenRouter | `microsoft/phi-4` |
+| OpenRouter | `microsoft/phi-4-mini-instruct` |
+| OpenRouter | `microsoft/wizardlm-2-8x22b` |
+| OpenRouter | `minimax/minimax-01` |
+| OpenRouter | `minimax/minimax-m1` |
+| OpenRouter | `minimax/minimax-m2` |
+| OpenRouter | `minimax/minimax-m2-her` |
+| OpenRouter | `minimax/minimax-m2.1` |
+| OpenRouter | `minimax/minimax-m2.5` |
+| OpenRouter | `minimax/minimax-m2.7` |
+| OpenRouter | `minimax/minimax-m3` |
+| OpenRouter | `mistralai/codestral-2508` |
+| OpenRouter | `mistralai/devstral-2512` |
+| OpenRouter | `mistralai/ministral-14b-2512` |
+| OpenRouter | `mistralai/ministral-3b-2512` |
+| OpenRouter | `mistralai/ministral-8b-2512` |
+| OpenRouter | `mistralai/mistral-large` |
+| OpenRouter | `mistralai/mistral-large-2407` |
+| OpenRouter | `mistralai/mistral-large-2512` |
+| OpenRouter | `mistralai/mistral-medium-3` |
+| OpenRouter | `mistralai/mistral-medium-3-5` |
+| OpenRouter | `mistralai/mistral-medium-3.1` |
+| OpenRouter | `mistralai/mistral-nemo` |
+| OpenRouter | `mistralai/mistral-saba` |
+| OpenRouter | `mistralai/mistral-small-24b-instruct-2501` |
+| OpenRouter | `mistralai/mistral-small-2603` |
+| OpenRouter | `mistralai/mistral-small-3.1-24b-instruct` |
+| OpenRouter | `mistralai/mistral-small-3.2-24b-instruct` |
+| OpenRouter | `mistralai/mixtral-8x22b-instruct` |
+| OpenRouter | `mistralai/voxtral-small-24b-2507` |
+| OpenRouter | `moonshotai/kimi-k2` |
+| OpenRouter | `moonshotai/kimi-k2-0905` |
+| OpenRouter | `moonshotai/kimi-k2-thinking` |
+| OpenRouter | `moonshotai/kimi-k2.5` |
+| OpenRouter | `moonshotai/kimi-k2.6` |
+| OpenRouter | `moonshotai/kimi-k2.6:free` |
+| OpenRouter | `morph/morph-v3-fast` |
+| OpenRouter | `morph/morph-v3-large` |
+| OpenRouter | `nex-agi/deepseek-v3.1-nex-n1` |
+| OpenRouter | `nousresearch/hermes-2-pro-llama-3-8b` |
+| OpenRouter | `nousresearch/hermes-3-llama-3.1-405b` |
+| OpenRouter | `nousresearch/hermes-3-llama-3.1-405b:free` |
+| OpenRouter | `nousresearch/hermes-3-llama-3.1-70b` |
+| OpenRouter | `nousresearch/hermes-4-405b` |
+| OpenRouter | `nousresearch/hermes-4-70b` |
+| OpenRouter | `nvidia/llama-3.3-nemotron-super-49b-v1.5` |
+| OpenRouter | `nvidia/nemotron-3-nano-30b-a3b` |
+| OpenRouter | `nvidia/nemotron-3-nano-30b-a3b:free` |
+| OpenRouter | `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` |
+| OpenRouter | `nvidia/nemotron-3-super-120b-a12b` |
+| OpenRouter | `nvidia/nemotron-3-super-120b-a12b:free` |
+| OpenRouter | `nvidia/nemotron-nano-12b-v2-vl:free` |
+| OpenRouter | `nvidia/nemotron-nano-9b-v2` |
+| OpenRouter | `nvidia/nemotron-nano-9b-v2:free` |
+| OpenRouter | `openai/gpt-3.5-turbo` |
+| OpenRouter | `openai/gpt-3.5-turbo-0613` |
+| OpenRouter | `openai/gpt-3.5-turbo-16k` |
+| OpenRouter | `openai/gpt-3.5-turbo-instruct` |
+| OpenRouter | `openai/gpt-4` |
+| OpenRouter | `openai/gpt-4-0314` |
+| OpenRouter | `openai/gpt-4-1106-preview` |
+| OpenRouter | `openai/gpt-4-turbo` |
+| OpenRouter | `openai/gpt-4-turbo-preview` |
+| OpenRouter | `openai/gpt-4.1` |
+| OpenRouter | `openai/gpt-4.1-mini` |
+| OpenRouter | `openai/gpt-4.1-nano` |
+| OpenRouter | `openai/gpt-4o` |
+| OpenRouter | `openai/gpt-4o-2024-05-13` |
+| OpenRouter | `openai/gpt-4o-2024-08-06` |
+| OpenRouter | `openai/gpt-4o-2024-11-20` |
+| OpenRouter | `openai/gpt-4o-mini` |
+| OpenRouter | `openai/gpt-4o-mini-2024-07-18` |
+| OpenRouter | `openai/gpt-4o-mini-search-preview` |
+| OpenRouter | `openai/gpt-4o-search-preview` |
+| OpenRouter | `openai/gpt-5` |
+| OpenRouter | `openai/gpt-5-chat` |
+| OpenRouter | `openai/gpt-5-codex` |
+| OpenRouter | `openai/gpt-5-image` |
+| OpenRouter | `openai/gpt-5-image-mini` |
+| OpenRouter | `openai/gpt-5-mini` |
+| OpenRouter | `openai/gpt-5-nano` |
+| OpenRouter | `openai/gpt-5-pro` |
+| OpenRouter | `openai/gpt-5.1` |
+| OpenRouter | `openai/gpt-5.1-chat` |
+| OpenRouter | `openai/gpt-5.1-codex` |
+| OpenRouter | `openai/gpt-5.1-codex-max` |
+| OpenRouter | `openai/gpt-5.1-codex-mini` |
+| OpenRouter | `openai/gpt-5.2` |
+| OpenRouter | `openai/gpt-5.2-chat` |
+| OpenRouter | `openai/gpt-5.2-codex` |
+| OpenRouter | `openai/gpt-5.2-pro` |
+| OpenRouter | `openai/gpt-5.3-chat` |
+| OpenRouter | `openai/gpt-5.3-codex` |
+| OpenRouter | `openai/gpt-5.4` |
+| OpenRouter | `openai/gpt-5.4-image-2` |
+| OpenRouter | `openai/gpt-5.4-mini` |
+| OpenRouter | `openai/gpt-5.4-nano` |
+| OpenRouter | `openai/gpt-5.4-pro` |
+| OpenRouter | `openai/gpt-5.5` |
+| OpenRouter | `openai/gpt-5.5-pro` |
+| OpenRouter | `openai/gpt-audio` |
+| OpenRouter | `openai/gpt-audio-mini` |
+| OpenRouter | `openai/gpt-chat-latest` |
+| OpenRouter | `openai/gpt-oss-120b` |
+| OpenRouter | `openai/gpt-oss-120b:free` |
+| OpenRouter | `openai/gpt-oss-20b` |
+| OpenRouter | `openai/gpt-oss-20b:free` |
+| OpenRouter | `openai/gpt-oss-safeguard-20b` |
+| OpenRouter | `openai/o1` |
+| OpenRouter | `openai/o1-pro` |
+| OpenRouter | `openai/o3` |
+| OpenRouter | `openai/o3-deep-research` |
+| OpenRouter | `openai/o3-mini` |
+| OpenRouter | `openai/o3-mini-high` |
+| OpenRouter | `openai/o3-pro` |
+| OpenRouter | `openai/o4-mini` |
+| OpenRouter | `openai/o4-mini-deep-research` |
+| OpenRouter | `openai/o4-mini-high` |
+| OpenRouter | `openrouter/anthropic/claude-3-haiku` |
+| OpenRouter | `openrouter/anthropic/claude-3.5-sonnet` |
+| OpenRouter | `openrouter/anthropic/claude-3.7-sonnet` |
+| OpenRouter | `openrouter/anthropic/claude-haiku-4.5` |
+| OpenRouter | `openrouter/anthropic/claude-opus-4` |
+| OpenRouter | `openrouter/anthropic/claude-opus-4.1` |
+| OpenRouter | `openrouter/anthropic/claude-opus-4.5` |
+| OpenRouter | `openrouter/anthropic/claude-opus-4.6` |
+| OpenRouter | `openrouter/anthropic/claude-opus-4.7` |
+| OpenRouter | `openrouter/anthropic/claude-sonnet-4` |
+| OpenRouter | `openrouter/anthropic/claude-sonnet-4.5` |
+| OpenRouter | `openrouter/anthropic/claude-sonnet-4.6` |
+| OpenRouter | `openrouter/auto` |
+| OpenRouter | `openrouter/bodybuilder` |
+| OpenRouter | `openrouter/bytedance/ui-tars-1.5-7b` |
+| OpenRouter | `openrouter/deepseek/deepseek-chat` |
+| OpenRouter | `openrouter/deepseek/deepseek-chat-v3-0324` |
+| OpenRouter | `openrouter/deepseek/deepseek-chat-v3.1` |
+| OpenRouter | `openrouter/deepseek/deepseek-r1` |
+| OpenRouter | `openrouter/deepseek/deepseek-r1-0528` |
+| OpenRouter | `openrouter/deepseek/deepseek-v3.2` |
+| OpenRouter | `openrouter/deepseek/deepseek-v3.2-exp` |
+| OpenRouter | `openrouter/free` |
+| OpenRouter | `openrouter/fusion` |
+| OpenRouter | `openrouter/google/gemini-2.0-flash-001` |
+| OpenRouter | `openrouter/google/gemini-2.5-flash` |
+| OpenRouter | `openrouter/google/gemini-2.5-pro` |
+| OpenRouter | `openrouter/google/gemini-3-flash-preview` |
+| OpenRouter | `openrouter/google/gemini-3-pro-preview` |
+| OpenRouter | `openrouter/google/gemini-3.1-flash-lite` |
+| OpenRouter | `openrouter/google/gemini-3.1-flash-lite-preview` |
+| OpenRouter | `openrouter/google/gemini-3.1-pro-preview` |
+| OpenRouter | `openrouter/gryphe/mythomax-l2-13b` |
+| OpenRouter | `openrouter/mancer/weaver` |
+| OpenRouter | `openrouter/meta-llama/llama-3-70b-instruct` |
+| OpenRouter | `openrouter/minimax/minimax-m2` |
+| OpenRouter | `openrouter/minimax/minimax-m2.1` |
+| OpenRouter | `openrouter/minimax/minimax-m2.5` |
+| OpenRouter | `openrouter/mistralai/devstral-2512` |
+| OpenRouter | `openrouter/mistralai/ministral-14b-2512` |
+| OpenRouter | `openrouter/mistralai/ministral-3b-2512` |
+| OpenRouter | `openrouter/mistralai/ministral-8b-2512` |
+| OpenRouter | `openrouter/mistralai/mistral-7b-instruct` |
+| OpenRouter | `openrouter/mistralai/mistral-large` |
+| OpenRouter | `openrouter/mistralai/mistral-large-2512` |
+| OpenRouter | `openrouter/mistralai/mistral-small-3.1-24b-instruct` |
+| OpenRouter | `openrouter/mistralai/mistral-small-3.2-24b-instruct` |
+| OpenRouter | `openrouter/mistralai/mixtral-8x22b-instruct` |
+| OpenRouter | `openrouter/moonshotai/kimi-k2.5` |
+| OpenRouter | `openrouter/openai/gpt-3.5-turbo` |
+| OpenRouter | `openrouter/openai/gpt-3.5-turbo-16k` |
+| OpenRouter | `openrouter/openai/gpt-4` |
+| OpenRouter | `openrouter/openai/gpt-4.1` |
+| OpenRouter | `openrouter/openai/gpt-4.1-mini` |
+| OpenRouter | `openrouter/openai/gpt-4.1-nano` |
+| OpenRouter | `openrouter/openai/gpt-4o` |
+| OpenRouter | `openrouter/openai/gpt-4o-2024-05-13` |
+| OpenRouter | `openrouter/openai/gpt-5` |
+| OpenRouter | `openrouter/openai/gpt-5-chat` |
+| OpenRouter | `openrouter/openai/gpt-5-codex` |
+| OpenRouter | `openrouter/openai/gpt-5-mini` |
+| OpenRouter | `openrouter/openai/gpt-5-nano` |
+| OpenRouter | `openrouter/openai/gpt-5.1-codex-max` |
+| OpenRouter | `openrouter/openai/gpt-5.2` |
+| OpenRouter | `openrouter/openai/gpt-5.2-chat` |
+| OpenRouter | `openrouter/openai/gpt-5.2-codex` |
+| OpenRouter | `openrouter/openai/gpt-5.2-pro` |
+| OpenRouter | `openrouter/openai/gpt-oss-120b` |
+| OpenRouter | `openrouter/openai/gpt-oss-20b` |
+| OpenRouter | `openrouter/openai/o1` |
+| OpenRouter | `openrouter/openai/o3-mini` |
+| OpenRouter | `openrouter/openai/o3-mini-high` |
+| OpenRouter | `openrouter/openrouter/auto` |
+| OpenRouter | `openrouter/openrouter/bodybuilder` |
+| OpenRouter | `openrouter/openrouter/free` |
+| OpenRouter | `openrouter/owl-alpha` |
+| OpenRouter | `openrouter/pareto-code` |
+| OpenRouter | `openrouter/qwen/qwen-2.5-coder-32b-instruct` |
+| OpenRouter | `openrouter/qwen/qwen-vl-plus` |
+| OpenRouter | `openrouter/qwen/qwen3-235b-a22b-2507` |
+| OpenRouter | `openrouter/qwen/qwen3-235b-a22b-thinking-2507` |
+| OpenRouter | `openrouter/qwen/qwen3-coder` |
+| OpenRouter | `openrouter/qwen/qwen3-coder-plus` |
+| OpenRouter | `openrouter/qwen/qwen3.5-122b-a10b` |
+| OpenRouter | `openrouter/qwen/qwen3.5-27b` |
+| OpenRouter | `openrouter/qwen/qwen3.5-35b-a3b` |
+| OpenRouter | `openrouter/qwen/qwen3.5-397b-a17b` |
+| OpenRouter | `openrouter/qwen/qwen3.5-flash-02-23` |
+| OpenRouter | `openrouter/qwen/qwen3.5-plus-02-15` |
+| OpenRouter | `openrouter/qwen/qwen3.6-plus` |
+| OpenRouter | `openrouter/switchpoint/router` |
+| OpenRouter | `openrouter/undi95/remm-slerp-l2-13b` |
+| OpenRouter | `openrouter/x-ai/grok-4` |
+| OpenRouter | `openrouter/xiaomi/mimo-v2-flash` |
+| OpenRouter | `openrouter/xiaomi/mimo-v2.5` |
+| OpenRouter | `openrouter/xiaomi/mimo-v2.5-pro` |
+| OpenRouter | `openrouter/z-ai/glm-4.6` |
+| OpenRouter | `openrouter/z-ai/glm-4.6:exacto` |
+| OpenRouter | `openrouter/z-ai/glm-4.7` |
+| OpenRouter | `openrouter/z-ai/glm-4.7-flash` |
+| OpenRouter | `openrouter/z-ai/glm-5` |
+| OpenRouter | `perceptron/perceptron-mk1` |
+| OpenRouter | `perplexity/sonar` |
+| OpenRouter | `perplexity/sonar-deep-research` |
+| OpenRouter | `perplexity/sonar-pro` |
+| OpenRouter | `perplexity/sonar-pro-search` |
+| OpenRouter | `perplexity/sonar-reasoning-pro` |
+| OpenRouter | `poolside/laguna-m.1:free` |
+| OpenRouter | `poolside/laguna-xs.2:free` |
+| OpenRouter | `prime-intellect/intellect-3` |
+| OpenRouter | `qwen/qwen-2.5-72b-instruct` |
+| OpenRouter | `qwen/qwen-2.5-7b-instruct` |
+| OpenRouter | `qwen/qwen-2.5-coder-32b-instruct` |
+| OpenRouter | `qwen/qwen-plus` |
+| OpenRouter | `qwen/qwen-plus-2025-07-28` |
+| OpenRouter | `qwen/qwen-plus-2025-07-28:thinking` |
+| OpenRouter | `qwen/qwen2.5-vl-72b-instruct` |
+| OpenRouter | `qwen/qwen3-14b` |
+| OpenRouter | `qwen/qwen3-235b-a22b` |
+| OpenRouter | `qwen/qwen3-235b-a22b-2507` |
+| OpenRouter | `qwen/qwen3-235b-a22b-thinking-2507` |
+| OpenRouter | `qwen/qwen3-30b-a3b` |
+| OpenRouter | `qwen/qwen3-30b-a3b-instruct-2507` |
+| OpenRouter | `qwen/qwen3-30b-a3b-thinking-2507` |
+| OpenRouter | `qwen/qwen3-32b` |
+| OpenRouter | `qwen/qwen3-8b` |
+| OpenRouter | `qwen/qwen3-coder` |
+| OpenRouter | `qwen/qwen3-coder-30b-a3b-instruct` |
+| OpenRouter | `qwen/qwen3-coder-flash` |
+| OpenRouter | `qwen/qwen3-coder-next` |
+| OpenRouter | `qwen/qwen3-coder-plus` |
+| OpenRouter | `qwen/qwen3-coder:free` |
+| OpenRouter | `qwen/qwen3-max` |
+| OpenRouter | `qwen/qwen3-max-thinking` |
+| OpenRouter | `qwen/qwen3-next-80b-a3b-instruct` |
+| OpenRouter | `qwen/qwen3-next-80b-a3b-instruct:free` |
+| OpenRouter | `qwen/qwen3-next-80b-a3b-thinking` |
+| OpenRouter | `qwen/qwen3-vl-235b-a22b-instruct` |
+| OpenRouter | `qwen/qwen3-vl-235b-a22b-thinking` |
+| OpenRouter | `qwen/qwen3-vl-30b-a3b-instruct` |
+| OpenRouter | `qwen/qwen3-vl-30b-a3b-thinking` |
+| OpenRouter | `qwen/qwen3-vl-32b-instruct` |
+| OpenRouter | `qwen/qwen3-vl-8b-instruct` |
+| OpenRouter | `qwen/qwen3-vl-8b-thinking` |
+| OpenRouter | `qwen/qwen3.5-122b-a10b` |
+| OpenRouter | `qwen/qwen3.5-27b` |
+| OpenRouter | `qwen/qwen3.5-35b-a3b` |
+| OpenRouter | `qwen/qwen3.5-397b-a17b` |
+| OpenRouter | `qwen/qwen3.5-9b` |
+| OpenRouter | `qwen/qwen3.5-flash-02-23` |
+| OpenRouter | `qwen/qwen3.5-plus-02-15` |
+| OpenRouter | `qwen/qwen3.5-plus-20260420` |
+| OpenRouter | `qwen/qwen3.6-27b` |
+| OpenRouter | `qwen/qwen3.6-35b-a3b` |
+| OpenRouter | `qwen/qwen3.6-flash` |
+| OpenRouter | `qwen/qwen3.6-max-preview` |
+| OpenRouter | `qwen/qwen3.6-plus` |
+| OpenRouter | `qwen/qwen3.7-max` |
+| OpenRouter | `qwen/qwen3.7-plus` |
+| OpenRouter | `rekaai/reka-edge` |
+| OpenRouter | `rekaai/reka-flash-3` |
+| OpenRouter | `relace/relace-apply-3` |
+| OpenRouter | `relace/relace-search` |
+| OpenRouter | `sao10k/l3-euryale-70b` |
+| OpenRouter | `sao10k/l3-lunaris-8b` |
+| OpenRouter | `sao10k/l3.1-70b-hanami-x1` |
+| OpenRouter | `sao10k/l3.1-euryale-70b` |
+| OpenRouter | `sao10k/l3.3-euryale-70b` |
+| OpenRouter | `stepfun/step-3.5-flash` |
+| OpenRouter | `stepfun/step-3.7-flash` |
+| OpenRouter | `switchpoint/router` |
+| OpenRouter | `tencent/hunyuan-a13b-instruct` |
+| OpenRouter | `tencent/hy3-preview` |
+| OpenRouter | `thedrummer/cydonia-24b-v4.1` |
+| OpenRouter | `thedrummer/rocinante-12b` |
+| OpenRouter | `thedrummer/skyfall-36b-v2` |
+| OpenRouter | `thedrummer/unslopnemo-12b` |
+| OpenRouter | `undi95/remm-slerp-l2-13b` |
+| OpenRouter | `upstage/solar-pro-3` |
+| OpenRouter | `writer/palmyra-x5` |
+| OpenRouter | `x-ai/grok-4.20` |
+| OpenRouter | `x-ai/grok-4.20-multi-agent` |
+| OpenRouter | `x-ai/grok-4.3` |
+| OpenRouter | `x-ai/grok-build-0.1` |
+| OpenRouter | `xiaomi/mimo-v2-flash` |
+| OpenRouter | `xiaomi/mimo-v2.5` |
+| OpenRouter | `xiaomi/mimo-v2.5-pro` |
+| OpenRouter | `z-ai/glm-4-32b` |
+| OpenRouter | `z-ai/glm-4.5` |
+| OpenRouter | `z-ai/glm-4.5-air` |
+| OpenRouter | `z-ai/glm-4.5-air:free` |
+| OpenRouter | `z-ai/glm-4.5v` |
+| OpenRouter | `z-ai/glm-4.6` |
+| OpenRouter | `z-ai/glm-4.6v` |
+| OpenRouter | `z-ai/glm-4.7` |
+| OpenRouter | `z-ai/glm-4.7-flash` |
+| OpenRouter | `z-ai/glm-5` |
+| OpenRouter | `z-ai/glm-5-turbo` |
+| OpenRouter | `z-ai/glm-5.1` |
+| OpenRouter | `z-ai/glm-5v-turbo` |
+| OpenRouter | `~anthropic/claude-haiku-latest` |
+| OpenRouter | `~anthropic/claude-opus-latest` |
+| OpenRouter | `~anthropic/claude-sonnet-latest` |
+| OpenRouter | `~google/gemini-flash-latest` |
+| OpenRouter | `~google/gemini-pro-latest` |
+| OpenRouter | `~moonshotai/kimi-latest` |
+| OpenRouter | `~openai/gpt-latest` |
+| OpenRouter | `~openai/gpt-mini-latest` |
 | Perplexity | `perplexity/anthropic/claude-haiku-4-5` |
 | Perplexity | `perplexity/anthropic/claude-opus-4-5` |
 | Perplexity | `perplexity/anthropic/claude-opus-4-6` |
@@ -1551,6 +1966,132 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Perplexity | `sonar-deep-research` |
 | Perplexity | `sonar-pro` |
 | Perplexity | `sonar-reasoning-pro` |
+| Poolside | `poolside/laguna-m.1` |
+| Poolside | `poolside/laguna-xs.2` |
+| Alibaba / Qwen | `MiniMax-M2.5` |
+| Alibaba / Qwen | `MiniMax/MiniMax-M2.7` |
+| Alibaba / Qwen | `dashscope/qwen-coder` |
+| Alibaba / Qwen | `dashscope/qwen-flash` |
+| Alibaba / Qwen | `dashscope/qwen-flash-2025-07-28` |
+| Alibaba / Qwen | `dashscope/qwen-image-2.0` |
+| Alibaba / Qwen | `dashscope/qwen-image-2.0-pro` |
+| Alibaba / Qwen | `dashscope/qwen-max` |
+| Alibaba / Qwen | `dashscope/qwen-plus` |
+| Alibaba / Qwen | `dashscope/qwen-plus-2025-01-25` |
+| Alibaba / Qwen | `dashscope/qwen-plus-2025-04-28` |
+| Alibaba / Qwen | `dashscope/qwen-plus-2025-07-14` |
+| Alibaba / Qwen | `dashscope/qwen-plus-2025-07-28` |
+| Alibaba / Qwen | `dashscope/qwen-plus-2025-09-11` |
+| Alibaba / Qwen | `dashscope/qwen-plus-latest` |
+| Alibaba / Qwen | `dashscope/qwen-turbo` |
+| Alibaba / Qwen | `dashscope/qwen-turbo-2024-11-01` |
+| Alibaba / Qwen | `dashscope/qwen-turbo-2025-04-28` |
+| Alibaba / Qwen | `dashscope/qwen-turbo-latest` |
+| Alibaba / Qwen | `dashscope/qwen3-30b-a3b` |
+| Alibaba / Qwen | `dashscope/qwen3-coder-flash` |
+| Alibaba / Qwen | `dashscope/qwen3-coder-flash-2025-07-28` |
+| Alibaba / Qwen | `dashscope/qwen3-coder-plus` |
+| Alibaba / Qwen | `dashscope/qwen3-coder-plus-2025-07-22` |
+| Alibaba / Qwen | `dashscope/qwen3-max` |
+| Alibaba / Qwen | `dashscope/qwen3-max-2026-01-23` |
+| Alibaba / Qwen | `dashscope/qwen3-max-preview` |
+| Alibaba / Qwen | `dashscope/qwen3-next-80b-a3b-instruct` |
+| Alibaba / Qwen | `dashscope/qwen3-next-80b-a3b-thinking` |
+| Alibaba / Qwen | `dashscope/qwen3-vl-235b-a22b-instruct` |
+| Alibaba / Qwen | `dashscope/qwen3-vl-235b-a22b-thinking` |
+| Alibaba / Qwen | `dashscope/qwen3-vl-32b-instruct` |
+| Alibaba / Qwen | `dashscope/qwen3-vl-32b-thinking` |
+| Alibaba / Qwen | `dashscope/qwen3-vl-plus` |
+| Alibaba / Qwen | `dashscope/qwen3.5-plus` |
+| Alibaba / Qwen | `dashscope/qwq-plus` |
+| Alibaba / Qwen | `deepseek-r1` |
+| Alibaba / Qwen | `deepseek-r1-0528` |
+| Alibaba / Qwen | `deepseek-r1-distill-llama-70b` |
+| Alibaba / Qwen | `deepseek-r1-distill-llama-8b` |
+| Alibaba / Qwen | `deepseek-r1-distill-qwen-1-5b` |
+| Alibaba / Qwen | `deepseek-r1-distill-qwen-14b` |
+| Alibaba / Qwen | `deepseek-r1-distill-qwen-32b` |
+| Alibaba / Qwen | `deepseek-r1-distill-qwen-7b` |
+| Alibaba / Qwen | `deepseek-v3` |
+| Alibaba / Qwen | `deepseek-v3-1` |
+| Alibaba / Qwen | `deepseek-v3-2-exp` |
+| Alibaba / Qwen | `deepseek-v4-flash` |
+| Alibaba / Qwen | `deepseek-v4-pro` |
+| Alibaba / Qwen | `glm-5` |
+| Alibaba / Qwen | `glm-5.1` |
+| Alibaba / Qwen | `kimi-k2-thinking` |
+| Alibaba / Qwen | `kimi-k2.5` |
+| Alibaba / Qwen | `kimi-k2.6` |
+| Alibaba / Qwen | `kimi/kimi-k2.5` |
+| Alibaba / Qwen | `moonshot-kimi-k2-instruct` |
+| Alibaba / Qwen | `qvq-max` |
+| Alibaba / Qwen | `qwen-deep-research` |
+| Alibaba / Qwen | `qwen-doc-turbo` |
+| Alibaba / Qwen | `qwen-flash` |
+| Alibaba / Qwen | `qwen-long` |
+| Alibaba / Qwen | `qwen-math-plus` |
+| Alibaba / Qwen | `qwen-math-turbo` |
+| Alibaba / Qwen | `qwen-max` |
+| Alibaba / Qwen | `qwen-mt-plus` |
+| Alibaba / Qwen | `qwen-mt-turbo` |
+| Alibaba / Qwen | `qwen-omni-turbo` |
+| Alibaba / Qwen | `qwen-omni-turbo-realtime` |
+| Alibaba / Qwen | `qwen-plus` |
+| Alibaba / Qwen | `qwen-plus-character` |
+| Alibaba / Qwen | `qwen-plus-character-ja` |
+| Alibaba / Qwen | `qwen-turbo` |
+| Alibaba / Qwen | `qwen-vl-max` |
+| Alibaba / Qwen | `qwen-vl-ocr` |
+| Alibaba / Qwen | `qwen-vl-plus` |
+| Alibaba / Qwen | `qwen2-5-14b-instruct` |
+| Alibaba / Qwen | `qwen2-5-32b-instruct` |
+| Alibaba / Qwen | `qwen2-5-72b-instruct` |
+| Alibaba / Qwen | `qwen2-5-7b-instruct` |
+| Alibaba / Qwen | `qwen2-5-coder-32b-instruct` |
+| Alibaba / Qwen | `qwen2-5-coder-7b-instruct` |
+| Alibaba / Qwen | `qwen2-5-math-72b-instruct` |
+| Alibaba / Qwen | `qwen2-5-math-7b-instruct` |
+| Alibaba / Qwen | `qwen2-5-omni-7b` |
+| Alibaba / Qwen | `qwen2-5-vl-72b-instruct` |
+| Alibaba / Qwen | `qwen2-5-vl-7b-instruct` |
+| Alibaba / Qwen | `qwen3-14b` |
+| Alibaba / Qwen | `qwen3-235b-a22b` |
+| Alibaba / Qwen | `qwen3-32b` |
+| Alibaba / Qwen | `qwen3-8b` |
+| Alibaba / Qwen | `qwen3-asr-flash` |
+| Alibaba / Qwen | `qwen3-coder-30b-a3b-instruct` |
+| Alibaba / Qwen | `qwen3-coder-480b-a35b-instruct` |
+| Alibaba / Qwen | `qwen3-coder-flash` |
+| Alibaba / Qwen | `qwen3-coder-plus` |
+| Alibaba / Qwen | `qwen3-livetranslate-flash-realtime` |
+| Alibaba / Qwen | `qwen3-max` |
+| Alibaba / Qwen | `qwen3-next-80b-a3b-instruct` |
+| Alibaba / Qwen | `qwen3-next-80b-a3b-thinking` |
+| Alibaba / Qwen | `qwen3-omni-flash` |
+| Alibaba / Qwen | `qwen3-omni-flash-realtime` |
+| Alibaba / Qwen | `qwen3-vl-235b-a22b` |
+| Alibaba / Qwen | `qwen3-vl-30b-a3b` |
+| Alibaba / Qwen | `qwen3-vl-plus` |
+| Alibaba / Qwen | `qwen3.5-122b-a10b` |
+| Alibaba / Qwen | `qwen3.5-27b` |
+| Alibaba / Qwen | `qwen3.5-35b-a3b` |
+| Alibaba / Qwen | `qwen3.5-397b-a17b` |
+| Alibaba / Qwen | `qwen3.5-flash` |
+| Alibaba / Qwen | `qwen3.5-plus` |
+| Alibaba / Qwen | `qwen3.6-27b` |
+| Alibaba / Qwen | `qwen3.6-35b-a3b` |
+| Alibaba / Qwen | `qwen3.6-flash` |
+| Alibaba / Qwen | `qwen3.6-max-preview` |
+| Alibaba / Qwen | `qwen3.6-plus` |
+| Alibaba / Qwen | `qwen3.7-max` |
+| Alibaba / Qwen | `qwen3.7-plus` |
+| Alibaba / Qwen | `qwq-32b` |
+| Alibaba / Qwen | `qwq-plus` |
+| Alibaba / Qwen | `siliconflow/deepseek-r1-0528` |
+| Alibaba / Qwen | `siliconflow/deepseek-v3-0324` |
+| Alibaba / Qwen | `siliconflow/deepseek-v3.1-terminus` |
+| Alibaba / Qwen | `siliconflow/deepseek-v3.2` |
+| Alibaba / Qwen | `tongyi-intent-detect-v3` |
 | Sarvam AI | `sarvam-105b` |
 | Sarvam AI | `sarvam-30b` |
 | Sarvam AI | `sarvam/sarvam-m` |
@@ -1665,47 +2206,67 @@ slugs (e.g. `meta-llama` → `meta`, `zhipuai` → `zhipu`, `volcengine` → `by
 | Zhipu AI / Z.ai | `glm-5.1` |
 | Zhipu AI / Z.ai | `glm-5v-turbo` |
 
-## Providers with no models in registry sources
+## Providers with no model rows in this Core registry snapshot
+
+These are still valid public catalog identities. Their current public pages and model inventories come from the platform's frozen OpenRouter/Bedrock reconciliation or historical catalog, not from this older Core capability snapshot.
 
 | Provider | Provider key |
 | --- | --- |
+| Cursor | `cursor` |
+| 01.AI | `01-ai` |
 | Baidu | `baidu` |
 | Huawei | `huawei` |
-| 01.AI | `01-ai` |
-| Baichuan AI | `baichuan` |
-| SenseTime | `sensetime` |
 | iFlytek | `iflytek` |
 | Kuaishou | `kuaishou` |
-| OpenBMB / ModelBest | `openbmb` |
-| Shanghai AI Lab | `shanghai-ai-lab` |
-| XVERSE AI | `xverse` |
 | Meituan | `meituan` |
-| Apple | `apple` |
-| Reka AI | `reka` |
-| Writer | `writer` |
-| Inflection AI | `inflection` |
-| Liquid AI | `liquid` |
-| Salesforce AI Research | `salesforce` |
-| Contextual AI | `contextual` |
-| Essential AI | `essential` |
-| Adept AI | `adept` |
-| Character.AI | `character` |
-| Nous Research | `nous` |
-| Arcee AI | `arcee` |
-| Technology Innovation Institute, UAE | `tii` |
+| OpenBMB / ModelBest | `openbmb` |
+| SenseTime | `sensetime` |
+| Shanghai AI Lab | `shanghai-ai-lab` |
+| Adept AI | `adept-ai` |
 | AI71 | `ai71` |
-| SDAIA / IBM / Saudi ecosystem | `sdaia` |
-| Naver | `naver` |
-| LG AI Research | `lg` |
-| Samsung Research | `samsung` |
-| SK Telecom | `sk-telecom` |
+| Aion Labs | `aion-labs` |
+| Aleph Alpha | `aleph-alpha` |
+| Allen Institute for AI, AI2 | `ai2` |
+| Anthracite Org | `anthracite-org` |
+| Apple | `apple` |
+| Arcee AI | `arcee-ai` |
+| BAAI, Beijing Academy of AI | `baai` |
+| Baichuan AI | `baichuan-ai` |
+| BigCode / ServiceNow / Hugging Face | `bigcode` |
+| BigScience / Hugging Face community | `bigscience` |
+| Character.AI | `character-ai` |
+| Cognitive Computations | `cognitivecomputations` |
+| Contextual AI | `contextual-ai` |
+| DeepCogito | `deepcogito` |
+| EleutherAI | `eleutherai` |
+| Essential AI | `essential-ai` |
+| Gryphe | `gryphe` |
+| IBM Granite | `ibm-granite` |
+| InclusionAI | `inclusionai` |
+| Inflection AI | `inflection-ai` |
 | Kakao | `kakao` |
 | Krutrim | `krutrim` |
-| Aleph Alpha | `aleph-alpha` |
+| KwaiPilot | `kwaipilot` |
+| LG AI Research | `lg` |
 | LightOn | `lighton` |
+| Liquid AI | `liquid-ai` |
+| Mancer | `mancer` |
+| Naver | `naver` |
+| Nex AGI | `nex-agi` |
+| Nous Research | `nous-research` |
+| Perceptron | `perceptron` |
+| Reka AI | `reka-ai` |
+| Relace | `relace` |
+| Sakana AI | `sakana` |
+| Salesforce AI Research | `salesforce` |
+| Samsung Research | `samsung-research` |
+| Sao10K | `sao10k` |
+| SDAIA / IBM / Saudi ecosystem | `sdaia` |
+| SK Telecom | `sk-telecom` |
+| Technology Innovation Institute, UAE | `tii` |
+| TheDrummer | `thedrummer` |
+| Thinking Machines | `thinkingmachines` |
+| Undi95 | `undi95` |
+| Writer | `writer` |
+| XVERSE AI | `xverse-ai` |
 | Yandex | `yandex` |
-| Allen Institute for AI, AI2 | `ai2` |
-| EleutherAI | `eleutherai` |
-| BigScience / Hugging Face community | `bigscience` |
-| BigCode / ServiceNow / Hugging Face | `bigcode` |
-| BAAI, Beijing Academy of AI | `baai` |
