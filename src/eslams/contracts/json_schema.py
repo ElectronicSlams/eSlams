@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 from typing import Any
 
+from eslams._build_provenance import core_source_commit
 from eslams.contracts.integrity import ATTEMPT_KINDS, FAILURE_CLASSES
 from eslams.contracts.pricing import no_secret_example as price_card_no_secret_example
 from eslams.contracts.provider import GATEWAY_MODES, PROVIDER_OUTCOMES
@@ -107,7 +107,7 @@ def schema_bundle_manifest(schema_paths: list[Path]) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION,
         "core_package_version": CORE_PACKAGE_VERSION,
-        "core_commit": _git_commit(),
+        "core_commit": core_source_commit(),
         "schema_bundle_version": SCHEMA_BUNDLE_VERSION,
         "deterministic_build_id": sha256_json(
             {
@@ -1345,22 +1345,6 @@ def _schemas() -> dict[str, dict[str, Any]]:
             },
         ),
     }
-
-
-def _git_commit() -> str | None:
-    root = Path(__file__).resolve().parents[3]
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    value = result.stdout.strip()
-    return value or None
 
 
 def _provider_attempt_schema() -> dict[str, Any]:

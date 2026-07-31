@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.6.1 - 2026-07-31
+
+### Fixed
+
+- Embedded the immutable release source commit into wheel and source
+  distributions so deterministic schema exports no longer depend on a runtime
+  Git checkout.
+- Unified schema-manifest and runner-health provenance behind one fail-closed
+  source, including linked worktrees and clean installed environments.
+
+### Validation
+
+- Added a package portability regression that builds a wheel through the source
+  distribution, installs it outside a Git checkout, exports schemas twice, and
+  requires byte equality with the source-checkout export.
+
 ## v0.6.0 - 2026-07-31
 
 ### Breaking changes
