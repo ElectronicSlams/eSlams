@@ -434,7 +434,7 @@ def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, c
         (tmp_path / "schemas" / "schema_bundle_manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["schema_version"] == "eslams.schema.bundle_manifest.v1"
-    assert manifest["core_package_version"] == "0.6.0"
+    assert manifest["core_package_version"] == "0.6.1"
     assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v4"
     assert any(
         row["schema_version"] == "eslams.catalogue.renderer.v1" for row in manifest["schemas"]

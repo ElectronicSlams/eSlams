@@ -33,6 +33,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.6.1](#release-v061)
 - [Release v0.6.0](#release-v060)
 - [Release v0.5.1](#release-v051)
 - [Release v0.5.0](#release-v050)
@@ -749,6 +750,15 @@ eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
 ```
 
+## Release v0.6.1
+
+`v0.6.1` is the portable provenance patch for the Core 0.6 integrity release.
+It emits `eslams-runner:0.6.1` and embeds the immutable release source commit
+into wheel and source distributions. Schema exports from a tagged checkout and
+from a clean installed package are therefore byte-identical; installed
+execution does not depend on Git being present. Contract schema content and the
+`eslams-schema-bundle-v4` format remain unchanged.
+
 ## Release v0.6.0
 
 `v0.6.0` is the fail-closed execution-integrity release. It emits
@@ -843,8 +853,10 @@ git push origin main v0.3.0
 ```
 
 `eslams schemas export --out schemas/` writes individual schema files plus
-`schema_bundle_manifest.json` with the Core package version, git commit when
-available, schema bundle version, schema hashes, and deterministic build id.
+`schema_bundle_manifest.json` with the Core package version, immutable release
+source commit, schema bundle version, schema hashes, and deterministic build id.
+Wheel and source distributions embed the source commit, so export fails closed
+instead of depending on Git being available at runtime.
 
 ## Contribute
 

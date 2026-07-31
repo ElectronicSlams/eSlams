@@ -35,9 +35,10 @@ rows remain snake_case. The package uses NodeNext-compatible ESM specifiers and
 its checked compile includes a package self-reference consumer.
 
 The export also writes `schema_bundle_manifest.json`. The manifest is
-deterministic and records Core package version, git commit when available,
+deterministic and records Core package version, immutable release source commit,
 schema bundle version, schema filenames, schema versions, SHA-256 hashes, byte
-sizes, and a deterministic build id.
+sizes, and a deterministic build id. Core 0.6.1 embeds that provenance in wheel
+and source distributions, so export does not depend on Git at installed runtime.
 
 ## Core Step v2
 

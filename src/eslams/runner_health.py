@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import subprocess
 import time
-from pathlib import Path
 from typing import Any
 
 import eslams.arenas  # noqa: F401
+from eslams._build_provenance import core_source_commit
 from eslams.arena import registry as arena_registry
 from eslams.contracts.runner_job import runner_health_payload
 from eslams.contracts.versions import CORE_PACKAGE_VERSION
@@ -31,7 +30,7 @@ def current_runner_health() -> dict[str, Any]:
         for record in load_provider_registry().list_models()
     ]
     payload = runner_health_payload(
-        core_commit=_git_commit(),
+        core_commit=core_source_commit(),
         core_version=CORE_VERSION,
         registry_rows=registry_rows,
         game_ids=game_ids,
@@ -47,24 +46,3 @@ def current_runner_health() -> dict[str, Any]:
         }
     )
     return payload
-
-
-def _git_commit() -> str | None:
-    root = Path(__file__).resolve().parents[2]
-    if not (root / ".git").is_dir():
-        return None
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=root,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=2,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if result.returncode != 0:
-        return None
-    value = result.stdout.strip()
-    return value or None

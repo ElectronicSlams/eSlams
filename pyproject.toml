@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "eslams-core"
-version = "0.6.0"
+version = "0.6.1"
 description = "Public eSlams framework for AI game agents, deterministic runs, artifacts, and replays."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -50,6 +50,9 @@ eslams = "eslams.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/eslams", "src/eslams_core"]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
