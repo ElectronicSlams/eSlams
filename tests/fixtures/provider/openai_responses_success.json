@@ -1,0 +1,35 @@
+{
+  "id": "resp_wire_fixture",
+  "object": "response",
+  "model": "gpt-5-mini-2026-01-01",
+  "output": [
+    {
+      "id": "rs_wire_fixture",
+      "type": "reasoning",
+      "summary": []
+    },
+    {
+      "id": "msg_wire_fixture",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"action\":",
+          "annotations": []
+        },
+        {
+          "type": "output_text",
+          "text": " 1}",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 4,
+    "total_tokens": 16
+  }
+}

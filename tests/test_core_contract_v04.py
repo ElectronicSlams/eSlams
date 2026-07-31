@@ -53,7 +53,7 @@ def test_core_step_v2_returns_hashes_timings_and_compact_views():
     )
 
     assert response["ok"] is True
-    assert response["coreVersion"] == "0.5.1"
+    assert response["coreVersion"] == "0.6.0"
     assert response["coreContractVersion"] == "2.0"
     assert response["previousStateHash"] == state.state_hash
     assert response["nextStateHash"] != state.state_hash

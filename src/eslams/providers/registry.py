@@ -144,7 +144,7 @@ PROVIDER_ALIASES = {
     "dashscope": "qwen",
     "meta-llama": "meta",
     "amazon": "amazon-aws",
-    "amazon-bedrock": "amazon-aws",
+    "amazon-bedrock": "bedrock",
     "amazon-nova": "amazon-aws",
     "arcee": "arcee-ai",
     "baichuan": "baichuan-ai",
@@ -171,7 +171,7 @@ PROVIDER_ALIASES = {
     "inception": "core42",
     "gigachat": "sber",
     "aws": "amazon-aws",
-    "bedrock": "amazon-aws",
+    "bedrock": "bedrock",
     "azure": "microsoft",
     "azure-ai": "microsoft",
     "watsonx": "ibm",
@@ -224,6 +224,8 @@ class ProviderRegistry:
             return warnings
         if record.available_from_api is False:
             warnings.append(f"provider model {provider}:{model} is marked unavailable from API")
+        if record.lifecycle in {"deprecated", "retired"}:
+            warnings.append(f"provider model {provider}:{model} lifecycle is {record.lifecycle}")
         if not record.allows_text_game_agent():
             warnings.append(f"provider model {provider}:{model} is not marked game_agent_supported")
         if api_key_env:

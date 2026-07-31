@@ -37,6 +37,11 @@ def runner_job_result_from_artifact(
         validation_status="valid" if report.valid else "invalid",
         scoring_safety_reason=_optional_str(manifest.get("scoring_safety_reason"))
         or _optional_str(manifest.get("invalid_reason"))
+        or (
+            "integrity_incomplete"
+            if report.per_case_run_valid is True and not scoring_eligible
+            else None
+        )
         or report.aggregate_ineligibility_reason,
         runner_error={} if report.valid else {"validation_errors": list(report.errors)},
     )

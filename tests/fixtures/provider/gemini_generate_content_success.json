@@ -1,0 +1,21 @@
+{
+  "responseId": "gemini-wire-fixture",
+  "modelVersion": "gemini-2.5-flash",
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {"text": "{\"action\":"},
+          {"text": " 1}"}
+        ]
+      },
+      "finishReason": "STOP"
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 12,
+    "candidatesTokenCount": 4,
+    "totalTokenCount": 16
+  }
+}

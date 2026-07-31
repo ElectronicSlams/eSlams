@@ -98,10 +98,12 @@ def test_cli_runner_result_completed_artifact(tmp_path: Path, capsys):
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["runner_completed"] is True
-    assert payload["scoring_eligible"] is True
+    assert payload["scoring_eligible"] is False
     assert payload["artifact_uri"] == "s3://bucket/run.eslams"
     assert payload["validation_status"] == "valid"
     assert payload["artifact_key"]
+    assert payload["retry_recommendation"] == "record_non_scoring_result"
+    assert payload["scoring_safety_reason"] == "integrity_incomplete"
 
 
 def test_cli_runner_result_validation_failure(tmp_path: Path, capsys):

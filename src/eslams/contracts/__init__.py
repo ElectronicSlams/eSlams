@@ -9,11 +9,19 @@ from eslams.contracts.artifact import (
     PublicArtifactManifest,
     PublicResultSummary,
 )
+from eslams.contracts.integrity import ActionProvenance, FailureClass, RunIntegrity
 from eslams.contracts.json_schema import export_schemas, schema_filename, schema_for_version
-from eslams.contracts.provider import ProviderReceipt, ProviderRuntimeConfig
+from eslams.contracts.pricing import PriceCardReference, validate_price_card_reference
+from eslams.contracts.provider import (
+    ProviderAttemptEvent,
+    ProviderReceipt,
+    ProviderRuntimeConfig,
+    provider_attempt_event_id,
+)
 from eslams.contracts.publication import ObjectManifestEntry, PublicationBundleManifest
 from eslams.contracts.replay import PublicReasoningRow, PublicReplayManifest, ReplayParticipant
 from eslams.contracts.versions import (
+    ACTION_PROVENANCE_SCHEMA_VERSION,
     ARENA_ACTION_DESCRIPTOR_SCHEMA_VERSION,
     ARENA_EVENT_SCHEMA_VERSION,
     ARENA_LEGAL_ACTIONS_PAGE_SCHEMA_VERSION,
@@ -35,12 +43,15 @@ from eslams.contracts.versions import (
     GAME_SURFACE_SCHEMA_VERSION,
     GAME_TOPOLOGY_SCHEMA_VERSION,
     OFFICIAL_RESULT_SCHEMA_VERSION,
+    PRICE_CARD_REFERENCE_SCHEMA_VERSION,
+    PROVIDER_ATTEMPT_SCHEMA_VERSION,
     PROVIDER_RECEIPT_SCHEMA_VERSION,
     PUBLICATION_BUNDLE_SCHEMA_VERSION,
     PUBLICATION_VALIDATION_SCHEMA_VERSION,
     REPLAY_DISPLAY_FRAME_SCHEMA_VERSION,
     REPLAY_MANIFEST_SCHEMA_VERSION,
     REPLAY_PUBLIC_SCHEMA_VERSION,
+    RUN_INTEGRITY_SCHEMA_VERSION,
     RUNNER_JOB_SCHEMA_VERSION,
     SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION,
     USAGE_MODEL_CALL_SCHEMA_VERSION,
@@ -51,6 +62,8 @@ from eslams.contracts.versions import (
 
 __all__ = [
     "ARTIFACT_COMPATIBILITY_MAP",
+    "ACTION_PROVENANCE_SCHEMA_VERSION",
+    "ActionProvenance",
     "ARTIFACT_KINDS",
     "ARTIFACT_MANIFEST_SCHEMA_VERSION",
     "ARTIFACT_PROFILES",
@@ -75,12 +88,18 @@ __all__ = [
     "EVAL_PROGRESS_SCHEMA_VERSION",
     "EVAL_RESUME_CHECKPOINT_SCHEMA_VERSION",
     "OFFICIAL_RESULT_SCHEMA_VERSION",
+    "PRICE_CARD_REFERENCE_SCHEMA_VERSION",
+    "FailureClass",
     "ObjectManifestEntry",
     "PROVIDER_RECEIPT_SCHEMA_VERSION",
+    "PROVIDER_ATTEMPT_SCHEMA_VERSION",
     "PUBLICATION_BUNDLE_SCHEMA_VERSION",
     "PUBLICATION_VALIDATION_SCHEMA_VERSION",
     "ProviderReceipt",
+    "ProviderAttemptEvent",
     "ProviderRuntimeConfig",
+    "provider_attempt_event_id",
+    "PriceCardReference",
     "PublicationBundleManifest",
     "PublicArtifactManifest",
     "PublicReasoningRow",
@@ -90,6 +109,8 @@ __all__ = [
     "REPLAY_MANIFEST_SCHEMA_VERSION",
     "REPLAY_PUBLIC_SCHEMA_VERSION",
     "RUNNER_JOB_SCHEMA_VERSION",
+    "RUN_INTEGRITY_SCHEMA_VERSION",
+    "RunIntegrity",
     "SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION",
     "USAGE_MODEL_CALL_SCHEMA_VERSION",
     "USAGE_SCHEMA_VERSION",
@@ -100,4 +121,5 @@ __all__ = [
     "schema_filename",
     "schema_for_version",
     "schema_versions",
+    "validate_price_card_reference",
 ]

@@ -68,7 +68,9 @@ def test_runner_artifact_includes_public_sidecars_and_archive_helpers(tmp_path: 
     assert validation_summary is not None
     assert validation_summary["schema_version"] == "eslams.artifact.validation.v1"
     assert validation_summary["verification_level_key"] == "local_artifact"
-    assert validation_summary["per_case_scoring_eligible"] is True
+    assert validation_summary["scoring_eligible"] is True
+    assert validation_summary["per_case_scoring_eligible"] is False
+    assert validation_summary["proof_row_publication_eligible"] is False
     assert validation_summary["aggregate_leaderboard_eligible"] is False
     assert public_manifest is not None
     assert public_manifest["replay_events_path"] == "replay/replay_events.jsonl"
@@ -85,12 +87,24 @@ def test_runner_artifact_includes_public_sidecars_and_archive_helpers(tmp_path: 
     assert manifest["artifact_profile_label"] == "Runner Bundle"
     assert manifest["scoring_policy_key"] == "tic_tac_toe_score"
     assert manifest["per_case_run_valid"] is True
-    assert manifest["per_case_scoring_eligible"] is True
-    assert manifest["proof_row_publication_eligible"] is True
+    assert manifest["per_case_scoring_eligible"] is False
+    assert manifest["proof_row_publication_eligible"] is False
     assert manifest["aggregate_leaderboard_eligible"] is False
     assert manifest["public_exports"]["public_reasoning"] == "public_reasoning/reasoning.jsonl"
     assert manifest["public_exports"]["public_display_frames"] == "replay/display_frames.jsonl"
     assert manifest["validation_summary_path"] == "validation/validation_summary.json"
+
+    public_result = json.loads(
+        (result.expanded_path / "public/public_result_summary.json").read_text(encoding="utf-8")
+    )
+    official_result = json.loads(
+        (result.expanded_path / "scores/official_result.json").read_text(encoding="utf-8")
+    )
+    assert public_result["valid_for_scoring"] is True
+    assert public_result["per_case_scoring_eligible"] is False
+    assert public_result["proof_row_publication_eligible"] is False
+    assert official_result["integrity"]["validForScoring"] is True
+    assert official_result["case_counts"]["non_scoring"] == 1
 
     replay = _read_jsonl(result.expanded_path / "replay/replay_events.jsonl")
     display_frames = _read_jsonl(result.expanded_path / "replay/display_frames.jsonl")
@@ -128,8 +142,7 @@ def test_validation_profiles_distinguish_runner_public_and_official(tmp_path: Pa
     assert optional_reasoning["sha256"]
     assert runner_report.valid is False
     assert any(
-        item == "missing required file: traces/public_trace.jsonl"
-        for item in runner_report.errors
+        item == "missing required file: traces/public_trace.jsonl" for item in runner_report.errors
     )
     assert official_report.valid is False
     assert "runner_signature_missing" in official_report.errors
@@ -185,8 +198,8 @@ def test_failed_provider_attempt_writes_redacted_receipt(tmp_path: Path, monkeyp
 
     assert receipts
     receipt = receipts[0]
-    assert receipt["schema_version"] == "eslams.provider.receipt.v1"
-    assert receipt["outcome"] == "unavailable"
+    assert receipt["schema_version"] == "eslams.provider.receipt.v2"
+    assert receipt["outcome"] == "provider_auth_failed"
     assert receipt["usage_unavailable_reason"] == "provider_not_called_missing_api_key"
     assert receipt["estimated_cost"]["status"] == "cost_unavailable"
     assert "raw_output_preview" not in receipt
@@ -208,7 +221,7 @@ def test_runner_persists_mock_provider_failure_receipts(tmp_path: Path):
 
     assert receipts
     assert receipts[0]["outcome"] == "gateway_auth_failed"
-    assert receipts[0]["schema_version"] == "eslams.provider.receipt.v1"
+    assert receipts[0]["schema_version"] == "eslams.provider.receipt.v2"
     assert receipts[0]["estimated_cost"]["status"] == "cost_unavailable"
 
 
@@ -233,7 +246,21 @@ def test_runner_persists_each_provider_retry_receipt(tmp_path: Path, monkeypatch
             200,
             json={
                 "id": "resp_retry",
-                "output_text": '{"action": 0}',
+                "output": [
+                    {"id": "reasoning_1", "type": "reasoning", "summary": []},
+                    {
+                        "id": "message_1",
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": '{"action": 0}',
+                                "annotations": [],
+                            }
+                        ],
+                    },
+                ],
                 "usage": {"input_tokens": 4, "output_tokens": 1},
             },
         )
@@ -261,7 +288,10 @@ def test_runner_persists_each_provider_retry_receipt(tmp_path: Path, monkeypatch
 
     assert calls["count"] == 2
     assert [receipt["attempt"] for receipt in receipts] == [1, 2]
-    assert [receipt["outcome"] for receipt in receipts] == ["provider_error", "ok"]
+    assert [receipt["outcome"] for receipt in receipts] == [
+        "provider_unavailable",
+        "ok",
+    ]
 
 
 def test_runner_persists_http_agent_provider_receipts(tmp_path: Path, monkeypatch):
@@ -404,15 +434,13 @@ def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, c
         (tmp_path / "schemas" / "schema_bundle_manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["schema_version"] == "eslams.schema.bundle_manifest.v1"
-    assert manifest["core_package_version"] == "0.5.1"
-    assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v3"
+    assert manifest["core_package_version"] == "0.6.0"
+    assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v4"
     assert any(
-        row["schema_version"] == "eslams.catalogue.renderer.v1"
-        for row in manifest["schemas"]
+        row["schema_version"] == "eslams.catalogue.renderer.v1" for row in manifest["schemas"]
     )
     assert any(
-        row["schema_version"] == "eslams.replay.display_frame.v1"
-        for row in manifest["schemas"]
+        row["schema_version"] == "eslams.replay.display_frame.v1" for row in manifest["schemas"]
     )
 
     assert main(["validate", str(result.artifact_path), "--profile", "runner-bundle"]) == 0
@@ -438,7 +466,7 @@ def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, c
                 "--provider",
                 "openai",
                 "--model",
-                "gpt-test",
+                "gpt-5-mini",
                 "--arena",
                 "tic-tac-toe",
             ]
@@ -449,9 +477,7 @@ def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, c
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 

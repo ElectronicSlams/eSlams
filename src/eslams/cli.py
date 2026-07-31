@@ -25,6 +25,8 @@ from eslams.artifacts import ArtifactValidator
 from eslams.bench import arena_step_benchmark
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
 from eslams.contracts.json_schema import export_schemas
+from eslams.contracts.pricing import PriceCardReference
+from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.contracts.versions import RUNNER_VERSION
 from eslams.core_contract import core_step, engine_capabilities, prompt_package
 from eslams.eval_runtime import (
@@ -40,7 +42,7 @@ from eslams.observation_budgets import all_observation_budget_reports
 from eslams.official import merge_official_results
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
-from eslams.provider_preflight import provider_preflight
+from eslams.provider_preflight import provider_models_live, provider_preflight
 from eslams.providers import load_provider_registry
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
@@ -220,6 +222,13 @@ def main(argv: list[str] | None = None) -> int:
     providers_preflight.add_argument("--provider", required=True)
     providers_preflight.add_argument("--model", required=True)
     providers_preflight.add_argument("--arena", default="tic-tac-toe", choices=registry.list())
+    providers_preflight.add_argument("--live", action="store_true")
+    providers_models = providers_sub.add_parser(
+        "models",
+        help="List registry or account-visible provider models.",
+    )
+    providers_models.add_argument("--provider", required=True)
+    providers_models.add_argument("--live", action="store_true")
 
     runner_cmd = sub.add_parser("runner", help="Runner/container helper commands.")
     runner_sub = runner_cmd.add_subparsers(dest="runner_command", required=True)
@@ -305,18 +314,45 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument(
         "--on-agent-error",
         choices=sorted(FAILURE_POLICIES),
-        default="fallback",
+        default="invalid-match",
     )
     run.add_argument(
         "--on-illegal-action",
         choices=sorted(FAILURE_POLICIES),
-        default="fallback",
+        default="invalid-match",
     )
+    run.add_argument(
+        "--execution-profile",
+        choices=["interactive", "smoke", "official_eval"],
+        default="interactive",
+    )
+    run.add_argument(
+        "--reasoning",
+        choices=["disabled", "enabled", "auto"],
+        default="auto",
+    )
+    run.add_argument(
+        "--openrouter-provider-order",
+        default="",
+        help=("Comma-separated OpenRouter provider order; provider fallback remains disabled."),
+    )
+    run.add_argument("--bedrock-region", default="us-east-1")
+    run.add_argument(
+        "--rate-card-id",
+        help="Diagnostic label only; official cost completeness requires --rate-card-reference.",
+    )
+    run.add_argument(
+        "--rate-card-reference",
+        type=Path,
+        help="Path to a complete eslams.price-card-reference.v1 JSON object.",
+    )
+    run.add_argument("--overwrite", action="store_true")
     run.add_argument("--verification-level", default="Local Artifact")
     run.add_argument("--eval-suite-version", default="public-smoke:1.0.0")
     run.add_argument("--runner-version", default=RUNNER_VERSION)
     run.add_argument("--suite-id")
     run.add_argument("--case-id")
+    run.add_argument("--case-attempt-index", type=int, default=1)
     run.add_argument("--suite-fingerprint")
     run.add_argument("--plan-hash")
     run.add_argument("--shard-index", type=int)
@@ -333,6 +369,7 @@ def main(argv: list[str] | None = None) -> int:
             "official-bundle",
             "battlefield-bundle",
             "public-replay-package",
+            "official-case",
             "auto",
         ],
         default="runner-bundle",
@@ -394,8 +431,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "models":
         return _models_command(args)
     if args.command == "run":
-        agent_1 = _agent_arg(args.agent)
-        agent_2 = _agent_arg(args.opponent)
+        provider_runtime = ProviderRuntimeConfig(
+            reasoning=args.reasoning,
+            openrouter_provider_order=tuple(_comma_list(args.openrouter_provider_order)),
+            openrouter_allow_fallbacks=False,
+            bedrock_region=args.bedrock_region,
+            rate_card_id=args.rate_card_id,
+            rate_card_reference=_read_price_card_reference(args.rate_card_reference),
+        )
+        agent_1 = _agent_arg(args.agent, runtime_config=provider_runtime)
+        agent_2 = _agent_arg(args.opponent, runtime_config=provider_runtime)
         _print_run_preflight(args, agent_1, agent_2)
         result = Runner().run(
             RunConfig(
@@ -409,11 +454,14 @@ def main(argv: list[str] | None = None) -> int:
                 archive=args.archive,
                 on_agent_error=args.on_agent_error,
                 on_illegal_action=args.on_illegal_action,
+                execution_profile=args.execution_profile,
+                overwrite=args.overwrite,
                 verification_level=args.verification_level,
                 eval_suite_version=args.eval_suite_version,
                 runner_version=args.runner_version,
                 suite_id=args.suite_id,
                 case_id=args.case_id,
+                case_attempt_index=args.case_attempt_index,
                 suite_fingerprint=args.suite_fingerprint,
                 plan_hash=args.plan_hash,
                 shard_index=args.shard_index,
@@ -428,23 +476,31 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(json.dumps(job_result.to_dict(), indent=2))
             return 0 if job_result.validation_status == "valid" else 1
-        print(
-            json.dumps(
-                {
-                    "run_id": result.run_id,
-                    "artifact": str(result.artifact_path),
-                    "expanded_artifact": str(result.expanded_path),
-                    "summary": {
-                        "winner": result.score.winner,
-                        "terminal_reason": _terminal_reason(result),
-                        "match_valid_for_scoring": result.score.match_valid_for_scoring,
-                        "invalid_reason": result.score.invalid_reason,
-                    },
-                    "score": result.score.to_dict(),
-                },
-                indent=2,
+        payload = {
+            "run_id": result.run_id,
+            "artifact": str(result.artifact_path),
+            "expanded_artifact": str(result.expanded_path),
+            "summary": {
+                "winner": result.score.winner,
+                "terminal_reason": _terminal_reason(result),
+                "match_valid_for_scoring": result.score.match_valid_for_scoring,
+                "invalid_reason": result.score.invalid_reason,
+            },
+            "score": result.score.to_dict(),
+        }
+        provider_error = _provider_error_summary(result)
+        if provider_error is not None:
+            payload["provider_error"] = provider_error
+            print(
+                "provider failure: "
+                f"{provider_error.get('provider')}:{provider_error.get('model')} "
+                f"status={provider_error.get('status_code')} "
+                f"type={provider_error.get('error_type')} "
+                f"message={provider_error.get('message')} "
+                f"details={provider_error.get('details_path')}",
+                file=sys.stderr,
             )
-        )
+        print(json.dumps(payload, indent=2))
         return 0
     if args.command == "validate":
         report = ArtifactValidator().validate_report(args.artifact, profile=args.profile)
@@ -464,7 +520,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             payload = validate_public_replay(Path(args.extra))
             print(json.dumps(payload, indent=2))
-            return 0 if payload.get("valid") is True else 1
+            return 0 if bool(payload.get("valid")) else 1
         output = render_replay_html(Path(args.artifact), args.output)
         print(json.dumps({"replay": str(output)}, indent=2))
         return 0
@@ -563,10 +619,7 @@ def _arena_command(args: argparse.Namespace) -> int:
         if args.json:
             print(json.dumps(payload, indent=2))
         else:
-            print(
-                f"ok={str(payload['ok']).lower()} "
-                f"game_count={payload['game_count']}"
-            )
+            print(f"ok={str(payload['ok']).lower()} game_count={payload['game_count']}")
         return 0 if payload["ok"] is True else 1
     if args.arena_command == "start":
         payload = start_session(
@@ -719,7 +772,26 @@ def _official_command(args: argparse.Namespace) -> int:
 
 def _providers_command(args: argparse.Namespace) -> int:
     if args.providers_command == "preflight":
-        payload = provider_preflight(args.provider, args.model, args.arena)
+        payload = provider_preflight(args.provider, args.model, args.arena, live=args.live)
+        print(json.dumps(payload, indent=2))
+        return 0 if payload["ok"] is True else 1
+    if args.providers_command == "models":
+        if args.live:
+            models = provider_models_live(args.provider)
+            payload = {
+                "provider": args.provider,
+                "mode": "live",
+                "ok": models is not None,
+                "models": models or [],
+            }
+        else:
+            records = load_provider_registry().list_models(provider=args.provider)
+            payload = {
+                "provider": args.provider,
+                "mode": "registry_only",
+                "ok": True,
+                "models": [record.to_dict() for record in records],
+            }
         print(json.dumps(payload, indent=2))
         return 0 if payload["ok"] is True else 1
     raise AssertionError(args.providers_command)
@@ -731,10 +803,7 @@ def _runner_command(args: argparse.Namespace) -> int:
         if args.json:
             print(json.dumps(payload, indent=2))
         else:
-            print(
-                f"core_version={payload['core_version']} "
-                f"game_count={payload['game_count']}"
-            )
+            print(f"core_version={payload['core_version']} game_count={payload['game_count']}")
         return 0
     if args.runner_command == "result":
         result = runner_job_result_from_artifact(
@@ -772,10 +841,14 @@ def _runner_command(args: argparse.Namespace) -> int:
     raise AssertionError(args.runner_command)
 
 
-def _agent_arg(value: str) -> str | HttpAgent | ModelProviderAgent:
+def _agent_arg(
+    value: str,
+    *,
+    runtime_config: ProviderRuntimeConfig | None = None,
+) -> str | HttpAgent | ModelProviderAgent:
     if value.startswith("http://") or value.startswith("https://"):
         return HttpAgent(url=value)
-    provider = _provider_agent(value)
+    provider = _provider_agent(value, runtime_config=runtime_config)
     if provider is not None:
         return provider
     return value
@@ -827,11 +900,18 @@ def _run_registry_update(args: argparse.Namespace) -> int:
     return subprocess.call(command)
 
 
-def _provider_agent(value: str) -> ModelProviderAgent | None:
+def _provider_agent(
+    value: str,
+    *,
+    runtime_config: ProviderRuntimeConfig | None = None,
+) -> ModelProviderAgent | None:
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-20250514", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
+        "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
+        "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
+        "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -846,6 +926,7 @@ def _provider_agent(value: str) -> ModelProviderAgent | None:
         model=model or default_model,
         api_key_env=env_name,
         version=model or default_model,
+        runtime_config=runtime_config,
     )
 
 
@@ -862,6 +943,23 @@ def _read_json_file(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return value
+
+
+def _read_price_card_reference(path: Path | None) -> PriceCardReference | None:
+    if path is None:
+        return None
+    value = _read_json_file(path)
+    return PriceCardReference(
+        rate_card_id=str(value.get("rateCardId") or ""),
+        rate_card_hash=str(value.get("rateCardHash") or ""),
+        provider=str(value.get("provider") or ""),
+        model=str(value.get("model") or ""),
+        currency=str(value.get("currency") or ""),
+        source_uri=str(value.get("sourceUri") or ""),
+        effective_at=(str(value["effectiveAt"]) if value.get("effectiveAt") is not None else None),
+        retrieved_at=(str(value["retrievedAt"]) if value.get("retrievedAt") is not None else None),
+        complete=value.get("complete") is True,
+    )
 
 
 def _json_arg(value: str, name: str) -> dict[str, Any]:
@@ -925,6 +1023,32 @@ def _terminal_reason(result: Any) -> str | None:
         terminal_reason = result.replay_events[-1].public_state.get("terminal_reason")
         if isinstance(terminal_reason, str):
             return terminal_reason
+    return None
+
+
+def _provider_error_summary(result: Any) -> dict[str, Any] | None:
+    errors_path = result.expanded_path / "logs/errors.jsonl"
+    if not errors_path.exists():
+        return None
+    rows = [line for line in errors_path.read_text(encoding="utf-8").splitlines() if line]
+    for line in reversed(rows):
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        metadata = row.get("response_metadata")
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("error_kind"), str):
+            continue
+        return {
+            "provider": metadata.get("provider"),
+            "model": metadata.get("model"),
+            "status_code": metadata.get("status_code"),
+            "error_type": metadata.get("error_kind"),
+            "message": str(metadata.get("error") or "provider call failed")[:500],
+            "details_path": str(errors_path.resolve()),
+        }
     return None
 
 

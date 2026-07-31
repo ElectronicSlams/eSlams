@@ -1,5 +1,95 @@
 # Changelog
 
+## v0.6.0 - 2026-07-31
+
+### Breaking changes
+
+- Changed the default agent-error and illegal-action policies from fallback to
+  `invalid-match`. Any fallback action now permanently makes a run unscoreable,
+  including signed artifacts.
+- Added `interactive`, `smoke`, and `official_eval` execution profiles.
+  `official_eval` rejects fallback policies and provider-local retries because
+  the official orchestrator owns whole-case retry policy.
+- Replaced deterministic execution IDs with unique
+  `run_<arena>_<utc-timestamp>_<short-uuid>` IDs. The deterministic
+  configuration identity is now stored separately as `match_fingerprint`.
+- Refused existing artifact output paths unless `--overwrite` is explicit.
+- Advanced provider receipt writers to `eslams.provider.receipt.v2`, provider
+  attempts to `eslams.provider-attempt.v2`, run integrity to
+  `eslams.run-integrity.v2`, usage summaries to `eslams.usage-summary.v2`, and
+  schema bundle metadata to `eslams-schema-bundle-v4`. Core retains tested read
+  compatibility for historical 0.5/v1 receipts.
+
+### Added
+
+- Added stable failure classes, action provenance, logical-action IDs,
+  deterministic physical-attempt IDs, positive case-attempt indexes, explicit
+  attempt kinds, parent attempt linkage, and gap-free attempt-ledger checks.
+- Added the fail-closed `official-case` artifact profile. It checks signatures,
+  Core scoring validity, fallback/agent-error counts, evaluated-seat provider
+  status, model identity, usage/cost completeness, and exact trace/replay/
+  receipt reconciliation with no orphan applied attempts.
+- Added native OpenRouter Chat Completions support with provider pinning,
+  fallback disabled, raw-wire parsing, request identity, normalized usage, and
+  native `usage.cost` capture.
+- Added native Amazon Bedrock Converse support with configurable region,
+  bearer-token auth, literal model version separators, raw-wire parsing, and
+  endpoint-pinned model identity.
+- Added documented raw REST fixtures and fault matrices for OpenAI Responses,
+  Anthropic Messages, Gemini `generateContent`, OpenRouter Chat Completions,
+  and Bedrock Converse.
+- Added registry-only and account-aware live provider preflight modes, live
+  model listing, minimal inference/action parsing/usage checks, first-class
+  OpenRouter/Bedrock registry identities, and lifecycle metadata.
+- Added canonical reasoning-inclusion, cached-token, provider-total, usage
+  source, and cost source semantics. Non-finite, negative, missing, or
+  incoherent accounting fails closed.
+- Added immutable `eslams.price-card-reference.v1` contracts. Bare rate-card
+  strings no longer make cost complete.
+- Added redacted CLI provider failure summaries with the exact artifact
+  diagnostics path, `--reasoning`, OpenRouter/Bedrock controls,
+  `--case-attempt-index`, `--rate-card-reference`, and `--overwrite`.
+- Added JSON Schemas and generated TypeScript contracts for run integrity,
+  action provenance, physical provider attempts, usage summaries, and price-card
+  references.
+- Added separate gameplay-valid and proof/publication-eligible claims. Missing
+  usage, cost, attempt-ledger, or model-identity evidence now fails publication
+  eligibility closed without rewriting a clean gameplay verdict.
+
+### Fixed
+
+- Stopped synthesizing resolved model identity from the requested model;
+  unknown identity remains null unless attested by a provider response or a
+  deliberately pinned endpoint.
+- Preserved sanitized request ID, status, usage, and cost evidence when an HTTP
+  200 response fails wire-schema parsing.
+- Classified action-repair failures as `action_repair` physical attempts rather
+  than primary calls.
+- Classified the first provider attempt of a whole-case retry as `case_retry`
+  and preserved the distinct `action_repair` lineage.
+- Corrected Anthropic manual/adaptive thinking payloads and token-budget rules,
+  and removed incompatible temperature/manual fields for adaptive models.
+- Prevented reasoning-token double counting and double billing while retaining
+  provider-reported totals and documented cross-provider derivations.
+- Recursively removed credential-bearing keys and redacted bearer/query-secret
+  values from caller-supplied HTTP agent endpoint metadata before persistence.
+- Rejected credential-bearing provider endpoint URLs and recursively rejected
+  sensitive fields or unredacted secret values in externally supplied receipts.
+- Constrained explicit run IDs to portable path-safe identifiers, refused
+  artifact symlink escapes, and limited `latest.eslams*` replacement to symlinks
+  so real files and directories are never removed during publication.
+- Made the public TypeScript contract barrel resolvable by NodeNext ESM
+  consumers and added a package self-reference compile regression.
+
+### Validation
+
+- Added fail-closed mutation coverage across all 50 arenas, a 20-turn
+  all-failure regression, signed-fallback rejection, attempt-join tamper tests,
+  all-provider fault injection, accounting coherence tests, schema lifecycle
+  tests, and deterministic event-ID tests.
+- Release gates cover Python 3.9–3.12, pytest, Ruff, mypy, TypeScript contract
+  typecheck, wheel/sdist build, `twine check`, and deterministic schema export.
+
 ## v0.5.1 - 2026-07-05
 
 ### Fixed
