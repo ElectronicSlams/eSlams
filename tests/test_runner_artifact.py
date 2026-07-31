@@ -92,18 +92,20 @@ def test_validator_detects_score_replay_terminal_outcome_mismatch(tmp_path: Path
     assert report.deterministic_replay.status == "invalid"
 
 
-def test_runner_artifact_id_is_stable_for_same_seed(tmp_path: Path):
-    first = Runner().run(
-        RunConfig(arena_id="tic-tac-toe", seed=23, output_dir=tmp_path / "first")
-    )
+def test_runner_ids_are_unique_and_fingerprint_is_stable_for_same_seed(tmp_path: Path):
+    first = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=23, output_dir=tmp_path / "first"))
     second = Runner().run(
         RunConfig(arena_id="tic-tac-toe", seed=23, output_dir=tmp_path / "second")
     )
     first_manifest = json.loads((first.artifact_path / "manifest.json").read_text("utf-8"))
     second_manifest = json.loads((second.artifact_path / "manifest.json").read_text("utf-8"))
 
-    assert first.run_id == second.run_id
-    assert first_manifest["artifact_id"] == second_manifest["artifact_id"]
+    assert first.run_id != second.run_id
+    assert first_manifest["artifact_id"] != second_manifest["artifact_id"]
+    assert (
+        first_manifest["run_metadata"]["match_fingerprint"]
+        == second_manifest["run_metadata"]["match_fingerprint"]
+    )
     assert "timings/timings.json" not in {row["path"] for row in first_manifest["files"]}
     assert first_manifest["unhashed_files"][0]["path"] == "timings/timings.json"
 
@@ -347,6 +349,7 @@ def test_runner_enforces_in_process_agent_timeout(tmp_path: Path):
             output_dir=tmp_path,
             max_turns=1,
             time_budget_ms=1,
+            on_agent_error="fallback",
         )
     )
 
@@ -355,8 +358,9 @@ def test_runner_enforces_in_process_agent_timeout(tmp_path: Path):
 
     assert ArtifactValidator().validate(result.artifact_path) == []
     assert "timeout" in trace[0]["markers"]
-    assert agent_io[0]["response"]["metadata"]["error_kind"] == "timeout"
+    assert agent_io[0]["response"]["metadata"]["error_kind"] == "provider_timeout"
     assert result.score.agent_error_count_by_player["player_1"] == 1
+    assert result.score.match_valid_for_scoring is False
 
 
 def test_runner_honors_zero_max_turns(tmp_path: Path):
@@ -394,6 +398,16 @@ def test_score_summary_primary_score_tracks_player_one():
             "player_2": "local_agent",
             "player_3": "local_agent",
         },
+        provider_action_count_by_player={"player_1": 0, "player_2": 0, "player_3": 0},
+        logical_action_count_by_player={"player_1": 0, "player_2": 0, "player_3": 0},
+        invalid_reason_codes=[],
+        aggregate_usage={
+            "usageComplete": False,
+            "costComplete": False,
+            "attemptLedgerComplete": True,
+        },
+        aggregate_cost={"costComplete": False, "costUsd": None},
+        model_identity_verified=True,
         suite_context={},
         requested_time_budget_ms=1000,
         effective_time_budget_ms=1000,
@@ -523,7 +537,7 @@ def test_runner_marks_agent_error_invalid_match_artifacts(tmp_path: Path):
 
     assert ArtifactValidator().validate(result.artifact_path) == []
     assert result.score.match_valid_for_scoring is False
-    assert result.score.invalid_reason == "player_1:agent_error:agent_crash,no_action"
+    assert result.score.invalid_reason == "player_1:agent_crash:agent_crash,no_action"
     assert result.score.agent_error_count_by_player == {"player_1": 1, "player_2": 0}
     assert result.score.fallback_action_count_by_player == {"player_1": 0, "player_2": 0}
     assert result.trace_events == []
@@ -535,7 +549,7 @@ def test_runner_marks_agent_error_invalid_match_artifacts(tmp_path: Path):
     assert errors[0]["response_metadata"]["error_kind"] == "agent_crash"
 
 
-def test_runner_falls_back_after_illegal_action_by_default(tmp_path: Path):
+def test_runner_marks_illegal_action_invalid_by_default(tmp_path: Path):
     result = Runner().run(
         RunConfig(
             arena_id="tic-tac-toe",
@@ -549,13 +563,33 @@ def test_runner_falls_back_after_illegal_action_by_default(tmp_path: Path):
     trace = _read_jsonl(result.artifact_path / "traces" / "public_trace.jsonl")
 
     assert ArtifactValidator().validate(result.artifact_path) == []
-    assert result.score.match_valid_for_scoring is True
-    assert result.score.invalid_reason is None
+    assert result.score.match_valid_for_scoring is False
+    assert result.score.invalid_reason == (
+        "player_1:illegal_action:illegal_action,action_not_legal"
+    )
     assert result.score.illegal_action_count_by_player == {"player_1": 1, "player_2": 0}
-    assert result.score.fallback_action_count_by_player == {"player_1": 1, "player_2": 0}
-    assert trace[0]["action"] == 0
-    assert trace[0]["markers"] == ["illegal_action", "fallback_action"]
+    assert result.score.fallback_action_count_by_player == {"player_1": 0, "player_2": 0}
+    assert trace == []
     assert score["metrics"]["illegal_action_count_by_player"]["player_1"] == 1
+
+
+def test_explicit_illegal_fallback_is_irreversibly_non_scoring(tmp_path: Path):
+    result = Runner().run(
+        RunConfig(
+            arena_id="tic-tac-toe",
+            agents={"player_1": FunctionAgent(lambda _request: 99, id="illegal-agent")},
+            output_dir=tmp_path,
+            max_turns=1,
+            on_illegal_action="fallback",
+        )
+    )
+
+    trace = _read_jsonl(result.artifact_path / "traces" / "public_trace.jsonl")
+
+    assert result.score.match_valid_for_scoring is False
+    assert result.score.fallback_action_count_by_player["player_1"] == 1
+    assert "fallback_action_used" in result.score.invalid_reason_codes
+    assert trace[0]["action_provenance"] == "fallback_action"
 
 
 def test_runner_can_forfeit_after_illegal_action(tmp_path: Path):
@@ -572,7 +606,9 @@ def test_runner_can_forfeit_after_illegal_action(tmp_path: Path):
 
     assert ArtifactValidator().validate(result.artifact_path) == []
     assert result.score.match_valid_for_scoring is False
-    assert result.score.invalid_reason == "player_1:illegal_action:illegal_action"
+    assert result.score.invalid_reason == (
+        "player_1:illegal_action:illegal_action,action_not_legal"
+    )
     assert result.score.winner == "player_2"
     assert result.score.outcome == {
         "winner": "player_2",
@@ -655,9 +691,7 @@ class ThreePlayerArena(Arena):
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 

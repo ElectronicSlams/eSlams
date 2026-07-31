@@ -6,10 +6,12 @@ disabled unless a model record explicitly enables them.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
 CapabilityFlagMap = dict[str, dict[str, Any]]
+MODEL_LIFECYCLES = {"active", "deprecated", "retired", "alias", "account-dependent"}
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,8 @@ class ModelCapabilities:
     display_name: str | None = None
     modality_summary: str | None = None
     pricing: dict[str, Any] = field(default_factory=dict)
+    lifecycle: str = "account-dependent"
+    anthropic_thinking_mode: str | None = None
 
     @classmethod
     def from_mapping(cls, value: dict[str, Any]) -> ModelCapabilities:
@@ -56,7 +60,14 @@ class ModelCapabilities:
             modalities = {"input": ["text"], "output": ["text"]}
         game_agent_supported = bool(value.get("game_agent_supported", False))
         provider = str(value["provider"]).lower()
+        model = str(value["model"])
         supports_reasoning = bool(value.get("supports_reasoning", False))
+        anthropic_thinking_mode = _anthropic_thinking_mode(
+            value.get("anthropic_thinking_mode"),
+            provider=provider,
+            model=model,
+            supports_reasoning=supports_reasoning,
+        )
         reasoning_efforts = _strings(value.get("reasoning_efforts"))
         default_reasoning_effort = _optional_str(value.get("default_reasoning_effort"))
         supports_google_thinking_config = bool(value.get("supports_google_thinking_config", False))
@@ -65,6 +76,7 @@ class ModelCapabilities:
                 provider,
                 supports_reasoning=supports_reasoning,
                 supports_google_thinking_config=supports_google_thinking_config,
+                anthropic_thinking_mode=anthropic_thinking_mode,
             )
         )
         supported_reasoning_modes = _strings(value.get("supported_reasoning_modes")) or (
@@ -84,7 +96,7 @@ class ModelCapabilities:
         )
         return cls(
             provider=provider,
-            model=str(value["model"]),
+            model=model,
             available_from_api=_optional_bool(value.get("available_from_api")),
             game_agent_supported=game_agent_supported,
             endpoints=_strings(value.get("endpoints")),
@@ -129,6 +141,8 @@ class ModelCapabilities:
             modality_summary=_optional_str(value.get("modality_summary"))
             or _modality_summary(modalities),
             pricing=_safe_mapping(value.get("pricing")),
+            lifecycle=_lifecycle(value.get("lifecycle"), value.get("available_from_api")),
+            anthropic_thinking_mode=anthropic_thinking_mode,
         )
 
     @classmethod
@@ -164,6 +178,7 @@ class ModelCapabilities:
             display_name=model,
             modality_summary="unknown",
             pricing={},
+            lifecycle="account-dependent",
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -205,6 +220,8 @@ class ModelCapabilities:
             "display_name": self.display_name,
             "modality_summary": self.modality_summary,
             "pricing": dict(self.pricing),
+            "lifecycle": self.lifecycle,
+            "anthropic_thinking_mode": self.anthropic_reasoning_mode(),
         }
 
     def allows_text_game_agent(self) -> bool:
@@ -225,6 +242,14 @@ class ModelCapabilities:
     def capability_enabled(self, capability: str) -> bool:
         value = self.capability_flags.get(capability, {})
         return value.get("enabled") is True
+
+    def anthropic_reasoning_mode(self) -> str | None:
+        return _anthropic_thinking_mode(
+            self.anthropic_thinking_mode,
+            provider=self.provider,
+            model=self.model,
+            supports_reasoning=self.supports_reasoning,
+        )
 
 
 def _strings(value: Any) -> list[str]:
@@ -259,17 +284,50 @@ def _safe_mapping(value: Any) -> dict[str, Any]:
     }
 
 
+def _lifecycle(value: Any, available_from_api: Any) -> str:
+    if isinstance(value, str) and value in MODEL_LIFECYCLES:
+        return value
+    if available_from_api is True:
+        return "active"
+    if available_from_api is False:
+        return "retired"
+    return "account-dependent"
+
+
+def _anthropic_thinking_mode(
+    value: Any,
+    *,
+    provider: str,
+    model: str,
+    supports_reasoning: bool,
+) -> str | None:
+    if isinstance(value, str) and value in {"manual", "adaptive", "default"}:
+        return value
+    if provider != "anthropic" or not supports_reasoning:
+        return None
+    match = re.search(r"claude-(?:[a-z]+-)?([45])(?:[.-]([0-9]+))?", model.lower())
+    if match is not None:
+        major = int(match.group(1))
+        minor = int(match.group(2) or 0)
+        if major >= 5 or (major == 4 and 7 <= minor < 100):
+            return "adaptive"
+    return "manual"
+
+
 def _provider_control_fields(
     provider: str,
     *,
     supports_reasoning: bool,
     supports_google_thinking_config: bool,
+    anthropic_thinking_mode: str | None,
 ) -> list[str]:
     if provider == "openai" and supports_reasoning:
         return ["reasoning_effort"]
     if provider in {"google", "gemini"} and supports_google_thinking_config:
         return ["thinkingBudget", "thinkingLevel"]
-    if provider == "anthropic" and supports_reasoning:
+    if provider == "anthropic" and anthropic_thinking_mode == "manual":
+        return ["thinking_budget_tokens"]
+    if provider == "anthropic" and anthropic_thinking_mode == "adaptive":
         return ["adaptive_thinking"]
     return []
 

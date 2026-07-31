@@ -6,7 +6,11 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from eslams.contracts.integrity import ATTEMPT_KINDS, FAILURE_CLASSES
+from eslams.contracts.pricing import no_secret_example as price_card_no_secret_example
+from eslams.contracts.provider import GATEWAY_MODES, PROVIDER_OUTCOMES
 from eslams.contracts.versions import (
+    ACTION_PROVENANCE_SCHEMA_VERSION,
     ARENA_ACTION_DESCRIPTOR_SCHEMA_VERSION,
     ARENA_EVENT_SCHEMA_VERSION,
     ARENA_LEGAL_ACTIONS_PAGE_SCHEMA_VERSION,
@@ -35,16 +39,20 @@ from eslams.contracts.versions import (
     GAME_SURFACE_SCHEMA_VERSION,
     GAME_TOPOLOGY_SCHEMA_VERSION,
     OFFICIAL_RESULT_SCHEMA_VERSION,
+    PRICE_CARD_REFERENCE_SCHEMA_VERSION,
+    PROVIDER_ATTEMPT_SCHEMA_VERSION,
     PROVIDER_RECEIPT_SCHEMA_VERSION,
     PUBLICATION_BUNDLE_SCHEMA_VERSION,
     PUBLICATION_VALIDATION_SCHEMA_VERSION,
     REPLAY_DISPLAY_FRAME_SCHEMA_VERSION,
     REPLAY_MANIFEST_SCHEMA_VERSION,
     REPLAY_PUBLIC_SCHEMA_VERSION,
+    RUN_INTEGRITY_SCHEMA_VERSION,
     RUNNER_JOB_SCHEMA_VERSION,
     SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION,
     SCHEMA_BUNDLE_VERSION,
     USAGE_SCHEMA_VERSION,
+    USAGE_SUMMARY_SCHEMA_VERSION,
     schema_versions,
 )
 from eslams.hashing import canonical_json, sha256_file, sha256_json
@@ -115,6 +123,52 @@ def schema_bundle_manifest(schema_paths: list[Path]) -> dict[str, Any]:
 
 def no_secret_examples() -> dict[str, dict[str, Any]]:
     return {
+        PRICE_CARD_REFERENCE_SCHEMA_VERSION: price_card_no_secret_example(),
+        RUN_INTEGRITY_SCHEMA_VERSION: {
+            "schemaVersion": RUN_INTEGRITY_SCHEMA_VERSION,
+            "integrityStatus": "valid",
+            "validForScoring": True,
+            "invalidReasonCodes": [],
+            "agentErrorCountByPlayer": {"player_1": 0},
+            "fallbackActionCountByPlayer": {"player_1": 0},
+            "illegalActionCountByPlayer": {"player_1": 0},
+            "providerStatusByPlayer": {"player_1": "provider_ok"},
+            "providerActionCountByPlayer": {"player_1": 1},
+            "logicalActionCountByPlayer": {"player_1": 1},
+            "usageComplete": True,
+            "costComplete": True,
+            "modelIdentityVerified": True,
+            "attemptLedgerComplete": True,
+        },
+        ACTION_PROVENANCE_SCHEMA_VERSION: {
+            "schemaVersion": ACTION_PROVENANCE_SCHEMA_VERSION,
+            "eventId": "event_example",
+            "runId": "run_example",
+            "episodeId": "episode_001",
+            "turnId": 0,
+            "seatId": "player_1",
+            "provenance": "provider_action",
+            "logicalActionId": "logical_example",
+            "successfulAttemptEventId": "sha256:example",
+            "metadata": {},
+        },
+        USAGE_SUMMARY_SCHEMA_VERSION: {
+            "schemaVersion": USAGE_SUMMARY_SCHEMA_VERSION,
+            "totalInputTokens": 10,
+            "totalOutputTokens": 2,
+            "totalCachedInputTokens": 0,
+            "totalReasoningTokens": 0,
+            "totalTokens": 12,
+            "totalCostUsd": None,
+            "usageComplete": True,
+            "costComplete": False,
+            "receiptCount": 1,
+            "attemptCount": 1,
+            "logicalActionCount": 1,
+            "attemptLedgerComplete": True,
+            "unavailableReasonCodes": ["pricing_not_configured"],
+            "rateCardReferences": [],
+        },
         ARENA_ACTION_DESCRIPTOR_SCHEMA_VERSION: {
             "token": "play:AS",
             "label": "Play A\u2660",
@@ -306,7 +360,7 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
                     "bytes": 123,
                 }
             ],
-        }
+        },
     }
 
 
@@ -401,19 +455,196 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "source_replay_event_id": {"type": "string"},
             },
         ),
+        RUN_INTEGRITY_SCHEMA_VERSION: _object_schema(
+            RUN_INTEGRITY_SCHEMA_VERSION,
+            required=[
+                "schemaVersion",
+                "integrityStatus",
+                "validForScoring",
+                "invalidReasonCodes",
+                "usageComplete",
+                "costComplete",
+                "modelIdentityVerified",
+                "attemptLedgerComplete",
+            ],
+            properties={
+                "schemaVersion": {"const": RUN_INTEGRITY_SCHEMA_VERSION},
+                "integrityStatus": {"enum": ["valid", "invalid", "incomplete"]},
+                "validForScoring": {"type": "boolean"},
+                "invalidReasonCodes": {"type": "array", "items": {"type": "string"}},
+                "agentErrorCountByPlayer": {"type": "object"},
+                "fallbackActionCountByPlayer": {"type": "object"},
+                "illegalActionCountByPlayer": {"type": "object"},
+                "providerStatusByPlayer": {"type": "object"},
+                "providerActionCountByPlayer": {"type": "object"},
+                "logicalActionCountByPlayer": {"type": "object"},
+                "usageComplete": {"type": "boolean"},
+                "costComplete": {"type": "boolean"},
+                "modelIdentityVerified": {"type": "boolean"},
+                "attemptLedgerComplete": {"type": "boolean"},
+            },
+        ),
+        ACTION_PROVENANCE_SCHEMA_VERSION: _object_schema(
+            ACTION_PROVENANCE_SCHEMA_VERSION,
+            required=[
+                "schemaVersion",
+                "eventId",
+                "runId",
+                "episodeId",
+                "turnId",
+                "seatId",
+                "provenance",
+                "logicalActionId",
+            ],
+            properties={
+                "schemaVersion": {"const": ACTION_PROVENANCE_SCHEMA_VERSION},
+                "eventId": {"type": "string"},
+                "runId": {"type": "string"},
+                "episodeId": {"type": "string"},
+                "turnId": {"type": "integer"},
+                "seatId": {"type": "string"},
+                "provenance": {"enum": ["provider_action", "local_action", "fallback_action"]},
+                "logicalActionId": {"type": "string"},
+                "successfulAttemptEventId": {"type": ["string", "null"]},
+                "metadata": {"type": "object"},
+            },
+        ),
+        PROVIDER_ATTEMPT_SCHEMA_VERSION: _provider_attempt_schema(),
         PROVIDER_RECEIPT_SCHEMA_VERSION: _object_schema(
             PROVIDER_RECEIPT_SCHEMA_VERSION,
-            required=["schema_version", "provider", "model", "outcome", "redaction_version"],
+            required=[
+                "schema_version",
+                "provider",
+                "model",
+                "outcome",
+                "environment",
+                "physical_run_id",
+                "run_id",
+                "official_run_id",
+                "model_lane_id",
+                "run_job_id",
+                "agent_id",
+                "turn_id",
+                "case_id",
+                "case_attempt_index",
+                "shard_index",
+                "attempt",
+                "attempt_index",
+                "event_id",
+                "logical_action_id",
+                "attempt_kind",
+                "status",
+                "usage_complete",
+                "cost_complete",
+                "wire_parse_status",
+                "action_parse_status",
+                "action_applied",
+                "case_valid_for_scoring",
+                "redaction_version",
+            ],
             properties={
                 "schema_version": {"const": PROVIDER_RECEIPT_SCHEMA_VERSION},
                 "provider": {"type": "string"},
                 "model": {"type": "string"},
-                "outcome": {"type": "string"},
+                "locked_model_id": {"type": ["string", "null"]},
+                "model_identity_source": {"type": ["string", "null"]},
+                "endpoint_kind": {"type": ["string", "null"]},
+                "parser_version": {"type": ["string", "null"]},
+                "agent_id": {"type": "string", "minLength": 1},
+                "agent_version": {"type": ["string", "null"]},
+                "turn_id": {"type": "integer", "minimum": 0},
+                "environment": {"type": "string", "minLength": 1},
+                "physical_run_id": {"type": "string", "minLength": 1},
+                "run_id": {"type": "string", "minLength": 1},
+                "official_run_id": {"type": "string", "minLength": 1},
+                "model_lane_id": {"type": "string", "minLength": 1},
+                "run_job_id": {"type": "string", "minLength": 1},
+                "episode_id": {"type": ["string", "null"]},
+                "case_id": {"type": ["string", "null"]},
+                "case_attempt_index": {"type": "integer", "minimum": 1},
+                "shard_index": {"type": ["integer", "null"], "minimum": 0},
+                "attempt": {"type": "integer", "minimum": 1},
+                "attempt_index": {"type": "integer", "minimum": 1},
+                "event_id": {"type": "string", "minLength": 1},
+                "logical_action_id": {"type": "string", "minLength": 1},
+                "active_player": {"type": ["string", "null"]},
+                "seat_id": {"type": ["string", "null"]},
+                "attempt_kind": {"enum": list(ATTEMPT_KINDS)},
+                "parent_attempt_id": {"type": ["string", "null"]},
+                "outcome": {"enum": list(PROVIDER_OUTCOMES)},
+                "status": {"enum": ["started", "completed", "failed"]},
+                "status_code": {
+                    "type": ["integer", "null"],
+                    "minimum": 100,
+                    "maximum": 599,
+                },
+                "request_id": {"type": ["string", "null"]},
+                "gateway_mode": {"enum": list(GATEWAY_MODES)},
+                "gateway_request_id": {"type": ["string", "null"]},
+                "latency_ms": {"type": ["integer", "null"], "minimum": 0},
                 "usage": {"type": "object"},
+                "usage_unavailable_reason": {"type": ["string", "null"]},
+                "pricing": {"type": "object"},
                 "estimated_cost": {"type": "object"},
+                "rate_card_reference": {"type": ["object", "null"]},
+                "rate_card_id": {"type": ["string", "null"]},
+                "reasoning_included_in_output": {"type": ["boolean", "null"]},
+                "usage_source": {"type": ["string", "null"]},
+                "usage_complete": {"type": "boolean"},
+                "cost_source": {"type": ["string", "null"]},
+                "cost_complete": {"type": "boolean"},
+                "wire_parse_status": {
+                    "enum": ["ok", "failed", "not_attempted"]
+                },
+                "action_parse_status": {
+                    "enum": ["ok", "failed", "not_attempted"]
+                },
+                "action_applied": {"type": "boolean"},
+                "case_valid_for_scoring": {"type": "boolean"},
+                "model_capability_known": {"type": "boolean"},
+                "game_agent_supported": {"type": "boolean"},
+                "capability_sources": {"type": "array", "items": {"type": "string"}},
+                "provider_response_id": {"type": ["string", "null"]},
+                "finish_reason": {"type": ["string", "null"]},
+                "finish_status": {"type": ["string", "null"]},
+                "retry_after_ms": {"type": ["integer", "null"], "minimum": 0},
+                "pricing_provenance": {"type": ["object", "null"]},
+                "endpoint_metadata": {"type": "object"},
+                "record_hash": {"type": "string"},
                 "redaction_version": {"type": "string"},
             },
         ),
+        PRICE_CARD_REFERENCE_SCHEMA_VERSION: {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": (f"https://schemas.eslams.dev/{PRICE_CARD_REFERENCE_SCHEMA_VERSION}.json"),
+            "title": PRICE_CARD_REFERENCE_SCHEMA_VERSION,
+            "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "schemaVersion",
+                "rateCardId",
+                "rateCardHash",
+                "provider",
+                "model",
+                "currency",
+                "sourceUri",
+                "effectiveAt",
+                "retrievedAt",
+                "complete",
+            ],
+            "properties": {
+                "schemaVersion": {"const": PRICE_CARD_REFERENCE_SCHEMA_VERSION},
+                "rateCardId": {"type": "string", "minLength": 1},
+                "rateCardHash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "provider": {"type": "string", "minLength": 1},
+                "model": {"type": "string", "minLength": 1},
+                "currency": {"const": "USD"},
+                "sourceUri": {"type": "string", "minLength": 1},
+                "effectiveAt": {"type": ["string", "null"]},
+                "retrievedAt": {"type": ["string", "null"]},
+                "complete": {"const": True},
+            },
+        },
         EVAL_PLAN_SCHEMA_VERSION: _object_schema(
             EVAL_PLAN_SCHEMA_VERSION,
             required=["schema_version", "kind", "plan_hash", "case_count_expected", "shards"],
@@ -1030,7 +1261,11 @@ def _schemas() -> dict[str, dict[str, Any]]:
             required=["schemaVersion", "usageComplete", "costComplete"],
             properties={
                 "schemaVersion": {
-                    "enum": ["eslams.usage.model_call.v1", "eslams.usage.summary.v1"]
+                    "enum": [
+                        "eslams.usage.model_call.v1",
+                        "eslams.usage.summary.v1",
+                        USAGE_SUMMARY_SCHEMA_VERSION,
+                    ]
                 },
                 "runId": {"type": "string"},
                 "gameId": {"type": "string"},
@@ -1057,6 +1292,40 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "bySeat": {"type": "object"},
                 "byAgent": {"type": "object"},
                 "byModel": {"type": "object"},
+            },
+        ),
+        USAGE_SUMMARY_SCHEMA_VERSION: _object_schema(
+            USAGE_SUMMARY_SCHEMA_VERSION,
+            required=[
+                "schemaVersion",
+                "usageComplete",
+                "costComplete",
+                "receiptCount",
+                "attemptCount",
+                "logicalActionCount",
+                "attemptLedgerComplete",
+            ],
+            properties={
+                "schemaVersion": {"const": USAGE_SUMMARY_SCHEMA_VERSION},
+                "totalInputTokens": {"type": ["integer", "null"]},
+                "totalOutputTokens": {"type": ["integer", "null"]},
+                "totalCachedInputTokens": {"type": ["integer", "null"]},
+                "totalReasoningTokens": {"type": ["integer", "null"]},
+                "totalTokens": {"type": ["integer", "null"]},
+                "totalCostUsd": {"type": ["number", "null"]},
+                "usageComplete": {"type": "boolean"},
+                "costComplete": {"type": "boolean"},
+                "receiptCount": {"type": "integer", "minimum": 0},
+                "attemptCount": {"type": "integer", "minimum": 0},
+                "logicalActionCount": {"type": "integer", "minimum": 0},
+                "attemptLedgerComplete": {"type": "boolean"},
+                "unavailableReasonCodes": {"type": "array", "items": {"type": "string"}},
+                "rateCardReferences": {"type": "array", "items": {"type": "string"}},
+                "bySeat": {"type": "object"},
+                "byProvider": {"type": "object"},
+                "byModel": {"type": "object"},
+                "byAttemptKind": {"type": "object"},
+                "byStatus": {"type": "object"},
             },
         ),
         CATALOGUE_MODEL_SCHEMA_VERSION: _object_schema(
@@ -1092,6 +1361,247 @@ def _git_commit() -> str | None:
         return None
     value = result.stdout.strip()
     return value or None
+
+
+def _provider_attempt_schema() -> dict[str, Any]:
+    nullable_string = {"type": ["string", "null"]}
+    nullable_nonnegative_integer = {"type": ["integer", "null"], "minimum": 0}
+    fields = [
+        "eventId",
+        "environment",
+        "physicalRunId",
+        "officialRunId",
+        "modelLaneId",
+        "runJobId",
+        "shardIndex",
+        "caseId",
+        "caseAttemptIndex",
+        "turnIndex",
+        "seatId",
+        "logicalActionId",
+        "attemptIndex",
+        "attemptKind",
+        "parentAttemptId",
+        "provider",
+        "requestedModel",
+        "resolvedModel",
+        "modelIdentitySource",
+        "providerEndpoint",
+        "endpointKind",
+        "parserVersion",
+        "wrapperVersion",
+        "status",
+        "gatewayRequestId",
+        "providerRequestId",
+        "httpStatus",
+        "errorClass",
+        "requestStartedAt",
+        "requestCompletedAt",
+        "latencyMs",
+        "inputTokens",
+        "cachedInputTokens",
+        "outputTokens",
+        "reasoningTokens",
+        "totalTokens",
+        "reasoningIncludedInOutput",
+        "usageSource",
+        "usageComplete",
+        "estimatedCostUsd",
+        "costSource",
+        "costComplete",
+        "rateCardId",
+        "wireParseStatus",
+        "actionParseStatus",
+        "actionApplied",
+        "caseValidForScoring",
+    ]
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": f"https://schemas.eslams.dev/{PROVIDER_ATTEMPT_SCHEMA_VERSION}.json",
+        "title": PROVIDER_ATTEMPT_SCHEMA_VERSION,
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["schemaVersion", *fields],
+        "properties": {
+            "schemaVersion": {"const": PROVIDER_ATTEMPT_SCHEMA_VERSION},
+            "eventId": {"type": "string", "minLength": 1},
+            "environment": {"type": "string", "minLength": 1},
+            "physicalRunId": {"type": "string", "minLength": 1},
+            "officialRunId": {"type": "string", "minLength": 1},
+            "modelLaneId": {"type": "string", "minLength": 1},
+            "runJobId": {"type": "string", "minLength": 1},
+            "shardIndex": {"type": "integer", "minimum": 0},
+            "caseId": nullable_string,
+            "caseAttemptIndex": {"type": "integer", "minimum": 1},
+            "turnIndex": {"type": "integer", "minimum": 0},
+            "seatId": {"type": "string", "minLength": 1},
+            "logicalActionId": {"type": "string", "minLength": 1},
+            "attemptIndex": {"type": "integer", "minimum": 1},
+            "attemptKind": {"enum": list(ATTEMPT_KINDS)},
+            "parentAttemptId": nullable_string,
+            "provider": {"type": "string", "minLength": 1},
+            "requestedModel": {"type": "string", "minLength": 1},
+            "resolvedModel": nullable_string,
+            "modelIdentitySource": {
+                "enum": [None, "provider_response", "pinned_endpoint"]
+            },
+            "providerEndpoint": {"type": "string", "format": "uri", "minLength": 1},
+            "endpointKind": nullable_string,
+            "parserVersion": nullable_string,
+            "wrapperVersion": nullable_string,
+            "status": {"enum": ["started", "completed", "failed"]},
+            "gatewayRequestId": nullable_string,
+            "providerRequestId": nullable_string,
+            "httpStatus": {
+                "type": ["integer", "null"],
+                "minimum": 100,
+                "maximum": 599,
+            },
+            "errorClass": {"enum": [None, *FAILURE_CLASSES]},
+            "requestStartedAt": {"type": "string", "minLength": 1},
+            "requestCompletedAt": nullable_string,
+            "latencyMs": nullable_nonnegative_integer,
+            "inputTokens": nullable_nonnegative_integer,
+            "cachedInputTokens": nullable_nonnegative_integer,
+            "outputTokens": nullable_nonnegative_integer,
+            "reasoningTokens": nullable_nonnegative_integer,
+            "totalTokens": nullable_nonnegative_integer,
+            "reasoningIncludedInOutput": {"type": ["boolean", "null"]},
+            "usageSource": nullable_string,
+            "usageComplete": {"type": "boolean"},
+            "estimatedCostUsd": {"type": ["number", "null"], "minimum": 0},
+            "costSource": nullable_string,
+            "costComplete": {"type": "boolean"},
+            "rateCardId": nullable_string,
+            "wireParseStatus": nullable_string,
+            "actionParseStatus": nullable_string,
+            "actionApplied": {"type": "boolean"},
+            "caseValidForScoring": {"type": "boolean"},
+        },
+        "allOf": [
+            {
+                "if": {"properties": {"status": {"const": "started"}}},
+                "then": {
+                    "properties": {
+                        "requestCompletedAt": {"type": "null"},
+                        "latencyMs": {"type": "null"},
+                        "httpStatus": {"type": "null"},
+                        "errorClass": {"type": "null"},
+                        "inputTokens": {"type": "null"},
+                        "cachedInputTokens": {"type": "null"},
+                        "outputTokens": {"type": "null"},
+                        "reasoningTokens": {"type": "null"},
+                        "totalTokens": {"type": "null"},
+                        "reasoningIncludedInOutput": {"type": "null"},
+                        "usageSource": {"type": "null"},
+                        "usageComplete": {"const": False},
+                        "estimatedCostUsd": {"type": "null"},
+                        "costSource": {"type": "null"},
+                        "costComplete": {"const": False},
+                        "rateCardId": {"type": "null"},
+                        "actionApplied": {"const": False},
+                        "caseValidForScoring": {"const": False},
+                    },
+                    "anyOf": [
+                        {"properties": {"resolvedModel": {"type": "null"}}},
+                        {
+                            "properties": {
+                                "modelIdentitySource": {"const": "pinned_endpoint"}
+                            }
+                        },
+                    ],
+                },
+            },
+            {
+                "if": {
+                    "properties": {
+                        "caseAttemptIndex": {"minimum": 2},
+                        "attemptIndex": {"const": 1},
+                    }
+                },
+                "then": {
+                    "properties": {
+                        "attemptKind": {"enum": ["case_retry", "action_repair"]}
+                    }
+                },
+            },
+            {
+                "if": {"properties": {"caseAttemptIndex": {"const": 1}}},
+                "then": {"not": {"properties": {"attemptKind": {"const": "case_retry"}}}},
+            },
+            {
+                "if": {"properties": {"status": {"enum": ["completed", "failed"]}}},
+                "then": {
+                    "properties": {
+                        "requestCompletedAt": {"type": "string", "minLength": 1},
+                        "latencyMs": {"type": "integer", "minimum": 0},
+                    }
+                },
+            },
+            {
+                "if": {"properties": {"status": {"const": "failed"}}},
+                "then": {"properties": {"errorClass": {"enum": list(FAILURE_CLASSES)}}},
+            },
+            {
+                "if": {"properties": {"status": {"const": "completed"}}},
+                "then": {"properties": {"errorClass": {"type": "null"}}},
+            },
+            {
+                "if": {"properties": {"usageComplete": {"const": True}}},
+                "then": {
+                    "properties": {
+                        "inputTokens": {"type": "integer", "minimum": 0},
+                        "outputTokens": {"type": "integer", "minimum": 0},
+                        "totalTokens": {"type": "integer", "minimum": 0},
+                        "reasoningIncludedInOutput": {"type": "boolean"},
+                        "usageSource": {"type": "string", "minLength": 1},
+                    }
+                },
+            },
+            {
+                "if": {"properties": {"costComplete": {"const": True}}},
+                "then": {
+                    "properties": {
+                        "estimatedCostUsd": {"type": "number", "minimum": 0},
+                        "costSource": {"type": "string", "minLength": 1},
+                        "rateCardId": {"type": "string", "minLength": 1},
+                    }
+                },
+            },
+            {
+                "if": {"properties": {"actionApplied": {"const": True}}},
+                "then": {"properties": {"status": {"const": "completed"}}},
+            },
+            {
+                "if": {"properties": {"caseValidForScoring": {"const": True}}},
+                "then": {
+                    "properties": {
+                        "status": {"const": "completed"},
+                        "caseId": {"type": "string", "minLength": 1},
+                        "resolvedModel": {"type": "string", "minLength": 1},
+                        "modelIdentitySource": {
+                            "enum": ["provider_response", "pinned_endpoint"]
+                        },
+                        "wireParseStatus": {"const": "ok"},
+                        "actionParseStatus": {"const": "ok"},
+                        "actionApplied": {"const": True},
+                    }
+                },
+            },
+        ],
+        "x-eslams-invariants": [
+            "cachedInputTokens <= inputTokens when both are present",
+            (
+                "totalTokens = inputTokens + outputTokens + reasoningTokens only when "
+                "reasoningIncludedInOutput is false"
+            ),
+            "pinned_endpoint identity requires resolvedModel = requestedModel",
+            (
+                "providerEndpoint is an absolute https/mock URI without userinfo, fragments, "
+                "or sensitive query parameters"
+            ),
+        ],
+    }
 
 
 def _object_schema(

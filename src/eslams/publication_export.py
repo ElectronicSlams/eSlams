@@ -416,14 +416,17 @@ def _validate_proof_rows(
     for index, row in enumerate(proof_rows):
         if row.get("evidence_row") is not True:
             errors.append(f"proof row {index} must be marked as evidence_row")
-        if row.get("proof_row_publication_eligible") is not True:
-            errors.append(f"proof row {index} must be publication eligible evidence")
+        publication_eligible = row.get("proof_row_publication_eligible")
+        if not isinstance(publication_eligible, bool):
+            errors.append(f"proof row {index} must declare publication eligibility")
         if row.get("aggregate_leaderboard_eligible") is True:
             errors.append(f"proof row {index} cannot be aggregate leaderboard eligible")
         if row.get("leaderboard_predicate") is True and row.get(
             "leaderboard_predicate_configured"
         ) is not True:
             errors.append(f"proof row {index} cannot be a leaderboard predicate by default")
+        if row.get("leaderboard_predicate") is True and publication_eligible is not True:
+            errors.append(f"proof row {index} is ineligible for leaderboard publication")
         public_replay_path = row.get("public_replay_path")
         if not isinstance(public_replay_path, str):
             errors.append(f"proof row {index} missing public_replay_path")

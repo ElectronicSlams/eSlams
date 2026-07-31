@@ -6,11 +6,11 @@ This file describes source-backed catalog identities, not direct-adapter or acco
 
 Generated with `python scripts/render_provider_registry_docs.py` from `models.generated.json`, `overrides.json`, and `REQUESTED_PROVIDER_ORGANIZATIONS`.
 
-Registry snapshot: `2026-06-04T02:52:41Z`
+Registry snapshot: `2026-07-31T14:48:48Z`
 
 Sources: models.dev, litellm
 
-Catalogued rows: **2189** (3 with `available_from_api=true`)
+Catalogued rows: **1926** (3 with `available_from_api=true`)
 
 Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to the same canonical provider keys used by the public `/models/...` routes.
 
@@ -28,380 +28,20 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | AI21 Labs | `jamba-large-1.7` |
 | AI21 Labs | `jamba-mini-1.6` |
 | AI21 Labs | `jamba-mini-1.7` |
-| Amazon / AWS | `1024-x-1024/50-steps/bedrock/amazon.nova-canvas-v1:0` |
-| Amazon / AWS | `1024-x-1024/50-steps/stability.stable-diffusion-xl-v1` |
-| Amazon / AWS | `1024-x-1024/max-steps/stability.stable-diffusion-xl-v1` |
-| Amazon / AWS | `512-x-512/50-steps/stability.stable-diffusion-xl-v0` |
-| Amazon / AWS | `512-x-512/max-steps/stability.stable-diffusion-xl-v0` |
-| Amazon / AWS | `ai21.j2-mid-v1` |
-| Amazon / AWS | `ai21.j2-ultra-v1` |
-| Amazon / AWS | `ai21.jamba-1-5-large-v1:0` |
-| Amazon / AWS | `ai21.jamba-1-5-mini-v1:0` |
-| Amazon / AWS | `ai21.jamba-instruct-v1:0` |
 | Amazon / AWS | `amazon-nova/nova-lite-v1` |
 | Amazon / AWS | `amazon-nova/nova-micro-v1` |
 | Amazon / AWS | `amazon-nova/nova-premier-v1` |
 | Amazon / AWS | `amazon-nova/nova-pro-v1` |
-| Amazon / AWS | `amazon.nova-2-lite-v1:0` |
-| Amazon / AWS | `amazon.nova-2-multimodal-embeddings-v1:0` |
-| Amazon / AWS | `amazon.nova-canvas-v1:0` |
-| Amazon / AWS | `amazon.nova-lite-v1:0` |
-| Amazon / AWS | `amazon.nova-micro-v1:0` |
-| Amazon / AWS | `amazon.nova-pro-v1:0` |
-| Amazon / AWS | `amazon.rerank-v1:0` |
-| Amazon / AWS | `amazon.titan-embed-image-v1` |
-| Amazon / AWS | `amazon.titan-embed-text-v1` |
-| Amazon / AWS | `amazon.titan-embed-text-v2:0` |
-| Amazon / AWS | `amazon.titan-image-generator-v1` |
-| Amazon / AWS | `amazon.titan-image-generator-v2` |
-| Amazon / AWS | `amazon.titan-image-generator-v2:0` |
-| Amazon / AWS | `amazon.titan-text-express-v1` |
-| Amazon / AWS | `amazon.titan-text-lite-v1` |
-| Amazon / AWS | `amazon.titan-text-premier-v1:0` |
-| Amazon / AWS | `anthropic.claude-3-5-haiku-20241022-v1:0` |
-| Amazon / AWS | `anthropic.claude-3-5-sonnet-20240620-v1:0` |
-| Amazon / AWS | `anthropic.claude-3-5-sonnet-20241022-v2:0` |
-| Amazon / AWS | `anthropic.claude-3-7-sonnet-20240620-v1:0` |
-| Amazon / AWS | `anthropic.claude-3-haiku-20240307-v1:0` |
-| Amazon / AWS | `anthropic.claude-3-opus-20240229-v1:0` |
-| Amazon / AWS | `anthropic.claude-3-sonnet-20240229-v1:0` |
-| Amazon / AWS | `anthropic.claude-haiku-4-5-20251001-v1:0` |
-| Amazon / AWS | `anthropic.claude-instant-v1` |
-| Amazon / AWS | `anthropic.claude-mythos-preview` |
-| Amazon / AWS | `anthropic.claude-opus-4-1-20250805-v1:0` |
-| Amazon / AWS | `anthropic.claude-opus-4-5-20251101-v1:0` |
-| Amazon / AWS | `anthropic.claude-opus-4-6-v1` |
-| Amazon / AWS | `anthropic.claude-opus-4-7` |
-| Amazon / AWS | `anthropic.claude-opus-4-8` |
-| Amazon / AWS | `anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `anthropic.claude-sonnet-4-6` |
-| Amazon / AWS | `anthropic.claude-v1` |
-| Amazon / AWS | `anthropic.claude-v2:1` |
-| Amazon / AWS | `apac.anthropic.claude-3-5-sonnet-20240620-v1:0` |
-| Amazon / AWS | `apac.anthropic.claude-3-5-sonnet-20241022-v2:0` |
-| Amazon / AWS | `apac.anthropic.claude-3-haiku-20240307-v1:0` |
-| Amazon / AWS | `apac.anthropic.claude-3-sonnet-20240229-v1:0` |
-| Amazon / AWS | `au.anthropic.claude-haiku-4-5-20251001-v1:0` |
-| Amazon / AWS | `au.anthropic.claude-opus-4-6-v1` |
-| Amazon / AWS | `au.anthropic.claude-opus-4-8` |
-| Amazon / AWS | `au.anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `au.anthropic.claude-sonnet-4-6` |
-| Amazon / AWS | `bedrock/*/1-month-commitment/cohere.command-light-text-v14` |
-| Amazon / AWS | `bedrock/*/1-month-commitment/cohere.command-text-v14` |
-| Amazon / AWS | `bedrock/*/6-month-commitment/cohere.command-light-text-v14` |
-| Amazon / AWS | `bedrock/*/6-month-commitment/cohere.command-text-v14` |
-| Amazon / AWS | `bedrock/ap-northeast-1/1-month-commitment/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/1-month-commitment/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/1-month-commitment/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/6-month-commitment/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/6-month-commitment/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/6-month-commitment/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/deepseek.v3.2` |
-| Amazon / AWS | `bedrock/ap-northeast-1/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/ap-northeast-1/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/ap-northeast-1/moonshotai.kimi-k2-thinking` |
-| Amazon / AWS | `bedrock/ap-northeast-1/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/ap-northeast-1/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/ap-south-1/deepseek.v3.2` |
-| Amazon / AWS | `bedrock/ap-south-1/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/ap-south-1/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/ap-south-1/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/ap-south-1/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/ap-south-1/moonshotai.kimi-k2-thinking` |
-| Amazon / AWS | `bedrock/ap-south-1/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/ap-south-1/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/ap-southeast-2/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/ap-southeast-3/deepseek.v3.2` |
-| Amazon / AWS | `bedrock/ap-southeast-3/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/ap-southeast-3/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/ap-southeast-3/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/ap-southeast-3/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/ca-central-1/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/ca-central-1/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/eu-central-1/1-month-commitment/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/eu-central-1/1-month-commitment/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/eu-central-1/1-month-commitment/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/eu-central-1/6-month-commitment/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/eu-central-1/6-month-commitment/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/eu-central-1/6-month-commitment/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/eu-central-1/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/eu-central-1/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/eu-central-1/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/eu-central-1/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/eu-central-1/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/eu-central-1/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/eu-north-1/deepseek.v3.2` |
-| Amazon / AWS | `bedrock/eu-north-1/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/eu-north-1/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/eu-north-1/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/eu-south-1/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/eu-south-1/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/eu-south-1/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/eu-west-1/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/eu-west-1/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/eu-west-1/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/eu-west-1/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/eu-west-1/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/eu-west-2/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/eu-west-2/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/eu-west-2/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/eu-west-2/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/eu-west-2/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/eu-west-3/mistral.mistral-7b-instruct-v0:2` |
-| Amazon / AWS | `bedrock/eu-west-3/mistral.mistral-large-2402-v1:0` |
-| Amazon / AWS | `bedrock/eu-west-3/mistral.mixtral-8x7b-instruct-v0:1` |
-| Amazon / AWS | `bedrock/invoke/anthropic.claude-3-5-sonnet-20240620-v1:0` |
-| Amazon / AWS | `bedrock/moonshotai.kimi-k2-thinking` |
-| Amazon / AWS | `bedrock/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/sa-east-1/deepseek.v3.2` |
-| Amazon / AWS | `bedrock/sa-east-1/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/sa-east-1/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/sa-east-1/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/sa-east-1/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/sa-east-1/moonshotai.kimi-k2-thinking` |
-| Amazon / AWS | `bedrock/sa-east-1/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/sa-east-1/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/us-east-1/1-month-commitment/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/us-east-1/1-month-commitment/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/us-east-1/1-month-commitment/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/us-east-1/6-month-commitment/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/us-east-1/6-month-commitment/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/us-east-1/6-month-commitment/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/us-east-1/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/us-east-1/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/us-east-1/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/us-east-1/deepseek.v3.2` |
-| Amazon / AWS | `bedrock/us-east-1/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/us-east-1/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/us-east-1/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/us-east-1/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/us-east-1/mistral.mistral-7b-instruct-v0:2` |
-| Amazon / AWS | `bedrock/us-east-1/mistral.mistral-large-2402-v1:0` |
-| Amazon / AWS | `bedrock/us-east-1/mistral.mixtral-8x7b-instruct-v0:1` |
-| Amazon / AWS | `bedrock/us-east-1/moonshotai.kimi-k2-thinking` |
-| Amazon / AWS | `bedrock/us-east-1/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/us-east-1/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/us-east-1/zai.glm-5` |
-| Amazon / AWS | `bedrock/us-east-2/deepseek.v3.2` |
-| Amazon / AWS | `bedrock/us-east-2/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/us-east-2/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/us-east-2/moonshotai.kimi-k2-thinking` |
-| Amazon / AWS | `bedrock/us-east-2/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/us-east-2/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/us-gov-east-1/amazon.nova-pro-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/amazon.titan-embed-text-v1` |
-| Amazon / AWS | `bedrock/us-gov-east-1/amazon.titan-embed-text-v2:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/amazon.titan-text-express-v1` |
-| Amazon / AWS | `bedrock/us-gov-east-1/amazon.titan-text-lite-v1` |
-| Amazon / AWS | `bedrock/us-gov-east-1/amazon.titan-text-premier-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/anthropic.claude-3-5-sonnet-20240620-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/anthropic.claude-3-haiku-20240307-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/anthropic.claude-haiku-4-5-20251001-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-east-1/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/amazon.nova-pro-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/amazon.titan-embed-text-v1` |
-| Amazon / AWS | `bedrock/us-gov-west-1/amazon.titan-embed-text-v2:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/amazon.titan-text-express-v1` |
-| Amazon / AWS | `bedrock/us-gov-west-1/amazon.titan-text-lite-v1` |
-| Amazon / AWS | `bedrock/us-gov-west-1/amazon.titan-text-premier-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/anthropic.claude-3-5-sonnet-20240620-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/anthropic.claude-3-7-sonnet-20250219-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/anthropic.claude-3-haiku-20240307-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/anthropic.claude-haiku-4-5-20251001-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/us-gov-west-1/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/us-west-1/meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/us-west-1/meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `bedrock/us-west-2/1-month-commitment/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/us-west-2/1-month-commitment/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/us-west-2/1-month-commitment/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/us-west-2/6-month-commitment/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/us-west-2/6-month-commitment/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/us-west-2/6-month-commitment/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/us-west-2/anthropic.claude-instant-v1` |
-| Amazon / AWS | `bedrock/us-west-2/anthropic.claude-v1` |
-| Amazon / AWS | `bedrock/us-west-2/anthropic.claude-v2:1` |
-| Amazon / AWS | `bedrock/us-west-2/deepseek.v3.2` |
-| Amazon / AWS | `bedrock/us-west-2/minimax.minimax-m2.1` |
-| Amazon / AWS | `bedrock/us-west-2/minimax.minimax-m2.5` |
-| Amazon / AWS | `bedrock/us-west-2/mistral.mistral-7b-instruct-v0:2` |
-| Amazon / AWS | `bedrock/us-west-2/mistral.mistral-large-2402-v1:0` |
-| Amazon / AWS | `bedrock/us-west-2/mistral.mixtral-8x7b-instruct-v0:1` |
-| Amazon / AWS | `bedrock/us-west-2/moonshotai.kimi-k2-thinking` |
-| Amazon / AWS | `bedrock/us-west-2/moonshotai.kimi-k2.5` |
-| Amazon / AWS | `bedrock/us-west-2/qwen.qwen3-coder-next` |
-| Amazon / AWS | `bedrock/us-west-2/zai.glm-5` |
-| Amazon / AWS | `bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0` |
-| Amazon / AWS | `claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `cohere.command-light-text-v14` |
-| Amazon / AWS | `cohere.command-r-plus-v1:0` |
-| Amazon / AWS | `cohere.command-r-v1:0` |
-| Amazon / AWS | `cohere.command-text-v14` |
-| Amazon / AWS | `cohere.embed-english-v3` |
-| Amazon / AWS | `cohere.embed-multilingual-v3` |
-| Amazon / AWS | `cohere.embed-v4:0` |
-| Amazon / AWS | `cohere.rerank-v3-5:0` |
-| Amazon / AWS | `deepseek.r1-v1:0` |
-| Amazon / AWS | `deepseek.v3-v1:0` |
-| Amazon / AWS | `deepseek.v3.2` |
-| Amazon / AWS | `eu.anthropic.claude-3-5-haiku-20241022-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-3-5-sonnet-20240620-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-3-5-sonnet-20241022-v2:0` |
-| Amazon / AWS | `eu.anthropic.claude-3-7-sonnet-20250219-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-3-haiku-20240307-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-3-opus-20240229-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-3-sonnet-20240229-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-haiku-4-5-20251001-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-opus-4-5-20251101-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-opus-4-6-v1` |
-| Amazon / AWS | `eu.anthropic.claude-opus-4-7` |
-| Amazon / AWS | `eu.anthropic.claude-opus-4-8` |
-| Amazon / AWS | `eu.anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `eu.anthropic.claude-sonnet-4-6` |
-| Amazon / AWS | `eu.meta.llama3-2-1b-instruct-v1:0` |
-| Amazon / AWS | `eu.meta.llama3-2-3b-instruct-v1:0` |
-| Amazon / AWS | `eu.twelvelabs.marengo-embed-2-7-v1:0` |
-| Amazon / AWS | `eu.twelvelabs.pegasus-1-2-v1:0` |
-| Amazon / AWS | `global.anthropic.claude-haiku-4-5-20251001-v1:0` |
-| Amazon / AWS | `global.anthropic.claude-opus-4-5-20251101-v1:0` |
-| Amazon / AWS | `global.anthropic.claude-opus-4-6-v1` |
-| Amazon / AWS | `global.anthropic.claude-opus-4-7` |
-| Amazon / AWS | `global.anthropic.claude-opus-4-8` |
-| Amazon / AWS | `global.anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `global.anthropic.claude-sonnet-4-6` |
-| Amazon / AWS | `google.gemma-3-12b-it` |
-| Amazon / AWS | `google.gemma-3-27b-it` |
-| Amazon / AWS | `google.gemma-3-4b-it` |
-| Amazon / AWS | `jp.anthropic.claude-opus-4-7` |
-| Amazon / AWS | `jp.anthropic.claude-opus-4-8` |
-| Amazon / AWS | `jp.anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `jp.anthropic.claude-sonnet-4-6` |
-| Amazon / AWS | `max-x-max/50-steps/stability.stable-diffusion-xl-v0` |
-| Amazon / AWS | `max-x-max/max-steps/stability.stable-diffusion-xl-v0` |
-| Amazon / AWS | `meta.llama2-13b-chat-v1` |
-| Amazon / AWS | `meta.llama2-70b-chat-v1` |
-| Amazon / AWS | `meta.llama3-1-405b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-1-70b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-1-8b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-2-11b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-2-1b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-2-3b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-2-90b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-3-70b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-70b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama3-8b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama4-maverick-17b-instruct-v1:0` |
-| Amazon / AWS | `meta.llama4-scout-17b-instruct-v1:0` |
-| Amazon / AWS | `minimax.minimax-m2` |
-| Amazon / AWS | `minimax.minimax-m2.1` |
-| Amazon / AWS | `minimax.minimax-m2.5` |
-| Amazon / AWS | `mistral.devstral-2-123b` |
-| Amazon / AWS | `mistral.magistral-small-2509` |
-| Amazon / AWS | `mistral.ministral-3-14b-instruct` |
-| Amazon / AWS | `mistral.ministral-3-3b-instruct` |
-| Amazon / AWS | `mistral.ministral-3-8b-instruct` |
-| Amazon / AWS | `mistral.mistral-7b-instruct-v0:2` |
-| Amazon / AWS | `mistral.mistral-large-2402-v1:0` |
-| Amazon / AWS | `mistral.mistral-large-2407-v1:0` |
-| Amazon / AWS | `mistral.mistral-large-3-675b-instruct` |
-| Amazon / AWS | `mistral.mistral-small-2402-v1:0` |
-| Amazon / AWS | `mistral.mixtral-8x7b-instruct-v0:1` |
-| Amazon / AWS | `mistral.pixtral-large-2502-v1:0` |
-| Amazon / AWS | `mistral.voxtral-mini-3b-2507` |
-| Amazon / AWS | `mistral.voxtral-small-24b-2507` |
-| Amazon / AWS | `moonshot.kimi-k2-thinking` |
-| Amazon / AWS | `moonshotai.kimi-k2.5` |
-| Amazon / AWS | `nvidia.nemotron-nano-12b-v2` |
-| Amazon / AWS | `nvidia.nemotron-nano-3-30b` |
-| Amazon / AWS | `nvidia.nemotron-nano-9b-v2` |
-| Amazon / AWS | `nvidia.nemotron-super-3-120b` |
-| Amazon / AWS | `openai.gpt-oss-120b-1:0` |
-| Amazon / AWS | `openai.gpt-oss-20b-1:0` |
-| Amazon / AWS | `openai.gpt-oss-safeguard-120b` |
-| Amazon / AWS | `openai.gpt-oss-safeguard-20b` |
-| Amazon / AWS | `qwen.qwen3-235b-a22b-2507-v1:0` |
-| Amazon / AWS | `qwen.qwen3-32b-v1:0` |
-| Amazon / AWS | `qwen.qwen3-coder-30b-a3b-v1:0` |
-| Amazon / AWS | `qwen.qwen3-coder-480b-a35b-v1:0` |
-| Amazon / AWS | `qwen.qwen3-coder-next` |
-| Amazon / AWS | `qwen.qwen3-next-80b-a3b` |
-| Amazon / AWS | `qwen.qwen3-vl-235b-a22b` |
-| Amazon / AWS | `stability.sd3-5-large-v1:0` |
-| Amazon / AWS | `stability.sd3-large-v1:0` |
-| Amazon / AWS | `stability.stable-conservative-upscale-v1:0` |
-| Amazon / AWS | `stability.stable-creative-upscale-v1:0` |
-| Amazon / AWS | `stability.stable-fast-upscale-v1:0` |
-| Amazon / AWS | `stability.stable-image-control-sketch-v1:0` |
-| Amazon / AWS | `stability.stable-image-control-structure-v1:0` |
-| Amazon / AWS | `stability.stable-image-core-v1:0` |
-| Amazon / AWS | `stability.stable-image-core-v1:1` |
-| Amazon / AWS | `stability.stable-image-erase-object-v1:0` |
-| Amazon / AWS | `stability.stable-image-inpaint-v1:0` |
-| Amazon / AWS | `stability.stable-image-remove-background-v1:0` |
-| Amazon / AWS | `stability.stable-image-search-recolor-v1:0` |
-| Amazon / AWS | `stability.stable-image-search-replace-v1:0` |
-| Amazon / AWS | `stability.stable-image-style-guide-v1:0` |
-| Amazon / AWS | `stability.stable-image-ultra-v1:0` |
-| Amazon / AWS | `stability.stable-image-ultra-v1:1` |
-| Amazon / AWS | `stability.stable-outpaint-v1:0` |
-| Amazon / AWS | `stability.stable-style-transfer-v1:0` |
-| Amazon / AWS | `twelvelabs.marengo-embed-2-7-v1:0` |
-| Amazon / AWS | `twelvelabs.pegasus-1-2-v1:0` |
-| Amazon / AWS | `us.amazon.nova-canvas-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-3-5-haiku-20241022-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-3-5-sonnet-20240620-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-3-5-sonnet-20241022-v2:0` |
-| Amazon / AWS | `us.anthropic.claude-3-haiku-20240307-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-3-opus-20240229-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-3-sonnet-20240229-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-opus-4-1-20250805-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-opus-4-5-20251101-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-opus-4-6-v1` |
-| Amazon / AWS | `us.anthropic.claude-opus-4-7` |
-| Amazon / AWS | `us.anthropic.claude-opus-4-8` |
-| Amazon / AWS | `us.anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Amazon / AWS | `us.anthropic.claude-sonnet-4-6` |
-| Amazon / AWS | `us.deepseek.r1-v1:0` |
-| Amazon / AWS | `us.meta.llama3-1-405b-instruct-v1:0` |
-| Amazon / AWS | `us.meta.llama3-1-70b-instruct-v1:0` |
-| Amazon / AWS | `us.meta.llama3-1-8b-instruct-v1:0` |
-| Amazon / AWS | `us.meta.llama3-2-11b-instruct-v1:0` |
-| Amazon / AWS | `us.meta.llama3-2-1b-instruct-v1:0` |
-| Amazon / AWS | `us.meta.llama3-2-3b-instruct-v1:0` |
-| Amazon / AWS | `us.meta.llama3-2-90b-instruct-v1:0` |
-| Amazon / AWS | `us.meta.llama4-maverick-17b-instruct-v1:0` |
-| Amazon / AWS | `us.meta.llama4-scout-17b-instruct-v1:0` |
-| Amazon / AWS | `us.twelvelabs.marengo-embed-2-7-v1:0` |
-| Amazon / AWS | `us.twelvelabs.pegasus-1-2-v1:0` |
-| Amazon / AWS | `writer.palmyra-x4-v1:0` |
-| Amazon / AWS | `writer.palmyra-x5-v1:0` |
-| Amazon / AWS | `zai.glm-4.7` |
-| Amazon / AWS | `zai.glm-4.7-flash` |
-| Amazon / AWS | `zai.glm-5` |
 | Ant Group | `Ling-1T` |
 | Ant Group | `Ring-1T` |
-| Anthropic | `claude-3-5-haiku-20241022` |
-| Anthropic | `claude-3-5-haiku-latest` |
-| Anthropic | `claude-3-5-sonnet-20240620` |
-| Anthropic | `claude-3-5-sonnet-20241022` |
 | Anthropic | `claude-3-7-sonnet-20250219` |
 | Anthropic | `claude-3-haiku-20240307` |
 | Anthropic | `claude-3-opus-20240229` |
-| Anthropic | `claude-3-sonnet-20240229` |
 | Anthropic | `claude-4-opus-20250514` |
 | Anthropic | `claude-4-sonnet-20250514` |
+| Anthropic | `claude-fable-5` |
 | Anthropic | `claude-haiku-4-5` |
 | Anthropic | `claude-haiku-4-5-20251001` |
-| Anthropic | `claude-opus-4-0` |
 | Anthropic | `claude-opus-4-1` |
 | Anthropic | `claude-opus-4-1-20250805` |
 | Anthropic | `claude-opus-4-20250514` |
@@ -412,11 +52,12 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Anthropic | `claude-opus-4-7` |
 | Anthropic | `claude-opus-4-7-20260416` |
 | Anthropic | `claude-opus-4-8` |
-| Anthropic | `claude-sonnet-4-0` |
+| Anthropic | `claude-opus-5` |
 | Anthropic | `claude-sonnet-4-20250514` |
 | Anthropic | `claude-sonnet-4-5` |
 | Anthropic | `claude-sonnet-4-5-20250929` |
 | Anthropic | `claude-sonnet-4-6` |
+| Anthropic | `claude-sonnet-5` |
 | ByteDance / Seed | `deepseek-v3-2-251201` |
 | ByteDance / Seed | `doubao-embedding` |
 | ByteDance / Seed | `doubao-embedding-large` |
@@ -436,6 +77,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Cohere | `cohere/embed-v4.0` |
 | Cohere | `command` |
 | Cohere | `command-a-03-2025` |
+| Cohere | `command-a-plus-05-2026` |
 | Cohere | `command-a-reasoning-08-2025` |
 | Cohere | `command-a-translate-08-2025` |
 | Cohere | `command-a-vision-07-2025` |
@@ -451,11 +93,13 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Cohere | `embed-multilingual-light-v3.0` |
 | Cohere | `embed-multilingual-v2.0` |
 | Cohere | `embed-multilingual-v3.0` |
+| Cohere | `north-mini-code-1-0` |
 | Cohere | `rerank-english-v2.0` |
 | Cohere | `rerank-english-v3.0` |
 | Cohere | `rerank-multilingual-v2.0` |
 | Cohere | `rerank-multilingual-v3.0` |
 | Cohere | `rerank-v3.5` |
+| Core42 / Inception / G42 | `inception/mercury-2` |
 | Core42 / Inception / G42 | `mercury-2` |
 | Core42 / Inception / G42 | `mercury-edit-2` |
 | Databricks / MosaicML | `databricks-claude-haiku-4-5` |
@@ -472,6 +116,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Databricks / MosaicML | `databricks-gemini-3-1-pro` |
 | Databricks / MosaicML | `databricks-gemini-3-flash` |
 | Databricks / MosaicML | `databricks-gemini-3-pro` |
+| Databricks / MosaicML | `databricks-glm-5-2` |
 | Databricks / MosaicML | `databricks-gpt-5` |
 | Databricks / MosaicML | `databricks-gpt-5-1` |
 | Databricks / MosaicML | `databricks-gpt-5-2` |
@@ -479,10 +124,14 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Databricks / MosaicML | `databricks-gpt-5-4-mini` |
 | Databricks / MosaicML | `databricks-gpt-5-4-nano` |
 | Databricks / MosaicML | `databricks-gpt-5-5` |
+| Databricks / MosaicML | `databricks-gpt-5-6-luna` |
+| Databricks / MosaicML | `databricks-gpt-5-6-sol` |
+| Databricks / MosaicML | `databricks-gpt-5-6-terra` |
 | Databricks / MosaicML | `databricks-gpt-5-mini` |
 | Databricks / MosaicML | `databricks-gpt-5-nano` |
 | Databricks / MosaicML | `databricks-gpt-oss-120b` |
 | Databricks / MosaicML | `databricks-gpt-oss-20b` |
+| Databricks / MosaicML | `databricks-kimi-k2-7-code` |
 | Databricks / MosaicML | `databricks/databricks-bge-large-en` |
 | Databricks / MosaicML | `databricks/databricks-claude-3-7-sonnet` |
 | Databricks / MosaicML | `databricks/databricks-claude-haiku-4-5` |
@@ -521,9 +170,14 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | DeepSeek | `deepseek/deepseek-reasoner` |
 | DeepSeek | `deepseek/deepseek-v3` |
 | DeepSeek | `deepseek/deepseek-v3.2` |
+| DeepSeek | `deepseek/deepseek-v4-flash` |
+| DeepSeek | `deepseek/deepseek-v4-pro` |
+| Google / DeepMind | `deep-research-max-preview-04-2026` |
+| Google / DeepMind | `deep-research-preview-04-2026` |
 | Google / DeepMind | `gemini-2.0-flash` |
 | Google / DeepMind | `gemini-2.0-flash-exp-image-generation` |
 | Google / DeepMind | `gemini-2.0-flash-lite` |
+| Google / DeepMind | `gemini-2.5-computer-use-preview-10-2025` |
 | Google / DeepMind | `gemini-2.5-flash` |
 | Google / DeepMind | `gemini-2.5-flash-image` |
 | Google / DeepMind | `gemini-2.5-flash-lite` |
@@ -534,19 +188,30 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Google / DeepMind | `gemini-2.5-pro` |
 | Google / DeepMind | `gemini-2.5-pro-preview-tts` |
 | Google / DeepMind | `gemini-3-flash-preview` |
+| Google / DeepMind | `gemini-3-pro-image` |
+| Google / DeepMind | `gemini-3-pro-image-preview` |
 | Google / DeepMind | `gemini-3-pro-preview` |
+| Google / DeepMind | `gemini-3.1-flash-image` |
 | Google / DeepMind | `gemini-3.1-flash-image-preview` |
 | Google / DeepMind | `gemini-3.1-flash-lite` |
+| Google / DeepMind | `gemini-3.1-flash-lite-image` |
 | Google / DeepMind | `gemini-3.1-flash-lite-preview` |
 | Google / DeepMind | `gemini-3.1-flash-live-preview` |
+| Google / DeepMind | `gemini-3.1-flash-tts-preview` |
 | Google / DeepMind | `gemini-3.1-pro-preview` |
 | Google / DeepMind | `gemini-3.1-pro-preview-customtools` |
 | Google / DeepMind | `gemini-3.5-flash` |
+| Google / DeepMind | `gemini-3.5-flash-lite` |
+| Google / DeepMind | `gemini-3.5-live-translate-preview` |
+| Google / DeepMind | `gemini-3.6-flash` |
 | Google / DeepMind | `gemini-embedding-001` |
+| Google / DeepMind | `gemini-embedding-2` |
 | Google / DeepMind | `gemini-exp-1206` |
 | Google / DeepMind | `gemini-flash-latest` |
 | Google / DeepMind | `gemini-flash-lite-latest` |
+| Google / DeepMind | `gemini-omni-flash-preview` |
 | Google / DeepMind | `gemini-pro-latest` |
+| Google / DeepMind | `gemini-robotics-er-1.6-preview` |
 | Google / DeepMind | `gemini/deep-research-pro-preview-12-2025` |
 | Google / DeepMind | `gemini/gemini-1.5-flash` |
 | Google / DeepMind | `gemini/gemini-2.0-flash` |
@@ -568,8 +233,10 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Google / DeepMind | `gemini/gemini-2.5-pro` |
 | Google / DeepMind | `gemini/gemini-2.5-pro-preview-tts` |
 | Google / DeepMind | `gemini/gemini-3-flash-preview` |
+| Google / DeepMind | `gemini/gemini-3-pro-image` |
 | Google / DeepMind | `gemini/gemini-3-pro-image-preview` |
 | Google / DeepMind | `gemini/gemini-3-pro-preview` |
+| Google / DeepMind | `gemini/gemini-3.1-flash-image` |
 | Google / DeepMind | `gemini/gemini-3.1-flash-image-preview` |
 | Google / DeepMind | `gemini/gemini-3.1-flash-lite` |
 | Google / DeepMind | `gemini/gemini-3.1-flash-lite-preview` |
@@ -577,6 +244,8 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Google / DeepMind | `gemini/gemini-3.1-pro-preview` |
 | Google / DeepMind | `gemini/gemini-3.1-pro-preview-customtools` |
 | Google / DeepMind | `gemini/gemini-3.5-flash` |
+| Google / DeepMind | `gemini/gemini-3.5-flash-lite` |
+| Google / DeepMind | `gemini/gemini-3.6-flash` |
 | Google / DeepMind | `gemini/gemini-embedding-001` |
 | Google / DeepMind | `gemini/gemini-embedding-2` |
 | Google / DeepMind | `gemini/gemini-embedding-2-preview` |
@@ -587,6 +256,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Google / DeepMind | `gemini/gemini-gemma-2-27b-it` |
 | Google / DeepMind | `gemini/gemini-gemma-2-9b-it` |
 | Google / DeepMind | `gemini/gemini-live-2.5-flash-preview-native-audio-09-2025` |
+| Google / DeepMind | `gemini/gemini-omni-flash-preview` |
 | Google / DeepMind | `gemini/gemini-pro-latest` |
 | Google / DeepMind | `gemini/gemini-robotics-er-1.5-preview` |
 | Google / DeepMind | `gemini/gemma-3-27b-it` |
@@ -608,13 +278,20 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Google / DeepMind | `gemma-3-27b-it` |
 | Google / DeepMind | `gemma-4-26b-a4b-it` |
 | Google / DeepMind | `gemma-4-31b-it` |
+| Google / DeepMind | `lyria-3-clip-preview` |
+| Google / DeepMind | `lyria-3-pro-preview` |
+| Google / DeepMind | `veo-3.1-fast-generate-preview` |
+| Google / DeepMind | `veo-3.1-generate-preview` |
+| Google / DeepMind | `veo-3.1-lite-generate-preview` |
 | Google / DeepMind | `vertex_ai/chirp` |
+| Google / DeepMind | `vertex_ai/chirp_3` |
 | Google / DeepMind | `vertex_ai/deepseek-ai/deepseek-ocr-maas` |
 | Google / DeepMind | `vertex_ai/gemini-3-flash-preview` |
 | Google / DeepMind | `vertex_ai/gemini-3-pro-preview` |
 | Google / DeepMind | `vertex_ai/gemini-3.1-pro-preview` |
 | Google / DeepMind | `vertex_ai/gemini-3.1-pro-preview-customtools` |
 | Google / DeepMind | `vertex_ai/gemini-3.5-flash` |
+| Google / DeepMind | `vertex_ai/gemini-3.6-flash` |
 | Google / DeepMind | `vertex_ai/gemini-embedding-2` |
 | Google / DeepMind | `vertex_ai/gemini-embedding-2-preview` |
 | Google / DeepMind | `vertex_ai/mistral-ocr-2505` |
@@ -652,10 +329,12 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | IBM | `watsonx/openai/gpt-oss-120b` |
 | IBM | `watsonx/sdaia/allam-1-13b-instruct` |
 | IBM | `watsonx/whisper-large-v3-turbo` |
+| Meta AI | `meta/muse-spark-1.1` |
 | Meta AI | `meta_llama/Llama-3.3-70B-Instruct` |
 | Meta AI | `meta_llama/Llama-3.3-8B-Instruct` |
 | Meta AI | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` |
 | Meta AI | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` |
+| Meta AI | `muse-spark-1.1` |
 | Microsoft | `azure/ada` |
 | Microsoft | `azure/codex-mini` |
 | Microsoft | `azure/command-r-plus` |
@@ -674,6 +353,14 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure/eu/gpt-5.1-chat` |
 | Microsoft | `azure/eu/gpt-5.1-codex` |
 | Microsoft | `azure/eu/gpt-5.1-codex-mini` |
+| Microsoft | `azure/eu/gpt-5.4` |
+| Microsoft | `azure/eu/gpt-5.4-2026-03-05` |
+| Microsoft | `azure/eu/gpt-5.5` |
+| Microsoft | `azure/eu/gpt-5.5-2026-04-23` |
+| Microsoft | `azure/eu/gpt-5.6` |
+| Microsoft | `azure/eu/gpt-5.6-luna` |
+| Microsoft | `azure/eu/gpt-5.6-sol` |
+| Microsoft | `azure/eu/gpt-5.6-terra` |
 | Microsoft | `azure/eu/o1-2024-12-17` |
 | Microsoft | `azure/eu/o1-mini-2024-09-12` |
 | Microsoft | `azure/eu/o1-preview-2024-09-12` |
@@ -765,6 +452,10 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure/gpt-5.5-2026-04-23` |
 | Microsoft | `azure/gpt-5.5-pro` |
 | Microsoft | `azure/gpt-5.5-pro-2026-04-23` |
+| Microsoft | `azure/gpt-5.6` |
+| Microsoft | `azure/gpt-5.6-luna` |
+| Microsoft | `azure/gpt-5.6-sol` |
+| Microsoft | `azure/gpt-5.6-terra` |
 | Microsoft | `azure/gpt-audio-1.5-2026-02-23` |
 | Microsoft | `azure/gpt-audio-2025-08-28` |
 | Microsoft | `azure/gpt-audio-mini-2025-10-06` |
@@ -777,6 +468,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure/gpt-realtime-1.5-2026-02-23` |
 | Microsoft | `azure/gpt-realtime-2025-08-28` |
 | Microsoft | `azure/gpt-realtime-mini-2025-10-06` |
+| Microsoft | `azure/gpt-realtime-whisper` |
 | Microsoft | `azure/hd/1024-x-1024/dall-e-3` |
 | Microsoft | `azure/hd/1024-x-1792/dall-e-3` |
 | Microsoft | `azure/hd/1792-x-1024/dall-e-3` |
@@ -846,6 +538,14 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure/us/gpt-5.1-chat` |
 | Microsoft | `azure/us/gpt-5.1-codex` |
 | Microsoft | `azure/us/gpt-5.1-codex-mini` |
+| Microsoft | `azure/us/gpt-5.4` |
+| Microsoft | `azure/us/gpt-5.4-2026-03-05` |
+| Microsoft | `azure/us/gpt-5.5` |
+| Microsoft | `azure/us/gpt-5.5-2026-04-23` |
+| Microsoft | `azure/us/gpt-5.6` |
+| Microsoft | `azure/us/gpt-5.6-luna` |
+| Microsoft | `azure/us/gpt-5.6-sol` |
+| Microsoft | `azure/us/gpt-5.6-terra` |
 | Microsoft | `azure/us/o1-2024-12-17` |
 | Microsoft | `azure/us/o1-mini-2024-09-12` |
 | Microsoft | `azure/us/o1-preview-2024-09-12` |
@@ -863,6 +563,9 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure_ai/Llama-4-Maverick-17B-128E-Instruct-FP8` |
 | Microsoft | `azure_ai/Llama-4-Scout-17B-16E-Instruct` |
 | Microsoft | `azure_ai/MAI-DS-R1` |
+| Microsoft | `azure_ai/MAI-Image-2.5` |
+| Microsoft | `azure_ai/MAI-Image-2.5-Flash` |
+| Microsoft | `azure_ai/MAI-Image-2e` |
 | Microsoft | `azure_ai/Meta-Llama-3-70B-Instruct` |
 | Microsoft | `azure_ai/Meta-Llama-3.1-405B-Instruct` |
 | Microsoft | `azure_ai/Meta-Llama-3.1-70B-Instruct` |
@@ -881,14 +584,17 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure_ai/Phi-4-mini-reasoning` |
 | Microsoft | `azure_ai/Phi-4-multimodal-instruct` |
 | Microsoft | `azure_ai/Phi-4-reasoning` |
+| Microsoft | `azure_ai/claude-fable-5` |
 | Microsoft | `azure_ai/claude-haiku-4-5` |
 | Microsoft | `azure_ai/claude-opus-4-1` |
 | Microsoft | `azure_ai/claude-opus-4-5` |
 | Microsoft | `azure_ai/claude-opus-4-6` |
 | Microsoft | `azure_ai/claude-opus-4-7` |
 | Microsoft | `azure_ai/claude-opus-4-8` |
+| Microsoft | `azure_ai/claude-opus-5` |
 | Microsoft | `azure_ai/claude-sonnet-4-5` |
 | Microsoft | `azure_ai/claude-sonnet-4-6` |
+| Microsoft | `azure_ai/claude-sonnet-5` |
 | Microsoft | `azure_ai/cohere-rerank-v3-english` |
 | Microsoft | `azure_ai/cohere-rerank-v3-multilingual` |
 | Microsoft | `azure_ai/cohere-rerank-v3.5` |
@@ -897,8 +603,11 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure_ai/deepseek-r1` |
 | Microsoft | `azure_ai/deepseek-v3` |
 | Microsoft | `azure_ai/deepseek-v3-0324` |
+| Microsoft | `azure_ai/deepseek-v3.1` |
 | Microsoft | `azure_ai/deepseek-v3.2` |
 | Microsoft | `azure_ai/deepseek-v3.2-speciale` |
+| Microsoft | `azure_ai/deepseek-v4-flash` |
+| Microsoft | `azure_ai/deepseek-v4-pro` |
 | Microsoft | `azure_ai/doc-intelligence/prebuilt-document` |
 | Microsoft | `azure_ai/doc-intelligence/prebuilt-layout` |
 | Microsoft | `azure_ai/doc-intelligence/prebuilt-read` |
@@ -914,6 +623,8 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure_ai/gpt-5.4-nano-2026-03-17` |
 | Microsoft | `azure_ai/gpt-5.4-pro` |
 | Microsoft | `azure_ai/gpt-5.4-pro-2026-03-05` |
+| Microsoft | `azure_ai/gpt-5.5` |
+| Microsoft | `azure_ai/gpt-5.5-2026-04-23` |
 | Microsoft | `azure_ai/gpt-oss-120b` |
 | Microsoft | `azure_ai/grok-3` |
 | Microsoft | `azure_ai/grok-3-mini` |
@@ -926,6 +637,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure_ai/jais-30b-chat` |
 | Microsoft | `azure_ai/jamba-instruct` |
 | Microsoft | `azure_ai/kimi-k2.5` |
+| Microsoft | `azure_ai/kimi-k2.6` |
 | Microsoft | `azure_ai/ministral-3b` |
 | Microsoft | `azure_ai/mistral-document-ai-2505` |
 | Microsoft | `azure_ai/mistral-document-ai-2512` |
@@ -938,34 +650,31 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `azure_ai/mistral-small` |
 | Microsoft | `azure_ai/mistral-small-2503` |
 | Microsoft | `azure_ai/model_router` |
+| Microsoft | `claude-fable-5` |
 | Microsoft | `claude-haiku-4-5` |
 | Microsoft | `claude-opus-4-1` |
 | Microsoft | `claude-opus-4-5` |
 | Microsoft | `claude-opus-4-6` |
+| Microsoft | `claude-opus-4-8` |
+| Microsoft | `claude-opus-5` |
 | Microsoft | `claude-sonnet-4-5` |
 | Microsoft | `claude-sonnet-4-6` |
+| Microsoft | `claude-sonnet-5` |
 | Microsoft | `codestral-2501` |
 | Microsoft | `codex-mini` |
 | Microsoft | `cohere-command-a` |
-| Microsoft | `cohere-command-r-08-2024` |
-| Microsoft | `cohere-command-r-plus-08-2024` |
 | Microsoft | `cohere-embed-v-4-0` |
 | Microsoft | `cohere-embed-v3-english` |
 | Microsoft | `cohere-embed-v3-multilingual` |
 | Microsoft | `computer-use-preview` |
 | Microsoft | `deepseek-r1` |
-| Microsoft | `deepseek-r1-0528` |
-| Microsoft | `deepseek-v3-0324` |
-| Microsoft | `deepseek-v3.1` |
 | Microsoft | `deepseek-v3.2` |
 | Microsoft | `deepseek-v3.2-speciale` |
+| Microsoft | `deepseek-v4-flash` |
+| Microsoft | `deepseek-v4-pro` |
 | Microsoft | `gpt-3.5-turbo-0125` |
-| Microsoft | `gpt-3.5-turbo-0301` |
-| Microsoft | `gpt-3.5-turbo-0613` |
 | Microsoft | `gpt-3.5-turbo-1106` |
 | Microsoft | `gpt-3.5-turbo-instruct` |
-| Microsoft | `gpt-4` |
-| Microsoft | `gpt-4-32k` |
 | Microsoft | `gpt-4-turbo` |
 | Microsoft | `gpt-4-turbo-vision` |
 | Microsoft | `gpt-4.1` |
@@ -974,65 +683,46 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Microsoft | `gpt-4o` |
 | Microsoft | `gpt-4o-mini` |
 | Microsoft | `gpt-5` |
-| Microsoft | `gpt-5-chat` |
 | Microsoft | `gpt-5-codex` |
 | Microsoft | `gpt-5-mini` |
 | Microsoft | `gpt-5-nano` |
 | Microsoft | `gpt-5-pro` |
 | Microsoft | `gpt-5.1` |
-| Microsoft | `gpt-5.1-chat` |
 | Microsoft | `gpt-5.1-codex` |
 | Microsoft | `gpt-5.1-codex-max` |
 | Microsoft | `gpt-5.1-codex-mini` |
 | Microsoft | `gpt-5.2` |
-| Microsoft | `gpt-5.2-chat` |
 | Microsoft | `gpt-5.2-codex` |
-| Microsoft | `gpt-5.3-chat` |
 | Microsoft | `gpt-5.3-codex` |
 | Microsoft | `gpt-5.4` |
 | Microsoft | `gpt-5.4-mini` |
 | Microsoft | `gpt-5.4-nano` |
 | Microsoft | `gpt-5.4-pro` |
 | Microsoft | `gpt-5.5` |
+| Microsoft | `gpt-5.6-luna` |
+| Microsoft | `gpt-5.6-sol` |
+| Microsoft | `gpt-5.6-terra` |
+| Microsoft | `gpt-chat-latest` |
+| Microsoft | `gpt-image-1` |
+| Microsoft | `gpt-image-1.5` |
+| Microsoft | `gpt-image-2` |
 | Microsoft | `grok-4-1-fast-non-reasoning` |
 | Microsoft | `grok-4-1-fast-reasoning` |
 | Microsoft | `grok-4-20-non-reasoning` |
 | Microsoft | `grok-4-20-reasoning` |
-| Microsoft | `grok-4-fast-reasoning` |
-| Microsoft | `kimi-k2-thinking` |
 | Microsoft | `kimi-k2.5` |
 | Microsoft | `kimi-k2.6` |
-| Microsoft | `llama-3.2-11b-vision-instruct` |
-| Microsoft | `llama-3.2-90b-vision-instruct` |
 | Microsoft | `llama-3.3-70b-instruct` |
 | Microsoft | `llama-4-maverick-17b-128e-instruct-fp8` |
 | Microsoft | `llama-4-scout-17b-16e-instruct` |
-| Microsoft | `mai-ds-r1` |
-| Microsoft | `meta-llama-3-70b-instruct` |
-| Microsoft | `meta-llama-3-8b-instruct` |
-| Microsoft | `meta-llama-3.1-405b-instruct` |
-| Microsoft | `meta-llama-3.1-70b-instruct` |
-| Microsoft | `meta-llama-3.1-8b-instruct` |
 | Microsoft | `ministral-3b` |
-| Microsoft | `mistral-large-2411` |
 | Microsoft | `mistral-medium-2505` |
-| Microsoft | `mistral-nemo` |
 | Microsoft | `mistral-small-2503` |
 | Microsoft | `model-router` |
 | Microsoft | `o1` |
-| Microsoft | `o1-mini` |
-| Microsoft | `o1-preview` |
 | Microsoft | `o3` |
 | Microsoft | `o3-mini` |
 | Microsoft | `o4-mini` |
-| Microsoft | `phi-3-medium-128k-instruct` |
-| Microsoft | `phi-3-medium-4k-instruct` |
-| Microsoft | `phi-3-mini-128k-instruct` |
-| Microsoft | `phi-3-mini-4k-instruct` |
-| Microsoft | `phi-3-small-128k-instruct` |
-| Microsoft | `phi-3-small-8k-instruct` |
-| Microsoft | `phi-3.5-mini-instruct` |
-| Microsoft | `phi-3.5-moe-instruct` |
 | Microsoft | `phi-4` |
 | Microsoft | `phi-4-mini` |
 | Microsoft | `phi-4-mini-reasoning` |
@@ -1054,6 +744,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | MiniMax | `minimax/MiniMax-M2.1-lightning` |
 | MiniMax | `minimax/MiniMax-M2.5` |
 | MiniMax | `minimax/MiniMax-M2.5-lightning` |
+| MiniMax | `minimax/MiniMax-M3` |
 | MiniMax | `minimax/speech-02-hd` |
 | MiniMax | `minimax/speech-02-turbo` |
 | MiniMax | `minimax/speech-2.6-hd` |
@@ -1107,6 +798,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Mistral AI | `mistral/ministral-3-3b-2512` |
 | Mistral AI | `mistral/ministral-3-8b-2512` |
 | Mistral AI | `mistral/ministral-8b-2512` |
+| Mistral AI | `mistral/ministral-8b-latest` |
 | Mistral AI | `mistral/mistral-embed` |
 | Mistral AI | `mistral/mistral-large-2402` |
 | Mistral AI | `mistral/mistral-large-2407` |
@@ -1117,9 +809,14 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Mistral AI | `mistral/mistral-medium` |
 | Mistral AI | `mistral/mistral-medium-2312` |
 | Mistral AI | `mistral/mistral-medium-2505` |
+| Mistral AI | `mistral/mistral-medium-2508` |
+| Mistral AI | `mistral/mistral-medium-2604` |
 | Mistral AI | `mistral/mistral-medium-3-1-2508` |
+| Mistral AI | `mistral/mistral-medium-3-5` |
 | Mistral AI | `mistral/mistral-medium-latest` |
 | Mistral AI | `mistral/mistral-ocr-2505-completion` |
+| Mistral AI | `mistral/mistral-ocr-2512` |
+| Mistral AI | `mistral/mistral-ocr-4-0` |
 | Mistral AI | `mistral/mistral-ocr-latest` |
 | Mistral AI | `mistral/mistral-small` |
 | Mistral AI | `mistral/mistral-small-3-2-2506` |
@@ -1147,6 +844,9 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Moonshot AI | `kimi-k2-turbo-preview` |
 | Moonshot AI | `kimi-k2.5` |
 | Moonshot AI | `kimi-k2.6` |
+| Moonshot AI | `kimi-k2.7-code` |
+| Moonshot AI | `kimi-k2.7-code-highspeed` |
+| Moonshot AI | `kimi-k3` |
 | Moonshot AI | `moonshot/kimi-k2-0711-preview` |
 | Moonshot AI | `moonshot/kimi-k2-0905-preview` |
 | Moonshot AI | `moonshot/kimi-k2-thinking` |
@@ -1174,19 +874,18 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Morph | `morph-v3-large` |
 | Morph | `morph/morph-v3-fast` |
 | Morph | `morph/morph-v3-large` |
-| NVIDIA | `abacusai/dracarys-llama-3_1-70b-instruct` |
+| NVIDIA | `abacusai/dracarys-llama-3.1-70b-instruct` |
 | NVIDIA | `baai/bge-m3` |
 | NVIDIA | `black-forest-labs/flux.1-dev` |
 | NVIDIA | `black-forest-labs/flux_1-kontext-dev` |
 | NVIDIA | `black-forest-labs/flux_1-schnell` |
 | NVIDIA | `black-forest-labs/flux_2-klein-4b` |
 | NVIDIA | `bytedance/seed-oss-36b-instruct` |
-| NVIDIA | `deepseek-ai/deepseek-v3.1-terminus` |
-| NVIDIA | `deepseek-ai/deepseek-v3.2` |
 | NVIDIA | `deepseek-ai/deepseek-v4-flash` |
 | NVIDIA | `deepseek-ai/deepseek-v4-pro` |
 | NVIDIA | `google/gemma-2-2b-it` |
-| NVIDIA | `google/gemma-3-27b-it` |
+| NVIDIA | `google/gemma-3-12b-it` |
+| NVIDIA | `google/gemma-3-4b-it` |
 | NVIDIA | `google/gemma-3n-e2b-it` |
 | NVIDIA | `google/gemma-3n-e4b-it` |
 | NVIDIA | `google/gemma-4-31b-it` |
@@ -1204,31 +903,35 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | NVIDIA | `meta/llama-guard-4-12b` |
 | NVIDIA | `microsoft/phi-4-mini-instruct` |
 | NVIDIA | `microsoft/phi-4-multimodal-instruct` |
-| NVIDIA | `minimaxai/minimax-m2.5` |
 | NVIDIA | `minimaxai/minimax-m2.7` |
-| NVIDIA | `mistralai/devstral-2-123b-instruct-2512` |
+| NVIDIA | `minimaxai/minimax-m3` |
 | NVIDIA | `mistralai/magistral-small-2506` |
-| NVIDIA | `mistralai/mistral-7b-instruct-v03` |
+| NVIDIA | `mistralai/ministral-14b-instruct-2512` |
+| NVIDIA | `mistralai/mistral-7b-instruct-v0.3` |
 | NVIDIA | `mistralai/mistral-large-3-675b-instruct-2512` |
 | NVIDIA | `mistralai/mistral-medium-3-instruct` |
+| NVIDIA | `mistralai/mistral-medium-3.5-128b` |
 | NVIDIA | `mistralai/mistral-nemotron` |
 | NVIDIA | `mistralai/mistral-small-4-119b-2603` |
 | NVIDIA | `mistralai/mixtral-8x22b-instruct` |
 | NVIDIA | `mistralai/mixtral-8x7b-instruct` |
-| NVIDIA | `moonshotai/kimi-k2-instruct` |
 | NVIDIA | `moonshotai/kimi-k2-instruct-0905` |
-| NVIDIA | `moonshotai/kimi-k2-thinking` |
 | NVIDIA | `moonshotai/kimi-k2.6` |
 | NVIDIA | `nvidia/active-speaker-detection` |
 | NVIDIA | `nvidia/bevformer` |
 | NVIDIA | `nvidia/cosmos-predict1-5b` |
+| NVIDIA | `nvidia/cosmos-reason2-8b` |
 | NVIDIA | `nvidia/cosmos-transfer1-7b` |
 | NVIDIA | `nvidia/cosmos-transfer2_5-2b` |
 | NVIDIA | `nvidia/gliner-pii` |
-| NVIDIA | `nvidia/llama-3_1-nemotron-safety-guard-8b-v3` |
+| NVIDIA | `nvidia/llama-3.1-nemotron-70b-instruct` |
+| NVIDIA | `nvidia/llama-3.1-nemotron-nano-8b-v1` |
+| NVIDIA | `nvidia/llama-3.1-nemotron-nano-vl-8b-v1` |
+| NVIDIA | `nvidia/llama-3.1-nemotron-safety-guard-8b-v3` |
+| NVIDIA | `nvidia/llama-3.1-nemotron-ultra-253b-v1` |
+| NVIDIA | `nvidia/llama-3.3-nemotron-super-49b-v1` |
+| NVIDIA | `nvidia/llama-3.3-nemotron-super-49b-v1.5` |
 | NVIDIA | `nvidia/llama-3_2-nemoretriever-300m-embed-v1` |
-| NVIDIA | `nvidia/llama-3_3-nemotron-super-49b-v1` |
-| NVIDIA | `nvidia/llama-3_3-nemotron-super-49b-v1_5` |
 | NVIDIA | `nvidia/llama-nemotron-embed-vl-1b-v2` |
 | NVIDIA | `nvidia/llama-nemotron-rerank-vl-1b-v2` |
 | NVIDIA | `nvidia/magpie-tts-zeroshot` |
@@ -1236,14 +939,16 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | NVIDIA | `nvidia/nemotron-3-nano-30b-a3b` |
 | NVIDIA | `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` |
 | NVIDIA | `nvidia/nemotron-3-super-120b-a12b` |
+| NVIDIA | `nvidia/nemotron-3-ultra-550b-a55b` |
 | NVIDIA | `nvidia/nemotron-content-safety-reasoning-4b` |
 | NVIDIA | `nvidia/nemotron-mini-4b-instruct` |
+| NVIDIA | `nvidia/nemotron-nano-12b-v2-vl` |
 | NVIDIA | `nvidia/nemotron-voicechat` |
 | NVIDIA | `nvidia/nv-embed-v1` |
 | NVIDIA | `nvidia/nv-embedcode-7b-v1` |
 | NVIDIA | `nvidia/nvidia-nemotron-nano-9b-v2` |
 | NVIDIA | `nvidia/rerank-qa-mistral-4b` |
-| NVIDIA | `nvidia/riva-translate-4b-instruct-v1_1` |
+| NVIDIA | `nvidia/riva-translate-4b-instruct-v1.1` |
 | NVIDIA | `nvidia/sparsedrive` |
 | NVIDIA | `nvidia/streampetr` |
 | NVIDIA | `nvidia/studiovoice` |
@@ -1253,20 +958,20 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | NVIDIA | `openai/gpt-oss-120b` |
 | NVIDIA | `openai/gpt-oss-20b` |
 | NVIDIA | `openai/whisper-large-v3` |
+| NVIDIA | `poolside/laguna-xs-2.1` |
 | NVIDIA | `qwen/qwen-image` |
 | NVIDIA | `qwen/qwen-image-edit` |
 | NVIDIA | `qwen/qwen2.5-coder-32b-instruct` |
 | NVIDIA | `qwen/qwen3-coder-480b-a35b-instruct` |
 | NVIDIA | `qwen/qwen3-next-80b-a3b-instruct` |
-| NVIDIA | `qwen/qwen3-next-80b-a3b-thinking` |
 | NVIDIA | `qwen/qwen3.5-122b-a10b` |
 | NVIDIA | `qwen/qwen3.5-397b-a17b` |
 | NVIDIA | `sarvamai/sarvam-m` |
 | NVIDIA | `stepfun-ai/step-3.5-flash` |
 | NVIDIA | `stepfun-ai/step-3.7-flash` |
-| NVIDIA | `upstage/solar-10_7b-instruct` |
-| NVIDIA | `z-ai/glm-5.1` |
-| NVIDIA | `z-ai/glm4.7` |
+| NVIDIA | `thinkingmachines/inkling` |
+| NVIDIA | `upstage/solar-10.7b-instruct` |
+| NVIDIA | `z-ai/glm-5.2` |
 | OpenAI | `1024-x-1024/dall-e-2` |
 | OpenAI | `1024-x-1024/gpt-image-1.5` |
 | OpenAI | `1024-x-1024/gpt-image-1.5-2025-12-16` |
@@ -1379,6 +1084,10 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenAI | `gpt-5.5-2026-04-23` |
 | OpenAI | `gpt-5.5-pro` |
 | OpenAI | `gpt-5.5-pro-2026-04-23` |
+| OpenAI | `gpt-5.6` |
+| OpenAI | `gpt-5.6-luna` |
+| OpenAI | `gpt-5.6-sol` |
+| OpenAI | `gpt-5.6-terra` |
 | OpenAI | `gpt-audio` |
 | OpenAI | `gpt-audio-1.5` |
 | OpenAI | `gpt-audio-2025-08-28` |
@@ -1394,10 +1103,13 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenAI | `gpt-realtime` |
 | OpenAI | `gpt-realtime-1.5` |
 | OpenAI | `gpt-realtime-2` |
+| OpenAI | `gpt-realtime-2.1` |
+| OpenAI | `gpt-realtime-2.1-mini` |
 | OpenAI | `gpt-realtime-2025-08-28` |
 | OpenAI | `gpt-realtime-mini` |
 | OpenAI | `gpt-realtime-mini-2025-10-06` |
 | OpenAI | `gpt-realtime-mini-2025-12-15` |
+| OpenAI | `gpt-realtime-whisper` |
 | OpenAI | `hd/1024-x-1024/dall-e-3` |
 | OpenAI | `hd/1024-x-1792/dall-e-3` |
 | OpenAI | `hd/1792-x-1024/dall-e-3` |
@@ -1436,8 +1148,6 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenAI | `medium/1536-x-1024/gpt-image-1.5-2025-12-16` |
 | OpenAI | `o1` |
 | OpenAI | `o1-2024-12-17` |
-| OpenAI | `o1-mini` |
-| OpenAI | `o1-preview` |
 | OpenAI | `o1-pro` |
 | OpenAI | `o1-pro-2025-03-19` |
 | OpenAI | `o3` |
@@ -1483,9 +1193,9 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenAI | `tts-1-hd-1106` |
 | OpenAI | `whisper-1` |
 | OpenRouter | `ai21/jamba-large-1.7` |
-| OpenRouter | `aion-labs/aion-1.0` |
-| OpenRouter | `aion-labs/aion-1.0-mini` |
 | OpenRouter | `aion-labs/aion-2.0` |
+| OpenRouter | `aion-labs/aion-3.0` |
+| OpenRouter | `aion-labs/aion-3.0-mini` |
 | OpenRouter | `aion-labs/aion-rp-llama-3.1-8b` |
 | OpenRouter | `allenai/olmo-3-32b-think` |
 | OpenRouter | `amazon/nova-2-lite-v1` |
@@ -1495,38 +1205,36 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `amazon/nova-pro-v1` |
 | OpenRouter | `anthracite-org/magnum-v4-72b` |
 | OpenRouter | `anthropic/claude-3-haiku` |
-| OpenRouter | `anthropic/claude-3.5-haiku` |
+| OpenRouter | `anthropic/claude-fable-5` |
 | OpenRouter | `anthropic/claude-haiku-4.5` |
 | OpenRouter | `anthropic/claude-opus-4` |
 | OpenRouter | `anthropic/claude-opus-4.1` |
 | OpenRouter | `anthropic/claude-opus-4.5` |
 | OpenRouter | `anthropic/claude-opus-4.6` |
-| OpenRouter | `anthropic/claude-opus-4.6-fast` |
 | OpenRouter | `anthropic/claude-opus-4.7` |
 | OpenRouter | `anthropic/claude-opus-4.7-fast` |
 | OpenRouter | `anthropic/claude-opus-4.8` |
 | OpenRouter | `anthropic/claude-opus-4.8-fast` |
+| OpenRouter | `anthropic/claude-opus-5` |
+| OpenRouter | `anthropic/claude-opus-5-fast` |
 | OpenRouter | `anthropic/claude-sonnet-4` |
 | OpenRouter | `anthropic/claude-sonnet-4.5` |
 | OpenRouter | `anthropic/claude-sonnet-4.6` |
-| OpenRouter | `arcee-ai/coder-large` |
-| OpenRouter | `arcee-ai/maestro-reasoning` |
-| OpenRouter | `arcee-ai/spotlight` |
+| OpenRouter | `anthropic/claude-sonnet-5` |
 | OpenRouter | `arcee-ai/trinity-large-thinking` |
-| OpenRouter | `arcee-ai/trinity-mini` |
 | OpenRouter | `arcee-ai/virtuoso-large` |
-| OpenRouter | `baidu/ernie-4.5-vl-28b-a3b` |
 | OpenRouter | `baidu/ernie-4.5-vl-424b-a47b` |
 | OpenRouter | `bytedance-seed/seed-1.6` |
 | OpenRouter | `bytedance-seed/seed-1.6-flash` |
 | OpenRouter | `bytedance-seed/seed-2.0-lite` |
 | OpenRouter | `bytedance-seed/seed-2.0-mini` |
 | OpenRouter | `bytedance/ui-tars-1.5-7b` |
-| OpenRouter | `cognitivecomputations/dolphin-mistral-24b-venice-edition:free` |
+| OpenRouter | `cognitivecomputations/dolphin-mistral-24b-venice-edition` |
 | OpenRouter | `cohere/command-a` |
 | OpenRouter | `cohere/command-r-08-2024` |
 | OpenRouter | `cohere/command-r-plus-08-2024` |
 | OpenRouter | `cohere/command-r7b-12-2024` |
+| OpenRouter | `cohere/north-mini-code:free` |
 | OpenRouter | `deepcogito/cogito-v2.1-671b` |
 | OpenRouter | `deepseek/deepseek-chat` |
 | OpenRouter | `deepseek/deepseek-chat-v3-0324` |
@@ -1534,28 +1242,30 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `deepseek/deepseek-r1` |
 | OpenRouter | `deepseek/deepseek-r1-0528` |
 | OpenRouter | `deepseek/deepseek-r1-distill-llama-70b` |
-| OpenRouter | `deepseek/deepseek-r1-distill-qwen-32b` |
 | OpenRouter | `deepseek/deepseek-v3.1-terminus` |
 | OpenRouter | `deepseek/deepseek-v3.2` |
 | OpenRouter | `deepseek/deepseek-v3.2-exp` |
 | OpenRouter | `deepseek/deepseek-v4-flash` |
 | OpenRouter | `deepseek/deepseek-v4-pro` |
-| OpenRouter | `essentialai/rnj-1-instruct` |
 | OpenRouter | `google/gemini-2.5-flash` |
 | OpenRouter | `google/gemini-2.5-flash-image` |
 | OpenRouter | `google/gemini-2.5-flash-lite` |
-| OpenRouter | `google/gemini-2.5-flash-lite-preview-09-2025` |
 | OpenRouter | `google/gemini-2.5-pro` |
 | OpenRouter | `google/gemini-2.5-pro-preview` |
 | OpenRouter | `google/gemini-2.5-pro-preview-05-06` |
 | OpenRouter | `google/gemini-3-flash-preview` |
+| OpenRouter | `google/gemini-3-pro-image` |
 | OpenRouter | `google/gemini-3-pro-image-preview` |
+| OpenRouter | `google/gemini-3.1-flash-image` |
 | OpenRouter | `google/gemini-3.1-flash-image-preview` |
 | OpenRouter | `google/gemini-3.1-flash-lite` |
+| OpenRouter | `google/gemini-3.1-flash-lite-image` |
 | OpenRouter | `google/gemini-3.1-flash-lite-preview` |
 | OpenRouter | `google/gemini-3.1-pro-preview` |
 | OpenRouter | `google/gemini-3.1-pro-preview-customtools` |
 | OpenRouter | `google/gemini-3.5-flash` |
+| OpenRouter | `google/gemini-3.5-flash-lite` |
+| OpenRouter | `google/gemini-3.6-flash` |
 | OpenRouter | `google/gemma-2-27b-it` |
 | OpenRouter | `google/gemma-3-12b-it` |
 | OpenRouter | `google/gemma-3-27b-it` |
@@ -1573,30 +1283,23 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `inception/mercury-2` |
 | OpenRouter | `inclusionai/ling-2.6-1t` |
 | OpenRouter | `inclusionai/ling-2.6-flash` |
+| OpenRouter | `inclusionai/ling-3.0-flash:free` |
 | OpenRouter | `inclusionai/ring-2.6-1t` |
-| OpenRouter | `inflection/inflection-3-pi` |
-| OpenRouter | `inflection/inflection-3-productivity` |
+| OpenRouter | `kwaipilot/kat-coder-air-v2.5` |
 | OpenRouter | `kwaipilot/kat-coder-pro-v2` |
-| OpenRouter | `liquid/lfm-2-24b-a2b` |
-| OpenRouter | `liquid/lfm-2.5-1.2b-instruct:free` |
-| OpenRouter | `liquid/lfm-2.5-1.2b-thinking:free` |
+| OpenRouter | `kwaipilot/kat-coder-pro-v2.5` |
 | OpenRouter | `mancer/weaver` |
-| OpenRouter | `meta-llama/llama-3-70b-instruct` |
-| OpenRouter | `meta-llama/llama-3-8b-instruct` |
+| OpenRouter | `meituan/longcat-2.0` |
 | OpenRouter | `meta-llama/llama-3.1-70b-instruct` |
 | OpenRouter | `meta-llama/llama-3.1-8b-instruct` |
-| OpenRouter | `meta-llama/llama-3.2-11b-vision-instruct` |
 | OpenRouter | `meta-llama/llama-3.2-1b-instruct` |
 | OpenRouter | `meta-llama/llama-3.2-3b-instruct` |
-| OpenRouter | `meta-llama/llama-3.2-3b-instruct:free` |
 | OpenRouter | `meta-llama/llama-3.3-70b-instruct` |
-| OpenRouter | `meta-llama/llama-3.3-70b-instruct:free` |
 | OpenRouter | `meta-llama/llama-4-maverick` |
 | OpenRouter | `meta-llama/llama-4-scout` |
-| OpenRouter | `meta-llama/llama-guard-3-8b` |
 | OpenRouter | `meta-llama/llama-guard-4-12b` |
+| OpenRouter | `meta/muse-spark-1.1` |
 | OpenRouter | `microsoft/phi-4` |
-| OpenRouter | `microsoft/phi-4-mini-instruct` |
 | OpenRouter | `microsoft/wizardlm-2-8x22b` |
 | OpenRouter | `minimax/minimax-01` |
 | OpenRouter | `minimax/minimax-m1` |
@@ -1630,32 +1333,31 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `moonshotai/kimi-k2-thinking` |
 | OpenRouter | `moonshotai/kimi-k2.5` |
 | OpenRouter | `moonshotai/kimi-k2.6` |
-| OpenRouter | `moonshotai/kimi-k2.6:free` |
+| OpenRouter | `moonshotai/kimi-k2.7-code` |
+| OpenRouter | `moonshotai/kimi-k3` |
 | OpenRouter | `morph/morph-v3-fast` |
 | OpenRouter | `morph/morph-v3-large` |
-| OpenRouter | `nex-agi/deepseek-v3.1-nex-n1` |
-| OpenRouter | `nousresearch/hermes-2-pro-llama-3-8b` |
+| OpenRouter | `nex-agi/nex-n2-mini` |
+| OpenRouter | `nex-agi/nex-n2-pro` |
 | OpenRouter | `nousresearch/hermes-3-llama-3.1-405b` |
-| OpenRouter | `nousresearch/hermes-3-llama-3.1-405b:free` |
 | OpenRouter | `nousresearch/hermes-3-llama-3.1-70b` |
 | OpenRouter | `nousresearch/hermes-4-405b` |
 | OpenRouter | `nousresearch/hermes-4-70b` |
-| OpenRouter | `nvidia/llama-3.3-nemotron-super-49b-v1.5` |
 | OpenRouter | `nvidia/nemotron-3-nano-30b-a3b` |
 | OpenRouter | `nvidia/nemotron-3-nano-30b-a3b:free` |
 | OpenRouter | `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` |
 | OpenRouter | `nvidia/nemotron-3-super-120b-a12b` |
 | OpenRouter | `nvidia/nemotron-3-super-120b-a12b:free` |
+| OpenRouter | `nvidia/nemotron-3-ultra-550b-a55b` |
+| OpenRouter | `nvidia/nemotron-3-ultra-550b-a55b:free` |
+| OpenRouter | `nvidia/nemotron-3.5-content-safety:free` |
 | OpenRouter | `nvidia/nemotron-nano-12b-v2-vl:free` |
-| OpenRouter | `nvidia/nemotron-nano-9b-v2` |
 | OpenRouter | `nvidia/nemotron-nano-9b-v2:free` |
 | OpenRouter | `openai/gpt-3.5-turbo` |
 | OpenRouter | `openai/gpt-3.5-turbo-0613` |
 | OpenRouter | `openai/gpt-3.5-turbo-16k` |
 | OpenRouter | `openai/gpt-3.5-turbo-instruct` |
 | OpenRouter | `openai/gpt-4` |
-| OpenRouter | `openai/gpt-4-0314` |
-| OpenRouter | `openai/gpt-4-1106-preview` |
 | OpenRouter | `openai/gpt-4-turbo` |
 | OpenRouter | `openai/gpt-4-turbo-preview` |
 | OpenRouter | `openai/gpt-4.1` |
@@ -1667,11 +1369,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `openai/gpt-4o-2024-11-20` |
 | OpenRouter | `openai/gpt-4o-mini` |
 | OpenRouter | `openai/gpt-4o-mini-2024-07-18` |
-| OpenRouter | `openai/gpt-4o-mini-search-preview` |
-| OpenRouter | `openai/gpt-4o-search-preview` |
 | OpenRouter | `openai/gpt-5` |
-| OpenRouter | `openai/gpt-5-chat` |
-| OpenRouter | `openai/gpt-5-codex` |
 | OpenRouter | `openai/gpt-5-image` |
 | OpenRouter | `openai/gpt-5-image-mini` |
 | OpenRouter | `openai/gpt-5-mini` |
@@ -1695,23 +1393,26 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `openai/gpt-5.4-pro` |
 | OpenRouter | `openai/gpt-5.5` |
 | OpenRouter | `openai/gpt-5.5-pro` |
+| OpenRouter | `openai/gpt-5.6-luna` |
+| OpenRouter | `openai/gpt-5.6-luna-pro` |
+| OpenRouter | `openai/gpt-5.6-sol` |
+| OpenRouter | `openai/gpt-5.6-sol-pro` |
+| OpenRouter | `openai/gpt-5.6-terra` |
+| OpenRouter | `openai/gpt-5.6-terra-pro` |
 | OpenRouter | `openai/gpt-audio` |
 | OpenRouter | `openai/gpt-audio-mini` |
 | OpenRouter | `openai/gpt-chat-latest` |
 | OpenRouter | `openai/gpt-oss-120b` |
-| OpenRouter | `openai/gpt-oss-120b:free` |
 | OpenRouter | `openai/gpt-oss-20b` |
 | OpenRouter | `openai/gpt-oss-20b:free` |
 | OpenRouter | `openai/gpt-oss-safeguard-20b` |
 | OpenRouter | `openai/o1` |
 | OpenRouter | `openai/o1-pro` |
 | OpenRouter | `openai/o3` |
-| OpenRouter | `openai/o3-deep-research` |
 | OpenRouter | `openai/o3-mini` |
 | OpenRouter | `openai/o3-mini-high` |
 | OpenRouter | `openai/o3-pro` |
 | OpenRouter | `openai/o4-mini` |
-| OpenRouter | `openai/o4-mini-deep-research` |
 | OpenRouter | `openai/o4-mini-high` |
 | OpenRouter | `openrouter/anthropic/claude-3-haiku` |
 | OpenRouter | `openrouter/anthropic/claude-3.5-sonnet` |
@@ -1788,7 +1489,6 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `openrouter/openrouter/auto` |
 | OpenRouter | `openrouter/openrouter/bodybuilder` |
 | OpenRouter | `openrouter/openrouter/free` |
-| OpenRouter | `openrouter/owl-alpha` |
 | OpenRouter | `openrouter/pareto-code` |
 | OpenRouter | `openrouter/qwen/qwen-2.5-coder-32b-instruct` |
 | OpenRouter | `openrouter/qwen/qwen-vl-plus` |
@@ -1814,15 +1514,17 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `openrouter/z-ai/glm-4.7` |
 | OpenRouter | `openrouter/z-ai/glm-4.7-flash` |
 | OpenRouter | `openrouter/z-ai/glm-5` |
+| OpenRouter | `openrouter/z-ai/glm-5.1` |
 | OpenRouter | `perceptron/perceptron-mk1` |
 | OpenRouter | `perplexity/sonar` |
 | OpenRouter | `perplexity/sonar-deep-research` |
 | OpenRouter | `perplexity/sonar-pro` |
 | OpenRouter | `perplexity/sonar-pro-search` |
 | OpenRouter | `perplexity/sonar-reasoning-pro` |
-| OpenRouter | `poolside/laguna-m.1:free` |
-| OpenRouter | `poolside/laguna-xs.2:free` |
-| OpenRouter | `prime-intellect/intellect-3` |
+| OpenRouter | `poolside/laguna-s-2.1` |
+| OpenRouter | `poolside/laguna-s-2.1:free` |
+| OpenRouter | `poolside/laguna-xs-2.1` |
+| OpenRouter | `poolside/laguna-xs-2.1:free` |
 | OpenRouter | `qwen/qwen-2.5-72b-instruct` |
 | OpenRouter | `qwen/qwen-2.5-7b-instruct` |
 | OpenRouter | `qwen/qwen-2.5-coder-32b-instruct` |
@@ -1844,11 +1546,9 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `qwen/qwen3-coder-flash` |
 | OpenRouter | `qwen/qwen3-coder-next` |
 | OpenRouter | `qwen/qwen3-coder-plus` |
-| OpenRouter | `qwen/qwen3-coder:free` |
 | OpenRouter | `qwen/qwen3-max` |
 | OpenRouter | `qwen/qwen3-max-thinking` |
 | OpenRouter | `qwen/qwen3-next-80b-a3b-instruct` |
-| OpenRouter | `qwen/qwen3-next-80b-a3b-instruct:free` |
 | OpenRouter | `qwen/qwen3-next-80b-a3b-thinking` |
 | OpenRouter | `qwen/qwen3-vl-235b-a22b-instruct` |
 | OpenRouter | `qwen/qwen3-vl-235b-a22b-thinking` |
@@ -1870,40 +1570,39 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `qwen/qwen3.6-flash` |
 | OpenRouter | `qwen/qwen3.6-max-preview` |
 | OpenRouter | `qwen/qwen3.6-plus` |
+| OpenRouter | `qwen/qwen3.7-flash` |
 | OpenRouter | `qwen/qwen3.7-max` |
 | OpenRouter | `qwen/qwen3.7-plus` |
 | OpenRouter | `rekaai/reka-edge` |
 | OpenRouter | `rekaai/reka-flash-3` |
 | OpenRouter | `relace/relace-apply-3` |
 | OpenRouter | `relace/relace-search` |
-| OpenRouter | `sao10k/l3-euryale-70b` |
+| OpenRouter | `sakana/fugu-ultra` |
 | OpenRouter | `sao10k/l3-lunaris-8b` |
-| OpenRouter | `sao10k/l3.1-70b-hanami-x1` |
 | OpenRouter | `sao10k/l3.1-euryale-70b` |
 | OpenRouter | `sao10k/l3.3-euryale-70b` |
 | OpenRouter | `stepfun/step-3.5-flash` |
 | OpenRouter | `stepfun/step-3.7-flash` |
-| OpenRouter | `switchpoint/router` |
 | OpenRouter | `tencent/hunyuan-a13b-instruct` |
+| OpenRouter | `tencent/hy3` |
 | OpenRouter | `tencent/hy3-preview` |
 | OpenRouter | `thedrummer/cydonia-24b-v4.1` |
 | OpenRouter | `thedrummer/rocinante-12b` |
 | OpenRouter | `thedrummer/skyfall-36b-v2` |
 | OpenRouter | `thedrummer/unslopnemo-12b` |
+| OpenRouter | `thinkingmachines/inkling` |
 | OpenRouter | `undi95/remm-slerp-l2-13b` |
 | OpenRouter | `upstage/solar-pro-3` |
 | OpenRouter | `writer/palmyra-x5` |
 | OpenRouter | `x-ai/grok-4.20` |
 | OpenRouter | `x-ai/grok-4.20-multi-agent` |
 | OpenRouter | `x-ai/grok-4.3` |
+| OpenRouter | `x-ai/grok-4.5` |
 | OpenRouter | `x-ai/grok-build-0.1` |
-| OpenRouter | `xiaomi/mimo-v2-flash` |
 | OpenRouter | `xiaomi/mimo-v2.5` |
 | OpenRouter | `xiaomi/mimo-v2.5-pro` |
-| OpenRouter | `z-ai/glm-4-32b` |
 | OpenRouter | `z-ai/glm-4.5` |
 | OpenRouter | `z-ai/glm-4.5-air` |
-| OpenRouter | `z-ai/glm-4.5-air:free` |
 | OpenRouter | `z-ai/glm-4.5v` |
 | OpenRouter | `z-ai/glm-4.6` |
 | OpenRouter | `z-ai/glm-4.6v` |
@@ -1912,7 +1611,9 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `z-ai/glm-5` |
 | OpenRouter | `z-ai/glm-5-turbo` |
 | OpenRouter | `z-ai/glm-5.1` |
+| OpenRouter | `z-ai/glm-5.2` |
 | OpenRouter | `z-ai/glm-5v-turbo` |
+| OpenRouter | `~anthropic/claude-fable-latest` |
 | OpenRouter | `~anthropic/claude-haiku-latest` |
 | OpenRouter | `~anthropic/claude-opus-latest` |
 | OpenRouter | `~anthropic/claude-sonnet-latest` |
@@ -1921,6 +1622,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | OpenRouter | `~moonshotai/kimi-latest` |
 | OpenRouter | `~openai/gpt-latest` |
 | OpenRouter | `~openai/gpt-mini-latest` |
+| OpenRouter | `~x-ai/grok-latest` |
 | Perplexity | `perplexity/anthropic/claude-haiku-4-5` |
 | Perplexity | `perplexity/anthropic/claude-opus-4-5` |
 | Perplexity | `perplexity/anthropic/claude-opus-4-6` |
@@ -1967,7 +1669,8 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Perplexity | `sonar-pro` |
 | Perplexity | `sonar-reasoning-pro` |
 | Poolside | `poolside/laguna-m.1` |
-| Poolside | `poolside/laguna-xs.2` |
+| Poolside | `poolside/laguna-s-2.1` |
+| Poolside | `poolside/laguna-xs-2.1` |
 | Alibaba / Qwen | `MiniMax-M2.5` |
 | Alibaba / Qwen | `MiniMax/MiniMax-M2.7` |
 | Alibaba / Qwen | `dashscope/qwen-coder` |
@@ -2003,6 +1706,8 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Alibaba / Qwen | `dashscope/qwen3-vl-32b-thinking` |
 | Alibaba / Qwen | `dashscope/qwen3-vl-plus` |
 | Alibaba / Qwen | `dashscope/qwen3.5-plus` |
+| Alibaba / Qwen | `dashscope/qwen3.7-max` |
+| Alibaba / Qwen | `dashscope/qwen3.7-plus` |
 | Alibaba / Qwen | `dashscope/qwq-plus` |
 | Alibaba / Qwen | `deepseek-r1` |
 | Alibaba / Qwen | `deepseek-r1-0528` |
@@ -2019,6 +1724,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Alibaba / Qwen | `deepseek-v4-pro` |
 | Alibaba / Qwen | `glm-5` |
 | Alibaba / Qwen | `glm-5.1` |
+| Alibaba / Qwen | `glm-5.2` |
 | Alibaba / Qwen | `kimi-k2-thinking` |
 | Alibaba / Qwen | `kimi-k2.5` |
 | Alibaba / Qwen | `kimi-k2.6` |
@@ -2092,6 +1798,9 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Alibaba / Qwen | `siliconflow/deepseek-v3.1-terminus` |
 | Alibaba / Qwen | `siliconflow/deepseek-v3.2` |
 | Alibaba / Qwen | `tongyi-intent-detect-v3` |
+| Sakana AI | `fugu` |
+| Sakana AI | `fugu-ultra` |
+| Sakana AI | `fugu-ultra-20260615` |
 | Sarvam AI | `sarvam-105b` |
 | Sarvam AI | `sarvam-30b` |
 | Sarvam AI | `sarvam/sarvam-m` |
@@ -2102,6 +1811,12 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Sber | `gigachat/GigaChat-2-Max` |
 | Sber | `gigachat/GigaChat-2-Pro` |
 | Snowflake | `snowflake/claude-3-5-sonnet` |
+| Snowflake | `snowflake/claude-3-7-sonnet` |
+| Snowflake | `snowflake/claude-4-opus` |
+| Snowflake | `snowflake/claude-4-sonnet` |
+| Snowflake | `snowflake/claude-haiku-4-5` |
+| Snowflake | `snowflake/claude-sonnet-4-5` |
+| Snowflake | `snowflake/claude-sonnet-4-6` |
 | Snowflake | `snowflake/deepseek-r1` |
 | Snowflake | `snowflake/gemma-7b` |
 | Snowflake | `snowflake/jamba-1.5-large` |
@@ -2116,28 +1831,44 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Snowflake | `snowflake/llama3.2-1b` |
 | Snowflake | `snowflake/llama3.2-3b` |
 | Snowflake | `snowflake/llama3.3-70b` |
+| Snowflake | `snowflake/llama4-maverick` |
 | Snowflake | `snowflake/mistral-7b` |
 | Snowflake | `snowflake/mistral-large` |
 | Snowflake | `snowflake/mistral-large2` |
 | Snowflake | `snowflake/mixtral-8x7b` |
+| Snowflake | `snowflake/openai-gpt-4.1` |
+| Snowflake | `snowflake/openai-gpt-5` |
+| Snowflake | `snowflake/openai-gpt-5-mini` |
+| Snowflake | `snowflake/openai-gpt-5-nano` |
 | Snowflake | `snowflake/reka-core` |
 | Snowflake | `snowflake/reka-flash` |
 | Snowflake | `snowflake/snowflake-arctic` |
+| Snowflake | `snowflake/snowflake-arctic-embed-l-v2.0` |
+| Snowflake | `snowflake/snowflake-arctic-embed-m-v2.0` |
 | Snowflake | `snowflake/snowflake-llama-3.1-405b` |
 | Snowflake | `snowflake/snowflake-llama-3.3-70b` |
 | StepFun | `step-1-32k` |
 | StepFun | `step-2-16k` |
 | StepFun | `step-3.5-flash` |
 | StepFun | `step-3.5-flash-2603` |
+| StepFun | `step-3.7-flash` |
+| StepFun | `step-tts-2` |
+| StepFun | `stepaudio-2.5-asr` |
+| StepFun | `stepaudio-2.5-tts` |
 | Tencent | `glm-5` |
 | Tencent | `hunyuan-2.0-instruct` |
 | Tencent | `hunyuan-2.0-thinking` |
 | Tencent | `hunyuan-t1` |
 | Tencent | `hunyuan-turbos` |
+| Tencent | `hy3` |
 | Tencent | `hy3-preview` |
 | Tencent | `kimi-k2.5` |
 | Tencent | `minimax-m2.5` |
 | Tencent | `tc-code-latest` |
+| Tencent | `tencent/deepseek-v4-flash` |
+| Tencent | `tencent/deepseek-v4-pro` |
+| Thinking Machines | `thinkingmachines/Inkling` |
+| Thinking Machines | `thinkingmachines/Inkling:peft:262144` |
 | Upstage | `solar-mini` |
 | Upstage | `solar-pro2` |
 | Upstage | `solar-pro3` |
@@ -2145,10 +1876,12 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | xAI | `grok-4.20-0309-reasoning` |
 | xAI | `grok-4.20-multi-agent-0309` |
 | xAI | `grok-4.3` |
+| xAI | `grok-4.5` |
 | xAI | `grok-build-0.1` |
 | xAI | `grok-imagine-image` |
 | xAI | `grok-imagine-image-quality` |
 | xAI | `grok-imagine-video` |
+| xAI | `grok-imagine-video-1.5` |
 | xAI | `xai/grok-2` |
 | xAI | `xai/grok-2-1212` |
 | xAI | `xai/grok-2-latest` |
@@ -2182,6 +1915,8 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | xAI | `xai/grok-4.20-multi-agent-beta-0309` |
 | xAI | `xai/grok-4.3` |
 | xAI | `xai/grok-4.3-latest` |
+| xAI | `xai/grok-4.5` |
+| xAI | `xai/grok-4.5-latest` |
 | xAI | `xai/grok-beta` |
 | xAI | `xai/grok-code-fast` |
 | xAI | `xai/grok-code-fast-1` |
@@ -2192,6 +1927,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Xiaomi | `mimo-v2-pro` |
 | Xiaomi | `mimo-v2.5` |
 | Xiaomi | `mimo-v2.5-pro` |
+| Xiaomi | `mimo-v2.5-pro-ultraspeed` |
 | Zhipu AI / Z.ai | `glm-4.5` |
 | Zhipu AI / Z.ai | `glm-4.5-air` |
 | Zhipu AI / Z.ai | `glm-4.5-flash` |
@@ -2204,6 +1940,7 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Zhipu AI / Z.ai | `glm-5` |
 | Zhipu AI / Z.ai | `glm-5-turbo` |
 | Zhipu AI / Z.ai | `glm-5.1` |
+| Zhipu AI / Z.ai | `glm-5.2` |
 | Zhipu AI / Z.ai | `glm-5v-turbo` |
 
 ## Providers with no model rows in this Core registry snapshot
@@ -2257,7 +1994,6 @@ These are still valid public catalog identities. Their current public pages and 
 | Perceptron | `perceptron` |
 | Reka AI | `reka-ai` |
 | Relace | `relace` |
-| Sakana AI | `sakana` |
 | Salesforce AI Research | `salesforce` |
 | Samsung Research | `samsung-research` |
 | Sao10K | `sao10k` |
@@ -2265,7 +2001,6 @@ These are still valid public catalog identities. Their current public pages and 
 | SK Telecom | `sk-telecom` |
 | Technology Innovation Institute, UAE | `tii` |
 | TheDrummer | `thedrummer` |
-| Thinking Machines | `thinkingmachines` |
 | Undi95 | `undi95` |
 | Writer | `writer` |
 | XVERSE AI | `xverse-ai` |

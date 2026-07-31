@@ -18,6 +18,22 @@ progress events, resume checkpoints, official results, publication bundle and
 validation payloads, runner jobs, catalogue rows, and live Arena start/step,
 event, action descriptor, and legal-action page payloads.
 
+Core 0.6 adds these shared integrity contracts:
+
+- `eslams.run-integrity.v2`
+- `eslams.provider-attempt.v2`
+- `eslams.action-provenance.v1`
+- `eslams.usage-summary.v2`
+- `eslams.provider.receipt.v2`
+- `eslams.price-card-reference.v1`
+
+Matching TypeScript types are exported by `@eslams/core-contracts` from
+`packages/core-contracts/src/generated/integrity.ts`. Python and TypeScript
+field names intentionally follow their respective wire contracts; provider
+attempt events are camelCase inter-service events, while persisted Core receipt
+rows remain snake_case. The package uses NodeNext-compatible ESM specifiers and
+its checked compile includes a package self-reference consumer.
+
 The export also writes `schema_bundle_manifest.json`. The manifest is
 deterministic and records Core package version, git commit when available,
 schema bundle version, schema filenames, schema versions, SHA-256 hashes, byte
@@ -151,6 +167,7 @@ Platform-facing TypeScript artifacts are checked in under:
 - `packages/core-contracts/src/generated/actions.ts`
 - `packages/core-contracts/src/generated/replay.ts`
 - `packages/core-contracts/src/generated/prompt.ts`
+- `packages/core-contracts/src/generated/integrity.ts`
 
 `packages/core-lite` contains a small TypeScript runtime for tic-tac-toe and
 connect-four. Python Core remains the official authority; Core-lite promotion
@@ -266,22 +283,81 @@ prompts, raw model responses, request headers, tokens, or debug payloads.
 
 ## Provider Runtime
 
-Provider receipts use `eslams.provider.receipt.v1` and include normalized
-outcome, attempts, status code, request ids, gateway mode, usage, pricing
-provenance, estimated cost status, and redaction version. Missing pricing is
-reported as `cost_unavailable`; Core does not report zero cost unless a free
-price is proven.
+Provider receipts written by Core 0.6 use `eslams.provider.receipt.v2` and
+include normalized failure class, physical-attempt identity and kind, status
+code, request IDs, gateway mode, requested/resolved model evidence,
+endpoint/parser versions, normalized usage, pricing provenance, estimated cost,
+application/scoring flags, and redaction version. Historical v1 receipts remain
+readable at the HTTP-agent boundary, but are normalized before Core writes them.
+Missing pricing is `cost_unavailable`; Core does not report zero cost unless a
+complete price-card reference proves it.
 
 `ProviderRuntimeConfig` carries timeout, connect/read timeout, retry/backoff,
-concurrency limit, rate limit, and generic gateway/base URL controls. Core
-enforces the synchronous concurrency and rate controls at the provider call
-boundary without adding a Platform-specific rate limiter dependency.
+concurrency limit, rate limit, reasoning mode/budgets, OpenRouter provider pins,
+Bedrock region, reviewed price-card reference, and generic gateway/base URL
+controls. Core enforces synchronous concurrency and rate controls at the
+provider call boundary without adding a Platform-specific rate limiter
+dependency. Official execution rejects nonzero adapter retries because the
+official orchestrator owns whole-case retry policy.
 
 Preflight without requiring network calls or credentials:
 
 ```bash
 eslams providers preflight --provider openai --model gpt-5-mini --arena tic-tac-toe
 ```
+
+This returns `preflight_mode: registry_only` and is never an account
+availability claim. Add `--live` for account model discovery where supported,
+one minimal inference, action parsing, and usage extraction. Platform must gate
+launches on the individual live checks it requires, not on registry metadata.
+
+## Provider Attempt v2
+
+Every physical provider request has one deterministic event identity derived
+from `physicalRunId`, `caseId`, `caseAttemptIndex`, `logicalActionId`, and
+`attemptIndex`. `physicalRunId` is the unique Core execution identity and maps
+exactly to artifact receipt `run_id`; it is distinct from the external
+`officialRunId` and `runJobId`. The public lifecycle event includes
+environment/lane/job/shard identity, route/parser/wrapper identity, request
+timestamps and IDs, status and failure class, canonical usage/cost fields,
+parse status, and action/scoring flags. It contains no prompt, hidden
+observation, credentials, request headers, raw response, or private reasoning.
+
+Core also supplies the frozen join context to agents in `ActRequest.metadata`:
+`state_hash`, `physical_run_id`, `case_id`, `case_attempt_index`,
+`shard_index`, and `logical_action_id`. Artifact receipts repeat the physical,
+official-run, model-lane, run-job, case-attempt, and shard identities at the
+top level; `run_id` and `physical_run_id` must be identical.
+
+Emit a `started` event before the network request, followed by one terminal
+`completed` or `failed` event with the same `eventId`. `attemptIndex` is
+positive and gap-free within a logical action; `caseAttemptIndex` is positive
+and scopes whole-case retries. `parentAttemptId` links repair/retry lineage.
+Valid attempt kinds are `primary`, `case_retry`, `action_repair`, and `canary`.
+For `caseAttemptIndex > 1`, the first physical provider attempt is
+`case_retry`; an action-repair request remains `action_repair`.
+
+`caseValidForScoring` describes the game action only: a completed applied
+action with trusted model identity and successful wire/action parsing. Usage
+or cost can still be incomplete. Incomplete accounting remains visible and
+forces `per_case_scoring_eligible` and `proof_row_publication_eligible` false,
+without rewriting the underlying gameplay verdict.
+
+Canonical usage semantics are explicit:
+
+- `cachedInputTokens` is a subset of `inputTokens`.
+- `reasoningIncludedInOutput` declares whether reasoning is already in
+  `outputTokens`.
+- `totalTokens = inputTokens + outputTokens` when reasoning is inclusive.
+- Separately reported reasoning is added exactly once when it is not inclusive.
+- Provider-reported totals are retained but must reconcile with the canonical
+  derivation.
+- negative, non-finite, missing, or incoherent values make usage/cost
+  incomplete.
+
+Cost completeness requires a finite non-negative value, `costSource`, and a
+complete provider/model-matching `eslams.price-card-reference.v1`. A bare
+`rateCardId` is not proof.
 
 Generic gateway/base URL routing is configured through
 `ProviderRuntimeConfig.gateway_base_url` and `gateway_mode`. Platform may map

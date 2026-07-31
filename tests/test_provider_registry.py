@@ -115,3 +115,28 @@ def test_registry_distinguishes_provider_controlled_and_native_reasoning():
     assert gpt41.accepted_control_fields == []
     assert gpt41.reasoning_track_kind == "provider_native"
     assert gpt41.unsupported_reasoning_control_reason == "provider_control_not_supported"
+
+
+def test_direct_bedrock_and_openrouter_routes_are_first_class_registry_entries():
+    registry = load_provider_registry()
+
+    bedrock = registry.resolve("amazon-bedrock", "amazon.nova-micro-v1:0")
+    openrouter = registry.resolve("openrouter", "openai/gpt-5-mini")
+
+    assert bedrock.known is True
+    assert bedrock.provider == "bedrock"
+    assert bedrock.endpoints == ["converse"]
+    assert bedrock.lifecycle == "account-dependent"
+    assert openrouter.known is True
+    assert openrouter.provider == "openrouter"
+    assert openrouter.endpoints == ["chat-completions"]
+    assert openrouter.lifecycle == "account-dependent"
+
+
+def test_anthropic_registry_exposes_only_the_supported_thinking_control():
+    registry = load_provider_registry()
+
+    manual = registry.resolve("anthropic", "claude-sonnet-4-20250514")
+
+    assert manual.anthropic_reasoning_mode() == "manual"
+    assert manual.accepted_control_fields == ["thinking_budget_tokens"]

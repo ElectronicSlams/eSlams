@@ -11,6 +11,7 @@ import os
 import shutil
 import tempfile
 import zipfile
+from collections import Counter
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -22,10 +23,11 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from eslams.contracts.artifact import (
-    ARTIFACT_PROFILES,
+    VALIDATION_PROFILES,
     PublicArtifactManifest,
     PublicResultSummary,
 )
+from eslams.contracts.provider import provider_receipt_validation_errors
 from eslams.contracts.replay import PublicReasoningRow, PublicReplayManifest, ReplayParticipant
 from eslams.contracts.safety import scan_public_payload
 from eslams.contracts.versions import (
@@ -95,12 +97,14 @@ PROFILE_REQUIRED_FILES = {
     "battlefield_bundle": REQUIRED_FILES
     | {"public/public_manifest.json", "public/public_result_summary.json"},
     "public_replay_package": PUBLIC_REPLAY_PACKAGE_REQUIRED_FILES,
+    "official_case": REQUIRED_FILES | {"scores/official_result.json"},
 }
 PROFILE_ALIASES = {
     "runner-bundle": "runner_bundle",
     "official-bundle": "official_bundle",
     "battlefield-bundle": "battlefield_bundle",
     "public-replay-package": "public_replay_package",
+    "official-case": "official_case",
     "auto": "auto",
 }
 
@@ -140,6 +144,14 @@ class ArtifactManifest:
     illegal_action_count_by_player: dict[str, int]
     fallback_action_count_by_player: dict[str, int]
     provider_status_by_player: dict[str, str]
+    provider_action_count_by_player: dict[str, int]
+    logical_action_count_by_player: dict[str, int]
+    invalid_reason_codes: list[str]
+    integrity_status: str
+    usage_complete: bool
+    cost_complete: bool
+    attempt_ledger_complete: bool
+    model_identity_verified: bool
     files: list[dict[str, Any]]
     hash_algorithm: str
     signature: dict[str, Any]
@@ -190,6 +202,14 @@ class ArtifactManifest:
             "illegal_action_count_by_player": self.illegal_action_count_by_player,
             "fallback_action_count_by_player": self.fallback_action_count_by_player,
             "provider_status_by_player": self.provider_status_by_player,
+            "provider_action_count_by_player": self.provider_action_count_by_player,
+            "logical_action_count_by_player": self.logical_action_count_by_player,
+            "invalid_reason_codes": self.invalid_reason_codes,
+            "integrity_status": self.integrity_status,
+            "usage_complete": self.usage_complete,
+            "cost_complete": self.cost_complete,
+            "attempt_ledger_complete": self.attempt_ledger_complete,
+            "model_identity_verified": self.model_identity_verified,
             "scoring_safety_reason": self.scoring_safety_reason,
             "runner_signature_status": self.runner_signature_status,
             "public_exports": self.public_exports,
@@ -328,13 +348,30 @@ class ArtifactValidationReport:
         return payload
 
 
-def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: bool = False) -> Path:
+def write_artifact(
+    build: ArtifactBuildInput,
+    output_path: Path,
+    *,
+    archive: bool = False,
+    overwrite: bool = False,
+) -> Path:
     """Write a directory artifact or zip-compatible .eslams archive."""
+
+    for index, receipt in enumerate(build.provider_receipts):
+        receipt_errors = provider_receipt_validation_errors(receipt)
+        if receipt_errors:
+            raise ValueError(
+                f"invalid provider receipt at index {index}: " + "; ".join(receipt_errors)
+            )
 
     output_path = output_path.resolve()
     artifact_dir = expanded_artifact_path(output_path)
     if artifact_dir.exists():
+        if not overwrite:
+            raise FileExistsError(f"artifact path already exists: {artifact_dir}")
         shutil.rmtree(artifact_dir)
+    if archive and output_path.exists() and not overwrite:
+        raise FileExistsError(f"artifact path already exists: {output_path}")
     required_dirs = {
         str(Path(item).parent) for item in REQUIRED_FILES if Path(item).parent != Path(".")
     }
@@ -374,6 +411,7 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
     )
     render_replay_html(artifact_dir)
     _write_json(artifact_dir / "scores/score.json", _canonical_score_summary(build.score))
+    publication_eligible = _case_publication_eligible(build.score)
     _write_json(
         artifact_dir / "scores/official_result.json",
         _official_result_summary(build.score, arena_id),
@@ -459,8 +497,8 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
             "replay_status": "recorded",
             "scoring_eligible": build.score.match_valid_for_scoring,
             "per_case_run_valid": build.score.match_valid_for_scoring,
-            "per_case_scoring_eligible": build.score.match_valid_for_scoring,
-            "proof_row_publication_eligible": True,
+            "per_case_scoring_eligible": publication_eligible,
+            "proof_row_publication_eligible": publication_eligible,
             "aggregate_leaderboard_eligible": False,
             "aggregate_ineligibility_reason": "single_case_not_full_suite",
             "runner_signature_status": "pending",
@@ -504,14 +542,22 @@ def write_artifact(build: ArtifactBuildInput, output_path: Path, *, archive: boo
         match_valid_for_scoring=build.score.match_valid_for_scoring,
         invalid_reason=build.score.invalid_reason,
         per_case_run_valid=build.score.match_valid_for_scoring,
-        per_case_scoring_eligible=build.score.match_valid_for_scoring,
-        proof_row_publication_eligible=True,
+        per_case_scoring_eligible=publication_eligible,
+        proof_row_publication_eligible=publication_eligible,
         aggregate_leaderboard_eligible=False,
         aggregate_ineligibility_reason="single_case_not_full_suite",
         agent_error_count_by_player=build.score.agent_error_count_by_player,
         illegal_action_count_by_player=build.score.illegal_action_count_by_player,
         fallback_action_count_by_player=build.score.fallback_action_count_by_player,
         provider_status_by_player=build.score.provider_status_by_player,
+        provider_action_count_by_player=build.score.provider_action_count_by_player,
+        logical_action_count_by_player=build.score.logical_action_count_by_player,
+        invalid_reason_codes=build.score.invalid_reason_codes,
+        integrity_status=build.score.integrity_status,
+        usage_complete=build.score.usage_complete,
+        cost_complete=build.score.cost_complete,
+        attempt_ledger_complete=build.score.attempt_ledger_complete,
+        model_identity_verified=build.score.model_identity_verified,
         scoring_safety_reason=build.score.scoring_safety_reason,
         runner_signature_status="signed" if signing_key is not None else "unsigned",
         model_identity_by_player=_model_identity_by_player(build.agent_version),
@@ -765,7 +811,7 @@ def _normalize_validation_profile(profile: str, artifact_dir: Path) -> str:
                     return candidate
         return "runner_bundle"
     if normalized not in PROFILE_REQUIRED_FILES:
-        valid = ", ".join(sorted((*ARTIFACT_PROFILES, "auto")))
+        valid = ", ".join(sorted(VALIDATION_PROFILES))
         raise ValueError(f"validation profile must be one of: {valid}")
     return normalized
 
@@ -799,9 +845,7 @@ def _validate_file_table(
         if path.is_file()
     }
     actual_payload_paths = {
-        rel
-        for rel in actual_paths
-        if rel != "manifest.json" and not rel.startswith("signatures/")
+        rel for rel in actual_paths if rel != "manifest.json" and not rel.startswith("signatures/")
     }
     for rel in sorted(actual_payload_paths - listed_paths - unhashed_paths):
         errors.append(f"unlisted artifact file: {rel}")
@@ -859,10 +903,10 @@ def _profile_replay_validation(
         except (OSError, json.JSONDecodeError) as exc:
             errors.append(f"replay/replay_manifest.json cannot be read: {exc}")
             replay_manifest = {}
-        if (
-            isinstance(replay_manifest, dict)
-            and replay_manifest.get("schema_version") not in {None, REPLAY_MANIFEST_SCHEMA_VERSION}
-        ):
+        if isinstance(replay_manifest, dict) and replay_manifest.get("schema_version") not in {
+            None,
+            REPLAY_MANIFEST_SCHEMA_VERSION,
+        }:
             errors.append("replay manifest schema_version is unsupported")
         return (
             DeterministicReplayValidationStatus(
@@ -882,7 +926,7 @@ def _profile_specific_errors(
     signature: SignatureValidationStatus,
 ) -> list[str]:
     errors: list[str] = []
-    if profile == "official_bundle":
+    if profile in {"official_bundle", "official_case"}:
         if signature.status in {"unsigned", "missing", "not_checked"}:
             errors.append("runner_signature_missing")
         elif not signature.verified or signature.algorithm != RUNNER_SIGNATURE_ALGORITHM:
@@ -892,10 +936,181 @@ def _profile_specific_errors(
                 errors.append("runner_signature_untrusted")
         if not (artifact_dir / "scores/official_result.json").exists():
             errors.append("missing required file: scores/official_result.json")
+    if profile == "official_case":
+        errors.extend(_official_case_integrity_errors(artifact_dir, manifest))
     if profile == "public_replay_package":
         artifact_profile = manifest.get("artifact_profile")
         if artifact_profile not in {None, "public_replay_package", "uploaded_replay"}:
             errors.append("public replay package has incompatible artifact_profile")
+    return errors
+
+
+def _official_case_integrity_errors(
+    artifact_dir: Path,
+    manifest: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    score_path = artifact_dir / "scores/score.json"
+    try:
+        score = json.loads(score_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"official_case score cannot be read: {exc}"]
+    if not isinstance(score, dict):
+        return ["official_case score must be a JSON object"]
+
+    def _sum_counts(name: str) -> int | None:
+        value = score.get(name)
+        if not isinstance(value, dict):
+            errors.append(f"official_case missing {name}")
+            return None
+        counts = list(value.values())
+        if not all(isinstance(item, int) and not isinstance(item, bool) for item in counts):
+            errors.append(f"official_case {name} must contain integer counts")
+            return None
+        return sum(cast(list[int], counts))
+
+    fallback_count = _sum_counts("fallback_action_count_by_player")
+    agent_error_count = _sum_counts("agent_error_count_by_player")
+    if fallback_count not in {None, 0}:
+        errors.append("fallback_action_present")
+    if agent_error_count not in {None, 0}:
+        errors.append("agent_error_present")
+    if score.get("match_valid_for_scoring") is not True:
+        errors.append("source_score_invalid")
+
+    metrics_value = score.get("metrics")
+    metrics = metrics_value if isinstance(metrics_value, dict) else {}
+    evaluated_player = metrics.get("evaluated_player", "player_1")
+    statuses = score.get("provider_status_by_player")
+    if not isinstance(statuses, dict) or statuses.get(evaluated_player) != "provider_ok":
+        errors.append("provider_status_not_ok")
+
+    provider_actions = score.get("provider_action_count_by_player")
+    logical_actions = score.get("logical_action_count_by_player")
+    if (
+        not isinstance(provider_actions, dict)
+        or not isinstance(logical_actions, dict)
+        or provider_actions.get(evaluated_player) != logical_actions.get(evaluated_player)
+    ):
+        errors.append("action_provenance_incomplete")
+    errors.extend(
+        _official_action_reconciliation_errors(
+            artifact_dir,
+            evaluated_player=str(evaluated_player),
+            expected_logical_actions=(
+                logical_actions.get(evaluated_player) if isinstance(logical_actions, dict) else None
+            ),
+        )
+    )
+
+    if score.get("usage_complete") is not True:
+        errors.append("usage_incomplete")
+    if score.get("cost_complete") is not True:
+        errors.append("cost_incomplete")
+    if score.get("attempt_ledger_complete") is not True:
+        errors.append("attempt_reconciliation_failed")
+    if score.get("model_identity_verified") is not True:
+        errors.append("model_route_mismatch")
+    if manifest.get("integrity_status") != "valid":
+        errors.append("integrity_status_not_valid")
+    return list(dict.fromkeys(errors))
+
+
+def _official_action_reconciliation_errors(
+    artifact_dir: Path,
+    *,
+    evaluated_player: str,
+    expected_logical_actions: Any,
+) -> list[str]:
+    read_errors: list[str] = []
+    trace_rows = _read_jsonl(artifact_dir / "traces/public_trace.jsonl", read_errors)
+    replay_rows = _read_jsonl(artifact_dir / "replay/replay_events.jsonl", read_errors)
+    receipt_rows = _read_jsonl(
+        artifact_dir / "receipts/provider_receipts.jsonl",
+        read_errors,
+    )
+    if read_errors or trace_rows is None or replay_rows is None or receipt_rows is None:
+        return ["action_provenance_incomplete", "attempt_reconciliation_failed"]
+
+    provider_traces = [
+        row
+        for row in trace_rows
+        if row.get("seat") == evaluated_player and row.get("action_provenance") == "provider_action"
+    ]
+    provider_replays = [
+        row
+        for row in replay_rows
+        if row.get("seat") == evaluated_player and row.get("action_provenance") == "provider_action"
+    ]
+    provenance_invalid = (
+        not isinstance(expected_logical_actions, int)
+        or isinstance(expected_logical_actions, bool)
+        or len(provider_traces) != expected_logical_actions
+        or len(provider_replays) != expected_logical_actions
+    )
+    ledger_invalid = False
+
+    receipts_by_event: dict[str, dict[str, Any]] = {}
+    for receipt in receipt_rows:
+        if provider_receipt_validation_errors(receipt):
+            ledger_invalid = True
+            provenance_invalid = True
+        event_id = receipt.get("event_id")
+        if not isinstance(event_id, str) or not event_id or event_id in receipts_by_event:
+            ledger_invalid = True
+            continue
+        receipts_by_event[event_id] = receipt
+
+    referenced_event_ids: list[str] = []
+    trace_join_keys: list[tuple[str, str]] = []
+    for trace in provider_traces:
+        event_id = trace.get("successful_attempt_event_id")
+        logical_action_id = trace.get("logical_action_id")
+        if not isinstance(event_id, str) or not isinstance(logical_action_id, str):
+            provenance_invalid = True
+            continue
+        referenced_event_ids.append(event_id)
+        trace_join_keys.append((logical_action_id, event_id))
+        joined_receipt = receipts_by_event.get(event_id)
+        if (
+            joined_receipt is None
+            or joined_receipt.get("logical_action_id") != logical_action_id
+            or (joined_receipt.get("seat_id") or joined_receipt.get("active_player"))
+            != evaluated_player
+            or joined_receipt.get("outcome") != "ok"
+            or joined_receipt.get("status") != "completed"
+            or joined_receipt.get("action_applied") is not True
+            or joined_receipt.get("case_valid_for_scoring") is not True
+        ):
+            provenance_invalid = True
+
+    if len(referenced_event_ids) != len(set(referenced_event_ids)):
+        provenance_invalid = True
+        ledger_invalid = True
+
+    replay_join_keys = [
+        (row.get("logical_action_id"), row.get("successful_attempt_event_id"))
+        for row in provider_replays
+    ]
+    if Counter(trace_join_keys) != Counter(replay_join_keys):
+        provenance_invalid = True
+
+    applied_success_event_ids = {
+        event_id
+        for event_id, receipt in receipts_by_event.items()
+        if (receipt.get("seat_id") or receipt.get("active_player")) == evaluated_player
+        and receipt.get("outcome") == "ok"
+        and receipt.get("action_applied") is True
+    }
+    if applied_success_event_ids != set(referenced_event_ids):
+        provenance_invalid = True
+        ledger_invalid = True
+
+    errors: list[str] = []
+    if provenance_invalid:
+        errors.append("action_provenance_incomplete")
+    if ledger_invalid:
+        errors.append("attempt_reconciliation_failed")
     return errors
 
 
@@ -919,9 +1134,7 @@ def _public_safety_errors(artifact_dir: Path, profile: str) -> list[str]:
             rows = _read_public_jsonl(path)
             for row_index, row in enumerate(rows):
                 for issue in scan_public_payload(row, root=f"{rel}[{row_index}]"):
-                    errors.append(
-                        f"unsafe public payload key in {rel}: {issue.path} ({issue.key})"
-                    )
+                    errors.append(f"unsafe public payload key in {rel}: {issue.path} ({issue.key})")
             continue
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
@@ -993,7 +1206,11 @@ def _validation_report(
         artifact_id=_optional_manifest_str(manifest, "artifact_id"),
         run_id=_optional_manifest_str(manifest, "run_id"),
         verification_level=_optional_manifest_str(manifest, "verification_level"),
-        scoring_eligible=_optional_manifest_bool(manifest, "match_valid_for_scoring"),
+        scoring_eligible=(
+            False
+            if profile == "official_case" and errors
+            else _optional_manifest_bool(manifest, "match_valid_for_scoring")
+        ),
         archive_sha256=_artifact_source_hash(source_path, artifact_dir),
         artifact_size_bytes=_artifact_source_size(source_path, artifact_dir),
         verification_level_key=_optional_manifest_str(manifest, "verification_level_key"),
@@ -1168,9 +1385,7 @@ def _public_replay_manifest(build: ArtifactBuildInput, arena_id: str) -> dict[st
         showcase_ready=not setup_only and visible_frame_count >= 2,
         minimum_autoplay_frames=2,
         autoplay_ready=not setup_only and visible_frame_count >= 2,
-        reasoning_frame_coverage=(
-            reasoning_count / move_frame_count if move_frame_count else 0.0
-        ),
+        reasoning_frame_coverage=(reasoning_count / move_frame_count if move_frame_count else 0.0),
     ).to_dict()
 
 
@@ -1198,6 +1413,7 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
     reason = None
     if score.outcome and isinstance(score.outcome.get("reason"), str):
         reason = cast(str, score.outcome["reason"])
+    publication_eligible = _case_publication_eligible(score)
     return PublicResultSummary(
         run_id=score.run_id,
         arena_id=arena_id,
@@ -1211,8 +1427,8 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
         valid_for_scoring=score.match_valid_for_scoring,
         scoring_safety_reason=score.scoring_safety_reason,
         per_case_run_valid=score.match_valid_for_scoring,
-        per_case_scoring_eligible=score.match_valid_for_scoring,
-        proof_row_publication_eligible=True,
+        per_case_scoring_eligible=publication_eligible,
+        proof_row_publication_eligible=publication_eligible,
         aggregate_leaderboard_eligible=False,
         aggregate_ineligibility_reason="single_case_not_full_suite",
     )
@@ -1220,24 +1436,54 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
 
 def _official_result_summary(score: ScoreSummary, arena_id: str) -> dict[str, Any]:
     public_summary = _public_result_summary(score, arena_id).to_dict()
+    publication_eligible = _case_publication_eligible(score)
     return {
         **public_summary,
         "schema_version": OFFICIAL_RESULT_SCHEMA_VERSION,
         "case_counts": {
             "completed": 1,
             "failed": 0 if score.match_valid_for_scoring else 1,
-            "non_scoring": 0 if score.match_valid_for_scoring else 1,
+            "non_scoring": 0 if publication_eligible else 1,
         },
         "aggregate_usage": score.aggregate_usage,
         "aggregate_cost": score.aggregate_cost,
+        "integrity": {
+            "schemaVersion": "eslams.run-integrity.v2",
+            "integrityStatus": score.integrity_status,
+            "validForScoring": score.match_valid_for_scoring,
+            "invalidReasonCodes": score.invalid_reason_codes,
+            "agentErrorCountByPlayer": score.agent_error_count_by_player,
+            "fallbackActionCountByPlayer": score.fallback_action_count_by_player,
+            "illegalActionCountByPlayer": score.illegal_action_count_by_player,
+            "providerStatusByPlayer": score.provider_status_by_player,
+            "providerActionCountByPlayer": score.provider_action_count_by_player,
+            "logicalActionCountByPlayer": score.logical_action_count_by_player,
+            "usageComplete": score.usage_complete,
+            "costComplete": score.cost_complete,
+            "modelIdentityVerified": score.model_identity_verified,
+            "attemptLedgerComplete": score.attempt_ledger_complete,
+        },
         "proof_counts": {
             "artifact": 1,
             "public_replay": 1,
-            "provider_receipt": 0,
+            "provider_receipt": score.aggregate_usage.get("receiptCount", 0),
         },
         "runner_signature_status": "pending",
         "audit_links": [],
     }
+
+
+def _case_publication_eligible(score: ScoreSummary) -> bool:
+    """Return the fail-closed eligibility claim for proof/publication surfaces."""
+
+    return bool(
+        score.match_valid_for_scoring
+        and score.integrity_status == "valid"
+        and score.usage_complete
+        and score.cost_complete
+        and score.attempt_ledger_complete
+        and score.model_identity_verified
+    )
 
 
 def _validate_deterministic_replay(
@@ -1250,8 +1496,7 @@ def _validate_deterministic_replay(
         deterministic_metadata_value if isinstance(deterministic_metadata_value, dict) else None
     )
     required = (
-        deterministic_metadata is not None
-        and deterministic_metadata.get("status") == "recorded"
+        deterministic_metadata is not None and deterministic_metadata.get("status") == "recorded"
     )
     if (
         deterministic_metadata is not None
@@ -1283,7 +1528,7 @@ def _validate_deterministic_replay(
                 replay_event_count=len(replay_rows),
             ),
             errors,
-    )
+        )
     if not has_state_snapshots:
         if required:
             errors.append("deterministic replay audit is missing auditor state snapshots")
@@ -1357,15 +1602,11 @@ def _validate_deterministic_replay(
             continue
 
         if previous_state is not None and state_before.state_hash != previous_state.state_hash:
-            errors.append(
-                f"auditor trace event {index} state_before does not continue prior state"
-            )
+            errors.append(f"auditor trace event {index} state_before does not continue prior state")
         if row.get("turn_id") != state_before.turn:
             errors.append(f"auditor trace event {index} turn_id does not match state_before")
         if row.get("active_player") != state_before.active_player:
-            errors.append(
-                f"auditor trace event {index} active_player does not match state_before"
-            )
+            errors.append(f"auditor trace event {index} active_player does not match state_before")
         if row.get("state_hash_before") != state_before.state_hash:
             errors.append(
                 f"auditor trace event {index} state_hash_before does not match state_before"
@@ -1407,9 +1648,7 @@ def _validate_deterministic_replay(
             continue
 
         if computed_state.state_hash != state_after.state_hash:
-            errors.append(
-                f"auditor trace event {index} state_after does not match replayed action"
-            )
+            errors.append(f"auditor trace event {index} state_after does not match replayed action")
         if not _canonical_equal(computed_state.to_dict(), state_after.to_dict()):
             errors.append(
                 f"auditor trace event {index} state_after payload does not match replayed action"

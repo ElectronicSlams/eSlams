@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import json
 import threading
 import time
 from contextlib import suppress
@@ -37,6 +40,30 @@ def _request() -> ActRequest:
     )
 
 
+def _openai_wire(
+    text: str,
+    *,
+    response_id: str = "resp_123",
+    usage: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "id": response_id,
+        "output": [
+            {"id": "reasoning_123", "type": "reasoning", "summary": []},
+            {
+                "id": "message_123",
+                "type": "message",
+                "role": "assistant",
+                "status": "completed",
+                "content": [{"type": "output_text", "text": text, "annotations": []}],
+            },
+        ],
+    }
+    if usage is not None:
+        payload["usage"] = usage
+    return payload
+
+
 def test_json_extraction_strips_only_complete_code_fences():
     payload = '```json\n{"action": "use `backtick`"}\n```'
 
@@ -58,14 +85,10 @@ def test_openai_model_agent_parses_legal_json_action(monkeypatch):
         assert "reasoning" not in json
         return httpx.Response(
             200,
-            json={
-                "id": "resp_123",
-                "output_text": (
-                    '{"action": "2", "confidence": 0.9, '
-                    '"public_explanation": "Creates a threat."}'
-                ),
-                "usage": {"input_tokens": 10, "output_tokens": 8},
-            },
+            json=_openai_wire(
+                ('{"action": "2", "confidence": 0.9, "public_explanation": "Creates a threat."}'),
+                usage={"input_tokens": 10, "output_tokens": 8},
+            ),
             headers={"x-request-id": "req_123"},
         )
 
@@ -81,7 +104,7 @@ def test_openai_model_agent_parses_legal_json_action(monkeypatch):
     assert response.action == 2
     assert response.confidence == 0.9
     assert response.metadata["provider_receipt"]["provider_response_id"] == "resp_123"
-    assert response.metadata["provider_receipt"]["schema_version"] == "eslams.provider.receipt.v1"
+    assert response.metadata["provider_receipt"]["schema_version"] == "eslams.provider.receipt.v2"
     assert response.metadata["provider_receipt"]["usage"]["input_tokens"] == 10
     assert response.metadata["provider_receipt"]["usage"]["total_tokens"] == 18
     assert response.metadata["provider_receipt"]["estimated_cost"]["status"] == "cost_unavailable"
@@ -127,11 +150,80 @@ def test_http_agent_preserves_provider_receipt_metadata(monkeypatch):
     assert response.action == 1
     assert response.metadata["provider_receipt"]["usage"]["total_tokens"] == 5
     assert agent.last_receipt is not None
-    assert agent.last_receipt["schema_version"] == "eslams.provider.receipt.v1"
+    assert agent.last_receipt["schema_version"] == "eslams.provider.receipt.v2"
     assert agent.last_receipt["provider"] == "openai"
     assert agent.last_receipt["model"] == "gpt-test"
     assert agent.last_receipt["usage"]["total_tokens"] == 5
     assert agent.attempt_receipts == [agent.last_receipt]
+
+
+def test_http_agent_recursively_redacts_sensitive_endpoint_metadata(monkeypatch):
+    def fake_post(
+        url: str,
+        *,
+        headers: dict[str, str],
+        json: dict[str, Any],
+        timeout: Any,
+    ) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "action": 1,
+                "metadata": {
+                    "provider_receipt": {
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "outcome": "ok",
+                        "pricing_provenance": {
+                            "authorization": "Bearer receipt-secret",
+                            "source": "gateway",
+                        },
+                    }
+                },
+            },
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    agent = HttpAgent(
+        url="https://agent.example/act",
+        endpoint_metadata={
+            "region": "eu-west-2",
+            "authorization": "Bearer top-secret",
+            "nested": {
+                "x-api-key": "nested-secret",
+                "X-Amz-Signature": "signature-secret",
+                "safe": "visible",
+                "items": [
+                    {"access_token": "list-secret", "route": "primary"},
+                    "https://example.test/path?api_key=query-secret&mode=fast",
+                    "https://url-user:url-pass@example.test/path",
+                    "https://example.test/path?mode=fast;X-Amz-Signature=query-signature",
+                    "https://example.test/callback#access_token=fragment-secret",
+                    "Bearer inline-secret",
+                ],
+            },
+        },
+    )
+
+    response = agent.act(_request())
+    serialized = json.dumps(response.metadata["provider_receipt"], sort_keys=True)
+
+    assert "top-secret" not in serialized
+    assert "nested-secret" not in serialized
+    assert "signature-secret" not in serialized
+    assert "list-secret" not in serialized
+    assert "query-secret" not in serialized
+    assert "url-user" not in serialized
+    assert "url-pass" not in serialized
+    assert "query-signature" not in serialized
+    assert "fragment-secret" not in serialized
+    assert "inline-secret" not in serialized
+    assert "receipt-secret" not in serialized
+    assert response.metadata["provider_receipt"]["endpoint_metadata"]["region"] == "eu-west-2"
+    assert response.metadata["provider_receipt"]["endpoint_metadata"]["nested"]["safe"] == (
+        "visible"
+    )
 
 
 def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):
@@ -148,11 +240,10 @@ def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):
         assert json["reasoning"] == {"effort": "minimal"}
         return httpx.Response(
             200,
-            json={
-                "id": "resp_123",
-                "output_text": '{"action": 1, "confidence": 0.8}',
-                "usage": {"input_tokens": 10, "output_tokens": 8},
-            },
+            json=_openai_wire(
+                '{"action": 1, "confidence": 0.8}',
+                usage={"input_tokens": 10, "output_tokens": 8},
+            ),
             headers={"x-request-id": "req_123"},
         )
 
@@ -163,6 +254,7 @@ def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):
         provider="openai",
         model="gpt-5-mini",
         api_key_env="OPENAI_API_KEY",
+        runtime_config=ProviderRuntimeConfig(reasoning="enabled"),
     ).act(_request())
 
     assert response.action == 1
@@ -181,7 +273,7 @@ def test_openai_registry_can_select_none_reasoning_effort(monkeypatch):
         assert json["reasoning"] == {"effort": "none"}
         return httpx.Response(
             200,
-            json={"id": "resp_123", "output_text": '{"action": 1}'},
+            json=_openai_wire('{"action": 1}'),
             headers={"x-request-id": "req_123"},
         )
 
@@ -192,6 +284,7 @@ def test_openai_registry_can_select_none_reasoning_effort(monkeypatch):
         provider="openai",
         model="gpt-5.4-mini",
         api_key_env="OPENAI_API_KEY",
+        runtime_config=ProviderRuntimeConfig(reasoning="enabled"),
     ).act(_request())
 
     assert response.action == 1
@@ -280,7 +373,10 @@ def test_google_provider_uses_gemini_endpoint_and_configurable_thinking(monkeypa
         provider="google",
         model="gemini-thinking",
         api_key_env="GEMINI_API_KEY",
-        runtime_config=ProviderRuntimeConfig(gemini_thinking_budget=256),
+        runtime_config=ProviderRuntimeConfig(
+            gemini_thinking_budget=256,
+            reasoning="enabled",
+        ),
     )
     agent.capabilities = ModelCapabilities(
         provider="google",
@@ -340,7 +436,7 @@ def test_anthropic_model_agent_sends_thinking_budget(monkeypatch):
         assert url == "https://api.anthropic.com/v1/messages"
         assert headers["x-api-key"] == "anthropic-key"
         assert json["max_tokens"] == 4096
-        assert json["thinking"] == {"type": "enabled", "budget_tokens": 512}
+        assert json["thinking"] == {"type": "enabled", "budget_tokens": 1024}
         return httpx.Response(
             200,
             json={
@@ -362,7 +458,10 @@ def test_anthropic_model_agent_sends_thinking_budget(monkeypatch):
         provider="anthropic",
         model="claude-thinking",
         api_key_env="ANTHROPIC_API_KEY",
-        runtime_config=ProviderRuntimeConfig(reasoning_budget_tokens=512),
+        runtime_config=ProviderRuntimeConfig(
+            reasoning_budget_tokens=1024,
+            reasoning="enabled",
+        ),
     )
     agent.capabilities = ModelCapabilities(
         provider="anthropic",
@@ -391,7 +490,7 @@ def test_provider_agent_uses_generic_gateway_base_url(monkeypatch):
         assert timeout.as_dict() == {"connect": 2.0, "read": 12.0, "write": 12.0, "pool": 2.0}
         return httpx.Response(
             200,
-            json={"id": "resp_123", "output_text": '{"action": 1}'},
+            json=_openai_wire('{"action": 1}'),
             headers={"x-gateway-request-id": "gw_123"},
         )
 
@@ -433,11 +532,11 @@ def test_provider_agent_retries_and_records_every_attempt(monkeypatch):
             return httpx.Response(500, text="temporary provider failure")
         return httpx.Response(
             200,
-            json={
-                "id": "resp_retry",
-                "output_text": '{"action": 1}',
-                "usage": {"input_tokens": 4, "output_tokens": 1},
-            },
+            json=_openai_wire(
+                '{"action": 1}',
+                response_id="resp_retry",
+                usage={"input_tokens": 4, "output_tokens": 1},
+            ),
             headers={"x-request-id": "req_retry"},
         )
 
@@ -456,7 +555,7 @@ def test_provider_agent_retries_and_records_every_attempt(monkeypatch):
     assert calls["count"] == 2
     assert [receipt["attempt"] for receipt in agent.attempt_receipts] == [1, 2]
     assert [receipt["outcome"] for receipt in agent.attempt_receipts] == [
-        "provider_error",
+        "provider_unavailable",
         "ok",
     ]
 
@@ -488,7 +587,7 @@ def test_provider_agent_does_not_retry_non_rate_limited_4xx(monkeypatch):
         agent.act(_request())
 
     assert calls["count"] == 1
-    assert agent.last_receipt["outcome"] == "provider_invalid_request"
+    assert agent.last_receipt["outcome"] == "provider_request_rejected"
     assert agent.last_receipt["status_code"] == 400
 
 
@@ -506,7 +605,10 @@ def test_provider_agent_retries_429_and_honors_retry_after(monkeypatch):
         calls["count"] += 1
         if calls["count"] == 1:
             return httpx.Response(429, text="slow down", headers={"Retry-After": "2"})
-        return httpx.Response(200, json={"id": "resp_429", "output_text": '{"action": 1}'})
+        return httpx.Response(
+            200,
+            json=_openai_wire('{"action": 1}', response_id="resp_429"),
+        )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setattr(httpx, "post", fake_post)
@@ -540,16 +642,16 @@ def test_provider_receipt_extracts_nested_usage_and_prices_cost(monkeypatch):
     ) -> httpx.Response:
         return httpx.Response(
             200,
-            json={
-                "id": "resp_usage",
-                "output_text": '{"action": 1}',
-                "usage": {
+            json=_openai_wire(
+                '{"action": 1}',
+                response_id="resp_usage",
+                usage={
                     "input_tokens": 100,
                     "output_tokens": 20,
                     "input_tokens_details": {"cached_tokens": 25},
                     "output_tokens_details": {"reasoning_tokens": 5},
                 },
-            },
+            ),
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
@@ -581,7 +683,9 @@ def test_provider_receipt_extracts_nested_usage_and_prices_cost(monkeypatch):
     assert receipt["usage"]["reasoning_tokens"] == 5
     assert receipt["pricing"]["status"] == "ok"
     assert receipt["estimated_cost"]["status"] == "ok"
-    assert receipt["estimated_cost"]["cost_usd"] == 0.13625
+    # Reasoning tokens are already included in OpenAI output tokens and must not
+    # be billed a second time.
+    assert receipt["estimated_cost"]["cost_usd"] == 0.12125
 
 
 def test_provider_agent_applies_rate_limit(monkeypatch):
@@ -597,7 +701,7 @@ def test_provider_agent_applies_rate_limit(monkeypatch):
     ) -> httpx.Response:
         return httpx.Response(
             200,
-            json={"id": "resp_rate", "output_text": '{"action": 1}'},
+            json=_openai_wire('{"action": 1}', response_id="resp_rate"),
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
@@ -644,7 +748,7 @@ def test_provider_agent_honors_concurrency_limit(monkeypatch):
             entered["current"] -= 1
         return httpx.Response(
             200,
-            json={"id": "resp_concurrency", "output_text": '{"action": 1}'},
+            json=_openai_wire('{"action": 1}', response_id="resp_concurrency"),
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
@@ -678,12 +782,23 @@ def test_provider_agent_honors_concurrency_limit(monkeypatch):
 def test_provider_preflight_skips_api_check_without_key(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-    payload = provider_preflight("openai", "gpt-test", "tic-tac-toe")
+    payload = provider_preflight("openai", "gpt-5-mini", "tic-tac-toe")
 
     assert payload["ok"] is True
+    assert payload["preflight_mode"] == "registry_only"
     assert payload["checks"]["arena_available"] is True
     assert payload["checks"]["api_key_configured"] is False
-    assert payload["receipt_shape"]["schema_version"] == "eslams.provider.receipt.v1"
+    assert payload["receipt_shape"]["schema_version"] == "eslams.provider.receipt.v2"
+
+
+def test_registry_only_preflight_does_not_claim_unknown_model_is_ready(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    payload = provider_preflight("openai", "not-in-registry", "tic-tac-toe")
+
+    assert payload["preflight_mode"] == "registry_only"
+    assert payload["checks"]["registry_entry"] is False
+    assert payload["ok"] is False
 
 
 def test_mock_provider_scenarios_emit_safe_receipts():
@@ -691,9 +806,9 @@ def test_mock_provider_scenarios_emit_safe_receipts():
     scenarios = {
         "success": "ok",
         "missing_usage": "ok",
-        "parse_error": "parse_error",
+        "parse_error": "action_response_unparseable",
         "timeout": "provider_timeout",
-        "provider_error": "provider_error",
+        "provider_error": "provider_unavailable",
         "gateway_auth_failed": "gateway_auth_failed",
     }
 
@@ -703,7 +818,7 @@ def test_mock_provider_scenarios_emit_safe_receipts():
             agent.act(request)
 
         assert agent.last_receipt is not None
-        assert agent.last_receipt["schema_version"] == "eslams.provider.receipt.v1"
+        assert agent.last_receipt["schema_version"] == "eslams.provider.receipt.v2"
         assert agent.last_receipt["outcome"] == outcome
         assert agent.last_receipt["estimated_cost"]["status"] == "cost_unavailable"
         assert "raw_output_preview" not in agent.last_receipt

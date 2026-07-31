@@ -59,6 +59,13 @@ Core artifacts and the scoring-validity posture:
 }
 ```
 
+Core 0.6 also records `integrity_status`, stable `invalid_reason_codes`,
+provider/logical action counts, `usage_complete`, `cost_complete`,
+`attempt_ledger_complete`, `model_identity_verified`, aggregate usage/cost, and
+the deterministic `match_fingerprint`. The execution `run_id` is unique; it is
+not the configuration fingerprint. Existing artifact paths are refused unless
+overwrite is explicit.
+
 `runs/latest.eslams` points at the latest archive when a run produced one.
 `runs/latest.eslams.d` points at the latest expanded copy.
 
@@ -72,6 +79,8 @@ Core validates artifacts with explicit profiles:
 - `runner-bundle`: the full local runner artifact.
 - `official-bundle`: a runner bundle with official result and runner signature
   requirements.
+- `official-case`: a signed official bundle plus fail-closed per-case execution
+  integrity checks.
 - `battlefield-bundle`: a runner bundle with public match projection
   requirements.
 - `public-replay-package`: a no-secret replay package containing only
@@ -83,7 +92,17 @@ Use `--summary-json` to produce the stable
 
 ```bash
 eslams validate runs/latest.eslams --profile runner-bundle --summary-json
+eslams validate runs/latest.eslams --profile official-case --summary-json
 ```
+
+`official-case` rejects fallback or agent-error counts, non-`provider_ok`
+status for the evaluated seat, mismatched provider/logical action counts,
+missing or duplicate physical attempts, incomplete usage or cost, unverified
+model identity, and any non-valid Core integrity state. It reconciles every
+provider action across public trace, replay, and receipt rows. A successful
+provider action must reference exactly one completed, applied, scoring-valid
+receipt with the same logical action ID and seat, and no applied-success receipt
+may be orphaned.
 
 Public replay packages can be exported and validated without private traces,
 provider prompts, raw model responses, request headers, API keys, or debug
@@ -120,6 +139,48 @@ This catches semantic tampering even when the manifest file table is refreshed
 after editing trace or replay files. Older artifacts without state snapshots are
 reported as `deterministic_replay.status = "not_recorded"` rather than being
 mistaken for fully audited replay packages.
+
+## Provider Receipts and Action Provenance
+
+Core 0.6 writes `eslams.provider.receipt.v2` rows. A runner-enriched row has a
+deterministic `event_id`, unique run/case/logical-action identity,
+`case_attempt_index`, positive gap-free `attempt_index`, `attempt_kind`, seat,
+terminal status, provider/model identity source, endpoint/parser versions,
+request IDs, normalized usage/cost, and `action_applied` /
+`case_valid_for_scoring` flags.
+
+`case_valid_for_scoring` is the gameplay verdict for that action and does not
+claim complete billing evidence. The manifest, validation summary, public
+result, and official result set `per_case_scoring_eligible` and
+`proof_row_publication_eligible` only when gameplay, usage, cost, attempt-ledger,
+and model-identity integrity are all complete. Thus a clean action with missing
+cost can remain game-score-valid while every publication claim stays false.
+
+Action repair is a separate physical attempt (`action_repair`), not a rewrite
+of the primary receipt. Whole-case retries use `case_retry` in orchestration and
+a new positive `case_attempt_index`. Official execution prohibits hidden
+adapter retries so the attempt ledger is complete.
+
+Each applied trace/replay action records one provenance value:
+`provider_action`, `local_action`, or `fallback_action`. Provider actions carry
+the successful attempt event ID. Fallback actions are permanently unscoreable,
+including when the artifact has a valid signature.
+
+Provider raw request/response bodies and credentials are not public receipt
+fields. Failed HTTP 200 wire parsing preserves sanitized request ID, status,
+usage, and cost evidence when those fields were safely available.
+
+## Usage and Cost Completeness
+
+Canonical totals remain `null` unless every physical attempt has coherent,
+non-negative provider usage. Reasoning inclusion is explicit so reasoning is
+never double-counted: inclusive reasoning is already inside output tokens;
+separate reasoning is added to the canonical total and priced once. Provider
+totals are preserved and checked against the canonical derivation.
+
+Cost is complete only when every attempt has a finite non-negative cost and a
+complete, provider/model-matching `eslams.price-card-reference.v1`. Missing or
+malformed data remains unavailable; Core never converts unknown cost to zero.
 
 ## Runner Signatures
 

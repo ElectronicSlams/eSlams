@@ -33,6 +33,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.6.0](#release-v060)
 - [Release v0.5.1](#release-v051)
 - [Release v0.5.0](#release-v050)
 - [Release v0.4.0](#release-v040)
@@ -111,6 +112,8 @@ Pass `provider:model` to use a provider-backed model agent.
 export OPENAI_API_KEY=...
 export ANTHROPIC_API_KEY=...
 export GEMINI_API_KEY=...
+export OPENROUTER_API_KEY=...
+export AWS_BEARER_TOKEN_BEDROCK=...
 
 eslams run \
   --arena chess \
@@ -121,13 +124,54 @@ eslams run \
   --arena connect-four \
   --agent gemini:gemini-flash-lite-latest \
   --opponent first-legal
+
+eslams run \
+  --arena tic-tac-toe \
+  --agent openrouter:openai/gpt-5-mini \
+  --openrouter-provider-order "Amazon Bedrock" \
+  --opponent first-legal
+
+# Split provider:model on the first colon; the Bedrock model's :0 is literal.
+eslams run \
+  --arena tic-tac-toe \
+  --agent bedrock:amazon.nova-micro-v1:0 \
+  --bedrock-region us-east-1 \
+  --opponent first-legal
 ```
 
 Provider receipts are written into the artifact without API keys. Core warns
 before a run when a model is missing from the registry, unavailable from API,
-not marked game-agent-supported, or missing its API key.
+not marked game-agent-supported, or missing its API key. See
+[the provider guide](docs/PROVIDERS.md) for the exact wire adapters, model
+identity rules, reasoning behavior, usage semantics, and rate-card contract.
 
-For model comparison runs, make invalidity explicit:
+Use the verified provider workflow before spending on a run:
+
+```bash
+# Safe and offline: registry metadata only. This is not an availability claim.
+eslams providers preflight \
+  --provider openai --model gpt-5-mini --arena tic-tac-toe
+
+# Account-aware: model discovery where supported, one minimal inference,
+# legal-action parsing, and usage extraction.
+eslams providers preflight \
+  --provider openai --model gpt-5-mini --arena tic-tac-toe --live
+
+eslams run \
+  --arena tic-tac-toe \
+  --agent openai:gpt-5-mini \
+  --opponent first-legal \
+  --execution-profile smoke
+eslams validate runs/latest.eslams --profile runner-bundle
+eslams replay runs/latest.eslams
+```
+
+`preflight_mode` is always `registry_only` or `live`, and every live check is
+reported separately. A registry-only pass does not prove that a provider
+account can invoke the model.
+
+The default failure policies are fail-closed (`invalid-match`). For model
+comparison runs, keep them explicit in automation:
 
 ```bash
 eslams run \
@@ -138,7 +182,8 @@ eslams run \
   --on-illegal-action invalid-match
 ```
 
-For smoke tests and demos, the default policy is deterministic fallback:
+For interactive demos, deterministic fallback is opt-in and permanently marks
+the run invalid for scoring:
 
 ```bash
 eslams run \
@@ -153,9 +198,20 @@ Failure policies:
 
 | Policy | Effect |
 | --- | --- |
-| `fallback` | Use the arena's deterministic failure action and keep the run scoreable. |
+| `fallback` | Use the arena's deterministic failure action, record `fallback_action`, and make the run unscoreable. |
 | `invalid-match` | Stop and mark `match_valid_for_scoring=false`. |
 | `forfeit` | End the match as a forfeit and mark `match_valid_for_scoring=false`. |
+
+Execution profiles are `interactive`, `smoke`, and `official_eval`.
+`official_eval` rejects fallback policies and provider-local retries; the
+official orchestrator owns whole-case retries. Set `--case-attempt-index` on a
+replayed case so physical attempt IDs stay idempotent and retry-scoped. Existing
+artifact paths are refused unless `--overwrite` is explicit.
+
+Reasoning is controlled with `--reasoning disabled|enabled|auto`. Core sends
+only model-supported controls. Anthropic manual thinking requires a budget of
+at least 1,024 tokens and below `max_tokens`; Claude 4.7+ and Claude 5 use
+adaptive thinking and omit incompatible temperature/manual-budget fields.
 
 ## Build an HTTP Agent
 
@@ -237,6 +293,12 @@ Score and manifest metadata include:
 - `illegal_action_count_by_player`
 - `fallback_action_count_by_player`
 - `provider_status_by_player`
+- `provider_action_count_by_player`
+- `logical_action_count_by_player`
+- `integrity_status`, `invalid_reason_codes`, and action provenance
+- `usage_complete`, `cost_complete`, and `attempt_ledger_complete`
+- `model_identity_verified`
+- aggregate usage/cost and per-seat/provider/model/attempt/status breakdowns
 
 Provider status values are normalized as `provider_ok`,
 `provider_receipt_missing`, `provider_usage_unavailable`, `local_agent`, or
@@ -467,13 +529,21 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for:
+Core has direct first-party HTTP adapters for all five provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
 | `openai:<model>` | `OPENAI_API_KEY` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` |
 | `gemini:<model>` | `GEMINI_API_KEY` |
+| `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
+| `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
+
+OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
+Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
+`usage.cost`, and Bedrock uses Converse. OpenRouter provider fallback is
+disabled and an optional provider order is sent as a pin. Bedrock model IDs
+retain their literal version separator such as `:0`.
 
 The model capability registry covers a broader provider landscape so Core can
 track API availability, text-game support, endpoints, modalities, temperature
@@ -492,7 +562,7 @@ eslams models list --provider gemini --game-agent-supported --json
 From a source checkout, refresh the generated registry:
 
 ```bash
-eslams models update --providers openai,anthropic,google
+eslams models update --providers openai,anthropic,google,openrouter,bedrock
 ```
 
 Provider organizations tracked by the registry:
@@ -678,6 +748,21 @@ eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
 ```
+
+## Release v0.6.0
+
+`v0.6.0` is the fail-closed execution-integrity release. It emits
+`eslams-runner:0.6.0` and `eslams-schema-bundle-v4`, adds first-class
+OpenRouter and Bedrock adapters, strict raw-wire parsing for all five providers,
+physical-attempt and action-provenance contracts, complete usage/cost semantics,
+the `official-case` validator, account-aware live preflight, unique run IDs, and
+overwrite protection.
+
+Breaking behavior changes are intentional: agent/illegal-action defaults are
+now `invalid-match`; fallback can never be scoring-valid; `official_eval`
+rejects fallback and hidden provider retries; run IDs are unique execution IDs
+rather than deterministic config hashes; and provider receipt writers emit v2.
+Core continues to read historical v1/0.5 receipt shapes.
 
 ## Release v0.5.1
 

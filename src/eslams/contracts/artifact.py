@@ -25,7 +25,7 @@ ARTIFACT_KINDS: tuple[str, ...] = (
     "uploaded_replay",
 )
 
-VALIDATION_PROFILES: tuple[str, ...] = (*ARTIFACT_PROFILES, "auto")
+VALIDATION_PROFILES: tuple[str, ...] = (*ARTIFACT_PROFILES, "official_case", "auto")
 
 ARTIFACT_COMPATIBILITY_MAP: dict[str, str] = {
     "artifact_version": "manifest_schema_version",

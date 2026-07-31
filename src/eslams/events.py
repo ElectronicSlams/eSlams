@@ -75,6 +75,9 @@ class ReplayEvent:
     public_safe: bool = True
     state_hash_valid: bool | None = True
     state_hash_invalid_reason: str | None = None
+    action_provenance: str | None = None
+    logical_action_id: str | None = None
+    successful_attempt_event_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -96,6 +99,9 @@ class ReplayEvent:
             "public_safe": self.public_safe,
             "state_hash_valid": self.state_hash_valid,
             "state_hash_invalid_reason": self.state_hash_invalid_reason,
+            "action_provenance": self.action_provenance,
+            "logical_action_id": self.logical_action_id,
+            "successful_attempt_event_id": self.successful_attempt_event_id,
             "public_state": self.public_state,
             "scores": self.scores,
             "terminal": self.terminal,
@@ -121,6 +127,14 @@ class ScoreSummary:
     illegal_action_count_by_player: dict[str, int] = field(default_factory=dict)
     fallback_action_count_by_player: dict[str, int] = field(default_factory=dict)
     provider_status_by_player: dict[str, str] = field(default_factory=dict)
+    provider_action_count_by_player: dict[str, int] = field(default_factory=dict)
+    logical_action_count_by_player: dict[str, int] = field(default_factory=dict)
+    invalid_reason_codes: list[str] = field(default_factory=list)
+    integrity_status: str = "valid"
+    usage_complete: bool = False
+    cost_complete: bool = False
+    attempt_ledger_complete: bool = False
+    model_identity_verified: bool = False
     scoring_safety_reason: str | None = None
     aggregate_usage: dict[str, Any] = field(default_factory=dict)
     aggregate_cost: dict[str, Any] = field(default_factory=dict)
@@ -141,6 +155,14 @@ class ScoreSummary:
             "illegal_action_count_by_player": self.illegal_action_count_by_player,
             "fallback_action_count_by_player": self.fallback_action_count_by_player,
             "provider_status_by_player": self.provider_status_by_player,
+            "provider_action_count_by_player": self.provider_action_count_by_player,
+            "logical_action_count_by_player": self.logical_action_count_by_player,
+            "invalid_reason_codes": self.invalid_reason_codes,
+            "integrity_status": self.integrity_status,
+            "usage_complete": self.usage_complete,
+            "cost_complete": self.cost_complete,
+            "attempt_ledger_complete": self.attempt_ledger_complete,
+            "model_identity_verified": self.model_identity_verified,
             "scoring_safety_reason": self.scoring_safety_reason,
             "aggregate_usage": self.aggregate_usage,
             "aggregate_cost": self.aggregate_cost,
