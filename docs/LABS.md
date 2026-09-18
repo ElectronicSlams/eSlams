@@ -168,4 +168,4 @@ See also Battlefield **NOW SHOWING** for how verified public replays look. Do no
 | Platform `/labs` | Dead SPA today; see `docs/LABS_PAGE_CONTRACT.md` |
 | Live LB as lab product | Retired / retiring — not the lab path |
 
-See also: [`docs/LABS_PAGE_CONTRACT.md`](./LABS_PAGE_CONTRACT.md) (Platform handoff).
+See also: [`docs/LABS_PAGE_CONTRACT.md`](./LABS_PAGE_CONTRACT.md) (Platform `/labs` contract) · [`docs/SAMPLE_CLASSIFICATION.md`](./SAMPLE_CLASSIFICATION.md) (GOOD vs dump plan).
