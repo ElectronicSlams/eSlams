@@ -24,6 +24,7 @@ catalogue listed below.
 
 - [Install](#install)
 - [Quick Start](#quick-start)
+- [Lab Quickstart](docs/LABS.md)
 - [Run Model Agents](#run-model-agents)
 - [Build an HTTP Agent](#build-an-http-agent)
 - [What a Run Produces](#what-a-run-produces)
@@ -915,6 +916,7 @@ In plain terms:
 ## Links
 
 - Platform: [https://eslams.com](https://eslams.com)
+- Lab Quickstart: [docs/LABS.md](docs/LABS.md)
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
 - Support: `hello@eslams.com`
