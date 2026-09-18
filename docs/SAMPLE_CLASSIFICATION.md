@@ -85,7 +85,7 @@ Tag **BAD**, **FAULT**, or **RETIRED** (dump path) if **any** apply:
 6  Optional: Platform slim D1 allowlist sync (sample metadata only — not trash)
 ```
 
-**No D1 deletes.** Export is read-only.
+**No D1 deletes.** Export is read-only. Full trash lives on HF after scrub; slim D1 never re-imports retired dump wholesale.
 
 ---
 
@@ -161,3 +161,5 @@ Statuses above are **plan tags**, not a completed validate pass.
 Wave A docs only. No HF uploads until Wave B. No prod D1 mutations.
 
 Contact: hello@eslams.com · eslams.com
+
+See also: [`docs/LABS.md`](./LABS.md) (Lab Quickstart) · [`docs/LABS_PAGE_CONTRACT.md`](./LABS_PAGE_CONTRACT.md) (Platform `/labs` contract).
