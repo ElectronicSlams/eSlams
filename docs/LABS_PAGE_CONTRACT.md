@@ -29,8 +29,8 @@ Platform builds a **real `/labs`** landing (today: SPA “Player Not Found”). 
 
 | Artifact | Location | Contract field | Status |
 | --- | --- | --- | --- |
-| Lab Quickstart | GitHub `docs/LABS.md` | `quickstart_url` | Wave A |
-| Sample catalog | GitHub + HF dataset README / JSON | `sample_ids[]` | Schema in `SAMPLE_CLASSIFICATION.md` |
+| Lab Quickstart | GitHub [`docs/LABS.md`](./LABS.md) | `quickstart_url` | Wave A |
+| Sample catalog | GitHub + HF dataset README / JSON | `sample_ids[]` | Schema in [`SAMPLE_CLASSIFICATION.md`](./SAMPLE_CLASSIFICATION.md) |
 | HF samples dataset | `https://huggingface.co/datasets/ElectronicSlams/eslams-sample-runs` | `hf_samples_url` | **PENDING Wave B** |
 | Static docs Space | `https://huggingface.co/spaces/ElectronicSlams/eslams-docs` | `hf_docs_url` | **PENDING Wave B** |
 | Collection | HF Collection slug `eslams-core` | `hf_collection_url` | **PENDING Wave B** |
@@ -108,3 +108,5 @@ Platform builds a **real `/labs`** landing (today: SPA “Player Not Found”). 
 | **Founder** | HF org; `/labs` + LB retirement brand timing |
 
 This PR lands the **contract doc only**. Platform implements the page in a separate ticket.
+
+See also: [`docs/LABS.md`](./LABS.md) (Lab Quickstart) · [`docs/SAMPLE_CLASSIFICATION.md`](./SAMPLE_CLASSIFICATION.md) (GOOD vs dump plan).
