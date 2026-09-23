@@ -160,11 +160,17 @@ def main(argv: list[str] | None = None) -> int:
     plan = sub.add_parser(
         "plan",
         help="Create deterministic plans. Official plans are historical, not a live ranking.",
+        description=(
+            "Create deterministic plans. Official plans are historical, not a live ranking."
+        ),
     )
     plan_sub = plan.add_subparsers(dest="plan_command", required=True)
     plan_official = plan_sub.add_parser(
         "official",
         help="Plan a historical official-suite layout. Does not submit to a leaderboard.",
+        description=(
+            "Plan a historical official-suite layout. Does not submit to a leaderboard."
+        ),
     )
     plan_official.add_argument("--suite", required=True)
     plan_official.add_argument("--providers", default="")
@@ -203,6 +209,7 @@ def main(argv: list[str] | None = None) -> int:
     publish_export = publish_sub.add_parser(
         "export",
         help="Export publication files. Not a public leaderboard submission.",
+        description="Export publication files. Not a public leaderboard submission.",
     )
     publish_export.add_argument(
         "--kind",
@@ -223,11 +230,17 @@ def main(argv: list[str] | None = None) -> int:
     official = sub.add_parser(
         "official",
         help="Historical official-result helpers. Does not rank or submit to a leaderboard.",
+        description=(
+            "Historical official-result helpers. Does not rank or submit to a leaderboard."
+        ),
     )
     official_sub = official.add_subparsers(dest="official_command", required=True)
     official_merge = official_sub.add_parser(
         "merge",
         help="Merge historical official result artifacts. Output is not a Grand Slam.",
+        description=(
+            "Merge historical official result artifacts. Output is not a Grand Slam."
+        ),
     )
     official_merge.add_argument("run_dir", type=Path)
     official_merge.add_argument("--out", type=Path, required=True)
@@ -407,6 +420,7 @@ def main(argv: list[str] | None = None) -> int:
     agent_publish = agent_sub.add_parser(
         "publish",
         help="Print a local registration payload. Does not submit to a leaderboard.",
+        description="Print a local registration payload. Does not submit to a leaderboard.",
     )
     agent_publish.add_argument("--name", required=True)
     agent_publish.add_argument("--url", required=True)
