@@ -4,6 +4,8 @@ Thank you for helping build eSlams Core.
 
 ## Development
 
+Whitespace and indent defaults for Python, TypeScript, YAML, JSON, TOML, and Markdown live in the root `.editorconfig`.
+
 ```bash
 python -m venv .venv
 . .venv/bin/activate
