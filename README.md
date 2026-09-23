@@ -412,13 +412,17 @@ material, or private reasoning.
 
 ## Sample Runs
 
-Curated sample runs live in [sample_runs/](sample_runs/). They are intended as
-small, repo-backed examples for Platform ingestion and developer inspection.
+Curated sample runs live in [sample_runs/](sample_runs/). They are the in-repo
+lab pack for developer inspection. Hugging Face org `ElectronicSlams` is not
+live, so these files are not an `ElectronicSlams/eslams-sample-runs` download.
+See [docs/LAB_PACK.md](docs/LAB_PACK.md).
 
-- `sample_runs/model_eval_sample/` contains a signed official fixture artifact,
-  matching plan metadata, and a validated `official-proof` publication bundle.
-- `sample_runs/model_battle_sample/` contains a curated chess battle
-  `run_d48ff364a0b949df`, matching battle plan metadata, and a validated
+- `sample_runs/model_eval_sample/` contains `official_signed.eslams`, a signed
+  official fixture, matching plan metadata, and a validated `official-proof`
+  publication bundle. The fixture is not a live Official or Grand Slam result.
+- `sample_runs/model_battle_sample/` contains
+  `run_eeab67d58b994ca7.eslams`, a short built-in first-legal versus
+  first-legal chess run, matching battle plan metadata, and a validated
   `battlefield-sample` publication bundle.
 
 The sample README documents the selection criteria for tracked sample artifacts.
