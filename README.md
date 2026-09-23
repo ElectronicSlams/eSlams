@@ -917,4 +917,5 @@ In plain terms:
 - Platform: [https://eslams.com](https://eslams.com)
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
+- Founder gates and open Core drafts (2026-09-23 PT): [docs/FOUNDER_GATES_AND_OPEN_DRAFTS.md](docs/FOUNDER_GATES_AND_OPEN_DRAFTS.md)
 - Support: `hello@eslams.com`
