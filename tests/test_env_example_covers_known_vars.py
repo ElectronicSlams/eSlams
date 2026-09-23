@@ -167,20 +167,31 @@ def _environ_key_exprs(tree: ast.AST) -> list[ast.expr]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             func = node.func
-            if _is_os_getenv(func) and node.args:
-                keys.append(node.args[0])
-            elif (
+            is_getenv = _is_os_getenv(func) and bool(node.args)
+            is_environ_method = (
                 isinstance(func, ast.Attribute)
                 and func.attr in _ENVIRON_METHODS
                 and _is_environ_receiver(func.value)
-                and node.args
-            ):
+                and bool(node.args)
+            )
+            if is_getenv or is_environ_method:
                 keys.append(node.args[0])
         elif isinstance(node, ast.Subscript) and _is_environ_receiver(node.value):
-            slice_node = node.slice
-            if isinstance(slice_node, ast.expr):
+            slice_node = _subscript_key(node)
+            if slice_node is not None:
                 keys.append(slice_node)
     return keys
+
+
+def _subscript_key(node: ast.Subscript) -> ast.expr | None:
+    # Python 3.9 wraps simple indexes in ast.Index. Later versions store the expr.
+    slice_node = node.slice
+    index_type = getattr(ast, "Index", None)
+    if index_type is not None and isinstance(slice_node, index_type):
+        slice_node = slice_node.value
+    if isinstance(slice_node, ast.expr):
+        return slice_node
+    return None
 
 
 def _is_os_getenv(func: ast.AST) -> bool:
@@ -207,14 +218,7 @@ def _tracked_from_dict_lookup(tree: ast.AST, name: str) -> set[str]:
     """Follow `name = SOME_DICT.get(...)` / `name = SOME_DICT[...]` to string values."""
     found: set[str] = set()
     for node in ast.walk(tree):
-        value: ast.expr | None = None
-        if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == name for target in node.targets
-        ):
-            value = node.value
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            if node.target.id == name:
-                value = node.value
+        value = _assigned_value(node, name, single_target=False)
         dict_name = _dict_name_from_lookup(value) if value is not None else None
         if dict_name is not None:
             found.update(_tracked_strings_assigned_to(tree, dict_name))
@@ -222,9 +226,13 @@ def _tracked_from_dict_lookup(tree: ast.AST, name: str) -> set[str]:
 
 
 def _dict_name_from_lookup(value: ast.expr) -> str | None:
-    if isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute):
-        if value.func.attr == "get" and isinstance(value.func.value, ast.Name):
-            return value.func.value.id
+    if (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Attribute)
+        and value.func.attr == "get"
+        and isinstance(value.func.value, ast.Name)
+    ):
+        return value.func.value.id
     if isinstance(value, ast.Subscript) and isinstance(value.value, ast.Name):
         return value.value.id
     return None
@@ -233,16 +241,26 @@ def _dict_name_from_lookup(value: ast.expr) -> str | None:
 def _tracked_strings_assigned_to(tree: ast.AST, name: str) -> set[str]:
     found: set[str] = set()
     for node in ast.walk(tree):
-        value: ast.expr | None = None
-        if isinstance(node, ast.Assign) and len(node.targets) == 1:
-            if isinstance(node.targets[0], ast.Name) and node.targets[0].id == name:
-                value = node.value
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            if node.target.id == name:
-                value = node.value
+        value = _assigned_value(node, name, single_target=True)
         if value is not None:
             found.update(_container_tracked_strings(value))
     return found
+
+
+def _assigned_value(node: ast.AST, name: str, *, single_target: bool) -> ast.expr | None:
+    assigns_name = (
+        isinstance(node, ast.Assign)
+        and (not single_target or len(node.targets) == 1)
+        and any(isinstance(target, ast.Name) and target.id == name for target in node.targets)
+    )
+    annotates_name = (
+        isinstance(node, ast.AnnAssign)
+        and isinstance(node.target, ast.Name)
+        and node.target.id == name
+    )
+    if assigns_name or annotates_name:
+        return node.value
+    return None
 
 
 def _container_tracked_strings(tree: ast.AST) -> set[str]:
