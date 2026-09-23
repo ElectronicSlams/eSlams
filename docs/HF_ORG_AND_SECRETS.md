@@ -1,146 +1,104 @@
-# Hugging Face org and lab secrets
+# HF lab pack readiness
 
-Docs only. This file names the target org, dataset skeleton, and where lab
-credentials are allowed to live. It does not create the org, upload datasets,
-or store any credential value.
+A newcomer cannot use Hugging Face for eSlams yet. Core installs from PyPI
+(`pip install eslams-core==0.6.1`). The run path, provider env-var names, and
+`hf download` command live in the lab quickstart
+([PR #13](https://github.com/ElectronicSlams/eSlams/pull/13), `docs/LABS.md`).
+This page is the Hub gap that quickstart does not close: the org, which
+dataset is the lab pack, and how Space secrets work.
 
-Pin: `eslams-core==0.6.1`. Install stays `pip install eslams-core`. Hugging Face
-is for datasets, a Collection, and docs — not a second package index. A local
-Core run is a Local Artifact. It is not an Official or Grand Slam result.
+**Local Artifact ≠ Official / Grand Slam.** Put that sentence on the lab-pack
+dataset card and on the Static docs Space. A visitor who lands on the Hub
+never opens the GitHub quickstart.
 
-## Org
+## Org is missing
 
-Target Hugging Face organization: **`ElectronicSlams`**. The founder creates
-it. Do not attach the GitHub org, a bot user, or a shared CI token as a
-stand-in owner.
+Target organization: **`ElectronicSlams`**. The founder creates it. Do not
+substitute a personal account, a bot, or a GitHub Actions token.
 
-Hub check **2026-09-23**: `GET /api/organizations/ElectronicSlams` returned
-404, `GET /api/users/ElectronicSlams/overview` returned 404, and a dataset
-search for `eslams` returned no rows. Re-check the Hub immediately before
-create in case the name is taken between this note and the click. Unrelated
-`eslam*` user accounts are not this project.
+Hub check **2026-09-23**:
 
-Nothing in this repository is an upload. Dataset and Space names below are
-skeletons for the founder standup.
+- `https://huggingface.co/ElectronicSlams` and
+  `GET /api/organizations/ElectronicSlams` → **404**
+- Public dataset search `eslams` → no rows
+- Unauthenticated `GET /api/datasets/...` and `GET /api/spaces/...` return
+  401 for nonsense names as well, so 401 is not evidence that a repo exists
 
-## Dataset skeleton
+Re-check the Hub the day the org is created. Unrelated `eslam*` users are
+not this project. This repository has no Hub token and must not gain one.
 
-Public warehouse (Hugging Face, after scrub). GitHub does not hold these
-trees.
+Until the org exists there is no Collection, no dataset, and no Space.
 
-| Hugging Face dataset | What it is for | GitHub |
-| --- | --- | --- |
-| `ElectronicSlams/eslams-sample-runs` | Tier **A** canary runs and tier **A-EX** teaching fails | Thin samples only. Today that is `sample_runs/model_battle_sample/` and `sample_runs/model_eval_sample/`. A later extract may add `sample_runs/success/` and `sample_runs/examples/`. |
-| `ElectronicSlams/eslams-official-suite-archive` | Tier **B** historical score proofs | `sample_runs/manifests/` pointers only, when that directory exists. Not the proof blobs. |
-| `ElectronicSlams/eslams-phoenix-strict-clean` | Tier **C** phoenix `strict-clean-v1` | Pointers / manifest rows only. |
-| `ElectronicSlams/eslams-eval-archaeology` | Tier **C-EX** plus scrubbed leaderboard **DUMP** | An index or manifest only. |
+## Lab pack pointer
 
-Optional later, still public and tiny: `ElectronicSlams/eslams-lab-smoke` for
-a bring-your-own case pack. It is not the warehouse.
+The lab sample pack is one dataset:
 
-`ElectronicSlams/eslams-retired-eval-dump` as a private default dump is
-retired. Private Hub storage is only for rows that cannot be scrubbed, each
-with a reason. See [Retired eval archive](RETIRED_EVAL_ARCHIVE.md).
+`https://huggingface.co/datasets/ElectronicSlams/eslams-sample-runs`
 
-Dataset cards, when the repos exist, should say: samples are MIT where the
-GitHub license applies; pin `eslams-core==0.6.1`; the official suite is
-historical; Local Artifact is not Official or Grand Slam. Contact for paid
-official work: `hello@eslams.com`.
+It is reserved for tier **A** (the 861 tic-tac-toe-skewed canary — not the
+full 50-arena suite) and tier **A-EX** (≤50 labeled teaching fails). Archive
+datasets are a different page:
+[Retired eval archive](RETIRED_EVAL_ARCHIVE.md). Do not send a first-time
+lab user to those repos.
 
-## Collection and Static docs Space
+That dataset does not exist yet. Until it does, the only pack in git is:
 
-MVP Hub surface, after the org exists:
+| Path | What it is |
+| --- | --- |
+| `sample_runs/model_battle_sample/run_eeab67d58b994ca7.eslams` | Battlefield-sample fixture on disk |
+| `sample_runs/model_eval_sample/official_signed.eslams` | Official-proof fixture |
 
-```text
-ElectronicSlams/
-  collections/eslams-core          # Collection: Core + datasets + docs Space
-  datasets/eslams-sample-runs
-  datasets/eslams-official-suite-archive
-  datasets/eslams-phoenix-strict-clean
-  datasets/eslams-eval-archaeology
-  spaces/eslams-docs               # Static Space (free). No compute.
-  spaces/eslams-lab-runner         # Later / optional. Not part of standup.
-```
+`sample_runs/README.md` and the root README still name battle id
+`run_d48ff364a0b949df`. That file is not in the tree. Use
+`run_eeab67d58b994ca7`.
 
-Collection `eslams-core` should link GitHub `ElectronicSlams/eSlams`, PyPI
-`eslams-core`, the datasets above, and `spaces/eslams-docs`.
+When `eslams-sample-runs` exists, the download line in `docs/LABS.md` is the
+one to follow (`hf download ElectronicSlams/eslams-sample-runs --repo-type
+dataset`). There is no sample manifest in git yet (id, sha256, Hub path).
+Classification schema is
+[PR #14](https://github.com/ElectronicSlams/eSlams/pull/14).
 
-Static Space `eslams-docs` outline:
+## Collection and Static Space
 
-1. What Core is, and `pip install eslams-core==0.6.1`.
-2. Banner: Local Artifact is not Official or Grand Slam.
-3. Bring-your-own keys: environment variable **names** only, same set as
-   [the provider guide](PROVIDERS.md). No values.
-4. Links to the public datasets once they exist, plus the GitHub sample
-   paths.
-5. Retired-suite line: historical archive, former hidden proofs may be
-   public after scrub, not a live leaderboard.
-6. Link back to this repository’s docs.
+Also absent. After the org exists, the lab-facing Hub surface is:
 
-Static Spaces expose variables in the browser. Do not put secrets, tokens,
-or signed URLs in that Space.
+- Collection **`eslams-core`** — GitHub `ElectronicSlams/eSlams`, PyPI
+  `eslams-core`, dataset `eslams-sample-runs`, Space `eslams-docs`
+- Space **`ElectronicSlams/eslams-docs`** — Static, no compute
 
-## Gradio runner (later / optional)
+Static Space copy, in order: pin `eslams-core==0.6.1`; Local Artifact ≠
+Official / Grand Slam; bring your own keys (names only, see
+[docs/PROVIDERS.md](PROVIDERS.md)); link `eslams-sample-runs`; link this
+repo. Static Space variables are visible in the browser. No secrets, tokens,
+or signed URLs on that Space.
 
-`spaces/eslams-lab-runner` is not required for the org standup. If it is
-built later:
+`ElectronicSlams/eslams-lab-runner` (Gradio) is optional and later. It is
+not required to download the lab pack or to run Core.
 
-- Ship it with **no** organization secrets.
-- Labs use **Duplicate this Space**, then add **their** keys under
-  Settings → Variables and secrets. Hub does not copy Secrets onto a
-  duplicate.
-- The app should refuse live provider calls until those Secrets exist.
-  Built-in `random` / `first-legal` agents do not need a key.
-- Organization Gradio Spaces generally need a paid Hub plan. Do not block
-  the Static docs Space or the dataset skeleton on that plan.
+## Space secrets are BYO on a duplicate
 
-## Where lab secrets live
+Local runs do not need a Space. Keys stay in the lab's own environment
+(quickstart + [SECURITY.md](../SECURITY.md)).
 
-Two allowed places, both owned by the lab:
+If the Gradio runner is published, the shared template ships with **no**
+organization provider keys:
 
-1. **Local environment.** `pip install eslams-core==0.6.1`, then the lab
-   exports only the variables for the providers they call
-   (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
-   `OPENROUTER_API_KEY`, `AWS_BEARER_TOKEN_BEDROCK`). Names match
-   [SECURITY.md](../SECURITY.md) and [docs/PROVIDERS.md](PROVIDERS.md).
-   Core reads credentials from the environment. It does not take them as
-   CLI arguments.
-2. **Secrets on a duplicated Space.** Only after a lab duplicates
-   `eslams-lab-runner` (when that Space exists) and sets Secrets on the
-   copy. The template Space stays empty.
+1. The lab uses **Duplicate this Space**. Hub copies public Variables. It
+   does not copy Secrets.
+2. On the duplicate: Settings → Variables and secrets → New secret, with
+   **the lab's** provider keys.
+3. The template does not call a live provider until those Secrets exist.
+   `random` and `first-legal` need no key.
 
-eSlams organization provider keys do **not** go in:
+A Variable is public and is copied onto duplicates. A key does not go in a
+Variable. eSlams organization provider keys do not go in GitHub Actions,
+Platform, `eslams-docs`, or the unduplicated runner. Core CI does not use
+provider keys; PyPI publish uses trusted publishing.
 
-- GitHub Actions (Core CI is tests, schema export, and lint; PyPI publish
-  uses trusted publishing, not a provider key)
-- Platform / eslams.com worker or dashboard secrets, for lab or demo burns
-- a shared Space, including `eslams-docs` and any unduplicated runner
+Organization Gradio Spaces generally need a paid Hub plan. That plan does
+not gate the Static Space or `eslams-sample-runs`.
 
-Variables on a Space are public and are copied on duplicate. Never put a
-key in a Variable.
+## Nothing secret in this repo
 
-## No live credentials in the repo
-
-This repository must not contain live API keys, Hub tokens, Cloudflare or
-GitHub tokens, signing private keys, session secrets, pre-signed or signed
-gateway URLs, or auth / Trinity material. Documentation may name environment
-variables. It must not assign them values. Placeholder ellipses in the
-README (`export OPENAI_API_KEY=...`) are not credentials and must stay
-empty.
-
-Do not commit `.env` files, Space secret exports, or eval blobs pulled from
-R2. Archive hosting rules are in
-[Retired eval archive](RETIRED_EVAL_ARCHIVE.md).
-
-## See also
-
-- [Retired eval archive](RETIRED_EVAL_ARCHIVE.md) — tiers, scrub, R2 hold.
-- [Provider guide](PROVIDERS.md) — adapter and environment-variable names.
-- [Security](../SECURITY.md) — credentials stay out of artifacts and receipts.
-- Companion docs on other open PRs, not in this change:
-  [Lab quickstart](https://github.com/ElectronicSlams/eSlams/pull/13)
-  (`docs/LABS.md`),
-  [sample classification](https://github.com/ElectronicSlams/eSlams/pull/14)
-  (`docs/SAMPLE_CLASSIFICATION.md`),
-  [`/labs` contract](https://github.com/ElectronicSlams/eSlams/pull/15)
-  (`docs/LABS_PAGE_CONTRACT.md`).
+Docs may name env vars and Hub repo ids. They must not contain API keys,
+Hub tokens, signing private keys, or signed gateway URLs.
