@@ -4,6 +4,8 @@
 # Override the interpreter with: make <target> PYTHON=python
 
 PYTHON ?= python3
+# Core CI passes the job interpreter to mypy. pyproject pins mypy to 3.9.
+PYTHON_VERSION = $(shell $(PYTHON) -c 'import sys; print("%d.%d" % sys.version_info[:2])')
 
 .DEFAULT_GOAL := help
 
@@ -21,8 +23,8 @@ test: ## Run pytest
 lint: ## Run Ruff
 	$(PYTHON) -m ruff check .
 
-typecheck: ## Run mypy on src
-	$(PYTHON) -m mypy src
+typecheck: ## Run mypy on src for the active Python version
+	$(PYTHON) -m mypy --python-version $(PYTHON_VERSION) src
 
 typecheck-ts: ## Type-check core-contracts and core-lite
 	npx --yes --package typescript@5.5.4 tsc --noEmit -p packages/core-contracts/tsconfig.json
