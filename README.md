@@ -79,7 +79,7 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-Core supports Python 3.9 through 3.12.
+Core supports Python 3.9 through 3.12. Secret names this repo reads are in `.env.example`; copy it to `.env` and do not commit that file.
 
 ## Quick Start
 
