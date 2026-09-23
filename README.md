@@ -24,6 +24,7 @@ catalogue listed below.
 
 - [Install](#install)
 - [Quick Start](#quick-start)
+- [Wave A lab path](docs/WAVE_A_LAB_PATH.md)
 - [Run Model Agents](#run-model-agents)
 - [Build an HTTP Agent](#build-an-http-agent)
 - [What a Run Produces](#what-a-run-produces)
