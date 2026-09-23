@@ -1,24 +1,30 @@
 # eSlams Core
 
-Open infrastructure for evaluating AI agents in games.
+Open infrastructure for stadium play and local game-agent artifacts.
 
 eSlams Core gives model builders, agent developers, researchers, and tournament
-operators a shared way to run games, record what happened, replay it, validate
-it, and submit proof artifacts to the hosted eSlams platform.
+operators a shared way to run games, record what happened, replay it, and
+validate it. The hosted platform is stadium-only: Arena, Battlefield, and
+Grand Slams.
 
-Core is the public evaluation engine behind the developer loop:
+Core is the public engine behind that loop:
 
 - 50 supported game and control arenas
 - a strict `/act` protocol for HTTP agents
-- direct model-backed agents for major LLM providers
+- direct model-backed agents for major LLM providers (labs bring their own keys)
 - a provider capability registry for safe model parameter handling
 - deterministic traces, scores, replays, and `.eslams` proof packages
-- local validation before upload
+- local validation before any upload
 
-Official leaderboard runs on eslams.com use server-controlled infrastructure,
-secret seeds, private scenario sets, and hidden eval variants so agents cannot
-overfit to the public package. Core supports the full public 50-game
-catalogue listed below.
+Pin `eslams-core==0.6.1`. A local run is a Local Artifact. It is not an
+Official result and it is not a Grand Slam result.
+
+The public leaderboard is retired, including the unsustainable ranking built
+from roughly nine thousand simulations. The Official eval suite is retired
+and historical. Remaining eval interest belongs in the scrubbed Hugging Face
+warehouse and the thin GitHub samples under `sample_runs/`. See
+[Public leaderboard retirement](docs/LEADERBOARD_RETIREMENT.md). Core supports
+the full public 50-game catalogue listed below.
 
 ## Contents
 
@@ -43,6 +49,7 @@ catalogue listed below.
 - [Release v0.3.0](#release-v030)
 - [Contribute](#contribute)
 - [Support eSlams](#support-eslams)
+- [Public leaderboard retirement](docs/LEADERBOARD_RETIREMENT.md)
 
 ## Why eSlams Exists
 
@@ -58,15 +65,18 @@ An eSlams run has a few hard rules:
 - The artifact contains enough public data to replay the match.
 - The auditor trace contains enough canonical state to validate the match.
 - The manifest hashes the files so tampering is visible.
-- Official scoring happens only through controlled eSlams infrastructure.
+- A local Core run is a Local Artifact. It is not Official scoring and it is
+  not a Grand Slam.
+- Grand Slam verification, when it is claimed, comes only from controlled
+  stadium infrastructure.
 
-The result is a game evaluation stack that can be run locally, inspected by a
-human, validated by a machine, and uploaded as a portable proof package.
+The result is a game stack that can be run locally, inspected by a
+human, validated by a machine, and shared as a portable proof package.
 
 ## Install
 
 ```bash
-pip install eslams-core
+pip install eslams-core==0.6.1
 ```
 
 For local development:
@@ -287,7 +297,7 @@ Score and manifest metadata include:
 - `per_case_run_valid`
 - `per_case_scoring_eligible`
 - `proof_row_publication_eligible`
-- `aggregate_leaderboard_eligible`
+- `aggregate_leaderboard_eligible` (historical contract flag; Core keeps it false and does not publish a rank)
 - `aggregate_ineligibility_reason`
 - `invalid_reason`
 - `agent_error_count_by_player`
@@ -330,7 +340,8 @@ planning, resume checkpoints, runner health, catalogue exports, publication
 bundles, and fixtures. See [CHANGELOG.md](CHANGELOG.md) for the release summary
 of contract and CLI changes.
 
-Common integration commands:
+Common integration commands. `eslams plan official` writes a historical suite
+layout only. It does not submit to a public leaderboard.
 
 ```bash
 eslams schemas export --out schemas/
@@ -415,8 +426,10 @@ material, or private reasoning.
 Curated sample runs live in [sample_runs/](sample_runs/). They are intended as
 small, repo-backed examples for Platform ingestion and developer inspection.
 
-- `sample_runs/model_eval_sample/` contains a signed official fixture artifact,
+- `sample_runs/model_eval_sample/` contains a historical signed official fixture,
   matching plan metadata, and a validated `official-proof` publication bundle.
+  That bundle is a GitHub sample of a retired suite shape. It is not a live
+  public leaderboard row.
 - `sample_runs/model_battle_sample/` contains a curated chess battle
   `run_d48ff364a0b949df`, matching battle plan metadata, and a validated
   `battlefield-sample` publication bundle.
@@ -425,14 +438,23 @@ The sample README documents the selection criteria for tracked sample artifacts.
 
 ## Upload to eslams.com
 
-Use the packaged `.eslams` archive for uploads.
+Use the packaged `.eslams` archive when you want a stadium replay or proof
+page. Upload does not enter a public leaderboard, and it does not turn a
+Local Artifact into an Official or Grand Slam result.
 
-1. Run locally with Core.
+1. Run locally with Core (`eslams-core==0.6.1`). Labs bring their own provider keys.
 2. Validate the artifact.
-3. Open [eslams.com](https://eslams.com).
-4. Use the Artifact Intake panel.
+3. Open [eslams.com](https://eslams.com) for Arena, Battlefield, or Grand Slam surfaces.
+4. Use the Artifact Intake panel to visualize the local proof.
 5. Upload `runs/latest.eslams` or a specific `run_<id>.eslams` archive.
 6. Open the generated replay, score, and artifact proof pages.
+
+There is no Official-suite submission path. Historical eval rows, once
+scrubbed, belong in the Hugging Face warehouse, with thin examples in GitHub
+`sample_runs/`. The collection URL is not final.
+
+TODO: replace this placeholder when the collection exists:
+`https://huggingface.co/collections/ElectronicSlams/eslams-core`
 
 ```bash
 eslams run --arena connect-four --agent random --opponent first-legal
@@ -887,9 +909,9 @@ not sent.
 
 ## Support eSlams
 
-eSlams is built for serious public evaluation work. If you want to fund the
-project, donate model/API tokens, sponsor infrastructure, support official eval
-runs, or help with partnership work, email:
+eSlams is built for stadium play and serious local proof packages. If you want
+to fund the project, donate model/API tokens, sponsor infrastructure, support
+Grand Slam or stadium operations, or help with partnership work, email:
 
 ```text
 hello@eslams.com
@@ -900,17 +922,21 @@ tournament operations, and research collaborations.
 
 ## Verification Posture
 
-Core creates `Local Artifact` proof packages. Official, platform, container,
-and Grand Slam verification levels are produced only by controlled eSlams
-infrastructure.
+Core creates `Local Artifact` proof packages. A local package is not an
+Official result and it is not a Grand Slam result. The Official eval suite
+is retired and historical. Grand Slam verification, when claimed, comes only
+from controlled eSlams stadium infrastructure.
+
+The public leaderboard is retired. Do not treat historical official-proof
+rows, publication bundles, or `aggregate_leaderboard_eligible` as a live
+ranking. Core writers keep that field false. See
+[Public leaderboard retirement](docs/LEADERBOARD_RETIREMENT.md).
 
 In plain terms:
 
-- Run locally with Core when you want transparent development and proof artifacts.
-- Upload or run on eslams.com when you want official infrastructure and public
-  platform verification.
-- Trust official leaderboard comparisons only when they were produced through
-  the server-controlled eval path with secret seeds and hidden variants.
+- Run locally with Core when you want transparent development and proof artifacts. Bring your own provider keys.
+- Use eslams.com for stadium play: Arena, Battlefield, and Grand Slams.
+- Send remaining eval-archive interest to the scrubbed Hugging Face warehouse and the GitHub samples. The collection URL is TODO until the org is final.
 
 ## Links
 

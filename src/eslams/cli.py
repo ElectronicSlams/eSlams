@@ -61,7 +61,11 @@ from eslams.runner_session import default_runner_session_store
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="eslams",
-        description="Run, validate, and replay eSlams artifacts.",
+        description=(
+            "Run, validate, and replay local eSlams artifacts. "
+            "A local run is not an Official or Grand Slam result. "
+            "The public leaderboard is retired."
+        ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -153,9 +157,15 @@ def main(argv: list[str] | None = None) -> int:
             command.add_argument("--include-render", action="store_true")
             command.add_argument("--include-animation", action="store_true")
 
-    plan = sub.add_parser("plan", help="Create deterministic no-secret eval plans.")
+    plan = sub.add_parser(
+        "plan",
+        help="Create deterministic plans. Official plans are historical, not a live ranking.",
+    )
     plan_sub = plan.add_subparsers(dest="plan_command", required=True)
-    plan_official = plan_sub.add_parser("official", help="Plan an official eval suite.")
+    plan_official = plan_sub.add_parser(
+        "official",
+        help="Plan a historical official-suite layout. Does not submit to a leaderboard.",
+    )
     plan_official.add_argument("--suite", required=True)
     plan_official.add_argument("--providers", default="")
     plan_official.add_argument("--arenas", default="")
@@ -192,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     publish_sub = publish.add_subparsers(dest="publish_command", required=True)
     publish_export = publish_sub.add_parser(
         "export",
-        help="Export deterministic publication bundle files.",
+        help="Export publication files. Not a public leaderboard submission.",
     )
     publish_export.add_argument(
         "--kind",
@@ -210,9 +220,15 @@ def main(argv: list[str] | None = None) -> int:
     publish_validate.add_argument("bundle", type=Path)
     publish_validate.add_argument("--json", action="store_true")
 
-    official = sub.add_parser("official", help="Official result helpers.")
+    official = sub.add_parser(
+        "official",
+        help="Historical official-result helpers. Does not rank or submit to a leaderboard.",
+    )
     official_sub = official.add_subparsers(dest="official_command", required=True)
-    official_merge = official_sub.add_parser("merge", help="Merge official result artifacts.")
+    official_merge = official_sub.add_parser(
+        "merge",
+        help="Merge historical official result artifacts. Output is not a Grand Slam.",
+    )
     official_merge.add_argument("run_dir", type=Path)
     official_merge.add_argument("--out", type=Path, required=True)
 
@@ -325,6 +341,7 @@ def main(argv: list[str] | None = None) -> int:
         "--execution-profile",
         choices=["interactive", "smoke", "official_eval"],
         default="interactive",
+        help="official_eval is historical and does not submit to a leaderboard.",
     )
     run.add_argument(
         "--reasoning",
@@ -387,7 +404,10 @@ def main(argv: list[str] | None = None) -> int:
     agent_test.add_argument("--url", required=True)
     agent_test.add_argument("--arena", default="tic-tac-toe", choices=registry.list())
     agent_test.add_argument("--seed", type=int, default=1)
-    agent_publish = agent_sub.add_parser("publish", help="Print a platform registration payload.")
+    agent_publish = agent_sub.add_parser(
+        "publish",
+        help="Print a local registration payload. Does not submit to a leaderboard.",
+    )
     agent_publish.add_argument("--name", required=True)
     agent_publish.add_argument("--url", required=True)
     agent_serve = agent_sub.add_parser("serve", help="Serve a sample first-legal /act endpoint.")

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Retired public-leaderboard and live Official-suite language on the Core
+  surface. Stadium copy is Arena, Battlefield, and Grand Slam. Documented
+  installs pin `eslams-core==0.6.1`. A local artifact is not an Official or
+  Grand Slam result. See `docs/LEADERBOARD_RETIREMENT.md`.
+- CLI help for `plan official`, `official`, publication export, and
+  `--execution-profile official_eval` now says those paths do not submit to a
+  public leaderboard. Historical contract fields such as
+  `aggregate_leaderboard_eligible` are unchanged and stay false.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

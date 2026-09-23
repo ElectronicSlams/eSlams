@@ -87,7 +87,9 @@ eslams run --arena tic-tac-toe \
 ```
 
 OpenRouter sends `allow_fallbacks: false` whenever a provider order is present.
-Official plans should pin a route and verify the returned model. Bedrock model
+Historical official-suite plans, and any Grand Slam plan, should pin a route
+and verify the returned model. The Official suite is retired and is not a live
+leaderboard. Bedrock model
 IDs retain a literal colon such as `:0`; the CLI splits `provider:model` on the
 first colon and the adapter does not percent-encode the version separator.
 
@@ -107,7 +109,8 @@ Use `--reasoning disabled`, `enabled`, or `auto`.
 
 `auto` enables optional reasoning only for configured Arena families and known
 capabilities. The exact effective control is visible in registry metadata; do
-not infer it from a model name in official infrastructure.
+not infer it from a model name. Stadium runs (Arena, Battlefield, Grand Slam)
+use the pinned control. The retired Official suite does not add a public rank.
 
 ## Failure and Retry Semantics
 
@@ -118,9 +121,11 @@ makes the case unscoreable under the fail-closed defaults.
 
 `interactive` runs may opt into deterministic fallback, but every fallback is
 recorded as `fallback_action` and permanently invalid for scoring. The
-`official_eval` profile rejects fallback policies and nonzero adapter
-`max_retries`; whole-case retries belong to the official orchestrator and must
-increment `case_attempt_index`.
+`official_eval` profile is a historical fail-closed local profile. It rejects
+fallback policies and nonzero adapter `max_retries`. It does not submit to a
+leaderboard and it does not create an Official or Grand Slam result.
+Whole-case retries on that historical profile must increment
+`case_attempt_index`.
 
 An action repair is a second physical request with
 `attempt_kind: action_repair`. It never overwrites the primary attempt receipt.

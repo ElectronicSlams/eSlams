@@ -2,7 +2,11 @@
 
 Every serious run produces a `.eslams` proof package. `.eslams` is the
 portable zip-compatible archive. The expanded inspection directory uses the
-`.eslams.d` suffix.
+`.eslams.d` suffix. A package from Core is a Local Artifact. It is not an
+Official result, a Grand Slam result, or a public leaderboard row. The public
+leaderboard is retired. See
+[Public leaderboard retirement](LEADERBOARD_RETIREMENT.md). Pin
+`eslams-core==0.6.1`.
 
 Required structure:
 
@@ -70,7 +74,8 @@ overwrite is explicit.
 `runs/latest.eslams.d` points at the latest expanded copy.
 
 Public artifacts never include hidden official eval seeds or private judge-only
-data in public traces.
+data in public traces. The Official suite those seeds belonged to is retired
+and historical. A public artifact is not a live leaderboard row.
 
 ## Profiles and Public Exports
 
@@ -210,8 +215,11 @@ eslams publish validate bundle --json
 ```
 
 Bundles include public manifests, public replay files, proof index rows,
-leaderboard rows, provider/model rows, aggregate usage, an object manifest,
-checkpoint manifest, and signature/readback manifest. Core validates object
-hashes, projection hashes, public replay packages, aggregate usage shape, and
-proof-row policy without requiring secrets or storage credentials. Proof rows
-are evidence-only by default and do not imply aggregate leaderboard eligibility.
+historical `leaderboard_rows.jsonl` files, provider/model rows, aggregate
+usage, an object manifest, checkpoint manifest, and signature/readback
+manifest. Core validates object hashes, projection hashes, public replay
+packages, aggregate usage shape, and proof-row policy without requiring
+secrets or storage credentials. Proof rows are evidence-only by default.
+`aggregate_leaderboard_eligible` stays false and does not publish a rank.
+The public leaderboard is retired. See
+[Public leaderboard retirement](LEADERBOARD_RETIREMENT.md).
