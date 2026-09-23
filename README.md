@@ -917,4 +917,5 @@ In plain terms:
 - Platform: [https://eslams.com](https://eslams.com)
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
+- Core Low F7–F10 status (index only): [docs/CORE_LOW_F7_F10_STATUS.md](docs/CORE_LOW_F7_F10_STATUS.md)
 - Support: `hello@eslams.com`
