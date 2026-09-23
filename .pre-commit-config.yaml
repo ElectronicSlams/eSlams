@@ -7,6 +7,7 @@ repos:
     hooks:
       # `ruff check` using [tool.ruff] in pyproject.toml. `ruff` is a legacy alias.
       - id: ruff-check
+      # CI does not run `ruff format`. This hook rewrites files that are not yet formatted.
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
