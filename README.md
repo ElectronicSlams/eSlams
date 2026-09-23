@@ -69,6 +69,9 @@ human, validated by a machine, and uploaded as a portable proof package.
 pip install eslams-core
 ```
 
+Pinned install of the published package, and what that wheel includes, is in
+[docs/PYPI_CONSUMER.md](docs/PYPI_CONSUMER.md).
+
 For local development:
 
 ```bash
