@@ -24,7 +24,6 @@ catalogue listed below.
 
 - [Install](#install)
 - [Quick Start](#quick-start)
-- [Lab Quickstart](docs/LABS.md)
 - [Run Model Agents](#run-model-agents)
 - [Build an HTTP Agent](#build-an-http-agent)
 - [What a Run Produces](#what-a-run-produces)
@@ -750,6 +749,8 @@ eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
 ```
+
+Checked-in multi-arena smoke (Local Artifact, no provider keys): [docs/LAB_RUN.md](docs/LAB_RUN.md).
 
 ## Release v0.6.1
 

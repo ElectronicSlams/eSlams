@@ -38,12 +38,16 @@ Artifacts land in `runs/lab-smoke/` (gitignored). The runner validates each arch
 
 The runner rejects any case whose agent is not `random` or `first-legal`, so this path cannot spend a provider key.
 
+## Not the HF lab pack
+
+Smoke archives under `runs/lab-smoke/` are local output. They are not `ElectronicSlams/eslams-sample-runs` (that dataset is not live) and not Official / Grand Slam. The interim path is [docs/LAB_RUN.md](../../docs/LAB_RUN.md).
+
 ## Keyed smoke is separate
 
-A single BYO model smoke is documented in [docs/LABS.md](../../docs/LABS.md). Export **your** key, then run one `eslams run … --execution-profile smoke` command. Do not put that key in this suite, in CI, or in an org secret store for lab runs.
+One BYO model smoke uses **your** key and the commands in [docs/PROVIDERS.md](../../docs/PROVIDERS.md). Do not put that key in this suite, in CI, or in an org secret store.
 
 ## Related docs
 
-- [docs/LABS.md](../../docs/LABS.md)
+- [docs/LAB_RUN.md](../../docs/LAB_RUN.md)
 - [docs/PROVIDERS.md](../../docs/PROVIDERS.md)
 - [SECURITY.md](../../SECURITY.md)
