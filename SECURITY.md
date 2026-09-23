@@ -22,7 +22,9 @@ Security-sensitive areas include:
 - artifact-signing bugs
 - sandbox escapes
 - provider credential handling
-- leaderboard verification bypasses
+- Grand Slam or stadium verification bypasses
+- presenting a local artifact, a retired official-suite row, or a scrubbed
+  archive row as a live public ranking, Official result, or Grand Slam
 
 ## Provider and Artifact Boundaries
 
@@ -52,6 +54,8 @@ Official-case validation is fail-closed. A signature does not repair a fallback,
 provider failure, missing attempt, incomplete usage/cost record, route mismatch,
 or broken trace/replay/receipt join. Downstream systems may make Core validity
 stricter; they must never turn an upstream invalid or incomplete run into valid.
+The public leaderboard is retired. Passing `official-case` does not publish a
+rank, and it does not make a Local Artifact an Official or Grand Slam result.
 
 Use a reviewed `eslams.price-card-reference.v1` object for complete cost claims.
 An arbitrary rate-card string is diagnostic metadata and cannot prove cost

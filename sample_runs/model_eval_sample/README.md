@@ -1,8 +1,10 @@
 Model Eval Sample
 =================
 
-This sample demonstrates the official-eval publication shape using the signed
-official fixture artifact.
+This sample demonstrates the historical official-eval publication shape using
+the signed official fixture artifact. The Official suite is retired. This
+directory is a GitHub sample, not a live public leaderboard row. A Local
+Artifact is not an Official or Grand Slam result. Pin `eslams-core==0.6.1`.
 
 Contents:
 

@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
 authors = [{ name = "ElectronicSlams" }]
-keywords = ["ai", "evals", "agents", "games", "leaderboards", "replays"]
+keywords = ["ai", "evals", "agents", "games", "arenas", "replays"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",

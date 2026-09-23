@@ -4,6 +4,10 @@ Core emits portable contracts and files that Platform can consume. Core does
 not upload to R2, write D1 rows, run Wrangler, create Durable Objects, upload
 video, call Stream or YouTube, or require Cloudflare credentials.
 
+Platform use of these files is stadium-only: Arena, Battlefield, and Grand
+Slams. The public leaderboard is retired. The Official suite is historical.
+See [Public leaderboard retirement](LEADERBOARD_RETIREMENT.md).
+
 ## Contract Schemas
 
 Export deterministic JSON schemas:
@@ -255,9 +259,10 @@ Canonical validation summary shape:
 Machine keys ending in `_key` are lowercase, version-stable policy inputs.
 Labels ending in `_label` are display text and may change for presentation.
 Core separates per-case run validity, per-case scoring eligibility, proof-row
-publication eligibility, and aggregate leaderboard eligibility. A valid
-one-case proof row is evidence by default; it does not imply public ranked
-leaderboard eligibility.
+publication eligibility, and the historical `aggregate_leaderboard_eligible`
+flag. A valid one-case proof row is evidence by default. The public
+leaderboard is retired, so that flag does not publish a rank. See
+[Public leaderboard retirement](LEADERBOARD_RETIREMENT.md).
 
 ## Public Replay Export
 
@@ -502,7 +507,10 @@ eslams catalogue renderers --json
 ```
 
 Models distinguish `official_eval`, `battlefield`, and `arena` capabilities.
-Every model/game availability row has a status or absence reason.
+`official_eval` is a historical capability flag for the retired Official
+suite. It is not a live public-leaderboard entitlement. Stadium surfaces are
+Arena, Battlefield, and Grand Slam. Every model/game availability row has a
+status or absence reason.
 Renderer rows classify all 50 arenas by renderer family, timeline
 completeness, public safety, visible frames, state frames, move frames, and
 state-hash status.
@@ -528,11 +536,14 @@ eslams publish validate bundle --json
 ```
 
 Bundles include public manifests, public replay files, proof index rows,
-leaderboard rows, provider/model rows, aggregate usage, object manifests,
-checkpoint manifests, and signature/readback manifests. Proof rows are marked
-as evidence rows and are not leaderboard predicates by default. Bundle manifests
-also carry publication kind key/label and aggregate leaderboard eligibility.
-They use `eslams.publication.bundle.v1`; validation emits
+historical `leaderboard_rows.jsonl` files, provider/model rows, aggregate
+usage, object manifests, checkpoint manifests, and signature/readback
+manifests. Proof rows are evidence. They are not a live ranking, and they
+are not leaderboard predicates by default. Bundle manifests also carry
+publication kind key/label and `aggregate_leaderboard_eligible`, which Core
+keeps false. The public leaderboard is retired. See
+[Public leaderboard retirement](LEADERBOARD_RETIREMENT.md). Bundles use
+`eslams.publication.bundle.v1`; validation emits
 `eslams.publication.validation.v1` and checks object hashes, projection hashes,
 public replay validity, aggregate usage shape, and proof-row publication policy.
 
