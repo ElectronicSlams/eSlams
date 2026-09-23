@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Action version bumps only. Does not rewrite existing pins in ci.yml or publish.yml.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # Root pyproject.toml (no lockfile). Runtime and dev extras.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python:
+        patterns:
+          - "*"
