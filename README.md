@@ -917,4 +917,5 @@ In plain terms:
 - Platform: [https://eslams.com](https://eslams.com)
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
+- Claim vocabulary (Local Artifact, Official, Grand Slam): [docs/CLAIM_VOCAB.md](docs/CLAIM_VOCAB.md)
 - Support: `hello@eslams.com`
