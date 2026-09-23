@@ -1,0 +1,18 @@
+id: lab-smoke
+package: eslams-core
+core_pin: "0.6.1"
+verification_level: "Local Artifact"
+execution_profile: smoke
+eval_suite_version: lab-smoke:0.6.1
+banner: "Local Artifact != Official / Grand Slam"
+cases:
+  - cases/01-ttt-random-vs-first-legal.yaml
+  - cases/02-ttt-first-legal-vs-first-legal.yaml
+  - cases/03-ttt-random-vs-random.yaml
+  - cases/04-c4-random-vs-first-legal.yaml
+  - cases/05-c4-first-legal-vs-first-legal.yaml
+  - cases/06-c4-random-vs-random.yaml
+  - cases/07-othello-random-vs-first-legal.yaml
+  - cases/08-othello-first-legal-vs-first-legal.yaml
+  - cases/09-chess-first-legal-vs-first-legal.yaml
+  - cases/10-chess-random-vs-first-legal.yaml

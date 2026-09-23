@@ -1,0 +1,6 @@
+id: ttt-first-legal-vs-first-legal-s2
+arena: tic-tac-toe
+agent: first-legal
+opponent: first-legal
+seed: 2
+execution_profile: smoke

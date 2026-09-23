@@ -1,0 +1,7 @@
+id: chess-first-legal-vs-first-legal-s1
+arena: chess
+agent: first-legal
+opponent: first-legal
+seed: 1
+max_turns: 8
+execution_profile: smoke

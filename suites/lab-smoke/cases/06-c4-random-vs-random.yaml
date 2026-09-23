@@ -1,0 +1,6 @@
+id: c4-random-vs-random-s11
+arena: connect-four
+agent: random
+opponent: random
+seed: 11
+execution_profile: smoke

@@ -1,0 +1,6 @@
+id: othello-random-vs-first-legal-s1
+arena: othello
+agent: random
+opponent: first-legal
+seed: 1
+execution_profile: smoke

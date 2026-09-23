@@ -1,0 +1,6 @@
+id: c4-first-legal-vs-first-legal-s7
+arena: connect-four
+agent: first-legal
+opponent: first-legal
+seed: 7
+execution_profile: smoke
