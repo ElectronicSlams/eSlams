@@ -14,6 +14,8 @@ python -m mypy src/eslams
 tsc -p packages/core-contracts/tsconfig.json
 ```
 
+Run `pre-commit install` once so commits use the same Ruff check as CI.
+
 Python 3.9, 3.10, 3.11, and 3.12 are supported. Before a release, run the
 suite in each interpreter, build the wheel and sdist, run `twine check`, export
 the schema bundle twice, and compare the bytes.

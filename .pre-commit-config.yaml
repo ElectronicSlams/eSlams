@@ -1,0 +1,19 @@
+# Local checks aligned with CI's `ruff check .` (see .github/workflows/ci.yml).
+# Does not add a workflow. Action pin updates stay with #26.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # v0.16.8 @ 2eeb5678de71a00c0902cbda7105d328432f72cb
+    rev: v0.16.8
+    hooks:
+      # `ruff check` using [tool.ruff] in pyproject.toml. `ruff` is a legacy alias.
+      - id: ruff-check
+      # CI does not run `ruff format`. This hook rewrites files that are not yet formatted.
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    # v6.0.0 @ 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
