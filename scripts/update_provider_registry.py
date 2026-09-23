@@ -240,7 +240,8 @@ def _records_from_provider_apis() -> list[dict[str, Any]]:
     google_key = os.getenv("GEMINI_API_KEY")
     if google_key:
         data = _fetch_json(
-            f"https://generativelanguage.googleapis.com/v1beta/models?key={google_key}"
+            "https://generativelanguage.googleapis.com/v1beta/models",
+            headers={"x-goog-api-key": google_key},
         )
         if isinstance(data, dict):
             for item in data.get("models", []):

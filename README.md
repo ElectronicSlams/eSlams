@@ -246,6 +246,11 @@ def act(request):
 server.run()
 ```
 
+`server.run()` and `eslams agent serve` bind `127.0.0.1` by default and serve
+the sample first-legal handler. Binding `0.0.0.0` is an explicit opt-in
+(`server.run(host="0.0.0.0")` or `eslams agent serve --host 0.0.0.0`). `/act`
+and `/health` stay unauthenticated on either bind.
+
 Test it locally:
 
 ```bash

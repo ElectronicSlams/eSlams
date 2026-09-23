@@ -48,7 +48,12 @@ class AgentServer:
         except ProtocolError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    def run(self, *, host: str = "0.0.0.0", port: int = 8000) -> None:
+    def run(self, *, host: str = "127.0.0.1", port: int = 8000) -> None:
+        """Serve ``/act`` and ``/health``.
+
+        The default bind is loopback. ``host="0.0.0.0"`` is an explicit opt-in
+        for the sample first-legal handler. Neither route is authenticated.
+        """
         import uvicorn
 
         uvicorn.run(self.app, host=host, port=port)
