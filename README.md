@@ -750,6 +750,8 @@ eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
 ```
 
+Checked-in multi-arena smoke (Local Artifact, no provider keys): [docs/LAB_RUN.md](docs/LAB_RUN.md).
+
 ## Release v0.6.1
 
 `v0.6.1` is the portable provenance patch for the Core 0.6 integrity release.

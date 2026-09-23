@@ -1,0 +1,6 @@
+id: ttt-random-vs-random-s3
+arena: tic-tac-toe
+agent: random
+opponent: random
+seed: 3
+execution_profile: smoke

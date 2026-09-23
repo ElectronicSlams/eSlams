@@ -1,0 +1,6 @@
+id: othello-first-legal-vs-first-legal-s4
+arena: othello
+agent: first-legal
+opponent: first-legal
+seed: 4
+execution_profile: smoke

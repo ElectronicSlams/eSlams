@@ -1,0 +1,6 @@
+id: c4-random-vs-first-legal-s1
+arena: connect-four
+agent: random
+opponent: first-legal
+seed: 1
+execution_profile: smoke

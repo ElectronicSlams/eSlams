@@ -16,7 +16,7 @@ Included samples:
 
 - `model_eval_sample/` uses the signed official fixture artifact as a compact
   model-eval publication example.
-- `model_battle_sample/` uses `run_d48ff364a0b949df`, a curated chess battle
-  between `composer-2.5` and `grok-build-0.1`.
+- `model_battle_sample/` uses `run_eeab67d58b994ca7.eslams`, a short built-in
+  first-legal versus first-legal chess run (see that directory's README).
 
 Scratch harness state and exploratory local runs are intentionally omitted.
