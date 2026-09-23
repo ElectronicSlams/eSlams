@@ -14,6 +14,8 @@ python -m mypy src/eslams
 tsc -p packages/core-contracts/tsconfig.json
 ```
 
+`tests/test_keyless_local_smoke.py` is the keyless Local Artifact smoke (related: #29, #18).
+
 Python 3.9, 3.10, 3.11, and 3.12 are supported. Before a release, run the
 suite in each interpreter, build the wheel and sdist, run `twine check`, export
 the schema bundle twice, and compare the bytes.
