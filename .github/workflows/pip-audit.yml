@@ -1,0 +1,48 @@
+name: pip-audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly. Offset from other Monday schedules so the jobs do not start together.
+    - cron: "23 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    name: Audit Python dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install package and pip-audit
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pip install pip-audit
+
+      - name: Audit installed dependencies
+        run: |
+          # Fail closed on every advisory except the IDs below.
+          # Those fixes are outside the caps in pyproject.toml:
+          # cryptography<47 (newest installable 46.0.7; fixes 48.0.1 / 49.0.0 / 50.0.0)
+          # and pytest<9 (newest installable 8.4.2; fix 9.0.3, affected through 9.0.2).
+          # PYSEC-2026-3554: X.509 name-constraint wildcard, fix 49.0.0
+          # PYSEC-2026-3552: PKCS#7 EnvelopedData decrypt oracle, fix 50.0.0
+          # PYSEC-2026-3553: certificate chain-build DoS, fix 49.0.0
+          # GHSA-537c-gmf6-5ccf: vendored OpenSSL in cryptography wheels, fix 48.0.1
+          # PYSEC-2026-1845: UNIX /tmp/pytest-of-{user} (dev extra only), fix 9.0.3
+          pip-audit --progress-spinner off \
+            --ignore-vuln PYSEC-2026-3554 \
+            --ignore-vuln PYSEC-2026-3552 \
+            --ignore-vuln PYSEC-2026-3553 \
+            --ignore-vuln GHSA-537c-gmf6-5ccf \
+            --ignore-vuln PYSEC-2026-1845
