@@ -917,4 +917,5 @@ In plain terms:
 - Platform: [https://eslams.com](https://eslams.com)
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
+- Open OSS drafts (reviewer map): [docs/OPEN_OSS_DRAFTS.md](docs/OPEN_OSS_DRAFTS.md)
 - Support: `hello@eslams.com`
