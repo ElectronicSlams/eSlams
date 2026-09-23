@@ -861,7 +861,11 @@ instead of depending on Git being available at runtime.
 ## Contribute
 
 Good contributions make eSlams more trustworthy, more portable, or easier to
-use. Strong areas to contribute:
+use.
+
+- Contributor holds: [docs/CONTRIBUTOR_HOLDS.md](docs/CONTRIBUTOR_HOLDS.md)
+
+Strong areas to contribute:
 
 - arena rule fixes
 - better observations for existing games
