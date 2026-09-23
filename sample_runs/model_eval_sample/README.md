@@ -2,7 +2,8 @@ Model Eval Sample
 =================
 
 This sample demonstrates the official-eval publication shape using the signed
-official fixture artifact.
+official fixture artifact. The file is in this git checkout. It is not a live
+Official result, not a Grand Slam result, and not a Hugging Face download.
 
 Contents:
 
