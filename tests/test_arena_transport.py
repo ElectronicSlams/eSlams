@@ -6,6 +6,9 @@ import pytest
 import eslams.arenas  # noqa: F401
 from eslams.arena import registry
 from eslams.arena_transport import (
+    DEVELOPMENT_SESSION_SECRET,
+    SESSION_SIGNATURE_PATH,
+    SessionSecretError,
     StateHashMismatch,
     deserialize_state,
     initial_state,
@@ -19,7 +22,19 @@ from eslams.arena_transport import (
 )
 from eslams.cli import main
 from eslams.contracts.safety import scan_public_payload
+from eslams.contracts.security import sign_runner_request
 from eslams.public_catalogue import PUBLIC_GAME_CATALOGUE_BY_ID
+
+ARENA_TEST_SECRET = "arena-session-test-secret-32chars-ok"
+
+
+@pytest.fixture(autouse=True)
+def _arena_session_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ESLAMS_ARENA_SESSION_SECRET", ARENA_TEST_SECRET)
+    monkeypatch.delenv("ESLAMS_ENV", raising=False)
+    monkeypatch.delenv("ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET", raising=False)
+    monkeypatch.delenv("ESLAMS_ARENA_SESSION_MAX_AGE_SECONDS", raising=False)
+
 
 REQUIRED_DESCRIPTOR_FIELDS = {
     "token",
@@ -280,6 +295,85 @@ def test_arena_session_golden_representative_descriptors():
         assert descriptor["category"] == row["first_category"]
         assert [event["type"] for event in start["events"]] == row["start_event_types"]
         assert start["display_frame"]["renderer_family"] == row["renderer_family"]
+
+
+def test_arena_session_fails_closed_without_a_configured_secret(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ESLAMS_ARENA_SESSION_SECRET", raising=False)
+    with pytest.raises(SessionSecretError, match="ESLAMS_ARENA_SESSION_SECRET is required"):
+        start_session("tic-tac-toe", "standard", 1, _players_for(("player_1", "player_2")))
+
+    monkeypatch.setenv("ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET", "1")
+    started = start_session("tic-tac-toe", "standard", 1, _players_for(("player_1", "player_2")))
+    assert started["session_state"]["signature"]["keyId"] == "development-unconfigured"
+
+    monkeypatch.setenv("ESLAMS_ENV", "production")
+    with pytest.raises(SessionSecretError, match="ESLAMS_ARENA_SESSION_SECRET is required"):
+        start_session("tic-tac-toe", "standard", 1, _players_for(("player_1", "player_2")))
+
+
+def test_arena_session_rejects_misconfigured_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ESLAMS_ARENA_SESSION_SECRET", "short")
+    with pytest.raises(SessionSecretError, match="misconfigured"):
+        start_session("tic-tac-toe", "standard", 1, _players_for(("player_1", "player_2")))
+
+    monkeypatch.setenv("ESLAMS_ARENA_SESSION_SECRET", DEVELOPMENT_SESSION_SECRET)
+    with pytest.raises(SessionSecretError, match="misconfigured"):
+        start_session("tic-tac-toe", "standard", 1, _players_for(("player_1", "player_2")))
+
+    monkeypatch.setenv("ESLAMS_ARENA_SESSION_SECRET", ARENA_TEST_SECRET)
+    monkeypatch.setenv("ESLAMS_ARENA_SESSION_MAX_AGE_SECONDS", "0")
+    with pytest.raises(SessionSecretError, match="ESLAMS_ARENA_SESSION_MAX_AGE_SECONDS"):
+        start_session("tic-tac-toe", "standard", 1, _players_for(("player_1", "player_2")))
+
+
+def test_arena_session_rejects_stale_signature() -> None:
+    players = _players_for(("player_1", "player_2"))
+    start = start_session("tic-tac-toe", "standard", 1, players)
+    envelope = start["session_state"]
+    signature = envelope["signature"]
+    resigned = sign_runner_request(
+        secret=ARENA_TEST_SECRET,
+        method="POST",
+        path=SESSION_SIGNATURE_PATH,
+        body={"payload": envelope["payload"]},
+        timestamp="2020-01-01T00:00:00Z",
+        nonce=str(signature["nonce"]),
+        request_id=str(signature["requestId"]),
+        key_id=str(signature["keyId"]),
+    )
+    stale = {**envelope, "signature": resigned}
+    stepped = step_session(stale, "player_1", "4")
+
+    assert stepped["accepted"] is False
+    assert stepped["error"]["diagnostics"]["signature_status"] == "timestamp_expired"
+
+
+def test_arena_start_cli_fails_closed_without_secret(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.delenv("ESLAMS_ARENA_SESSION_SECRET", raising=False)
+    players_json = json.dumps(_players_for(("player_1", "player_2")))
+    assert (
+        main(
+            [
+                "arena",
+                "start",
+                "--game",
+                "tic-tac-toe",
+                "--variant",
+                "standard",
+                "--seed",
+                "1",
+                "--players-json",
+                players_json,
+            ]
+        )
+        == 2
+    )
+    assert capsys.readouterr().err.strip() == "ESLAMS_ARENA_SESSION_SECRET is required"
 
 
 def _players_for(player_ids: tuple[str, ...]) -> dict[str, dict[str, str]]:

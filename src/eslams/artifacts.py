@@ -8,6 +8,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import shutil
 import tempfile
 import zipfile
@@ -830,8 +831,11 @@ def _validate_file_table(
             continue
         valid_entries.append(entry)
         listed_paths.add(entry["path"])
-        file_path = artifact_dir / entry["path"]
-        if not file_path.exists():
+        file_path, path_error = _confine_artifact_member(artifact_dir, entry["path"])
+        if path_error is not None:
+            errors.append(path_error)
+            continue
+        if file_path is None or not file_path.is_file():
             errors.append(f"manifest file missing on disk: {entry['path']}")
             continue
         expected = entry.get("sha256")
@@ -873,10 +877,13 @@ def _validate_unhashed_file_table(
             continue
         rel = entry["path"]
         paths.add(rel)
+        file_path, path_error = _confine_artifact_member(artifact_dir, rel)
+        if path_error is not None:
+            errors.append(path_error)
+            continue
         if rel not in UNHASHED_FILE_PATHS:
             errors.append(f"unsupported unhashed artifact file: {rel}")
-        file_path = artifact_dir / rel
-        if not file_path.exists():
+        if file_path is None or not file_path.is_file():
             errors.append(f"manifest unhashed file missing on disk: {rel}")
             continue
         expected = entry.get("sha256")
@@ -1197,6 +1204,35 @@ def _validation_report(
     artifact_dir: Path,
     manifest: dict[str, Any] | None = None,
 ) -> ArtifactValidationReport:
+    verification_level = _optional_manifest_str(manifest, "verification_level")
+    verification_level_key = _optional_manifest_str(manifest, "verification_level_key")
+    verification_level_label = _optional_manifest_str(manifest, "verification_level_label")
+    scoring_eligible = _optional_manifest_bool(manifest, "match_valid_for_scoring")
+    per_case_run_valid = _optional_manifest_bool(manifest, "per_case_run_valid")
+    per_case_scoring_eligible = _optional_manifest_bool(manifest, "per_case_scoring_eligible")
+    proof_row_publication_eligible = _optional_manifest_bool(
+        manifest,
+        "proof_row_publication_eligible",
+    )
+    aggregate_leaderboard_eligible = _optional_manifest_bool(
+        manifest,
+        "aggregate_leaderboard_eligible",
+    )
+    if errors:
+        scoring_eligible = False
+        per_case_run_valid = False
+        per_case_scoring_eligible = False
+        proof_row_publication_eligible = False
+        aggregate_leaderboard_eligible = False
+    official_claim = _verification_claim_is_privileged(
+        verification_level,
+        verification_level_key,
+        verification_level_label,
+    )
+    if official_claim and (errors or not _signature_pins_official(signature)):
+        verification_level = "Untrusted"
+        verification_level_key = "untrusted"
+        verification_level_label = "Untrusted"
     return ArtifactValidationReport(
         errors=errors,
         signature=signature,
@@ -1205,36 +1241,41 @@ def _validation_report(
         artifact=str(source_path),
         artifact_id=_optional_manifest_str(manifest, "artifact_id"),
         run_id=_optional_manifest_str(manifest, "run_id"),
-        verification_level=_optional_manifest_str(manifest, "verification_level"),
-        scoring_eligible=(
-            False
-            if profile == "official_case" and errors
-            else _optional_manifest_bool(manifest, "match_valid_for_scoring")
-        ),
+        verification_level=verification_level,
+        scoring_eligible=scoring_eligible,
         archive_sha256=_artifact_source_hash(source_path, artifact_dir),
         artifact_size_bytes=_artifact_source_size(source_path, artifact_dir),
-        verification_level_key=_optional_manifest_str(manifest, "verification_level_key"),
-        verification_level_label=_optional_manifest_str(manifest, "verification_level_label"),
+        verification_level_key=verification_level_key,
+        verification_level_label=verification_level_label,
         artifact_profile_key=_optional_manifest_str(manifest, "artifact_profile_key") or profile,
         artifact_profile_label=_optional_manifest_str(manifest, "artifact_profile_label")
         or policy_artifact_profile_label(profile),
-        per_case_run_valid=_optional_manifest_bool(manifest, "per_case_run_valid"),
-        per_case_scoring_eligible=_optional_manifest_bool(
-            manifest,
-            "per_case_scoring_eligible",
-        ),
-        proof_row_publication_eligible=_optional_manifest_bool(
-            manifest,
-            "proof_row_publication_eligible",
-        ),
-        aggregate_leaderboard_eligible=_optional_manifest_bool(
-            manifest,
-            "aggregate_leaderboard_eligible",
-        ),
+        per_case_run_valid=per_case_run_valid,
+        per_case_scoring_eligible=per_case_scoring_eligible,
+        proof_row_publication_eligible=proof_row_publication_eligible,
+        aggregate_leaderboard_eligible=aggregate_leaderboard_eligible,
         aggregate_ineligibility_reason=_optional_manifest_str(
             manifest,
             "aggregate_ineligibility_reason",
         ),
+    )
+
+
+def _verification_claim_is_privileged(*values: str | None) -> bool:
+    for value in values:
+        if not value:
+            continue
+        normalized = re.sub(r"[^a-z0-9]+", "", value.lower())
+        if "official" in normalized or "grandslam" in normalized:
+            return True
+    return False
+
+
+def _signature_pins_official(signature: SignatureValidationStatus) -> bool:
+    return bool(
+        signature.verified
+        and signature.algorithm == RUNNER_SIGNATURE_ALGORITHM
+        and signature.key_id
     )
 
 
@@ -2216,6 +2257,29 @@ def _safe_artifact_subpath(rel: str) -> Path | None:
     if path.is_absolute() or ".." in path.parts or rel == "":
         return None
     return path
+
+
+def _confine_artifact_member(artifact_dir: Path, rel: str) -> tuple[Path | None, str | None]:
+    """Resolve a manifest path and refuse escapes and symlinks.
+
+    Returns ``(path, None)`` when the member stays inside ``artifact_dir``.
+    The error string names the manifest path and not the resolved host path.
+    """
+
+    subpath = _safe_artifact_subpath(rel)
+    if subpath is None:
+        return None, f"manifest path escapes artifact root: {rel}"
+    root = artifact_dir.resolve()
+    current = root
+    for part in subpath.parts:
+        current = current / part
+        if current.is_symlink():
+            return None, f"refusing symlink: {rel}"
+    try:
+        current.resolve().relative_to(root)
+    except ValueError:
+        return None, f"manifest path escapes artifact root: {rel}"
+    return current, None
 
 
 def _materialize(path: Path) -> tuple[Path, bool]:

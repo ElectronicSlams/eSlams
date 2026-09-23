@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -9,7 +10,14 @@ from typing import Any
 
 import eslams.arenas  # noqa: F401
 from eslams.arena import registry
-from eslams.arena_transport import deserialize_state, serialize_state
+from eslams.arena_transport import (
+    SESSION_METADATA_KEY,
+    SESSION_STATE_SCHEMA_VERSION,
+    deserialize_session_state,
+    deserialize_state,
+    serialize_session_state,
+    serialize_state,
+)
 from eslams.contracts.versions import (
     CORE_CONTRACT_VERSION,
     CORE_PACKAGE_VERSION,
@@ -17,6 +25,16 @@ from eslams.contracts.versions import (
 )
 from eslams.core_contract import core_step
 from eslams.state import ArenaState
+
+_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+
+
+class RunnerSessionExists(Exception):
+    """Raised when a caller tries to overwrite an existing runner session id."""
+
+    def __init__(self, session_id: str) -> None:
+        self.session_id = session_id
+        super().__init__(f"runner session {session_id!r} already exists")
 
 
 @dataclass
@@ -64,8 +82,12 @@ class RunnerSessionStore:
     ) -> dict[str, Any]:
         arena = registry.create(game_id)
         resolved_id = session_id or f"runner_{uuid.uuid4().hex[:16]}"
+        if _SESSION_ID_RE.fullmatch(resolved_id) is None:
+            raise ValueError("sessionId must be a path-safe token")
+        if resolved_id in self._sessions:
+            raise RunnerSessionExists(resolved_id)
         state = (
-            deserialize_state(snapshot)
+            _state_from_signed_snapshot(snapshot, game_id=game_id)
             if snapshot is not None
             else arena.initial_state(initial_seed)
         )
@@ -116,6 +138,17 @@ class RunnerSessionStore:
         session.touch()
         return {**session.summary(message="snapshot"), "state": serialize_state(session.state)}
 
+    def session_ping(self, session_id: str) -> dict[str, Any]:
+        session = self._session(session_id)
+        session.touch()
+        return session.summary(message="pong")
+
+    def export_signed_state(self, session_id: str) -> dict[str, Any]:
+        """Return the signed session envelope for an authenticated server caller."""
+
+        session = self._session(session_id)
+        return serialize_session_state(session.state)
+
     def close(self, session_id: str) -> dict[str, Any]:
         session = self._session(session_id)
         del self._sessions[session_id]
@@ -137,6 +170,18 @@ class RunnerSessionStore:
         if session_id not in self._sessions:
             raise KeyError(f"unknown runner session {session_id!r}")
         return self._sessions[session_id]
+
+
+def _state_from_signed_snapshot(snapshot: dict[str, Any], *, game_id: str) -> ArenaState:
+    if snapshot.get("schema_version") != SESSION_STATE_SCHEMA_VERSION:
+        raise ValueError("snapshot must be a signed session_state envelope")
+    state = deserialize_session_state(snapshot)
+    session = state.metadata.get(SESSION_METADATA_KEY)
+    if isinstance(session, dict):
+        slug = session.get("game_slug")
+        if isinstance(slug, str) and slug and slug != game_id:
+            raise ValueError("snapshot game does not match gameId")
+    return state
 
 
 default_runner_session_store = RunnerSessionStore()

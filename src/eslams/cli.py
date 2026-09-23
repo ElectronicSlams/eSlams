@@ -15,6 +15,7 @@ import eslams.arenas  # noqa: F401
 from eslams.agents import HttpAgent, ModelProviderAgent
 from eslams.arena import registry
 from eslams.arena_transport import (
+    SessionSecretError,
     deserialize_state,
     legal_actions_page,
     smoke_all_arenas,
@@ -622,13 +623,17 @@ def _arena_command(args: argparse.Namespace) -> int:
             print(f"ok={str(payload['ok']).lower()} game_count={payload['game_count']}")
         return 0 if payload["ok"] is True else 1
     if args.arena_command == "start":
-        payload = start_session(
-            game_slug=args.game,
-            variant=args.variant,
-            seed=args.seed,
-            players=_json_arg(args.players_json, "players-json"),
-            options=_json_arg(args.options_json, "options-json"),
-        )
+        try:
+            payload = start_session(
+                game_slug=args.game,
+                variant=args.variant,
+                seed=args.seed,
+                players=_json_arg(args.players_json, "players-json"),
+                options=_json_arg(args.options_json, "options-json"),
+            )
+        except SessionSecretError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
         print(json.dumps(payload, indent=2))
         return 0
     if args.arena_command == "step":

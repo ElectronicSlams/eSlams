@@ -133,6 +133,9 @@ store.ping()
 store.close("arena_123")
 ```
 
+`eslams runner session-*` uses the in-process store. It is a local operator
+tool, not a network boundary.
+
 FastAPI routes are available from `eslams.runner_server:app`:
 
 - `POST /runner/session/create`
@@ -141,6 +144,32 @@ FastAPI routes are available from `eslams.runner_server:app`:
 - `POST /runner/session/{id}/ping`
 - `POST /runner/session/{id}/close`
 - `GET /runner/session/ping`
+
+That app is the network boundary. Every route requires
+`X-Eslams-Runner-Signature`, a JSON object from `sign_runner_request`. The
+signed `path` is the request path, and the signed body is the JSON object
+(`{}` when the route has no body). Core does not ship a runner shared secret.
+Set `ESLAMS_RUNNER_REQUEST_SECRET` (at least 32 characters) and
+`ESLAMS_RUNNER_REQUEST_KEY_ID` on the runner and on every caller. Requests
+expire after `ESLAMS_RUNNER_REQUEST_MAX_AGE_SECONDS` (default 300) and a nonce
+is accepted once per process.
+
+Rotate by copying the current secret and key id to
+`ESLAMS_RUNNER_REQUEST_SECRET_PREVIOUS` and
+`ESLAMS_RUNNER_REQUEST_KEY_ID_PREVIOUS`, installing the new pair, restarting
+the runner and callers, then deleting the previous pair and restarting again.
+Do not log either secret. There is no overlapping window after the previous
+pair is removed.
+
+`ESLAMS_RUNNER_REQUEST_ALLOW_UNSIGNED=1` skips signatures only for a local
+process. It is refused when `ESLAMS_ENV` is `production`, `prod`, or `staging`,
+and it does nothing once a secret is set. Do not set it on a reachable host.
+
+HTTP responses omit `private_state_by_player` and replace the raw state
+snapshot with a signed `sessionState` envelope. Create rejects an unsigned
+snapshot and rejects an existing session id. The envelope is for the
+authenticated platform process only. It is an HMAC, not encryption, and must
+not be forwarded to browsers.
 
 `eslams runner health --json` now includes `ok`, `loadedGames`, `warm`, and
 `uptimeMs` in addition to the existing registry/action/renderer hashes.
@@ -185,20 +214,31 @@ Runner request signing helpers canonicalize method, path, body SHA-256,
 timestamp, nonce, and request id:
 
 ```python
+import json
+import os
+
 from eslams.contracts.security import sign_runner_request, verify_runner_request_signature
 
+secret = os.environ["ESLAMS_RUNNER_REQUEST_SECRET"]
+key_id = os.environ["ESLAMS_RUNNER_REQUEST_KEY_ID"]
+body = {"action": {"actionId": "4"}}
 signature = sign_runner_request(
-    secret="runner-secret",
+    secret=secret,
     method="POST",
     path="/runner/session/arena_123/step",
-    body={"action": {"actionId": "4"}},
+    body=body,
     timestamp="2026-06-11T00:00:00Z",
     nonce="nonce",
     request_id="req_123",
-    key_id="runner-key-1",
+    key_id=key_id,
 )
-assert verify_runner_request_signature(secret="runner-secret", signature_payload=signature)
+assert verify_runner_request_signature(secret=secret, signature_payload=signature)
+headers = {"X-Eslams-Runner-Signature": json.dumps(signature)}
 ```
+
+Send `headers` with the matching method, path, and JSON body. Rotate the
+secret with the previous-secret pair documented on the runner routes. Do not
+reuse a sample or short secret.
 
 ## Artifact Validation
 
@@ -459,9 +499,14 @@ Start and step results emit:
 - public-safe Arena events
 - phase timing fields and `total_core_ms`
 
-`session_state` is verified with `ESLAMS_ARENA_SESSION_SECRET`; set that secret
-in every production runner/container that creates or steps live Arena sessions.
-Platform must not forward the envelope to browsers or public streams.
+`session_state` is verified with `ESLAMS_ARENA_SESSION_SECRET`. A missing,
+empty, short, or development-constant secret fails closed, including when
+`ESLAMS_ENV` is unset. Set a secret of at least 32 characters in every
+runner or container that creates or steps live Arena sessions. Signatures
+older than `ESLAMS_ARENA_SESSION_MAX_AGE_SECONDS` (default 86400) are rejected.
+`ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET=1` is a local opt-in and is
+ignored when `ESLAMS_ENV` is `production`, `prod`, or `staging`. Do not log the
+secret. Platform must not forward the envelope to browsers or public streams.
 Browser-streamable fields are the public state, display frame, action
 descriptors for the active actor, events, actor metadata, terminal/outcome
 fields, and timing.
