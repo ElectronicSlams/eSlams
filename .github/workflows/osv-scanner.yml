@@ -1,0 +1,62 @@
+name: OSV-Scanner
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly. Offset from the CodeQL (41 7) and pip-audit (23 6) Monday jobs.
+    - cron: "17 8 * * 1"
+
+# contents: read is enough to check out the tree and run the scanner.
+# security-events: write is not granted. This job calls
+# google/osv-scanner-action/osv-scanner-action, which runs the scanner and
+# does not upload SARIF.
+# The upstream reusable workflow
+# (google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml)
+# does upload SARIF through github/codeql-action/upload-sarif. That path
+# requires security-events: write, and actions: read on private repositories
+# (github/codeql-action#2117). This workflow does not call it.
+permissions:
+  contents: read
+
+jobs:
+  osv-scan:
+    name: Scan dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Pin the resolved pyproject environment
+        run: |
+          python -m pip install -e ".[dev]"
+          # Full freeze, not a ranged manifest. The filename is not
+          # *requirements*.txt, so the recursive walk does not scan it twice.
+          python -m pip freeze --exclude-editable > osv-pinned.txt
+
+      - name: Run OSV-Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+        with:
+          # The action entrypoint splits this string on newlines into CLI args.
+          # Image inside that commit: ghcr.io/google/osv-scanner-action:v2.6.0
+          # Default extractors stay enabled (lockfile, sbom, directory) and
+          # python/pyprojecttoml is added. That extractor reads PEP 621
+          # project name/version. Ranged dependency strings are not versions,
+          # so the pinned freeze above is what gets matched.
+          # --no-resolve scans the freeze as written. --allow-no-lockfiles
+          # keeps a tree with no committed lockfile from failing the walk.
+          scan-args: |-
+            --recursive
+            --allow-no-lockfiles
+            --no-resolve
+            --experimental-plugins=lockfile,sbom,directory,python/pyprojecttoml
+            --lockfile=requirements.txt:./osv-pinned.txt
+            ./
