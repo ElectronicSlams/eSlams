@@ -1,0 +1,14 @@
+# Text defaults to LF. Existing blobs are not renormalized by this file.
+* text=auto eol=lf
+
+*.py    text
+*.ts    text
+*.yml   text
+*.yaml  text
+*.md    text
+*.json  text
+*.jsonl text
+*.toml  text
+
+# Arena bundles (*.eslams) are zip archives.
+*.eslams binary -eol
