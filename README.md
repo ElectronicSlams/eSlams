@@ -914,6 +914,7 @@ In plain terms:
 
 ## Links
 
+- Contributor holds quickref: [docs/CONTRIBUTING_HOLDS_QUICKREF.md](docs/CONTRIBUTING_HOLDS_QUICKREF.md)
 - Platform: [https://eslams.com](https://eslams.com)
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
