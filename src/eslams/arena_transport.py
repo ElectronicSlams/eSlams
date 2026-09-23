@@ -16,6 +16,9 @@ from eslams.action_descriptors import action_descriptors, action_token
 from eslams.arena import registry
 from eslams.contracts.safety import assert_public_payload_safe
 from eslams.contracts.security import (
+    MIN_HMAC_SECRET_LENGTH,
+    is_non_dev_environment,
+    parse_utc_timestamp,
     sign_runner_request,
     signing_payload,
     verify_runner_request_signature,
@@ -34,8 +37,12 @@ SESSION_METADATA_KEY = "arena_session"
 SESSION_STATE_SCHEMA_VERSION = "eslams.arena.session_state.v1"
 SESSION_SECRET_ENV = "ESLAMS_ARENA_SESSION_SECRET"
 SESSION_KEY_ID_ENV = "ESLAMS_ARENA_SESSION_KEY_ID"
+SESSION_ALLOW_DEVELOPMENT_ENV = "ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET"
+SESSION_MAX_AGE_ENV = "ESLAMS_ARENA_SESSION_MAX_AGE_SECONDS"
 SESSION_SIGNATURE_PATH = "/arena/session-state"
 DEVELOPMENT_SESSION_SECRET = "development-only-eslams-arena-session-secret"
+DEFAULT_SESSION_MAX_AGE_SECONDS = 24 * 60 * 60
+_MAX_CLOCK_SKEW_SECONDS = 60
 DEFAULT_SESSION_ACTION_LIMIT = 200
 DEFAULT_PAGE_LIMIT = 50
 MAX_ACTION_LIMIT = 200
@@ -56,6 +63,10 @@ class StateHashMismatch(ValueError):
             "provided_state_hash": self.provided,
             "canonical_state_hash": self.canonical,
         }
+
+
+class SessionSecretError(RuntimeError):
+    """Raised when the arena session HMAC secret is missing or misconfigured."""
 
 
 class SessionStateEnvelopeError(ValueError):
@@ -170,15 +181,22 @@ def _decode_session_envelope(envelope: dict[str, Any]) -> dict[str, Any]:
             message="session_state envelope body does not match signature payload",
             diagnostics={"signature_status": "body_hash_mismatch"},
         )
-    if not verify_runner_request_signature(
-        secret=_session_secret(),
-        signature_payload={str(key): str(value) for key, value in signature.items()},
-    ):
+    try:
+        secret = _session_secret()
+    except SessionSecretError as exc:
+        raise SessionStateEnvelopeError(
+            reason="session_secret_unavailable",
+            message="arena session secret is not configured",
+            diagnostics={"signature_status": "secret_unavailable"},
+        ) from exc
+    signature_payload = {str(key): str(value) for key, value in signature.items()}
+    if not verify_runner_request_signature(secret=secret, signature_payload=signature_payload):
         raise SessionStateEnvelopeError(
             reason="session_state_signature_invalid",
             message="session_state envelope signature is invalid",
             diagnostics={"signature_status": "hmac_mismatch"},
         )
+    _reject_untrusted_session_signature(signature_payload)
     try:
         decoded = json.loads(_decode_payload(token))
     except (ValueError, TypeError, json.JSONDecodeError) as exc:
@@ -206,14 +224,101 @@ def _decode_payload(token: str) -> str:
     return base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
 
 
+def require_session_secret() -> str:
+    """Return the arena session HMAC secret or raise ``SessionSecretError``.
+
+    A missing, empty, short, or development-constant value fails closed.
+    ``ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET=1`` selects the built-in
+    development secret only outside production and staging. Do not log the secret.
+    """
+
+    return _session_secret()
+
+
 def _session_secret() -> str:
-    return os.getenv(SESSION_SECRET_ENV) or DEVELOPMENT_SESSION_SECRET
+    _session_max_age_seconds()
+    configured = os.getenv(SESSION_SECRET_ENV)
+    if isinstance(configured, str) and configured != "":
+        stripped = configured.strip()
+        if (
+            stripped != configured
+            or len(stripped) < MIN_HMAC_SECRET_LENGTH
+            or stripped == DEVELOPMENT_SESSION_SECRET
+        ):
+            raise SessionSecretError(f"{SESSION_SECRET_ENV} is misconfigured")
+        return stripped
+    if _development_session_secret_allowed():
+        return DEVELOPMENT_SESSION_SECRET
+    raise SessionSecretError(f"{SESSION_SECRET_ENV} is required")
+
+
+def _development_session_secret_allowed() -> bool:
+    if os.getenv(SESSION_ALLOW_DEVELOPMENT_ENV) != "1":
+        return False
+    return not is_non_dev_environment()
 
 
 def _session_key_id() -> str:
-    return os.getenv(SESSION_KEY_ID_ENV) or (
-        "configured" if os.getenv(SESSION_SECRET_ENV) else "development-unconfigured"
-    )
+    configured = os.getenv(SESSION_KEY_ID_ENV)
+    if configured and configured.strip() == configured and configured.strip():
+        return configured.strip()
+    if _using_development_secret():
+        return "development-unconfigured"
+    return "configured"
+
+
+def _using_development_secret() -> bool:
+    configured = os.getenv(SESSION_SECRET_ENV)
+    if configured not in (None, ""):
+        return False
+    return _development_session_secret_allowed()
+
+
+def _session_max_age_seconds() -> int:
+    raw = os.getenv(SESSION_MAX_AGE_ENV)
+    if raw is None or raw.strip() == "":
+        return DEFAULT_SESSION_MAX_AGE_SECONDS
+    try:
+        parsed = int(raw)
+    except ValueError as exc:
+        raise SessionSecretError(f"{SESSION_MAX_AGE_ENV} is misconfigured") from exc
+    if parsed <= 0:
+        raise SessionSecretError(f"{SESSION_MAX_AGE_ENV} is misconfigured")
+    return parsed
+
+
+def _reject_untrusted_session_signature(signature: dict[str, str]) -> None:
+    key_id = signature.get("keyId", "")
+    if key_id == "development-unconfigured" and not _development_session_secret_allowed():
+        raise SessionStateEnvelopeError(
+            reason="session_state_signature_invalid",
+            message="session_state envelope signature is invalid",
+            diagnostics={"signature_status": "untrusted_key"},
+        )
+    timestamp = signature.get("timestamp", "")
+    try:
+        signed_at = parse_utc_timestamp(timestamp)
+    except ValueError as exc:
+        raise SessionStateEnvelopeError(
+            reason="session_state_signature_invalid",
+            message="session_state envelope signature is invalid",
+            diagnostics={"signature_status": "timestamp_invalid"},
+        ) from exc
+    try:
+        max_age = _session_max_age_seconds()
+    except SessionSecretError as exc:
+        raise SessionStateEnvelopeError(
+            reason="session_secret_unavailable",
+            message="arena session secret is not configured",
+            diagnostics={"signature_status": "secret_unavailable"},
+        ) from exc
+    age = (datetime.now(timezone.utc) - signed_at).total_seconds()
+    if age > max_age or age < -_MAX_CLOCK_SKEW_SECONDS:
+        raise SessionStateEnvelopeError(
+            reason="session_state_signature_invalid",
+            message="session_state envelope signature is expired",
+            diagnostics={"signature_status": "timestamp_expired"},
+        )
 
 
 def start_session(

@@ -25,14 +25,19 @@ jobs:
       - name: Resolve publish ref
         id: publish-ref
         shell: bash
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          if [ -n "${{ github.event.inputs.ref }}" ]; then
-            echo "ref=${{ github.event.inputs.ref }}" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "ref=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
+          python - <<'PY'
+          import os
+
+          ref = os.environ.get("INPUT_REF") or os.environ.get("RELEASE_TAG") or os.environ["GITHUB_REF_NAME"]
+          if not ref or any(char in ref for char in "\r\n"):
+              raise SystemExit("publish ref must be a single line")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"ref={ref}\n")
+          PY
 
       - name: Check out release source
         uses: actions/checkout@v4

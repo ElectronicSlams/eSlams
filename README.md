@@ -425,13 +425,22 @@ The sample README documents the selection criteria for tracked sample artifacts.
 
 ## Upload to eslams.com
 
-Use the packaged `.eslams` archive for uploads.
+A runner bundle is a private intake archive, not a public page. `runs/latest.eslams`
+can include auditor traces and `logs/agent_io.jsonl` with plaintext hidden state.
+Upload that archive only to a private intake path.
+
+For a public replay page, export the public replay package and upload that
+package instead:
+
+```bash
+eslams artifact public-export runs/latest.eslams --out public_replay_package
+```
 
 1. Run locally with Core.
 2. Validate the artifact.
 3. Open [eslams.com](https://eslams.com).
 4. Use the Artifact Intake panel.
-5. Upload `runs/latest.eslams` or a specific `run_<id>.eslams` archive.
+5. Upload `runs/latest.eslams` or a specific `run_<id>.eslams` archive for private intake, or upload `public_replay_package` when the page is public.
 6. Open the generated replay, score, and artifact proof pages.
 
 ```bash

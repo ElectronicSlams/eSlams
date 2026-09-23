@@ -42,6 +42,30 @@ userinfo, fragments, or credential-bearing query parameters. Receipt validation
 recursively rejects sensitive field names and unredacted bearer or URL secrets,
 including receipts produced outside Core.
 
+The runner HTTP app (`eslams.runner_server:app`) is the network boundary for
+persistent sessions. `eslams runner session-*` is local and in-process. The
+HTTP app authenticates callers with HMAC request signatures
+(`ESLAMS_RUNNER_REQUEST_SECRET` and `ESLAMS_RUNNER_REQUEST_KEY_ID`). Core does
+not embed a runner secret. Rotate by moving the current secret and key id to
+the `ESLAMS_RUNNER_REQUEST_SECRET_PREVIOUS` and
+`ESLAMS_RUNNER_REQUEST_KEY_ID_PREVIOUS` variables, installing the new pair,
+restarting callers, then removing the previous pair. Do not log the secret.
+`ESLAMS_RUNNER_REQUEST_ALLOW_UNSIGNED=1` is local-only and is ignored when
+`ESLAMS_ENV` is `production`, `prod`, or `staging`.
+
+Arena `session_state` HMACs require `ESLAMS_ARENA_SESSION_SECRET`. A missing or
+misconfigured secret fails closed. The development opt-in
+`ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET=1` is refused for those same
+`ESLAMS_ENV` values. Do not log the secret or any development constant.
+Stale session signatures are rejected.
+
+Manifest validation confines every file-table path to the artifact root and
+refuses symlinks. A failed validation report forces scoring and publication
+eligibility false, and it does not echo an Official or Grand Slam label unless
+a verified Ed25519 signature pins that claim. Auditors should set
+`RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY` and should not rely on a signing key to
+verify its own artifacts.
+
 Explicit run IDs are portable path-safe identifiers and cannot select paths
 outside the configured output directory. Artifact output symlinks are never
 followed for overwrite. The `latest.eslams` and `latest.eslams.d` aliases may
