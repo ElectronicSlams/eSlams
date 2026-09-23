@@ -30,6 +30,7 @@ catalogue listed below.
 - [Platform Contracts](#platform-contracts)
 - [Arena Session Transport](#arena-session-transport)
 - [Sample Runs](#sample-runs)
+- [Hugging Face and the retired eval archive](#hugging-face-and-the-retired-eval-archive)
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
@@ -422,6 +423,19 @@ small, repo-backed examples for Platform ingestion and developer inspection.
   `battlefield-sample` publication bundle.
 
 The sample README documents the selection criteria for tracked sample artifacts.
+
+## Hugging Face and the retired eval archive
+
+Lab provider keys stay with the lab: local environment variables, or Secrets
+on a Hugging Face Space the lab duplicates. eSlams organization provider keys
+do not go in GitHub Actions, Platform, or shared Spaces, and this repo does
+not store live credential values. See
+[Hugging Face org and lab secrets](docs/HF_ORG_AND_SECRETS.md).
+
+The former official eval suite is retired and historical. Scrubbed public
+hosting is a Hugging Face warehouse; this repository keeps thin samples and
+manifests or pointers only. See
+[Retired eval archive](docs/RETIRED_EVAL_ARCHIVE.md).
 
 ## Upload to eslams.com
 
