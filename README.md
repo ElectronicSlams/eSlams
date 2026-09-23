@@ -41,6 +41,7 @@ catalogue listed below.
 - [Release v0.3.2](#release-v032)
 - [Release v0.3.1](#release-v031)
 - [Release v0.3.0](#release-v030)
+- [Local test and smoke](docs/LOCAL_TEST_SMOKE.md)
 - [Contribute](#contribute)
 - [Support eSlams](#support-eslams)
 
