@@ -9,3 +9,6 @@ out/
 *.egg-info/
 runs/
 .DS_Store
+.env
+.env.*
+!.env.example

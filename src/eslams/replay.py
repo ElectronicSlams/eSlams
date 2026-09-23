@@ -9,6 +9,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from eslams.zip_extract import confined_extract
+
 
 def render_replay_html(artifact_path: Path, output_path: Path | None = None) -> Path:
     artifact_path = artifact_path.resolve()
@@ -20,7 +22,7 @@ def render_replay_html(artifact_path: Path, output_path: Path | None = None) -> 
         with tempfile.TemporaryDirectory(prefix="eslams-replay-") as tmp_dir:
             tmp_path = Path(tmp_dir)
             with zipfile.ZipFile(artifact_path) as archive:
-                archive.extractall(tmp_path)
+                confined_extract(archive, tmp_path)
             events = _read_replay_events(tmp_path)
         output = output_path or artifact_path.with_suffix(".replay.html")
         return _write_replay(output, events)
@@ -543,7 +545,8 @@ function chessCell(row, col, piece, lastSquares) {
   const tone = (row + col) % 2 === 0 ? 'light' : 'dark';
   const side = piece ? (piece === piece.toUpperCase() ? 'white' : 'black') : '';
   const last = lastSquares.has(square) ? ' last' : '';
-  const content = piece ? `<span class="piece piece-${side}" aria-label="${side} ${piece}">${glyphs[piece] || piece}</span>` : '';
+  const glyph = glyphs[piece] || escapeHtml(piece);
+  const content = piece ? `<span class="piece piece-${side}" aria-label="${escapeHtml(side)} ${escapeHtml(piece)}">${glyph}</span>` : '';
   return `<div class="square ${tone}${last}" data-square="${square}">${content}</div>`;
 }
 

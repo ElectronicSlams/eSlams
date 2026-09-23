@@ -29,7 +29,7 @@ Deterministic failures:
 - no action: `no_action`
 
 Core records those markers into the trace and replay-safe event stream. Runner
-failure policy is explicit:
+failure policy is explicit. The CLI defaults are fail-closed:
 
 ```bash
 eslams run --on-agent-error invalid-match --on-illegal-action invalid-match
@@ -37,10 +37,11 @@ eslams run --on-agent-error forfeit --on-illegal-action forfeit
 eslams run --on-agent-error fallback --on-illegal-action fallback
 ```
 
-`fallback` is the smoke/demo default and chooses the arena's deterministic
-failure action. `invalid-match` records the run as not valid for scoring.
-`forfeit` ends the match with the other player as winner and also records the
-run as not valid for scoring.
+`invalid-match` is the default for `--on-agent-error` and `--on-illegal-action`.
+It records the run as not valid for scoring. `forfeit` ends the match with the
+other player as winner and also records the run as not valid for scoring.
+`fallback` is an explicit smoke/demo opt-in and chooses the arena's
+deterministic failure action.
 
 ## Provider-Backed Agents
 
@@ -57,7 +58,7 @@ redacted provider receipts:
 - normalized usage and explicit unavailable reasons
 - pricing provenance and `cost_unavailable` when pricing is not configured
 
-Provider receipts use `eslams.provider.receipt.v1`. Public replay exports never
+Provider receipts use `eslams.provider.receipt.v2`. Public replay exports never
 include raw prompts, raw responses, request headers, tokens, API keys, or debug
 provider payloads.
 

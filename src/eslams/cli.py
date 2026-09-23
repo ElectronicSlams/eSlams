@@ -390,8 +390,18 @@ def main(argv: list[str] | None = None) -> int:
     agent_publish = agent_sub.add_parser("publish", help="Print a platform registration payload.")
     agent_publish.add_argument("--name", required=True)
     agent_publish.add_argument("--url", required=True)
-    agent_serve = agent_sub.add_parser("serve", help="Serve a sample first-legal /act endpoint.")
-    agent_serve.add_argument("--host", default="0.0.0.0")
+    agent_serve = agent_sub.add_parser(
+        "serve",
+        help="Serve a sample first-legal /act endpoint on loopback.",
+    )
+    agent_serve.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help=(
+            "Bind address. Defaults to 127.0.0.1. "
+            "0.0.0.0 is an explicit opt-in; /act and /health stay unauthenticated."
+        ),
+    )
     agent_serve.add_argument("--port", type=int, default=8000)
 
     args = parser.parse_args(argv)

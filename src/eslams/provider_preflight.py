@@ -172,7 +172,7 @@ def provider_models_live(provider: str) -> list[str] | None:
     if provider == "anthropic":
         headers.update({"x-api-key": api_key, "anthropic-version": "2023-06-01"})
     elif provider in {"google", "gemini"}:
-        params["key"] = api_key
+        headers["x-goog-api-key"] = api_key
     else:
         headers["Authorization"] = f"Bearer {api_key}"
     try:
