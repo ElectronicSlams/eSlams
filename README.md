@@ -30,6 +30,7 @@ catalogue listed below.
 - [Platform Contracts](#platform-contracts)
 - [Arena Session Transport](#arena-session-transport)
 - [Sample Runs](#sample-runs)
+- [HF lab pack](docs/HF_LAB.md)
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
@@ -415,11 +416,18 @@ material, or private reasoning.
 Curated sample runs live in [sample_runs/](sample_runs/). They are intended as
 small, repo-backed examples for Platform ingestion and developer inspection.
 
-- `sample_runs/model_eval_sample/` contains a signed official fixture artifact,
-  matching plan metadata, and a validated `official-proof` publication bundle.
-- `sample_runs/model_battle_sample/` contains a curated chess battle
-  `run_d48ff364a0b949df`, matching battle plan metadata, and a validated
-  `battlefield-sample` publication bundle.
+- `sample_runs/model_eval_sample/` contains `official_signed.eslams`, a
+  deterministic tic-tac-toe fixture signed with the fixture key, plus plan
+  metadata and an `official-proof` publication bundle. It is a shape example,
+  not a live Official seal.
+- `sample_runs/model_battle_sample/` contains chess battle
+  `run_eeab67d58b994ca7` (built-in `first-legal` vs `first-legal`), matching
+  battle plan metadata, and a validated `battlefield-sample` publication bundle.
+
+These directories are small GitHub samples. The Official suite is retired /
+historical and is not this tree. The Hugging Face warehouse, Collection, and
+docs Space are not live yet; the reserved ids and the keyless smoke path are
+in [docs/HF_LAB.md](docs/HF_LAB.md). Lab installs pin `eslams-core==0.6.1`.
 
 The sample README documents the selection criteria for tracked sample artifacts.
 
@@ -917,4 +925,5 @@ In plain terms:
 - Platform: [https://eslams.com](https://eslams.com)
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
+- HF lab pack: [docs/HF_LAB.md](docs/HF_LAB.md)
 - Support: `hello@eslams.com`

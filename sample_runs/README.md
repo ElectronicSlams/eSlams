@@ -16,7 +16,12 @@ Included samples:
 
 - `model_eval_sample/` uses the signed official fixture artifact as a compact
   model-eval publication example.
-- `model_battle_sample/` uses `run_d48ff364a0b949df`, a curated chess battle
-  between `composer-2.5` and `grok-build-0.1`.
+- `model_battle_sample/` uses `run_eeab67d58b994ca7`, a deterministic chess
+  battle between built-in `first-legal` agents.
+
+`model_eval_sample/official_signed.eslams` is a fixture shape, not a live
+Official suite. The Official suite is retired / historical. Bulk samples are
+planned on the Hugging Face warehouse; see [docs/HF_LAB.md](../docs/HF_LAB.md).
+Lab installs pin `eslams-core==0.6.1`.
 
 Scratch harness state and exploratory local runs are intentionally omitted.
