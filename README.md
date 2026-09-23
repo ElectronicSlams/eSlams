@@ -23,6 +23,7 @@ catalogue listed below.
 ## Contents
 
 - [Install](#install)
+- [Public vs private surface](docs/PUBLIC_VS_PRIVATE_SURFACE.md)
 - [Quick Start](#quick-start)
 - [Run Model Agents](#run-model-agents)
 - [Build an HTTP Agent](#build-an-http-agent)
