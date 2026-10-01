@@ -7,12 +7,13 @@ import json
 import os
 import subprocess
 import sys
+import zipfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import eslams.arenas  # noqa: F401
-from eslams.agents import HttpAgent, ModelProviderAgent
+from eslams.agents import BUILTIN_AGENT_NAMES, HttpAgent, ModelProviderAgent
 from eslams.arena import registry
 from eslams.arena_transport import (
     deserialize_state,
@@ -58,7 +59,19 @@ from eslams.runner_result import runner_job_result_from_artifact
 from eslams.runner_session import default_runner_session_store
 
 
+class CliError(Exception):
+    """A user-facing error: reported as one line on stderr, without a traceback."""
+
+
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except CliError as exc:
+        print(f"eslams: error: {exc}", file=sys.stderr)
+        return 2
+
+
+def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="eslams",
         description="Run, validate, and replay eSlams artifacts.",
@@ -503,6 +516,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2))
         return 0
     if args.command == "validate":
+        _require_artifact_path(args.artifact)
         report = ArtifactValidator().validate_report(args.artifact, profile=args.profile)
         payload = report.to_dict()
         if args.summary_json:
@@ -521,6 +535,7 @@ def main(argv: list[str] | None = None) -> int:
             payload = validate_public_replay(Path(args.extra))
             print(json.dumps(payload, indent=2))
             return 0 if bool(payload.get("valid")) else 1
+        _require_artifact_path(Path(args.artifact))
         output = render_replay_html(Path(args.artifact), args.output)
         print(json.dumps({"replay": str(output)}, indent=2))
         return 0
@@ -531,7 +546,10 @@ def main(argv: list[str] | None = None) -> int:
 
 def _schemas_command(args: argparse.Namespace) -> int:
     if args.schemas_command == "export":
-        written = export_schemas(args.out)
+        try:
+            written = export_schemas(args.out)
+        except OSError as exc:
+            raise CliError(f"cannot export schemas to {args.out}: {exc.strerror or exc}") from exc
         print(json.dumps({"schemas": [str(path) for path in written]}, indent=2))
         return 0
     raise AssertionError(args.schemas_command)
@@ -591,6 +609,11 @@ def _core_command(args: argparse.Namespace) -> int:
 def _bench_command(args: argparse.Namespace) -> int:
     if args.bench_command == "arena-step":
         games = ["all"] if args.games == "all" else _comma_list(args.games)
+        unknown = [game for game in games if game != "all" and game not in registry.list()]
+        if unknown:
+            raise CliError(
+                f"unknown arena {unknown[0]!r}; run `eslams arenas` to list available arenas"
+            )
         rows = arena_step_benchmark(games=games, iterations=max(1, args.iterations))
         payload = {
             "schemaVersion": "eslams.core.benchmark.v1",
@@ -851,7 +874,19 @@ def _agent_arg(
     provider = _provider_agent(value, runtime_config=runtime_config)
     if provider is not None:
         return provider
+    if value not in BUILTIN_AGENT_NAMES:
+        raise CliError(
+            f"unknown agent {value!r}; use a built-in agent ({', '.join(BUILTIN_AGENT_NAMES)}), "
+            "an http(s):// agent URL, or <provider>[:<model>]"
+        )
     return value
+
+
+def _require_artifact_path(path: Path) -> None:
+    if not path.exists():
+        raise CliError(f"artifact not found: {path}")
+    if path.is_file() and not zipfile.is_zipfile(path):
+        raise CliError(f"{path} is not an artifact directory or .eslams zip archive")
 
 
 def _models_command(args: argparse.Namespace) -> int:
@@ -939,9 +974,14 @@ def _int_list(value: str) -> list[int]:
 
 
 def _read_json_file(path: Path) -> dict[str, Any]:
-    value = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise CliError(f"cannot read {path}: {exc.strerror or exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise CliError(f"{path} is not valid JSON: {exc}") from exc
     if not isinstance(value, dict):
-        raise ValueError(f"{path} must contain a JSON object")
+        raise CliError(f"{path} must contain a JSON object")
     return value
 
 
@@ -963,9 +1003,12 @@ def _read_price_card_reference(path: Path | None) -> PriceCardReference | None:
 
 
 def _json_arg(value: str, name: str) -> dict[str, Any]:
-    parsed = json.loads(value)
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise CliError(f"--{name} is not valid JSON: {exc}") from exc
     if not isinstance(parsed, dict):
-        raise ValueError(f"--{name} must be a JSON object")
+        raise CliError(f"--{name} must be a JSON object")
     return parsed
 
 

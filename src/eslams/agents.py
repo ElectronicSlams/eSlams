@@ -2156,6 +2156,9 @@ def _find_legal_action(text: str, legal_actions: list[Any]) -> Any:
     return find_legal_action(text, legal_actions)
 
 
+BUILTIN_AGENT_NAMES = ("first-legal", "random")
+
+
 def create_builtin_agent(name: str, *, seed: int = 0) -> FirstLegalAgent | RandomAgent:
     if name == "first-legal":
         return FirstLegalAgent()

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `eslams run` (unknown `--agent`/`--opponent`), `validate`/`replay` (missing or
+  non-archive path), `arena start` / `core step` (unreadable or invalid JSON),
+  `bench arena-step` (unknown game) and `schemas export` (unwritable `--out`)
+  now print a single `eslams: error: ...` line and exit 2 instead of a Python
+  traceback.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed
