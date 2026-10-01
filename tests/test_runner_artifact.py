@@ -1,6 +1,8 @@
+import errno
 import hashlib
 import hmac
 import json
+import os
 import time
 import zipfile
 from pathlib import Path
@@ -9,7 +11,7 @@ import pytest
 
 from eslams.agents import FunctionAgent
 from eslams.arena import Arena
-from eslams.artifacts import ArtifactValidator
+from eslams.artifacts import ArtifactValidator, _artifact_file_paths
 from eslams.cli import main
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 from eslams.replay import render_replay_html
@@ -108,6 +110,29 @@ def test_runner_ids_are_unique_and_fingerprint_is_stable_for_same_seed(tmp_path:
     )
     assert "timings/timings.json" not in {row["path"] for row in first_manifest["files"]}
     assert first_manifest["unhashed_files"][0]["path"] == "timings/timings.json"
+
+
+def test_artifact_file_walk_raises_emfile_instead_of_skipping_subtree(
+    tmp_path: Path, monkeypatch
+):
+    artifact_dir = tmp_path / "artifact"
+    nested_dir = artifact_dir / "nested"
+    nested_dir.mkdir(parents=True)
+    (artifact_dir / "present.txt").write_text("present\n", encoding="utf-8")
+    (nested_dir / "skipped.txt").write_text("skipped\n", encoding="utf-8")
+    real_scandir = os.scandir
+
+    def fail_on_nested_directory(path):
+        if Path(path) == nested_dir:
+            raise OSError(errno.EMFILE, "Too many open files", str(path))
+        return real_scandir(path)
+
+    monkeypatch.setattr(os, "scandir", fail_on_nested_directory)
+
+    with pytest.raises(OSError) as error:
+        _artifact_file_paths(artifact_dir)
+
+    assert error.value.errno == errno.EMFILE
 
 
 def test_validator_rejects_unlisted_artifact_files(tmp_path: Path):

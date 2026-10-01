@@ -593,9 +593,8 @@ def write_artifact(
         if archive_path.exists():
             archive_path.unlink()
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            for path in sorted(artifact_dir.rglob("*")):
-                if path.is_file():
-                    zf.write(path, path.relative_to(artifact_dir).as_posix())
+            for path in _artifact_file_paths(artifact_dir):
+                zf.write(path, path.relative_to(artifact_dir).as_posix())
         return archive_path
     return artifact_dir
 
@@ -841,8 +840,7 @@ def _validate_file_table(
     unhashed_paths = _validate_unhashed_file_table(artifact_dir, manifest, errors)
     actual_paths = {
         path.relative_to(artifact_dir).as_posix()
-        for path in artifact_dir.rglob("*")
-        if path.is_file()
+        for path in _artifact_file_paths(artifact_dir)
     }
     actual_payload_paths = {
         rel for rel in actual_paths if rel != "manifest.json" and not rel.startswith("signatures/")
@@ -1264,7 +1262,7 @@ def _artifact_source_size(source_path: Path, artifact_dir: Path) -> int | None:
     if source_path.is_file():
         return source_path.stat().st_size
     if artifact_dir.is_dir():
-        return sum(path.stat().st_size for path in artifact_dir.rglob("*") if path.is_file())
+        return sum(path.stat().st_size for path in _artifact_file_paths(artifact_dir))
     return None
 
 
@@ -1830,18 +1828,38 @@ def _compare_replay_snapshot(
         errors.append(f"replay event {index} turn_id does not match deterministic state")
 
 
+def _artifact_file_paths(artifact_dir: Path) -> list[Path]:
+    """List artifact files without suppressing filesystem traversal errors."""
+
+    paths: list[Path] = []
+
+    def raise_on_walk_error(error: OSError) -> None:
+        raise error
+
+    for root, directories, filenames in os.walk(
+        artifact_dir,
+        onerror=raise_on_walk_error,
+        followlinks=False,
+    ):
+        directories.sort()
+        for filename in filenames:
+            path = Path(root) / filename
+            if path.is_file():
+                paths.append(path)
+    return sorted(paths)
+
+
 def _file_entries(artifact_dir: Path) -> list[dict[str, Any]]:
     entries = []
-    for path in sorted(artifact_dir.rglob("*")):
-        if path.is_file():
-            rel = path.relative_to(artifact_dir).as_posix()
-            if (
-                rel == "manifest.json"
-                or rel.startswith("signatures/")
-                or rel in UNHASHED_FILE_PATHS
-            ):
-                continue
-            entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
+    for path in _artifact_file_paths(artifact_dir):
+        rel = path.relative_to(artifact_dir).as_posix()
+        if (
+            rel == "manifest.json"
+            or rel.startswith("signatures/")
+            or rel in UNHASHED_FILE_PATHS
+        ):
+            continue
+        entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
     return sorted(entries, key=lambda item: item["path"])
 
 
