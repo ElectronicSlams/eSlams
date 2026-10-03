@@ -15,6 +15,7 @@ from eslams.providers import load_provider_registry
 
 CORE_VERSION = CORE_PACKAGE_VERSION
 PLAN_GENERATED_AT = "1970-01-01T00:00:00Z"
+MAX_PLAN_SHARDS = 1024
 
 
 def official_plan(
@@ -126,14 +127,17 @@ def _registry_hash() -> str:
 
 
 def _shards(case_ids: list[str], shard_count: int) -> list[dict[str, Any]]:
-    shard_count = max(1, shard_count)
+    maximum = min(MAX_PLAN_SHARDS, max(1, len(case_ids)))
+    if (
+        isinstance(shard_count, bool)
+        or not isinstance(shard_count, int)
+        or not 1 <= shard_count <= maximum
+    ):
+        raise ValueError(f"shard_count must be an integer between 1 and {maximum}")
+    ordered_cases = sorted(case_ids)
     shards = []
     for shard_index in range(shard_count):
-        shard_cases = [
-            case_id
-            for index, case_id in enumerate(sorted(case_ids))
-            if index % shard_count == shard_index
-        ]
+        shard_cases = ordered_cases[shard_index::shard_count]
         shards.append(
             {
                 "shard_index": shard_index,

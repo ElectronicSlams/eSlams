@@ -109,20 +109,20 @@ def test_official_plan_is_deterministic_and_conservative():
         suite="public-smoke",
         providers=["openai"],
         arenas=["tic-tac-toe"],
-        shard_count=2,
+        shard_count=1,
     )
     second = official_plan(
         suite="public-smoke",
         providers=["openai"],
         arenas=["tic-tac-toe"],
-        shard_count=2,
+        shard_count=1,
     )
 
     assert first == second
     assert first["schema_version"] == "eslams.eval.plan.v1"
     assert first["plan_hash"]
     assert first["selected_arenas"] == ["tic-tac-toe"]
-    assert len(first["shards"]) == 2
+    assert len(first["shards"]) == 1
     openai_game_agents = [
         record
         for record in load_provider_registry().list_models(provider="openai")

@@ -58,6 +58,10 @@ entry-point gate for #57 / #174 / #172 and PR #217; the final matrix remains.
 - #175 / #194: runner shard ranges and time-budget integers are validated
   before any output is created; budgets are no longer silently clamped.
 
+- #186: all planners reject malformed/excessive shard counts, bounded by
+  workload and a ceiling of 1024, rather than silently clamping or generating
+  unbounded empty shards.
+
 ## Test reduction checkpoint
 
 Removed 11 of the required 55 original cases: ten redundant family registry-only

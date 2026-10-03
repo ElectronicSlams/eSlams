@@ -46,6 +46,9 @@
 - Runner rejects invalid shard ranges and nonpositive/noninteger action time
   budgets before creating outputs, instead of silently clamping budgets.
 
+- Plan shard counts must be positive integers, at most the number of cases
+  (one diagnostic shard for an empty plan), and no more than 1024.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

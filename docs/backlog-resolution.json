@@ -956,9 +956,9 @@
       "number": 186,
       "title": "`eslams plan official|battlefield|public-match --shard-count N` is unbounded: N=1,000,000 prints a 115 MB plan for a suite with 0 cases; 0 and negatives are silently clamped to 1",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Reject invalid/excessive shard counts, bound plan expansion by meaningful workload limits, and never silently clamp a malformed request into apparent success.",
-      "evidence": null
+      "evidence": "All planners reject noninteger/nonpositive counts, counts exceeding the case workload (one diagnostic shard for empty plans), and counts over 1024. Cases are sorted once and sliced deterministically, replacing repeated full scans. CLI invalid counts and public-match partition/workload bounds pass with existing planning/publication cases (25 tests)."
     },
     {
       "number": 187,
