@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Public replay export, publication export, and uploaded replay fixture
+  generation no longer delete an existing output directory. They refuse
+  existing destinations and input/output aliases, stage writes separately,
+  and install the completed directory after success. Concurrent Core exporters
+  cannot claim the same destination. Use a new output directory for each export;
+  no release or historical artifact bytes are changed by this repair.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +17,7 @@ from eslams.contracts.versions import (
     PUBLICATION_VALIDATION_SCHEMA_VERSION,
 )
 from eslams.hashing import canonical_json, sha256_file, sha256_json
+from eslams.output import staged_directory
 from eslams.policy import policy_key, publication_kind_label
 from eslams.public_replay import export_public_replay, validate_public_replay
 
@@ -43,13 +43,29 @@ def export_publication_bundle(
     artifact: Path | None = None,
     plan_path: Path | None = None,
 ) -> Path:
+    sources = [path for path in (artifacts_dir, artifact, plan_path) if path is not None]
+    with staged_directory(output_dir, sources=sources) as staged:
+        _export_publication_bundle(
+            kind=kind,
+            output_dir=staged,
+            artifacts_dir=artifacts_dir,
+            artifact=artifact,
+            plan_path=plan_path,
+        )
+    return output_dir.resolve()
+
+
+def _export_publication_bundle(
+    *,
+    kind: str,
+    output_dir: Path,
+    artifacts_dir: Path | None,
+    artifact: Path | None,
+    plan_path: Path | None,
+) -> None:
     if kind not in PUBLICATION_KINDS:
         valid = ", ".join(PUBLICATION_KINDS)
         raise ValueError(f"publication kind must be one of: {valid}")
-    output_dir = output_dir.resolve()
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True)
 
     artifacts = _artifact_inputs(artifacts_dir=artifacts_dir, artifact=artifact)
     plan_payload = _read_plan(plan_path)
@@ -163,7 +179,6 @@ def export_publication_bundle(
         "aggregate_ineligibility_reason": "publication_bundle_evidence_only",
     }
     _write_json(output_dir / "bundle_manifest.json", bundle_manifest)
-    return output_dir
 
 
 def validate_publication_bundle(bundle_dir: Path) -> dict[str, Any]:
