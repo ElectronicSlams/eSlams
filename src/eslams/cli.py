@@ -1102,4 +1102,13 @@ def _agent_command(args: argparse.Namespace) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except (KeyError, FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(1)
+    except Exception as exc:
+        if os.getenv("ESLAMS_DEBUG"):
+            raise
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(1)
