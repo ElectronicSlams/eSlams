@@ -84,8 +84,22 @@ class RunConfig:
             or self.max_turns < 1
         ):
             raise ValueError("max_turns must be a positive integer")
-        if isinstance(self.case_attempt_index, bool) or self.case_attempt_index < 1:
-            raise ValueError("case_attempt_index must be a positive integer")
+        for name, number in (
+            ("time_budget_ms", self.time_budget_ms),
+            ("case_attempt_index", self.case_attempt_index),
+            ("shard_count", self.shard_count),
+        ):
+            if name == "shard_count" and number is None:
+                continue
+            if isinstance(number, bool) or not isinstance(number, int) or number < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        if self.shard_index is not None and (
+            isinstance(self.shard_index, bool)
+            or not isinstance(self.shard_index, int)
+            or self.shard_index < 0
+            or (self.shard_count is not None and self.shard_index >= self.shard_count)
+        ):
+            raise ValueError("shard_index must be a nonnegative integer less than shard_count")
         if self.run_id is not None:
             _validate_run_id(self.run_id)
         for name, value in (
@@ -134,7 +148,7 @@ class Runner:
         if config.execution_profile == "official_eval":
             _reject_official_inline_retries(list(agents.values()))
         max_turns = config.max_turns if config.max_turns is not None else arena.max_turns
-        effective_time_budget_ms = max(1, config.time_budget_ms)
+        effective_time_budget_ms = config.time_budget_ms
         suite_context = _suite_context(config)
         match_fingerprint = _match_fingerprint(arena, config, agents, max_turns)
         run_id = config.run_id or _default_run_id(arena)

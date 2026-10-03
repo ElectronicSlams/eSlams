@@ -43,6 +43,9 @@
   score or publish evidence as complete cases. Diagnostic replay remains valid;
   artifact validation rejects scoring claims unsupported by terminal replay.
 
+- Runner rejects invalid shard ranges and nonpositive/noninteger action time
+  budgets before creating outputs, instead of silently clamping budgets.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

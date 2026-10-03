@@ -868,9 +868,9 @@
       "number": 175,
       "title": "`eslams run --shard-index 5 --shard-count 2` (also index -1, count 0) is accepted and the artifact validates as `valid: true`",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Reject invalid shard ranges before output; record the valid shard identity and test no scoring-valid artifacts are written for illegal selections.",
-      "evidence": null
+      "evidence": "RunConfig rejects nonpositive/noninteger/bool/missing time budgets, invalid case-attempt integers and negative/noninteger shard indices/counts; enforces index<count when a count is supplied. Valid values are recorded without clamping. Sixteen input-boundary regression cases plus runner/integrity tests passed; final matrix pending."
     },
     {
       "number": 176,
@@ -1020,9 +1020,9 @@
       "number": 194,
       "title": "`eslams run --time-budget-ms 0` and negative values are accepted without error and the run is scoring-valid",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Reject nonpositive time budgets before output; test enforced bounded action attempts and no scoring-valid impossible configuration.",
-      "evidence": null
+      "evidence": "RunConfig rejects nonpositive/noninteger/bool/missing time budgets, invalid case-attempt integers and negative/noninteger shard indices/counts; enforces index<count when a count is supplied. Valid values are recorded without clamping. Sixteen input-boundary regression cases plus runner/integrity tests passed; final matrix pending."
     },
     {
       "number": 195,

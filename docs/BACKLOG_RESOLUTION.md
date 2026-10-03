@@ -55,6 +55,9 @@ Actual installed-wheel console/module checks passed outside the checkout on
 macOS/Python 3.9 (11 checks at commit b651238). This resolves the local packaging
 entry-point gate for #57 / #174 / #172 and PR #217; the final matrix remains.
 
+- #175 / #194: runner shard ranges and time-budget integers are validated
+  before any output is created; budgets are no longer silently clamped.
+
 ## Test reduction checkpoint
 
 Removed 11 of the required 55 original cases: ten redundant family registry-only
