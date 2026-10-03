@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.nine_mens_morris import NineMensMorrisArena
 from eslams.arenas.poker import (
     LeducHoldemArena,
@@ -23,10 +22,6 @@ POKER_AND_MORRIS_ARENAS = {
     "nine-mens-morris",
     "no-limit-texas-holdem",
 }
-
-
-def test_poker_and_morris_arenas_are_registered():
-    assert POKER_AND_MORRIS_ARENAS.issubset(set(registry.list()))
 
 
 def test_leduc_hides_private_hole_cards_and_keeps_board_betting_round():

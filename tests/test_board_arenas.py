@@ -1,15 +1,10 @@
 from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.gomoku import GomokuArena
 from eslams.arenas.hex import HexArena
 from eslams.arenas.othello import OthelloArena
 from eslams.artifacts import ArtifactValidator
 from eslams.runner import RunConfig, Runner
-
-
-def test_new_board_arenas_are_registered():
-    assert {"othello", "gomoku", "hex"}.issubset(set(registry.list()))
 
 
 def test_othello_initial_move_flips_disc():

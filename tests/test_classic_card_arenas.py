@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.classic_cards import (
     CrazyEightsArena,
     HeartsArena,
@@ -16,10 +15,6 @@ CLASSIC_CARD_ARENAS = {
     "shedding-card-game",
     "spades",
 }
-
-
-def test_classic_card_arenas_are_registered():
-    assert CLASSIC_CARD_ARENAS.issubset(set(registry.list()))
 
 
 def test_shedding_card_game_hides_opponent_hand_and_allows_matching_play():

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.control_arcade import (
     AlienShooterArena,
     BoxingStyleArena,
@@ -20,10 +19,6 @@ CONTROL_ARCADE_ARENAS = {
     "mountain-car",
     "paddle-ball",
 }
-
-
-def test_control_arcade_arenas_are_registered():
-    assert CONTROL_ARCADE_ARENAS.issubset(set(registry.list()))
 
 
 def test_cartpole_applies_physics_and_keeps_observation_public():

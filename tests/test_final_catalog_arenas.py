@@ -16,13 +16,6 @@ FINAL_CATALOG_ARENAS = {
 }
 
 
-def test_final_catalog_arenas_are_registered() -> None:
-    registered = set(registry.list())
-
-    assert FINAL_CATALOG_ARENAS.issubset(registered)
-    assert len(registered) >= 50
-
-
 def test_go_two_passes_reaches_scored_terminal_state() -> None:
     arena = GoArena()
     state = arena.initial_state(seed=5)

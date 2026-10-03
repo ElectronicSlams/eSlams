@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.battleship import BattleshipArena
 from eslams.arenas.gridworld import CliffWalkingArena, FrozenLakeArena, TaxiArena
 from eslams.artifacts import ArtifactValidator
@@ -12,10 +11,6 @@ ENVIRONMENT_ARENAS = {
     "frozen-lake",
     "taxi",
 }
-
-
-def test_environment_arenas_are_registered():
-    assert ENVIRONMENT_ARENAS.issubset(set(registry.list()))
 
 
 def test_frozen_lake_reaches_goal_on_safe_path():

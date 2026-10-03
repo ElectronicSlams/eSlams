@@ -1549,5 +1549,108 @@
       "evidence": "Shared main wrapper replaces entry-specific behavior; module and console target subprocesses cover normal/debug errors and an early-closing pipe. Installed command gate remains outstanding."
     }
   ],
-  "consolidation_pr": "https://github.com/ElectronicSlams/eSlams/pull/218"
+  "consolidation_pr": "https://github.com/ElectronicSlams/eSlams/pull/218",
+  "test_removals": [
+    {
+      "removed_baseline_case": "tests/test_advanced_card_arenas.py::test_advanced_card_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_advanced_card_arenas.py::test_runner_generates_valid_artifacts_for_advanced_card_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_board_arenas.py::test_new_board_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_board_arenas.py::test_runner_generates_valid_artifacts_for_new_board_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_classic_card_arenas.py::test_classic_card_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_classic_card_arenas.py::test_runner_generates_valid_artifacts_for_classic_card_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_control_arcade_arenas.py::test_control_arcade_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_control_arcade_arenas.py::test_runner_generates_valid_artifacts_for_control_arcade_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_environment_arenas.py::test_environment_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_environment_arenas.py::test_runner_generates_valid_artifacts_for_environment_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_expanded_arenas.py::test_expanded_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_expanded_arenas.py::test_runner_generates_valid_artifacts_for_expanded_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_final_catalog_arenas.py::test_final_catalog_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_modern_control_and_backgammon.py::test_modern_control_and_backgammon_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_modern_control_and_backgammon.py::test_runner_generates_valid_artifacts_for_modern_control_and_backgammon",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_poker_and_morris_arenas.py::test_poker_and_morris_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_poker_and_morris_arenas.py::test_runner_generates_valid_artifacts_for_poker_and_morris_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_strategic_arenas.py::test_strategic_arenas_are_registered",
+      "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
+      "retained_checks": [
+        "tests/test_strategic_arenas.py::test_runner_generates_valid_artifacts_for_strategic_arenas",
+        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+      ],
+      "baseline_unique_lines": 0
+    }
+  ],
+  "test_reduction_checkpoint": {
+    "removed_original_cases": 10,
+    "remaining_removal_target": 45,
+    "passing_cases": 328,
+    "covered_lines": 10426,
+    "statements": 12174,
+    "line_coverage": 85.64153113192049,
+    "coverage_change_percentage_points": 0.3086455639580947,
+    "scope": "src/eslams; full pytest including packaged provenance; Python 3.9.6",
+    "note": "Intermediate checkpoint only; remaining removals and final coverage gate outstanding."
+  }
 }

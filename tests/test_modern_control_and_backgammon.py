@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 
-from eslams.arenas import registry
 from eslams.arenas.backgammon import BackgammonArena
 from eslams.arenas.modern_control import (
     BipedalWalkerArena,
@@ -19,10 +18,6 @@ MODERN_CONTROL_AND_BACKGAMMON = {
     "car-racing",
     "lunar-lander",
 }
-
-
-def test_modern_control_and_backgammon_arenas_are_registered():
-    assert MODERN_CONTROL_AND_BACKGAMMON.issubset(set(registry.list()))
 
 
 def test_lunar_lander_soft_landing_scores_success():

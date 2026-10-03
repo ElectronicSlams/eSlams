@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.checkers import CheckersArena
 from eslams.arenas.mancala import MancalaArena
 from eslams.arenas.matrix_games import PrisonersDilemmaArena, RockPaperScissorsArena
@@ -17,10 +16,6 @@ EXPANDED_ARENAS = {
     "rock-paper-scissors",
     "prisoners-dilemma",
 }
-
-
-def test_expanded_arenas_are_registered():
-    assert EXPANDED_ARENAS.issubset(set(registry.list()))
 
 
 def test_checkers_initial_moves_and_capture():

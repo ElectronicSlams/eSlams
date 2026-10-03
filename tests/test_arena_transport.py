@@ -51,6 +51,7 @@ def test_all_arenas_smoke_without_provider_calls():
 
     assert payload["ok"] is True
     assert payload["game_count"] == 50
+    assert {row["arena_id"] for row in payload["rows"]} == set(PUBLIC_GAME_CATALOGUE_BY_ID)
     assert all(row["legal_action_count"] >= 0 for row in payload["rows"])
 
 

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.strategic_games import (
     BargainingArena,
     BlackjackArena,
@@ -20,10 +19,6 @@ STRATEGIC_ARENAS = {
     "liars-dice",
     "negotiation",
 }
-
-
-def test_strategic_arenas_are_registered():
-    assert STRATEGIC_ARENAS.issubset(set(registry.list()))
 
 
 def test_blackjack_reveals_dealer_hand_only_on_terminal():

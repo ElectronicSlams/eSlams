@@ -42,6 +42,15 @@ coverage recorded separately.
 - #172: global `--version` / `-V` prints the shared package version and exits
   successfully. Installed-wheel verification remains outstanding.
 
+## Test reduction checkpoint
+
+Removed 10 of the required 55 original cases: redundant family registry-only
+checks. Retained Runner tests create the same named arenas and validate their
+artifacts; the retained all-arena smoke now checks exact public-catalogue
+membership. Full suite: 328 passing cases; line coverage 85.641531%, above the
+85.332886% baseline. Each removal and retained check is recorded in the JSON
+ledger. Another 45 original cases remain to be assessed and removed.
+
 ## Remaining work
 
 All 148 original issues and 43 original PRs, with captured PR heads and

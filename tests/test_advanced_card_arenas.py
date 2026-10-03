@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.advanced_cards import (
     CribbageArena,
     EuchreArena,
@@ -16,10 +15,6 @@ ADVANCED_CARD_ARENAS = {
     "gin-rummy",
     "hanabi",
 }
-
-
-def test_advanced_card_arenas_are_registered():
-    assert ADVANCED_CARD_ARENAS.issubset(set(registry.list()))
 
 
 def test_gin_rummy_hides_opponent_hand_and_detects_undercut():
