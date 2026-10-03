@@ -21,6 +21,16 @@ materialization is cleaned on corrupt data, I/O failure or interruption. Trusted
 API integrations needing a different bound can explicitly supply `ArchiveLimits`
 to `eslams.zip_extract.extract_archive`; ordinary CLI reads use the safe defaults.
 
+Artifact writing stages the directory and ZIP before installing either. On a
+write or installation error, the writer removes its temporary outputs and
+restores replaced artifacts. Directory and ZIP installation are separate
+filesystem operations; this is not a transaction across both paths. Existing
+archives remain readable until replacement. A forced process kill or power loss
+can leave hidden staging/backup files, which are never named as completed runs.
+Archive members use the fixed ZIP timestamp 1980-01-01; actual run time remains
+in the manifest. Filesystem enumeration errors never produce a successful empty
+archive. Expanded artifacts reject symlink and special-file members.
+
 ## Package layout
 
 Every serious run produces a `.eslams` proof package. `.eslams` is the

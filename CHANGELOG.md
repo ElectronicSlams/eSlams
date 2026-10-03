@@ -27,6 +27,11 @@
   traceback; unexpected programming errors remain visible. Early-closing output
   pipes terminate without a BrokenPipeError traceback.
 
+- Artifact directories and archives are built under temporary names before
+  installation. Failed writes and interrupts leave prior artifacts intact;
+  overwrite refuses unrelated directories. Traversal/stat errors and symlink
+  members fail closed. ZIP members use a fixed portable timestamp.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

@@ -580,9 +580,9 @@
       "number": 138,
       "title": "eslams run crashes after the match when the system clock is before 1980 or after 2107 (ZIP timestamp range); empty archive left",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Choose deterministic valid archive timestamp handling, test clocks outside ZIP range, and stage archives so failures leave no installed empty archive.",
-      "evidence": null
+      "evidence": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate."
     },
     {
       "number": 139,
@@ -628,9 +628,9 @@
       "number": 144,
       "title": "Low file-descriptor limit makes eslams run exit 0 with a valid-looking summary but an empty 22-byte archive on Python 3.12+ (Path.rglob swallows EMFILE)",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Injected EMFILE must propagate as failure before a success summary/final archive; verify on Python versions where pathlib can suppress traversal errors and pair with atomic output handling.",
-      "evidence": null
+      "evidence": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate."
     },
     {
       "number": 145,
@@ -876,9 +876,9 @@
       "number": 176,
       "title": "Interrupting `eslams run` (Ctrl-C / SIGINT) leaves a half-written `run_*.eslams.d` directory with no `manifest.json`",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Stage artifact trees/archive and commit atomically; distinguish explicit failed/partial diagnostic state from complete artifacts and clean temporary writes on interrupt.",
-      "evidence": null
+      "evidence": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate."
     },
     {
       "number": 177,
@@ -1534,9 +1534,10 @@
       "number": 161,
       "head": "bc34625d38ef0eb348bedb6f70c7fa6e76903289",
       "title": "fix: surface artifact traversal errors",
-      "status": "pending",
+      "status": "incorporated with stronger traversal and staged writing; matrix pending",
       "review_route": "Retain, conditional",
-      "criterion": "Rebase onto artifact-confinement work, run supported-version CI including injected EMFILE, ensure no success summary or installed final archive on failed write, and test symlink handling. Merge; close #144 only to the demonstrated failure mode."
+      "criterion": "Rebase onto artifact-confinement work, run supported-version CI including injected EMFILE, ensure no success summary or installed final archive on failed write, and test symlink handling. Merge; close #144 only to the demonstrated failure mode.",
+      "evidence": "Adopted os.walk(onerror=raise) intent across hash, validation, source-size and ZIP enumeration, replaced is_file suppression with lstat regular-file checks and rejected directory links. Added staged installation and failure rollback so EMFILE cannot publish an empty final archive."
     },
     {
       "number": 217,

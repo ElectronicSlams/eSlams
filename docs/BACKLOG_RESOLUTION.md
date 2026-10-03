@@ -30,6 +30,11 @@ coverage recorded separately.
   tracebacks and clean termination when an output pipe closes early. The actual
   installed-wheel command remains a final integration gate (revised PR #217).
 
+- #138 / #144 / #176: artifact writing stages complete outputs, rolls back
+  failed replacements, propagates traversal/stat errors and uses fixed portable
+  ZIP member timestamps. This incorporates PR #161 with additional symlink and
+  failure safeguards. Native OS/Python matrix checks remain outstanding.
+
 ## Remaining work
 
 All 148 original issues and 43 original PRs, with captured PR heads and

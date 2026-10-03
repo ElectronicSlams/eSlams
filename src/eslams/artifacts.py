@@ -9,6 +9,7 @@ import hmac
 import json
 import os
 import shutil
+import stat
 import tempfile
 import zipfile
 from collections import Counter
@@ -18,6 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
@@ -365,14 +367,22 @@ def write_artifact(
                 f"invalid provider receipt at index {index}: " + "; ".join(receipt_errors)
             )
 
-    output_path = output_path.resolve()
-    artifact_dir = expanded_artifact_path(output_path)
-    if artifact_dir.exists():
-        if not overwrite:
-            raise FileExistsError(f"artifact path already exists: {artifact_dir}")
-        shutil.rmtree(artifact_dir)
-    if archive and output_path.exists() and not overwrite:
-        raise FileExistsError(f"artifact path already exists: {output_path}")
+    destinations = [expanded_artifact_path(output_path)]
+    if archive:
+        destinations.append(archive_artifact_path(output_path))
+    with _staged_artifact_outputs(destinations, overwrite=overwrite) as staged:
+        artifact_dir = staged / "payload.eslams.d"
+        _write_artifact_directory(build, artifact_dir)
+        outputs = [(artifact_dir, destinations[0].resolve())]
+        if archive:
+            staged_archive = staged / "payload.eslams"
+            _write_archive(artifact_dir, staged_archive)
+            outputs.append((staged_archive, destinations[1].resolve()))
+        _install_artifact_outputs(outputs, overwrite=overwrite)
+    return destinations[-1].resolve()
+
+
+def _write_artifact_directory(build: ArtifactBuildInput, artifact_dir: Path) -> None:
     required_dirs = {
         str(Path(item).parent) for item in REQUIRED_FILES if Path(item).parent != Path(".")
     }
@@ -418,7 +428,7 @@ def write_artifact(
         _official_result_summary(build.score, arena_id),
     )
     _write_json(artifact_dir / "scores/metrics.json", _canonical_hashed_payload(build.metrics))
-    (artifact_dir / "logs/runner.log").write_text(build.runner_log, encoding="utf-8")
+    _write_text(artifact_dir / "logs/runner.log", build.runner_log)
     _write_jsonl(
         artifact_dir / "logs/agent_io.jsonl",
         (_canonical_hashed_payload(row) for row in build.agent_io),
@@ -433,10 +443,7 @@ def write_artifact(
         artifact_dir / "environment/lockfile.json",
         {"python": ">=3.9", "package": "eslams-core"},
     )
-    (artifact_dir / "environment/container_digest.txt").write_text(
-        "local-development\n",
-        encoding="utf-8",
-    )
+    _write_text(artifact_dir / "environment/container_digest.txt", "local-development\n")
     _write_json(
         artifact_dir / "environment/package_versions.json",
         {"eslams-core": CORE_PACKAGE_VERSION},
@@ -589,16 +596,108 @@ def write_artifact(
         signature_path.parent.mkdir(parents=True, exist_ok=True)
         _write_json(signature_path, _runner_signature(manifest_path, manifest_dict, signing_key))
 
-    if archive:
-        archive_path = archive_artifact_path(output_path)
-        if archive_path.exists():
-            archive_path.unlink()
-        with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            for path in sorted(artifact_dir.rglob("*")):
-                if path.is_file():
-                    zf.write(path, path.relative_to(artifact_dir).as_posix())
-        return archive_path
-    return artifact_dir
+
+
+def _check_artifact_destination(path: Path, *, overwrite: bool) -> None:
+    if path.is_symlink():
+        raise ValueError(f"artifact destination must not be a symlink: {path}")
+    if not path.exists():
+        return
+    if not overwrite:
+        raise FileExistsError(f"artifact path already exists: {path}; pass overwrite=True")
+    if path.is_dir():
+        cwd = Path.cwd().resolve()
+        if cwd == path or cwd.is_relative_to(path) or (path / ".git").exists():
+            raise ValueError(f"refusing to replace working directory or Git checkout: {path}")
+        manifest = path / "manifest.json"
+        if manifest.is_symlink() or not manifest.is_file():
+            raise ValueError(
+                f"refusing to replace a directory without an artifact manifest: {path}"
+            )
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or payload.get("artifact_version") != ARTIFACT_VERSION:
+            raise ValueError(f"refusing to replace a nonartifact directory: {path}")
+
+
+@contextmanager
+def _staged_artifact_outputs(paths: list[Path], *, overwrite: bool) -> Iterator[Path]:
+    # Lock both canonical names: directory-only and archive writers must contend.
+    locks: list[tuple[int, Path]] = []
+    try:
+        for raw in sorted(paths):
+            _check_artifact_destination(raw, overwrite=overwrite)
+            path = raw.resolve()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            lock = path.with_name(f".{path.name}.eslams-output.lock")
+            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            locks.append((descriptor, lock))
+        for raw in paths:
+            _check_artifact_destination(raw, overwrite=overwrite)
+        with tempfile.TemporaryDirectory(
+            prefix=".eslams-artifact-", dir=paths[0].resolve().parent
+        ) as name:
+            yield Path(name)
+    finally:
+        for descriptor, lock in reversed(locks):
+            os.close(descriptor)
+            lock.unlink(missing_ok=True)
+
+
+def _install_artifact_outputs(outputs: list[tuple[Path, Path]], *, overwrite: bool) -> None:
+    # Each installed path is complete. A directory and ZIP cannot be renamed in
+    # one filesystem operation; preserve old outputs to roll back a failed pair.
+    backups: dict[Path, Path] = {}
+    installed: list[Path] = []
+    try:
+        for source, destination in outputs:
+            _check_artifact_destination(destination, overwrite=overwrite)
+            if destination.exists():
+                backup = destination.with_name(f".{destination.name}.eslams-backup-{uuid4().hex}")
+                if destination.is_dir():
+                    destination.rename(backup)
+                else:
+                    # Keep an existing archive continuously available to readers.
+                    os.link(destination, backup)
+                backups[destination] = backup
+            if not overwrite and source.is_file():
+                os.link(source, destination)
+                installed.append(destination)
+                source.unlink()
+            else:
+                os.replace(source, destination)
+                installed.append(destination)
+    except BaseException:
+        for destination in reversed(installed):
+            if destination.is_dir():
+                shutil.rmtree(destination)
+            else:
+                destination.unlink()
+        for destination, backup in backups.items():
+            # If rollback itself fails, the backup stays outside the temporary
+            # tree rather than being erased by its cleanup.
+            os.replace(backup, destination)
+            # POSIX rename is a no-op when both names already reference one inode.
+            backup.unlink(missing_ok=True)
+        raise
+    else:
+        for backup in backups.values():
+            if backup.is_dir():
+                shutil.rmtree(backup, ignore_errors=True)
+            else:
+                backup.unlink(missing_ok=True)
+
+
+def _write_archive(artifact_dir: Path, archive_path: Path) -> None:
+    paths = _artifact_file_paths(artifact_dir)
+    if not paths:
+        raise ValueError("refusing to write an empty artifact archive")
+    with zipfile.ZipFile(archive_path, "x", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in paths:
+            info = zipfile.ZipInfo(path.relative_to(artifact_dir).as_posix(), (1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = (stat.S_IFREG | 0o600) << 16
+            with path.open("rb") as source, archive.open(info, "w") as destination:
+                shutil.copyfileobj(source, destination)
 
 
 def archive_artifact_path(path: Path) -> Path:
@@ -842,8 +941,7 @@ def _validate_file_table(
     unhashed_paths = _validate_unhashed_file_table(artifact_dir, manifest, errors)
     actual_paths = {
         path.relative_to(artifact_dir).as_posix()
-        for path in artifact_dir.rglob("*")
-        if path.is_file()
+        for path in _artifact_file_paths(artifact_dir)
     }
     actual_payload_paths = {
         rel for rel in actual_paths if rel != "manifest.json" and not rel.startswith("signatures/")
@@ -1265,18 +1363,23 @@ def _artifact_source_size(source_path: Path, artifact_dir: Path) -> int | None:
     if source_path.is_file():
         return source_path.stat().st_size
     if artifact_dir.is_dir():
-        return sum(path.stat().st_size for path in artifact_dir.rglob("*") if path.is_file())
+        return sum(path.stat().st_size for path in _artifact_file_paths(artifact_dir))
     return None
+
+
+def _write_text(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(text)
 
 
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
+    _write_text(path, canonical_json(payload) + "\n")
 
 
 def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
+    _write_text(path, "".join(canonical_json(row) + "\n" for row in rows))
 
 
 def _canonical_hashed_payload(payload: Any) -> Any:
@@ -1831,18 +1934,37 @@ def _compare_replay_snapshot(
         errors.append(f"replay event {index} turn_id does not match deterministic state")
 
 
+def _artifact_file_paths(artifact_dir: Path) -> list[Path]:
+    """Fail closed on traversal/stat errors, links and nonregular members."""
+    if not stat.S_ISDIR(artifact_dir.lstat().st_mode):
+        raise ValueError("artifact root must be a real directory")
+    paths: list[Path] = []
+
+    def raise_on_walk_error(error: OSError) -> None:
+        raise error
+
+    for root, directories, filenames in os.walk(
+        artifact_dir, onerror=raise_on_walk_error, followlinks=False
+    ):
+        for name in directories:
+            path = Path(root) / name
+            if not stat.S_ISDIR(path.lstat().st_mode):
+                raise ValueError(f"artifact directory must not be a symlink: {path}")
+        for name in filenames:
+            path = Path(root) / name
+            if not stat.S_ISREG(path.lstat().st_mode):
+                raise ValueError(f"artifact member must be a regular file: {path}")
+            paths.append(path)
+    return sorted(paths)
+
+
 def _file_entries(artifact_dir: Path) -> list[dict[str, Any]]:
     entries = []
-    for path in sorted(artifact_dir.rglob("*")):
-        if path.is_file():
-            rel = path.relative_to(artifact_dir).as_posix()
-            if (
-                rel == "manifest.json"
-                or rel.startswith("signatures/")
-                or rel in UNHASHED_FILE_PATHS
-            ):
-                continue
-            entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
+    for path in _artifact_file_paths(artifact_dir):
+        rel = path.relative_to(artifact_dir).as_posix()
+        if rel == "manifest.json" or rel.startswith("signatures/") or rel in UNHASHED_FILE_PATHS:
+            continue
+        entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
     return sorted(entries, key=lambda item: item["path"])
 
 
