@@ -265,7 +265,7 @@ def test_provider_action_joins_exactly_one_successful_physical_attempt(tmp_path:
     assert receipts[0]["seat_id"] == trace["seat"]
     assert receipts[0]["status"] == "completed"
     assert receipts[0]["action_applied"] is True
-    assert receipts[0]["case_valid_for_scoring"] is True
+    assert receipts[0]["case_valid_for_scoring"] is False
     assert receipts[0]["attempt_kind"] == "case_retry"
     assert receipts[0]["case_attempt_index"] == 2
     assert receipts[0]["shard_index"] == 3
@@ -282,7 +282,8 @@ def test_provider_action_joins_exactly_one_successful_physical_attempt(tmp_path:
     Draft202012Validator(
         schema_for_version("eslams.provider.receipt.v2")
     ).validate(receipts[0])
-    assert public_result["valid_for_scoring"] is True
+    assert public_result["valid_for_scoring"] is False
+    assert result.score.invalid_reason == "run_truncated"
     assert manifest["per_case_scoring_eligible"] is False
     assert manifest["proof_row_publication_eligible"] is False
     assert result.score.provider_action_count_by_player["player_1"] == 1

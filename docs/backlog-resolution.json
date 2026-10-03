@@ -68,9 +68,9 @@
       "number": 57,
       "title": "CLI prints raw Python tracebacks for ordinary user errors (unknown agent/arena, missing file, bad JSON)",
       "work_package": "W8",
-      "status": "implemented; targeted verification",
+      "status": "implemented; installed-wheel verification on macOS/Python 3.9",
       "criterion": "Keep open; require console-entry-point handling and actual installed-command verification.",
-      "evidence": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate."
+      "evidence": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite)."
     },
     {
       "number": 58,
@@ -84,9 +84,9 @@
       "number": 59,
       "title": "`eslams run --max-turns 0` / negative accepted; zero-turn run is match_valid_for_scoring: true",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; full local verification",
       "criterion": "Reject zero/negative turn caps before output creation; test that no scoring-valid empty run is emitted. Resolve jointly with #102.",
-      "evidence": null
+      "evidence": "RunConfig rejects nonpositive/noninteger/bool turn caps before output creation. External nonterminal truncation emits run_truncated, scoring-invalid diagnostic artifact and non-scoring physical receipts; declared arena horizon remains valid. Validator rejects refreshed score/manifest/publication claims on nonterminal replay. Completed mocked provider case runs to a real terminal state; signed/local fixtures regenerated as complete games. Full Python 3.9/macOS suite passed; cross-version/native OS gates remain."
     },
     {
       "number": 60,
@@ -324,9 +324,9 @@
       "number": 102,
       "title": "Runner: max_turns below natural game length yields a scoring-valid run with no outcome and 0/0 scores (extends #59)",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; full local verification",
       "criterion": "Mark externally truncated nonterminal runs invalid/incomplete for the agreed scoring contract; preserve replay/diagnostic output and distinguish a declared arena horizon outcome from runner truncation.",
-      "evidence": null
+      "evidence": "RunConfig rejects nonpositive/noninteger/bool turn caps before output creation. External nonterminal truncation emits run_truncated, scoring-invalid diagnostic artifact and non-scoring physical receipts; declared arena horizon remains valid. Validator rejects refreshed score/manifest/publication claims on nonterminal replay. Completed mocked provider case runs to a real terminal state; signed/local fixtures regenerated as complete games. Full Python 3.9/macOS suite passed; cross-version/native OS gates remain."
     },
     {
       "number": 103,
@@ -844,9 +844,9 @@
       "number": 172,
       "title": "`eslams --version` and `-V` are not supported (argparse: \"the following arguments are required: command\")",
       "work_package": "W8",
-      "status": "implemented; source verification",
+      "status": "implemented; installed-wheel verification on macOS/Python 3.9",
       "criterion": "Expose the actual installed distribution version consistently for --version/-V and module entry; test without creating output or requiring secrets.",
-      "evidence": "Global --version/-V argparse action prints shared CORE_PACKAGE_VERSION before required subcommands. Both flags verified with module invocation; installed-wheel command verification pending."
+      "evidence": "Global --version/-V argparse action prints shared CORE_PACKAGE_VERSION before required subcommands. Both flags verified with module invocation; installed-wheel command verification pending. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite)."
     },
     {
       "number": 173,
@@ -860,9 +860,9 @@
       "number": 174,
       "title": "`eslams catalogue games --json | head -1` exits 1 with a `BrokenPipeError` traceback (also `models list`, `core budgets`)",
       "work_package": "W8",
-      "status": "implemented; targeted verification",
+      "status": "implemented; installed-wheel verification on macOS/Python 3.9",
       "criterion": "Handle BrokenPipeError as normal pipe termination at the real entry point without obscuring actual command failures; test piped output with an early-closing consumer.",
-      "evidence": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate."
+      "evidence": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite)."
     },
     {
       "number": 175,
@@ -1543,10 +1543,10 @@
       "number": 217,
       "head": "7e7d68953152ef419c5406bbb7fefebbabf4b3ec",
       "title": "fix(cli): print clean error messages instead of tracebacks for runtime errors",
-      "status": "incorporated with revisions; installed-wheel verification pending",
+      "status": "incorporated with revisions; installed-wheel verification on macOS/Python 3.9",
       "review_route": "Revise / split",
       "criterion": "Put handling in the actual installed entry path, retain debug tracebacks consistently, handle expected user errors specifically, test console executable and module entry, then merge and close #57.",
-      "evidence": "Shared main wrapper replaces entry-specific behavior; module and console target subprocesses cover normal/debug errors and an early-closing pipe. Installed command gate remains outstanding."
+      "evidence": "Shared main wrapper replaces entry-specific behavior; module and console target subprocesses cover normal/debug errors and an early-closing pipe. Installed command gate remains outstanding. Actual installed wheel console and module commands verified outside checkout at b651238."
     }
   ],
   "consolidation_pr": "https://github.com/ElectronicSlams/eSlams/pull/218",
@@ -1640,16 +1640,25 @@
         "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
       ],
       "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_runner_artifact.py::test_runner_honors_zero_max_turns",
+      "reason": "Obsolete assertion accepts zero-turn artifacts, contradicting the corrected positive turn-cap contract (#59/#102). Replaced by input-boundary regressions that verify no output is created.",
+      "retained_checks": [
+        "tests/test_run_completion.py::test_invalid_turn_cap_is_rejected_before_creating_output[0]",
+        "tests/test_run_completion.py::test_truncated_run_retains_valid_diagnostic_artifact_but_cannot_score"
+      ],
+      "baseline_unique_lines": 0
     }
   ],
   "test_reduction_checkpoint": {
-    "removed_original_cases": 10,
-    "remaining_removal_target": 45,
-    "passing_cases": 328,
-    "covered_lines": 10426,
-    "statements": 12174,
-    "line_coverage": 85.64153113192049,
-    "coverage_change_percentage_points": 0.3086455639580947,
+    "removed_original_cases": 11,
+    "remaining_removal_target": 44,
+    "passing_cases": 340,
+    "covered_lines": 10450,
+    "statements": 12185,
+    "line_coverage": 85.76118178087813,
+    "coverage_change_percentage_points": 0.4282962129157397,
     "scope": "src/eslams; full pytest including packaged provenance; Python 3.9.6",
     "note": "Intermediate checkpoint only; remaining removals and final coverage gate outstanding."
   }

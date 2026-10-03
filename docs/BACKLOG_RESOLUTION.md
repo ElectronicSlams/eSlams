@@ -46,14 +46,23 @@ coverage recorded separately.
   malformed or illegal-action endpoints, while retaining valid diagnostic
   artifacts and reporting action/error counts.
 
+- #59 / #102: nonpositive turn caps are rejected; externally truncated games
+  retain valid diagnostics while failing scoring eligibility. Validation rejects
+  refreshed eligibility claims on a nonterminal replay. Declared arena horizons
+  remain complete games; fixtures and positive provider tests now finish games.
+
+Actual installed-wheel console/module checks passed outside the checkout on
+macOS/Python 3.9 (11 checks at commit b651238). This resolves the local packaging
+entry-point gate for #57 / #174 / #172 and PR #217; the final matrix remains.
+
 ## Test reduction checkpoint
 
-Removed 10 of the required 55 original cases: redundant family registry-only
-checks. Retained Runner tests create the same named arenas and validate their
+Removed 11 of the required 55 original cases: ten redundant family registry-only
+checks and one obsolete zero-turn acceptance test, replaced by rejection checks. Retained Runner tests create the same named arenas and validate their
 artifacts; the retained all-arena smoke now checks exact public-catalogue
-membership. Full suite: 328 passing cases; line coverage 85.641531%, above the
+membership. Full suite: 340 passing cases; line coverage 85.761182%, above the
 85.332886% baseline. Each removal and retained check is recorded in the JSON
-ledger. Another 45 original cases remain to be assessed and removed.
+ledger. Another 44 original cases remain to be assessed and removed.
 
 ## Remaining work
 

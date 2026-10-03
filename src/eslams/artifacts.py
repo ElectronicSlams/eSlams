@@ -1307,7 +1307,7 @@ def _validation_report(
         verification_level=_optional_manifest_str(manifest, "verification_level"),
         scoring_eligible=(
             False
-            if profile == "official_case" and errors
+            if errors
             else _optional_manifest_bool(manifest, "match_valid_for_scoring")
         ),
         archive_sha256=_artifact_source_hash(source_path, artifact_dir),
@@ -1688,7 +1688,7 @@ def _validate_deterministic_replay(
     )
     if len(replay_rows) != len(transition_rows) + 1:
         errors.append("deterministic replay event count does not match action trace length")
-    _validate_score_terminal_matches_last_replay(artifact_dir, replay_rows, errors)
+    _validate_score_terminal_matches_last_replay(artifact_dir, manifest, replay_rows, errors)
 
     previous_state = None
     for index, row in enumerate(transition_rows):
@@ -1817,6 +1817,7 @@ def _artifact_arena_id(
 
 def _validate_score_terminal_matches_last_replay(
     artifact_dir: Path,
+    manifest: dict[str, Any],
     replay_rows: list[dict[str, Any]],
     errors: list[str],
 ) -> None:
@@ -1835,6 +1836,14 @@ def _validate_score_terminal_matches_last_replay(
     score_outcome = score.get("outcome")
     last_replay = replay_rows[-1]
     replay_outcome = last_replay.get("outcome")
+    if last_replay.get("terminal") is not True and (
+        score.get("match_valid_for_scoring") is True
+        or any(manifest.get(key) is True for key in (
+            "match_valid_for_scoring", "per_case_scoring_eligible",
+            "proof_row_publication_eligible", "aggregate_leaderboard_eligible",
+        ))
+    ):
+        errors.append("nonterminal replay cannot be eligible for scoring or publication")
     if score_outcome is None:
         if last_replay.get("terminal") and replay_outcome is not None:
             errors.append("last replay terminal outcome does not match score.json")

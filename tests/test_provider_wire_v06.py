@@ -199,6 +199,8 @@ def test_openrouter_provider_pin_is_explicit_and_fallback_stays_disabled(monkeyp
 def test_complete_openrouter_case_is_publication_eligible(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "fixture-key")
 
+    actions = iter([0, 2, 4, 6])
+
     def fake_post(
         url: str,
         *,
@@ -206,10 +208,9 @@ def test_complete_openrouter_case_is_publication_eligible(tmp_path: Path, monkey
         json: dict[str, Any],
         timeout: Any,
     ) -> httpx.Response:
-        return httpx.Response(
-            200,
-            json=_fixture("openrouter_chat_completions_success.json"),
-        )
+        payload = _fixture("openrouter_chat_completions_success.json")
+        payload["choices"][0]["message"]["content"] = f'{{"action": {next(actions)}}}'
+        return httpx.Response(200, json=payload)
 
     monkeypatch.setattr(httpx, "post", fake_post)
     result = Runner().run(
@@ -224,22 +225,23 @@ def test_complete_openrouter_case_is_publication_eligible(tmp_path: Path, monkey
             },
             case_id="case_openrouter_complete_001",
             model_id_by_player={"player_1": "openai/gpt-5-mini"},
-            max_turns=1,
+            max_turns=9,
             output_dir=tmp_path,
         )
     )
-    receipt = json.loads(
+    receipts = [json.loads(line) for line in
         (result.artifact_path / "receipts/provider_receipts.jsonl").read_text(
             encoding="utf-8"
-        )
-    )
+        ).splitlines()]
     manifest = json.loads(
         (result.artifact_path / "manifest.json").read_text(encoding="utf-8")
     )
 
-    assert receipt["case_valid_for_scoring"] is True
-    assert receipt["usage_complete"] is True
-    assert receipt["cost_complete"] is True
+    assert len(receipts) == 4
+    assert result.replay_events[-1].terminal is True
+    assert all(receipt["case_valid_for_scoring"] is True for receipt in receipts)
+    assert all(receipt["usage_complete"] is True for receipt in receipts)
+    assert all(receipt["cost_complete"] is True for receipt in receipts)
     assert result.score.integrity_status == "valid"
     assert manifest["per_case_run_valid"] is True
     assert manifest["per_case_scoring_eligible"] is True

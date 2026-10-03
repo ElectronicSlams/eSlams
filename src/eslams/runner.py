@@ -78,6 +78,12 @@ class RunConfig:
     overwrite: bool = False
 
     def __post_init__(self) -> None:
+        if self.max_turns is not None and (
+            isinstance(self.max_turns, bool)
+            or not isinstance(self.max_turns, int)
+            or self.max_turns < 1
+        ):
+            raise ValueError("max_turns must be a positive integer")
         if isinstance(self.case_attempt_index, bool) or self.case_attempt_index < 1:
             raise ValueError("case_attempt_index must be a positive integer")
         if self.run_id is not None:
@@ -477,6 +483,11 @@ class Runner:
                 }
             )
             state = next_state
+
+        if not state.terminal and state.turn >= max_turns:
+            match_valid_for_scoring = False
+            invalid_reason = invalid_reason or "run_truncated"
+            invalid_reason_codes.append("run_truncated")
 
         elapsed_ms = int((time.perf_counter() - start) * 1000)
         for provider_receipt in provider_receipts:
@@ -1264,6 +1275,9 @@ def _score_summary(
         outcome=state.outcome,
         metrics={
             "turns": len(trace_events),
+            "run_status": "completed" if state.terminal else (
+                "truncated" if "run_truncated" in invalid_reason_codes else "failed"
+            ),
             "elapsed_ms": elapsed_ms,
             "illegal_action_rate": illegal / total_turns,
             "timeout_rate": timeouts / total_turns,

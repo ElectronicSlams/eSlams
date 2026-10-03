@@ -38,6 +38,11 @@
 - `agent test` reports endpoint failures and illegal/malformed responses in
   its `ok` flag, exit status and diagnostic counts.
 
+- Nonpositive or noninteger turn caps are rejected before output creation.
+  Nonterminal games stopped by the Runner are marked `run_truncated` and cannot
+  score or publish evidence as complete cases. Diagnostic replay remains valid;
+  artifact validation rejects scoring claims unsupported by terminal replay.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

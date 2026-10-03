@@ -363,20 +363,6 @@ def test_runner_enforces_in_process_agent_timeout(tmp_path: Path):
     assert result.score.match_valid_for_scoring is False
 
 
-def test_runner_honors_zero_max_turns(tmp_path: Path):
-    result = Runner().run(
-        RunConfig(
-            arena_id="tic-tac-toe",
-            output_dir=tmp_path,
-            max_turns=0,
-        )
-    )
-    manifest = json.loads((result.artifact_path / "manifest.json").read_text(encoding="utf-8"))
-
-    assert result.trace_events == []
-    assert manifest["run_metadata"]["max_turns"] == 0
-
-
 def test_score_summary_primary_score_tracks_player_one():
     arena = ThreePlayerArena()
     state = _three_player_state(scores={"player_1": 0.25, "player_2": 0.9, "player_3": 0.6})

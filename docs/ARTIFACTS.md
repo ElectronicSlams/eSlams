@@ -36,6 +36,15 @@ directory and installs only the requested file. Use `fixtures artifact
 --overwrite` to explicitly regenerate an existing fixture; output filenames
 may contain spaces, Unicode and ordinary punctuation.
 
+A runner turn cap must be a positive integer. If it ends a game before the
+arena reaches a terminal state, the artifact remains a valid diagnostic proof
+but `match_valid_for_scoring` and publication eligibility are false, with
+`run_truncated` as the reason. A horizon defined by arena rules that produces a
+terminal outcome remains a completed game. Validation checks the terminal
+replay before accepting scoring claims. Older truncated artifacts that claim
+scoring eligibility now fail this check; regenerate complete fixtures or
+retain them explicitly as invalid examples.
+
 ## Package layout
 
 Every serious run produces a `.eslams` proof package. `.eslams` is the
