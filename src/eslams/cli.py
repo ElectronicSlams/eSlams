@@ -1095,13 +1095,30 @@ def _agent_command(args: argparse.Namespace) -> int:
                 output_dir=Path("runs/protocol-tests"),
             )
         )
+        actor = "player_1"
+        checks = {
+            "tested_actions": result.score.logical_action_count_by_player.get(actor, 0),
+            "agent_errors": result.score.agent_error_count_by_player.get(actor, 0),
+            "illegal_actions": result.score.illegal_action_count_by_player.get(actor, 0),
+            "fallback_actions": result.score.fallback_action_count_by_player.get(actor, 0),
+        }
+        ok = checks["tested_actions"] > 0 and all(
+            checks[name] == 0 for name in ("agent_errors", "illegal_actions", "fallback_actions")
+        )
         print(
             json.dumps(
-                {"ok": True, "run_id": result.run_id, "artifact": str(result.artifact_path)},
+                {
+                    "ok": ok,
+                    "run_id": result.run_id,
+                    "artifact": str(result.artifact_path),
+                    "checks": checks,
+                    "failure_reason": None if ok else result.score.invalid_reason
+                    or "agent_not_exercised",
+                },
                 indent=2,
             )
         )
-        return 0
+        return 0 if ok else 1
     if args.agent_command == "publish":
         print(
             json.dumps(

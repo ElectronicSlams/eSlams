@@ -42,6 +42,10 @@ coverage recorded separately.
 - #172: global `--version` / `-V` prints the shared package version and exits
   successfully. Installed-wheel verification remains outstanding.
 
+- #54: agent protocol test reports failure and exits 1 for unreachable,
+  malformed or illegal-action endpoints, while retaining valid diagnostic
+  artifacts and reporting action/error counts.
+
 ## Test reduction checkpoint
 
 Removed 10 of the required 55 original cases: redundant family registry-only

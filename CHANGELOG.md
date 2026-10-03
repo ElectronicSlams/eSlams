@@ -35,6 +35,9 @@
 - Artifact fixtures preserve sibling directories and existing latest pointers,
   accept ordinary filenames independent of run IDs, and expose `--overwrite`.
 
+- `agent test` reports endpoint failures and illegal/malformed responses in
+  its `ok` flag, exit status and diagnostic counts.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

@@ -44,9 +44,9 @@
       "number": 54,
       "title": "`eslams agent test` always reports \"ok\": true / exit 0, even when the agent is unreachable or returns illegal actions",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Agent-test ok/exit status must reflect unreachable/illegal responses; test successful, transport-failed and illegal-action agents using local fixtures.",
-      "evidence": null
+      "evidence": "agent test now bases ok/exit status on tested logical actions and absence of agent errors, illegal actions and fallbacks, with failure reason/counts. Four local mocked endpoint regressions cover success, connection failure, illegal action and malformed response; artifacts validate for both successful and failed diagnostics."
     },
     {
       "number": 55,
