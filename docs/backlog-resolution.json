@@ -172,9 +172,9 @@
       "number": 76,
       "title": "`eslams replay --output` and `core golden --out` overwrite the input artifact without warning",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Reject input/output aliasing, directories and unintended existing outputs before writing; test replay and golden exports preserve source bytes with explicit overwrite behavior only when safe.",
-      "evidence": null
+      "evidence": "tests/test_output_safety.py: source/file/hardlink preservation, explicit overwrite, replay extra-argument error; 54 relevant tests pass; changed sources Ruff and mypy pass"
     },
     {
       "number": 77,
@@ -852,9 +852,9 @@
       "number": 173,
       "title": "`eslams replay <artifact> <anything>` silently accepts an undocumented second positional and ignores it (a typo still exits 0)",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Remove/reject the ignored positional argument or document and implement it; a typo must not silently look successful.",
-      "evidence": null
+      "evidence": "tests/test_output_safety.py: source/file/hardlink preservation, explicit overwrite, replay extra-argument error; 54 relevant tests pass; changed sources Ruff and mypy pass"
     },
     {
       "number": 174,
@@ -1546,5 +1546,6 @@
       "review_route": "Revise / split",
       "criterion": "Put handling in the actual installed entry path, retain debug tracebacks consistently, handle expected user errors specifically, test console executable and module entry, then merge and close #57."
     }
-  ]
+  ],
+  "consolidation_pr": "https://github.com/ElectronicSlams/eSlams/pull/218"
 }

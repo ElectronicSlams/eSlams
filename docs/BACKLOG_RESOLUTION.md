@@ -17,6 +17,11 @@ coverage recorded separately.
   output after success. Regression checks preserve unrelated files, reject
   working-directory/source/symlink destinations and exercise writer conflicts.
 
+- #76: replay/golden exports require explicit file overwrite; replay refuses input
+  and hardlink aliases and writes outside expanded artifacts.
+- #173: normal replay rejects an ignored extra positional argument while
+  retaining the validate-public compatibility command.
+
 ## Remaining work
 
 All 148 original issues and 43 original PRs, with captured PR heads and

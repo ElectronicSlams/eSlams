@@ -9,21 +9,25 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from eslams.output import write_text_file
 
-def render_replay_html(artifact_path: Path, output_path: Path | None = None) -> Path:
+
+def render_replay_html(
+    artifact_path: Path, output_path: Path | None = None, *, overwrite: bool = False
+) -> Path:
     artifact_path = artifact_path.resolve()
+    name = artifact_path.name.removesuffix(".eslams.d").removesuffix(".eslams")
+    output = output_path or artifact_path.with_name(f"{name}.replay.html")
     if artifact_path.is_dir():
         events = _read_replay_events(artifact_path)
-        output = output_path or artifact_path / "replay" / "index.html"
-        return _write_replay(output, events)
+        return _write_replay(output, events, overwrite=overwrite, source=artifact_path)
     if zipfile.is_zipfile(artifact_path):
         with tempfile.TemporaryDirectory(prefix="eslams-replay-") as tmp_dir:
             tmp_path = Path(tmp_dir)
             with zipfile.ZipFile(artifact_path) as archive:
                 archive.extractall(tmp_path)
             events = _read_replay_events(tmp_path)
-        output = output_path or artifact_path.with_suffix(".replay.html")
-        return _write_replay(output, events)
+        return _write_replay(output, events, overwrite=overwrite, source=artifact_path)
     raise FileNotFoundError(artifact_path)
 
 
@@ -36,11 +40,22 @@ def _read_replay_events(artifact_path: Path) -> list[dict[str, Any]]:
     ]
 
 
-def _write_replay(output_path: Path, events: list[dict[str, Any]]) -> Path:
+def _write_artifact_replay(artifact_path: Path) -> Path:
+    """Create the in-artifact replay before the artifact writer hashes it."""
+    return _write_replay(artifact_path / "replay" / "index.html", _read_replay_events(artifact_path))
+
+
+def _write_replay(
+    output_path: Path,
+    events: list[dict[str, Any]],
+    *,
+    overwrite: bool = False,
+    source: Path | None = None,
+) -> Path:
     payload = json.dumps(events, ensure_ascii=False).replace("</", "<\\/")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(_html(payload), encoding="utf-8")
-    return output_path
+    return write_text_file(
+        output_path, _html(payload), overwrite=overwrite, sources=[] if source is None else [source]
+    )
 
 
 def _html(events_json: str) -> str:

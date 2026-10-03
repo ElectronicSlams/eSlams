@@ -10,6 +10,12 @@
   and install the completed directory after success. Concurrent Core exporters
   cannot claim the same destination. Use a new output directory for each export;
   no release or historical artifact bytes are changed by this repair.
+- Replay and golden exports refuse implicit file overwrite. `--overwrite`
+  explicitly permits replacing output files, but replay always refuses its
+  source or an alias. Expanded-artifact replays are rendered beside the
+  artifact, preserving hashed members. Replay rejects ignored extra arguments;
+  the documented `replay validate-public <package>` compatibility command stays
+  supported.
 
 ## v0.6.1 - 2026-07-31
 

@@ -42,7 +42,7 @@ from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 from eslams.policy import artifact_profile_label as policy_artifact_profile_label
 from eslams.policy import policy_key, policy_label
-from eslams.replay import render_replay_html
+from eslams.replay import _write_artifact_replay
 from eslams.replay_projection import display_frame_rows
 
 ARTIFACT_VERSION = "eslams-artifact-v1"
@@ -409,7 +409,7 @@ def write_artifact(
         artifact_dir / "public_reasoning/reasoning.jsonl",
         _public_reasoning_rows(build.replay_events),
     )
-    render_replay_html(artifact_dir)
+    _write_artifact_replay(artifact_dir)
     _write_json(artifact_dir / "scores/score.json", _canonical_score_summary(build.score))
     publication_eligible = _case_publication_eligible(build.score)
     _write_json(

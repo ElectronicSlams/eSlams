@@ -40,6 +40,7 @@ from eslams.fixtures import ARTIFACT_FIXTURE_KINDS, create_artifact_fixture
 from eslams.golden import golden_fixture_bundle
 from eslams.observation_budgets import all_observation_budget_reports
 from eslams.official import merge_official_results
+from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_live, provider_preflight
@@ -112,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     core_golden = core_sub.add_parser("golden", help="Emit Core golden fixtures.")
     core_golden.add_argument("--games", default="tic-tac-toe,connect-four")
     core_golden.add_argument("--out", type=Path)
+    core_golden.add_argument("--overwrite", action="store_true", help="Replace an existing file.")
 
     bench = sub.add_parser("bench", help="Core benchmark helper commands.")
     bench_sub = bench.add_subparsers(dest="bench_command", required=True)
@@ -380,6 +382,7 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("artifact")
     replay.add_argument("extra", nargs="?")
     replay.add_argument("--output", type=Path)
+    replay.add_argument("--overwrite", action="store_true", help="Replace an existing HTML file.")
 
     agent = sub.add_parser("agent", help="Agent helper commands.")
     agent_sub = agent.add_subparsers(dest="agent_command", required=True)
@@ -521,7 +524,9 @@ def main(argv: list[str] | None = None) -> int:
             payload = validate_public_replay(Path(args.extra))
             print(json.dumps(payload, indent=2))
             return 0 if bool(payload.get("valid")) else 1
-        output = render_replay_html(Path(args.artifact), args.output)
+        if args.extra is not None:
+            parser.error("replay accepts only one artifact argument")
+        output = render_replay_html(Path(args.artifact), args.output, overwrite=args.overwrite)
         print(json.dumps({"replay": str(output)}, indent=2))
         return 0
     if args.command == "agent":
@@ -576,10 +581,10 @@ def _core_command(args: argparse.Namespace) -> int:
         games = _comma_list(args.games)
         golden_payload = golden_fixture_bundle(game_ids=games)
         if args.out is not None:
-            args.out.parent.mkdir(parents=True, exist_ok=True)
-            args.out.write_text(
+            write_text_file(
+                args.out,
                 json.dumps(golden_payload, sort_keys=True, indent=2) + "\n",
-                encoding="utf-8",
+                overwrite=args.overwrite,
             )
             print(json.dumps({"fixture": str(args.out)}, indent=2))
         else:
