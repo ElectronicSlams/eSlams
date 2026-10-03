@@ -26,6 +26,10 @@ coverage recorded separately.
   replay and public export. Unsupported existing files are distinguished from
   missing files. This incorporates and extends the archive part of PR #26.
 
+- #57 / #174: console/module entry points share expected-error reporting, debug
+  tracebacks and clean termination when an output pipe closes early. The actual
+  installed-wheel command remains a final integration gate (revised PR #217).
+
 ## Remaining work
 
 All 148 original issues and 43 original PRs, with captured PR heads and

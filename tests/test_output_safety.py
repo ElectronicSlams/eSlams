@@ -118,8 +118,7 @@ def test_golden_export_preserves_existing_artifact_and_rejects_extra_argument(tm
 
     artifact = tmp_path / "source.eslams"
     artifact.write_bytes(b"existing artifact")
-    with pytest.raises(FileExistsError):
-        main(["core", "golden", "--out", str(artifact)])
+    assert main(["core", "golden", "--out", str(artifact)]) == 1
     assert artifact.read_bytes() == b"existing artifact"
     with pytest.raises(SystemExit) as error:
         main(["replay", str(artifact), "mistyped-output.html"])

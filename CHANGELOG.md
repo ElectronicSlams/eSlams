@@ -22,6 +22,10 @@
   decompressed, enforced before and during extraction. Temporary extraction
   directories are removed on CRC, I/O and interruption failures. Existing
   nonarchive files now report unsupported input instead of "file not found".
+- The installed `eslams` command and `python -m eslams.cli` now report expected
+  user/file errors consistently with exit 1. Set `ESLAMS_DEBUG=1` for the full
+  traceback; unexpected programming errors remain visible. Early-closing output
+  pipes terminate without a BrokenPipeError traceback.
 
 ## v0.6.1 - 2026-07-31
 

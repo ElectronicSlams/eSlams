@@ -60,6 +60,28 @@ from eslams.runner_session import default_runner_session_store
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Installed console and module entry point, with actionable user errors."""
+    try:
+        status = _main(argv)
+        sys.stdout.flush()
+        return status
+    except BrokenPipeError:
+        # Avoid a second buffered-write exception during interpreter shutdown.
+        try:
+            descriptor = sys.stdout.fileno()
+        except (AttributeError, OSError, ValueError):
+            return 0
+        with open(os.devnull, "w", encoding="utf-8") as sink:
+            os.dup2(sink.fileno(), descriptor)
+        return 0
+    except (KeyError, ValueError, OSError) as exc:
+        if os.getenv("ESLAMS_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
+            raise
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+
+def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="eslams",
         description="Run, validate, and replay eSlams artifacts.",

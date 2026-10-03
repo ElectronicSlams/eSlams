@@ -68,9 +68,9 @@
       "number": 57,
       "title": "CLI prints raw Python tracebacks for ordinary user errors (unknown agent/arena, missing file, bad JSON)",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Keep open; require console-entry-point handling and actual installed-command verification.",
-      "evidence": null
+      "evidence": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate."
     },
     {
       "number": 58,
@@ -860,9 +860,9 @@
       "number": 174,
       "title": "`eslams catalogue games --json | head -1` exits 1 with a `BrokenPipeError` traceback (also `models list`, `core budgets`)",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Handle BrokenPipeError as normal pipe termination at the real entry point without obscuring actual command failures; test piped output with an early-closing consumer.",
-      "evidence": null
+      "evidence": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate."
     },
     {
       "number": 175,
@@ -1542,9 +1542,10 @@
       "number": 217,
       "head": "7e7d68953152ef419c5406bbb7fefebbabf4b3ec",
       "title": "fix(cli): print clean error messages instead of tracebacks for runtime errors",
-      "status": "pending",
+      "status": "incorporated with revisions; installed-wheel verification pending",
       "review_route": "Revise / split",
-      "criterion": "Put handling in the actual installed entry path, retain debug tracebacks consistently, handle expected user errors specifically, test console executable and module entry, then merge and close #57."
+      "criterion": "Put handling in the actual installed entry path, retain debug tracebacks consistently, handle expected user errors specifically, test console executable and module entry, then merge and close #57.",
+      "evidence": "Shared main wrapper replaces entry-specific behavior; module and console target subprocesses cover normal/debug errors and an early-closing pipe. Installed command gate remains outstanding."
     }
   ],
   "consolidation_pr": "https://github.com/ElectronicSlams/eSlams/pull/218"
