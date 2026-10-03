@@ -168,6 +168,7 @@ class Runner:
                 state,
                 None,
                 [],
+                arena=arena,
                 actor_player=None,
                 state_hash_before=None,
             )
@@ -279,6 +280,7 @@ class Runner:
                         )
                         trace_events.append(
                             _trace_event(
+                                arena=arena,
                                 run_id=run_id,
                                 episode_id=episode_id,
                                 state=state,
@@ -301,6 +303,7 @@ class Runner:
                                 next_state,
                                 response.action if response else None,
                                 markers,
+                                arena=arena,
                                 actor_player=player_id,
                                 state_hash_before=state.state_hash,
                             )
@@ -353,6 +356,7 @@ class Runner:
                         )
                         trace_events.append(
                             _trace_event(
+                                arena=arena,
                                 run_id=run_id,
                                 episode_id=episode_id,
                                 state=state,
@@ -375,6 +379,7 @@ class Runner:
                                 next_state,
                                 action,
                                 markers,
+                                arena=arena,
                                 actor_player=player_id,
                                 state_hash_before=state.state_hash,
                             )
@@ -441,6 +446,7 @@ class Runner:
                 provider_action_count[player_id] += 1
 
             trace = _trace_event(
+                arena=arena,
                 run_id=run_id,
                 episode_id=episode_id,
                 state=state,
@@ -465,6 +471,7 @@ class Runner:
                     next_state,
                     action,
                     markers,
+                    arena=arena,
                     actor_player=player_id,
                     state_hash_before=state.state_hash,
                     action_provenance=action_provenance.value,
@@ -490,6 +497,7 @@ class Runner:
                     "turn_id": state.turn,
                     "player": player_id,
                     "action": action,
+                    "reveal_turn": arena.action_reveal_turn(next_state),
                     "state_hash": next_state.state_hash,
                     "markers": markers,
                     "action_provenance": action_provenance.value,
@@ -1010,7 +1018,11 @@ def _request(
         observation=arena.observation_for(state, player_id),
         legal_actions=arena.legal_actions_for(state, player_id),
         action_schema=arena.action_schema,
-        history=list(history),
+        history=[
+            {key: value for key, value in entry.items() if key != "reveal_turn"}
+            for entry in history
+            if entry["reveal_turn"] <= state.turn
+        ],
         time_budget_ms=time_budget_ms,
         memory_policy=memory_policy,
         metadata={
@@ -1131,6 +1143,7 @@ def _agent_time_limit(time_budget_ms: int) -> Iterator[None]:
 
 def _trace_event(
     *,
+    arena: Arena,
     run_id: str,
     episode_id: str,
     state: ArenaState,
@@ -1149,20 +1162,23 @@ def _trace_event(
     successful_attempt_event_id: str | None = None,
 ) -> TraceEvent:
     event_id = f"{run_id}:{state.turn:06d}"
+    visible_action = arena.public_action(next_state, action)
     public = {
         "state_hash_before": state.state_hash,
         "state_hash_after": next_state.state_hash,
         "active_player": state.active_player,
         "actor_player": state.active_player,
         "seat": state.active_player,
-        "action": action,
+        "action": visible_action,
         "scores": next_state.scores,
         "markers": markers,
         "latency_ms": latency_ms,
         "requested_time_budget_ms": requested_time_budget_ms,
         "effective_time_budget_ms": effective_time_budget_ms,
         "suite_context": suite_context,
-        "public_explanation": response.public_explanation if response else None,
+        "public_explanation": (
+            response.public_explanation if response and visible_action is not None else None
+        ),
         "action_provenance": action_provenance,
         "logical_action_id": logical_action_id,
         "successful_attempt_event_id": successful_attempt_event_id,
@@ -1181,11 +1197,13 @@ def _trace_event(
         },
         judge={
             **public,
+            "action": action,
             "request": request.to_dict(),
             "response": response.to_dict() if response else None,
         },
         auditor={
             **public,
+            "action": action,
             "protocol_version": request.protocol_version,
             "state_before": state.to_dict(),
             "state_after": next_state.to_dict(),
@@ -1200,12 +1218,14 @@ def _replay_event(
     action: Any | None,
     markers: list[str],
     *,
+    arena: Arena,
     actor_player: str | None,
     state_hash_before: str | None,
     action_provenance: str | None = None,
     logical_action_id: str | None = None,
     successful_attempt_event_id: str | None = None,
 ) -> ReplayEvent:
+    action = arena.public_action(state, action)
     public_reasoning_ref = None
     if action is not None:
         public_reasoning_ref = f"public_reasoning/reasoning.jsonl#{state.turn}"

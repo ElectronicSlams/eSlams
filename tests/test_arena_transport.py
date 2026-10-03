@@ -285,7 +285,8 @@ def test_arena_session_golden_representative_descriptors():
 
 def _players_for(player_ids: tuple[str, ...]) -> dict[str, dict[str, str]]:
     rows = {player_id: {"kind": "human", "label": player_id} for player_id in player_ids}
-    rows[player_ids[-1]]["kind"] = "model"
+    if len(player_ids) > 1:
+        rows[player_ids[-1]]["kind"] = "model"
     return rows
 
 

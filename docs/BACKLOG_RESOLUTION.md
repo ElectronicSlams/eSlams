@@ -95,3 +95,7 @@ overall backlog.
 Inventory recheck: all 148 issues and 43 original PRs remain open; no new
 items or changed original PR heads were found. Consolidation PR #218 remains
 draft. No release has been published.
+
+- #126 / #147 / #149 / #187 / #190: sealed-action privacy, independent fleets,
+  private model legal actions and safe agent binding/port validation implemented.
+  Thirty-seven relevant cases pass; final integration gates remain.

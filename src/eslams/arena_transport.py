@@ -404,13 +404,16 @@ def step_session(
     next_state = _reattach_session_metadata(next_state, session)
     timing["apply_ms"] = _elapsed_ms(apply_start)
 
+    visible = arena.public_action(next_state, raw_action) is not None
+    public_token = action_token if visible else None
+    public_label = str(accepted_descriptor["label"]) if visible else None
     display_start = perf_counter_ns()
     frame = _display_frame(
         next_state,
         event_id=_event_id(next_state, "state.applied", 1),
         actor_player=player_id,
-        action=action_token,
-        action_label=str(accepted_descriptor["label"]),
+        action=public_token,
+        action_label=public_label,
     )
     timing["display_ms"] = _elapsed_ms(display_start)
 
@@ -429,8 +432,8 @@ def step_session(
         state=next_state,
         players=players,
         actor=player_id,
-        action=action_token,
-        action_label=str(accepted_descriptor["label"]),
+        action=public_token,
+        action_label=public_label,
         display_frame=frame,
     )
     timing["total_core_ms"] = _elapsed_ms(total_start)
@@ -623,7 +626,14 @@ def _legal_action_page(
 ) -> dict[str, Any]:
     bounded_limit = _bounded_limit(limit)
     offset = _cursor_offset(cursor)
-    legal = registry.create(game_slug).legal_actions_for(state, player_id)
+    # This response is for the active human recipient. Model-seat actions
+    # remain inside the trusted runner; legal actions can encode private hands.
+    players = _dict(_session_metadata(state).get("players"))
+    legal = (
+        registry.create(game_slug).legal_actions_for(state, player_id)
+        if player_id == state.active_player and _player_kind(player_id, players) == "human"
+        else []
+    )
     descriptors = action_descriptors(game_id=game_slug, state=state, actions=legal)
     matching = _filter_descriptors(descriptors, query)
     page_rows = matching[offset : offset + bounded_limit]
@@ -893,8 +903,8 @@ def _step_events(
     state: ArenaState,
     players: dict[str, Any],
     actor: str,
-    action: str,
-    action_label: str,
+    action: str | None,
+    action_label: str | None,
     display_frame: dict[str, Any],
 ) -> list[dict[str, Any]]:
     actor_kind = _player_kind(actor, players)

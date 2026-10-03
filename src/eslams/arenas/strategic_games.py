@@ -115,6 +115,7 @@ class BlackjackArena(Arena):
 
 
 class FirstPriceSealedBidAuctionArena(Arena):
+    pending_action_key = "pending_bid"
     id = "first-price-sealed-bid-auction"
     version = "1.0.0"
     players = ("player_1", "player_2")
@@ -229,6 +230,7 @@ class FirstPriceSealedBidAuctionArena(Arena):
 
 
 class GoofspielArena(Arena):
+    pending_action_key = "pending_bid"
     id = "goofspiel"
     version = "1.0.0"
     players = ("player_1", "player_2")

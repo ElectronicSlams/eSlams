@@ -4,6 +4,16 @@
 
 ### Fixed
 
+- Sealed commitments stay hidden from opponent history, public traces and live
+  session events until the reveal phase. Auditor evidence retains raw actions.
+- Model-seat legal actions remain private, and public state views no longer
+  carry legal action lists. Human action lists are for the active human
+  recipient and must be routed privately by the Platform.
+- Battleship fleets now draw independently from each full grid (arena 1.1.0).
+- Agent servers bind to `127.0.0.1` by default. Container and remote callers
+  must pass `--host 0.0.0.0` (or `host="0.0.0.0"` in Python) explicitly.
+  Ports must be integers from 1 to 65535; ephemeral port zero is unsupported.
+
 - Public replay export, publication export, and uploaded replay fixture
   generation no longer delete an existing output directory. They refuse
   existing destinations and input/output aliases, stage writes separately,

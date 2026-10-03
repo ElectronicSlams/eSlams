@@ -23,6 +23,24 @@ class Arena(ABC):
     players: tuple[str, ...]
     action_schema: dict[str, Any]
     max_turns: int
+    pending_action_key: str | None = None
+
+    def action_reveal_turn(self, state_after: ArenaState) -> int:
+        """First turn at which an applied action may enter public history.
+
+        Sealed two-seat arenas declare the private commitment field. The
+        following response completes their reveal phase; other arenas reveal
+        immediately. Auditor evidence always retains the original action.
+        """
+        if self.pending_action_key is not None and any(
+            private.get(self.pending_action_key) is not None
+            for private in state_after.private_state_by_player.values()
+        ):
+            return state_after.turn + 1
+        return state_after.turn
+
+    def public_action(self, state_after: ArenaState, action: Any) -> Any:
+        return action if self.action_reveal_turn(state_after) <= state_after.turn else None
 
     @abstractmethod
     def initial_state(self, seed: int) -> ArenaState:

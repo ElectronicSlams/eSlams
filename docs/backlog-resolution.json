@@ -484,9 +484,9 @@
       "number": 126,
       "title": "Rock-paper-scissors and prisoners-dilemma: player_1's hidden commit is visible to player_2 in ActRequest.history, the provider prompt and session events (same for sealed-bid auction and goofspiel)",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Project action history/events per viewer and reveal simultaneous commitments only at the declared reveal phase. Test RPS, prisoners-dilemma, sealed auction and goofspiel through HTTP/provider/browser paths.",
-      "evidence": null
+      "evidence": "An arena-level reveal rule suppresses sealed actions/explanations/reasoning references from public trace, replay, live session events/display frames and opponent request history until the reveal phase. Auditor actions remain complete and deterministic replay validates. Eight new regressions cover all four arenas, including successive Goofspiel rounds."
     },
     {
       "number": 127,
@@ -652,9 +652,9 @@
       "number": 147,
       "title": "Battleship: player_2's hidden fleet is drawn only from cells not used by player_1 (0 overlaps in 20,000 seeds vs 33% expected), so a player's own board leaks information about the opponent's",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Generate opponent fleets independently under the declared independent-board rules; use deterministic structural tests rather than relying only on aggregate overlap frequencies.",
-      "evidence": null
+      "evidence": "Both Battleship fleets are sampled from the full grid, permitting overlap without conditioning either board on the other. Version bumped to 1.1.0. Structural RNG test proves identical full populations; repeatability/private observation regression retained."
     },
     {
       "number": 148,
@@ -668,9 +668,9 @@
       "number": 149,
       "title": "Card games (hearts, spades, bridge, mahjong, dou-dizhu): session responses list the model seat's legal actions, which are its private hand, in browser-streamable fields",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Public session projections must never enumerate another seat's private legal cards. Project legal actions/viewer-specific descriptors across state, events and HTTP responses; signed full-state envelopes remain service-only unless encrypted/opaque.",
-      "evidence": null
+      "evidence": "Model-seat legal actions/descriptors are absent from start, step and pagination responses; public_view omits legal_actions_by_player. Eight regressions cover private card hands. Human action lists are recipient-specific, requiring trusted Platform routing; signed envelopes remain server-only."
     },
     {
       "number": 150,
@@ -964,9 +964,9 @@
       "number": 187,
       "title": "`eslams agent serve --port 65536` is accepted; the banner prints `http://127.0.0.1:65536` but the socket listens on a different random port",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Validate port range before socket creation and print the actual bound address/port; test out-of-range values and explicit ephemeral port if intentionally supported.",
-      "evidence": null
+      "evidence": "CLI validates ports 1..65535 with argparse exit 2; AgentServer.run rejects noninteger, boolean and out-of-range values before uvicorn. Port zero is deliberately unsupported because the helper does not discover/return an ephemeral port. Boundary/default/explicit-container tests pass."
     },
     {
       "number": 188,
@@ -988,9 +988,9 @@
       "number": 190,
       "title": "Draft PR #26 changes the default bind of `eslams agent serve` and `AgentServer.run()` from 0.0.0.0 to 127.0.0.1 but adds no CHANGELOG entry",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Document loopback default and explicit remote/container --host opt-in; verify expected container workflows. Close when revised #26 lands or is withdrawn, rather than reporting an unmerged default as released.",
-      "evidence": null
+      "evidence": "Default AgentServer and sample CLI binding is loopback; explicit --host 0.0.0.0 preserves container/remote use. Help and Unreleased changelog explain the changed default."
     },
     {
       "number": 191,

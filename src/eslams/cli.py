@@ -59,6 +59,13 @@ from eslams.runner_result import runner_job_result_from_artifact
 from eslams.runner_session import default_runner_session_store
 
 
+def _agent_port(value: str) -> int:
+    port = int(value)
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError("--port must be between 1 and 65535")
+    return port
+
+
 def main(argv: list[str] | None = None) -> int:
     """Installed console and module entry point, with actionable user errors."""
     try:
@@ -420,8 +427,11 @@ def _main(argv: list[str] | None = None) -> int:
     agent_publish.add_argument("--name", required=True)
     agent_publish.add_argument("--url", required=True)
     agent_serve = agent_sub.add_parser("serve", help="Serve a sample first-legal /act endpoint.")
-    agent_serve.add_argument("--host", default="0.0.0.0")
-    agent_serve.add_argument("--port", type=int, default=8000)
+    agent_serve.add_argument(
+        "--host", default="127.0.0.1",
+        help="Bind address (default: local loopback; use 0.0.0.0 for containers/remote access).",
+    )
+    agent_serve.add_argument("--port", type=_agent_port, default=8000)
 
     args = parser.parse_args(argv)
     if args.command == "init":

@@ -10,6 +10,7 @@ from eslams.state import ArenaState
 
 
 class RockPaperScissorsArena(Arena):
+    pending_action_key = "pending_action"
     id = "rock-paper-scissors"
     version = "1.0.0"
     players = ("player_1", "player_2")
@@ -90,6 +91,7 @@ class RockPaperScissorsArena(Arena):
 
 
 class PrisonersDilemmaArena(Arena):
+    pending_action_key = "pending_action"
     id = "prisoners-dilemma"
     version = "1.0.0"
     players = ("player_1", "player_2")

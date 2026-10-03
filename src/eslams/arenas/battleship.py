@@ -15,7 +15,7 @@ SHIP_COUNT = 3
 
 class BattleshipArena(Arena):
     id = "battleship"
-    version = "1.0.0"
+    version = "1.1.0"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
@@ -134,8 +134,7 @@ def _ship_layout(seed: int) -> dict[str, list[str]]:
     cells = [f"{row},{col}" for row in range(GRID_SIZE) for col in range(GRID_SIZE)]
     rng = random.Random(seed)
     player_1 = sorted(rng.sample(cells, SHIP_COUNT))
-    remaining = [cell for cell in cells if cell not in player_1]
-    player_2 = sorted(rng.sample(remaining, SHIP_COUNT))
+    player_2 = sorted(rng.sample(cells, SHIP_COUNT))
     return {"player_1": player_1, "player_2": player_2}
 
 
