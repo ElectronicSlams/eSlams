@@ -316,9 +316,9 @@
       "number": 101,
       "title": "Runner: float (3.0) and bool (True) actions pass legality then fail or are accepted inconsistently; forfeit and fallback policies ignored",
       "work_package": "W3",
-      "status": "implemented; full local verification on Python 3.9",
+      "status": "implemented; full local verification on Python 3.9 and 3.12",
       "criterion": "Validate action shapes/types at the boundary, rejecting bool/nonintegral forms consistently before indexing. Test illegal-action and fallback/forfeit policy and receipt provenance.",
-      "evidence": "Arena legality compares JSON values with strict types, including nested lists/dicts and finite floats; bool/int/float aliases cannot pass membership and fail later while bypassing failure policy. Policy tests cover invalid-match/forfeit/fallback for True and 3.0; rejected mocked provider action stays unapplied/non-scoring when fallback is used. Full Python 3.9 suite passed; native matrix pending."
+      "evidence": "Arena legality compares JSON values with strict types, including nested lists/dicts and finite floats; bool/int/float aliases cannot pass membership and fail later while bypassing failure policy. Policy tests cover invalid-match/forfeit/fallback for True and 3.0; rejected mocked provider action stays unapplied/non-scoring when fallback is used. Full Python 3.9 suite passed; native matrix pending. Full Python 3.12 suite also passed (373 cases), with strict typing across 95 modules."
     },
     {
       "number": 102,
@@ -1681,6 +1681,26 @@
       "installed_wheel_prior_commit": "b651238",
       "installed_wheel_checks": 11,
       "remaining_final_gates": "All pending issues/PRs; 44 remaining baseline test removals; native OS/Python matrix; Platform consumer compatibility; final integrated wheel/sdist checks."
+    },
+    {
+      "source_commit": "718ac35",
+      "platform": "macOS arm64",
+      "passing_cases_python_3_9": 373,
+      "passing_cases_python_3_12": 373,
+      "strict_typing_python_3_12": "95 source files passed",
+      "line_coverage_python_3_9": 85.80090126997132,
+      "original_cases_removed": 11,
+      "removals_remaining": 44,
+      "note": "Intermediate checkpoint; final OS/consumer/backlog gates still outstanding."
     }
-  ]
+  ],
+  "inventory_recheck": {
+    "open_issues": 148,
+    "open_original_prs": 43,
+    "consolidation_pr": 218,
+    "new_issues": [],
+    "new_original_prs": [],
+    "changed_original_heads": [],
+    "note": "Read-only checkpoint; original issues and PRs remain open."
+  }
 }

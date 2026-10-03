@@ -72,7 +72,7 @@ Linux, other supported interpreters and final consumer checks remain gates.
 - #101: action legality uses strict JSON type/value equality. Boolean/float
   aliases follow illegal-action policies consistently; provider receipts never
   claim an applied action when a fallback replaced the rejected response.
-  Latest Python 3.9 full suite: 373 passing cases.
+  Latest Python 3.9 and 3.12 full suites: 373 passing cases each.
 
 ## Test reduction checkpoint
 
@@ -91,3 +91,7 @@ Each pending entry must receive implementation or an evidence-based disposition.
 Package/OS/consumer compatibility, coverage retention and repository closure
 are final gates. A passing narrow test does not establish completion of the
 overall backlog.
+
+Inventory recheck: all 148 issues and 43 original PRs remain open; no new
+items or changed original PR heads were found. Consolidation PR #218 remains
+draft. No release has been published.
