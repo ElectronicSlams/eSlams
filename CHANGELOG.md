@@ -16,6 +16,12 @@
   artifact, preserving hashed members. Replay rejects ignored extra arguments;
   the documented `replay validate-public <package>` compatibility command stays
   supported.
+- Archive readers prevalidate portable member names and refuse links,
+  duplicate/aliased paths, special members and extraction overwrites. Limits
+  are 64 MiB compressed, 4,096 members, 64 MiB per file and 256 MiB total
+  decompressed, enforced before and during extraction. Temporary extraction
+  directories are removed on CRC, I/O and interruption failures. Existing
+  nonarchive files now report unsupported input instead of "file not found".
 
 ## v0.6.1 - 2026-07-31
 

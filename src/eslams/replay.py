@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from eslams.output import write_text_file
+from eslams.zip_extract import extract_archive
 
 
 def render_replay_html(
@@ -24,10 +25,11 @@ def render_replay_html(
     if zipfile.is_zipfile(artifact_path):
         with tempfile.TemporaryDirectory(prefix="eslams-replay-") as tmp_dir:
             tmp_path = Path(tmp_dir)
-            with zipfile.ZipFile(artifact_path) as archive:
-                archive.extractall(tmp_path)
+            extract_archive(artifact_path, tmp_path)
             events = _read_replay_events(tmp_path)
         return _write_replay(output, events, overwrite=overwrite, source=artifact_path)
+    if artifact_path.exists():
+        raise ValueError(f"not an artifact directory or ZIP archive: {artifact_path}")
     raise FileNotFoundError(artifact_path)
 
 

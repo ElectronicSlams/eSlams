@@ -22,6 +22,10 @@ coverage recorded separately.
 - #173: normal replay rejects an ignored extra positional argument while
   retaining the validate-public compatibility command.
 
+- #162 / #183: shared bounded archive extraction and cleanup now cover validation,
+  replay and public export. Unsupported existing files are distinguished from
+  missing files. This incorporates and extends the archive part of PR #26.
+
 ## Remaining work
 
 All 148 original issues and 43 original PRs, with captured PR heads and

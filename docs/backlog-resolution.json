@@ -764,9 +764,9 @@
       "number": 162,
       "title": "`eslams validate` and `eslams replay` on an existing file that is not an .eslams archive fail with `FileNotFoundError: <that path>`",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Distinguish existing unsupported/corrupt files from missing files with actionable errors; test archive/content identification without reading unrelated data.",
-      "evidence": null
+      "evidence": "tests/test_archive_safety.py: preflight member/byte bounds, portable traversal/alias/link rejection, CRC/interrupt cleanup and all archive consumers; existing nonarchives get ValueError rather than FileNotFoundError"
     },
     {
       "number": 163,
@@ -932,9 +932,9 @@
       "number": 183,
       "title": "`eslams validate` / `replay` / `public-export` extract the whole archive before judging it: a 300 KB archive expands to 300 MiB in /tmp (no size or member-count cap)",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Preflight and stream-enforce member count, per-member/total expanded bytes and accepted path/member types; clean up on CRC/I/O/security failures. #26 path confinement alone cannot close this.",
-      "evidence": null
+      "evidence": "tests/test_archive_safety.py: preflight member/byte bounds, portable traversal/alias/link rejection, CRC/interrupt cleanup and all archive consumers; existing nonarchives get ValueError rather than FileNotFoundError"
     },
     {
       "number": 184,
@@ -1310,7 +1310,7 @@
       "number": 26,
       "head": "eda26887caf269abcdb062f97cc98ee1612f32d9",
       "title": "fix(low): Core review F7\u2013F10 \u2014 replay trust, agent bind, CI hygiene, protocol drift",
-      "status": "pending",
+      "status": "partially incorporated; remaining renderer, bind, CI and protocol changes pending",
       "review_route": "Revise / split",
       "criterion": "Split and retain focused fixes; enforce bounded extraction and cleanup on all failures, test renderer trust handling, document remote bind opt-in (#190), and preserve protocol compatibility. Do not close #181/#183 on traversal/XSS tests alone."
     },

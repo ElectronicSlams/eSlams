@@ -1,5 +1,28 @@
 # eSlams Artifacts
 
+## Safe export destinations and archive limits
+
+Public replay/publication exports and uploaded replay fixture generation require
+a new output directory. They refuse existing destinations, the working directory
+and its ancestors, Git checkouts, symlinks and input/output containment. They
+stage the export and install it after success. Choose a separate destination
+outside the input tree; an input or validation failure preserves existing data.
+
+Replay and golden file exports refuse existing files unless `--overwrite` is
+explicit. Replay never replaces the source artifact or its members, including
+hardlink aliases. Expanded-artifact viewing writes a sibling `.replay.html`
+instead of modifying the hashed `replay/index.html` inside the artifact.
+
+ZIP readers share limits of 64 MiB compressed, 4,096 members, 64 MiB per member
+and 256 MiB total decompressed. They check metadata before extracting and bound
+actual streamed bytes. Links, special/encrypted members, traversal, duplicate
+or filesystem-aliased names and extraction overwrites are refused. Temporary
+materialization is cleaned on corrupt data, I/O failure or interruption. Trusted
+API integrations needing a different bound can explicitly supply `ArchiveLimits`
+to `eslams.zip_extract.extract_archive`; ordinary CLI reads use the safe defaults.
+
+## Package layout
+
 Every serious run produces a `.eslams` proof package. `.eslams` is the
 portable zip-compatible archive. The expanded inspection directory uses the
 `.eslams.d` suffix.

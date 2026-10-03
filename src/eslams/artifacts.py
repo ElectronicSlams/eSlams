@@ -44,6 +44,7 @@ from eslams.policy import artifact_profile_label as policy_artifact_profile_labe
 from eslams.policy import policy_key, policy_label
 from eslams.replay import _write_artifact_replay
 from eslams.replay_projection import display_frame_rows
+from eslams.zip_extract import extract_archive
 
 ARTIFACT_VERSION = "eslams-artifact-v1"
 RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v2"
@@ -2222,17 +2223,14 @@ def _materialize(path: Path) -> tuple[Path, bool]:
     path = path.resolve()
     if path.is_dir():
         return path, False
+    if not path.is_file():
+        raise FileNotFoundError(path)
     if zipfile.is_zipfile(path):
         tmp = Path(tempfile.mkdtemp(prefix=f"{path.stem}.validate."))
-        tmp_root = tmp.resolve()
-        with zipfile.ZipFile(path) as zf:
-            for member in zf.infolist():
-                member_path = (tmp / member.filename).resolve()
-                try:
-                    member_path.relative_to(tmp_root)
-                except ValueError as exc:
-                    shutil.rmtree(tmp)
-                    raise ValueError(f"unsafe artifact archive path: {member.filename}") from exc
-            zf.extractall(tmp)
+        try:
+            extract_archive(path, tmp)
+        except BaseException:
+            shutil.rmtree(tmp)
+            raise
         return tmp, True
-    raise FileNotFoundError(path)
+    raise ValueError(f"not an artifact directory or ZIP archive: {path}")
