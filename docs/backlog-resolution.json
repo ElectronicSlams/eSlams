@@ -844,9 +844,9 @@
       "number": 172,
       "title": "`eslams --version` and `-V` are not supported (argparse: \"the following arguments are required: command\")",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented; source verification",
       "criterion": "Expose the actual installed distribution version consistently for --version/-V and module entry; test without creating output or requiring secrets.",
-      "evidence": null
+      "evidence": "Global --version/-V argparse action prints shared CORE_PACKAGE_VERSION before required subcommands. Both flags verified with module invocation; installed-wheel command verification pending."
     },
     {
       "number": 173,

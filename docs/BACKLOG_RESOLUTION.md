@@ -39,6 +39,9 @@ coverage recorded separately.
   installs only the requested archive. Filenames no longer determine run IDs;
   explicit overwrite is available without deleting siblings or latest links.
 
+- #172: global `--version` / `-V` prints the shared package version and exits
+  successfully. Installed-wheel verification remains outstanding.
+
 ## Remaining work
 
 All 148 original issues and 43 original PRs, with captured PR heads and

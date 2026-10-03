@@ -27,7 +27,7 @@ from eslams.catalogue import availability_rows, game_catalogue_rows, model_catal
 from eslams.contracts.json_schema import export_schemas
 from eslams.contracts.pricing import PriceCardReference
 from eslams.contracts.provider import ProviderRuntimeConfig
-from eslams.contracts.versions import RUNNER_VERSION
+from eslams.contracts.versions import CORE_PACKAGE_VERSION, RUNNER_VERSION
 from eslams.core_contract import core_step, engine_capabilities, prompt_package
 from eslams.eval_runtime import (
     ResumeInvariant,
@@ -85,6 +85,9 @@ def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="eslams",
         description="Run, validate, and replay eSlams artifacts.",
+    )
+    parser.add_argument(
+        "-V", "--version", action="version", version=f"eslams-core {CORE_PACKAGE_VERSION}"
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
