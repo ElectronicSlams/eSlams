@@ -444,9 +444,9 @@
       "number": 121,
       "title": "eslams fixtures artifact deletes unrelated files: sibling <stem>.eslams.d for dotted --out names and latest.eslams pointers in the output directory",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Output ownership must be explicit: avoid deleting sibling .eslams.d directories or unrelated latest pointers. Test dotted names, mixed outputs and existing files.",
-      "evidence": null
+      "evidence": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite."
     },
     {
       "number": 122,
@@ -476,9 +476,9 @@
       "number": 125,
       "title": "fixtures artifact: re-running into an existing file fails with FileExistsError traceback telling the user to pass --overwrite, which the subcommand rejects (0.4.0 replaced the file)",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Choose one documented overwrite/refusal API for fixtures and enforce it safely; re-run a fixture command into existing output and preserve bytes on refusal.",
-      "evidence": null
+      "evidence": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite."
     },
     {
       "number": 126,
@@ -700,9 +700,9 @@
       "number": 153,
       "title": "eslams fixtures artifact: --out names with a space, accent, + or parentheses crash with a run_id ValueError traceback (worked in 0.4.0)",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Decouple arbitrary output filenames from the path-safe internal run ID, preserving confinement. Test spaces/Unicode/+/( ) without accepting traversal in internal IDs.",
-      "evidence": null
+      "evidence": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite."
     },
     {
       "number": 154,

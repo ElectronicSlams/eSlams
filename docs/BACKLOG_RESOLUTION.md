@@ -35,6 +35,10 @@ coverage recorded separately.
   ZIP member timestamps. This incorporates PR #161 with additional symlink and
   failure safeguards. Native OS/Python matrix checks remain outstanding.
 
+- #121 / #125 / #153: fixture generation uses an owned temporary root and
+  installs only the requested archive. Filenames no longer determine run IDs;
+  explicit overwrite is available without deleting siblings or latest links.
+
 ## Remaining work
 
 All 148 original issues and 43 original PRs, with captured PR heads and

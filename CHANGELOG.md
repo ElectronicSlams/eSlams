@@ -32,6 +32,9 @@
   overwrite refuses unrelated directories. Traversal/stat errors and symlink
   members fail closed. ZIP members use a fixed portable timestamp.
 
+- Artifact fixtures preserve sibling directories and existing latest pointers,
+  accept ordinary filenames independent of run IDs, and expose `--overwrite`.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

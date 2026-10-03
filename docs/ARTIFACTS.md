@@ -31,6 +31,11 @@ Archive members use the fixed ZIP timestamp 1980-01-01; actual run time remains
 in the manifest. Filesystem enumeration errors never produce a successful empty
 archive. Expanded artifacts reject symlink and special-file members.
 
+Artifact fixture generation writes its Runner outputs in a private temporary
+directory and installs only the requested file. Use `fixtures artifact
+--overwrite` to explicitly regenerate an existing fixture; output filenames
+may contain spaces, Unicode and ordinary punctuation.
+
 ## Package layout
 
 Every serious run produces a `.eslams` proof package. `.eslams` is the

@@ -166,6 +166,7 @@ def _main(argv: list[str] | None = None) -> int:
     fixtures_artifact = fixtures_sub.add_parser("artifact", help="Generate artifact fixtures.")
     fixtures_artifact.add_argument("--kind", choices=list(ARTIFACT_FIXTURE_KINDS), required=True)
     fixtures_artifact.add_argument("--out", type=Path, required=True)
+    fixtures_artifact.add_argument("--overwrite", action="store_true")
 
     catalogue = sub.add_parser("catalogue", help="Export public catalogue rows.")
     catalogue_sub = catalogue.add_subparsers(dest="catalogue_command", required=True)
@@ -693,7 +694,7 @@ def _fixtures_command(args: argparse.Namespace) -> int:
         print(json.dumps({"fixture": str(output)}, indent=2))
         return 0
     if args.fixtures_command == "artifact":
-        output = create_artifact_fixture(args.kind, args.out)
+        output = create_artifact_fixture(args.kind, args.out, overwrite=args.overwrite)
         print(json.dumps({"fixture": str(output)}, indent=2))
         return 0
     raise AssertionError(args.fixtures_command)

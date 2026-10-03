@@ -51,10 +51,11 @@ def _require_new_destination(path: Path) -> None:
         raise FileExistsError(f"output already exists: {path}; choose a new output directory")
 
 
-def write_text_file(
-    output: Path, text: str, *, overwrite: bool = False, sources: Sequence[Path] = ()
-) -> Path:
-    """Install complete UTF-8/LF text, refusing input aliases and implicit overwrite."""
+@contextmanager
+def staged_file(
+    output: Path, *, overwrite: bool = False, sources: Sequence[Path] = ()
+) -> Iterator[Path]:
+    """Yield an owned temporary file and install it only after successful writing."""
     if output.is_symlink():
         raise ValueError("output file must not be a symlink")
     destination = output.resolve()
@@ -70,10 +71,12 @@ def write_text_file(
         _require_new_destination(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, name = tempfile.mkstemp(prefix=".eslams-output-", dir=destination.parent)
+    os.close(descriptor)
     temporary = Path(name)
     try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
-            stream.write(text)
+        yield temporary
+        if output.is_symlink():
+            raise ValueError("output file must not be a symlink")
         if overwrite:
             os.replace(temporary, destination)
         else:
@@ -81,4 +84,13 @@ def write_text_file(
             os.link(temporary, destination)
     finally:
         temporary.unlink(missing_ok=True)
-    return destination
+
+
+def write_text_file(
+    output: Path, text: str, *, overwrite: bool = False, sources: Sequence[Path] = ()
+) -> Path:
+    """Install complete UTF-8/LF text, refusing input aliases and implicit overwrite."""
+    with staged_file(output, overwrite=overwrite, sources=sources) as temporary, \
+            temporary.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(text)
+    return output.resolve()
