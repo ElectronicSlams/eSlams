@@ -1,0 +1,1550 @@
+{
+  "baseline": {
+    "commit": "7f6bb418974739986e76049d45dfb7de2109a780",
+    "test_cases": 275,
+    "test_functions": 243,
+    "covered_lines": 10164,
+    "statements": 11911,
+    "line_coverage": 85.33288556796239,
+    "scope": "src/eslams; full pytest including packaged provenance; Python 3.9.6"
+  },
+  "requirements": {
+    "single_consolidation_pr": true,
+    "release_published": false,
+    "original_test_removal_target": 55,
+    "maximum_coverage_drop_percentage_points": 2,
+    "also_check_relative_coverage_drop": true
+  },
+  "issues": [
+    {
+      "number": 10,
+      "title": "[oss][feature] Add LABS.md Quickstart for BYO-key lab runs",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Close after one tested keyless/BYO-key lab guide lands with honest availability and trust claims; absorb #13/#18/#31 rather than keep three overlapping entry points.",
+      "evidence": null
+    },
+    {
+      "number": 11,
+      "title": "[oss][chore] Classify good/bad samples for GitHub+HF dual-home",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose current sample classification and custody policy; replace obsolete GOOD/BAD requirements. Sample metadata validation cannot authorize hidden-suite publication or prove byte-level scrubbing.",
+      "evidence": null
+    },
+    {
+      "number": 12,
+      "title": "[oss][chore] Add /labs page contract for Platform",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether /labs is a supported product goal. A Core handoff contract can close this scoped issue only after owner agreement; implementing hosted routes belongs to Platform.",
+      "evidence": null
+    },
+    {
+      "number": 54,
+      "title": "`eslams agent test` always reports \"ok\": true / exit 0, even when the agent is unreachable or returns illegal actions",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Agent-test ok/exit status must reflect unreachable/illegal responses; test successful, transport-failed and illegal-action agents using local fixtures.",
+      "evidence": null
+    },
+    {
+      "number": 55,
+      "title": "Documented `mypy src` / `mypy src/eslams` fails on Python >=3.10 (pyproject python_version=3.9 + anyio 4.15 `match` syntax)",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Use version-matched mypy configuration/tool compatibility and test the exact documented command on each supported Python, rather than ignoring dependency parse errors.",
+      "evidence": null
+    },
+    {
+      "number": 56,
+      "title": "`twine check` fails on a fresh build with the dev-extra twine (<7): '2.5' is not a valid metadata version",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Build fresh wheel/sdist, require a Twine version that supports generated metadata, and run twine check on both. No PyPI publication is necessary to verify this.",
+      "evidence": null
+    },
+    {
+      "number": 57,
+      "title": "CLI prints raw Python tracebacks for ordinary user errors (unknown agent/arena, missing file, bad JSON)",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Keep open; require console-entry-point handling and actual installed-command verification.",
+      "evidence": null
+    },
+    {
+      "number": 58,
+      "title": "`eslams run` exits 0 when the run is invalid for scoring (e.g. provider auth failure)",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Define CLI execution exit status separately from scoring eligibility. Retaining exit 0 for a completed diagnostic run is defensible if clearly documented; add an explicit strict mode if needed without silently breaking existing automation.",
+      "evidence": null
+    },
+    {
+      "number": 59,
+      "title": "`eslams run --max-turns 0` / negative accepted; zero-turn run is match_valid_for_scoring: true",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Reject zero/negative turn caps before output creation; test that no scoring-valid empty run is emitted. Resolve jointly with #102.",
+      "evidence": null
+    },
+    {
+      "number": 60,
+      "title": "`eslams core budgets --json` (documented) exits 1: gomoku and pentago exceed Core prompt-token budgets",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Budget-check exit 1 is correct for an exceeded enforced budget. Reduce prompt usage or deliberately revise budget thresholds; do not force a green diagnostic without a documented decision.",
+      "evidence": null
+    },
+    {
+      "number": 61,
+      "title": "sample_runs/model_eval_sample official_signed.eslams does not validate under its documented command (official-bundle); docs inconsistent",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Document and test the actual intended fixture validation profile/key trust. A fixture signature is not live Official evidence; do not loosen Official validation to make an example pass.",
+      "evidence": null
+    },
+    {
+      "number": 62,
+      "title": "pip install from GitHub source archive (tag tarball / Download ZIP / git archive) fails: 'cannot build Core without immutable source provenance'",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: The immutable-provenance refusal is deliberate. Support source archives only with authenticated embedded provenance, or document Git/wheel installation; never fabricate a commit or weaken fail-closed provenance.",
+      "evidence": null
+    },
+    {
+      "number": 63,
+      "title": "README `eslams models update --providers ...` overwrites tracked models.generated.json and shrinks it ~80% (8762 -> 1697)",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Live model refresh must preserve the source registry or use explicit separate generated output/reviewed diff; test partial provider refresh cannot silently shrink the full registry.",
+      "evidence": null
+    },
+    {
+      "number": 67,
+      "title": "Arena start example in README fails after draft PR #21 (fail-closed session secret); README and CHANGELOG not updated",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Treat README, environment names and changelog as #21 acceptance criteria.",
+      "evidence": null
+    },
+    {
+      "number": 68,
+      "title": "Draft PRs #19 and #21 give contradictory README upload guidance (private runner bundle vs public replay package)",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Revised canonical guidance must distinguish private runner/auditor bundles from public replay packages; withdrawal of conflicting drafts also resolves this PR-only report.",
+      "evidence": null
+    },
+    {
+      "number": 69,
+      "title": "Dependency caps cryptography<47 and pytest<9 on main block fixes for known advisories (see draft PR #51)",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Close after audited compatible dependency bounds and supported-Python CI permit the reviewed fixes; raising caps alone is not evidence of safe declared floors.",
+      "evidence": null
+    },
+    {
+      "number": 70,
+      "title": "Open PR set (#13-#53) has 20 conflicting pairs and cannot be merged in arbitrary order; landing order needed",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Close when the retained/revised subset has a tested integration order and superseded proposals are withdrawn. A mergeable flag is insufficient; no need to merge every current branch.",
+      "evidence": null
+    },
+    {
+      "number": 71,
+      "title": "Draft PR #52 env-var coverage test fails once #21 lands alongside #40 (.env.example missing #21 variables)",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Update those PR acceptance criteria together; include #184 debug-observation documentation.",
+      "evidence": null
+    },
+    {
+      "number": 75,
+      "title": "Data loss: artifact public-export, publish export and fixtures replay delete the --out directory before validating input (--out . deletes the current directory)",
+      "work_package": "W1",
+      "status": "implemented; targeted verification",
+      "criterion": "Validate inputs and canonical source/destination relationships first; refuse dangerous/preexisting destinations by default; stage output atomically. Test current directory, ancestor, source directory, symlink aliases and existing unrelated-file preservation for every affected command.",
+      "evidence": "tests/test_output_safety.py; publication, fixture and runner artifact regressions pass"
+    },
+    {
+      "number": 76,
+      "title": "`eslams replay --output` and `core golden --out` overwrite the input artifact without warning",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Reject input/output aliasing, directories and unintended existing outputs before writing; test replay and golden exports preserve source bytes with explicit overwrite behavior only when safe.",
+      "evidence": null
+    },
+    {
+      "number": 77,
+      "title": "6 of 50 advertised arenas cannot be run from the CLI (bridge, dou-dizhu, mahjong, leduc-holdem, limit-texas-holdem, no-limit-texas-holdem): raw traceback, no per-seat agent option",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Add an explicit per-seat agent mapping, or give actionable unsupported-mode errors and accurate capability docs. Run an actual supported CLI match for each affected multi-seat game.",
+      "evidence": null
+    },
+    {
+      "number": 78,
+      "title": "Missing or corrupt inputs to publish export, plan and official merge exit 0 and produce valid-looking output (unknown arena silently replaced)",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Missing/corrupt input, unknown arena and absent required plans must fail clearly without producing a valid-looking bundle; test source validation before output creation and no fabricated unknown-arena replacements.",
+      "evidence": null
+    },
+    {
+      "number": 79,
+      "title": "Artifacts produced by Core 0.2.0 to 0.5.0 fail validation on 0.5.1 and later (terminal outcome mismatch), with no compatibility note",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose tested legacy read support versus an explicit unsupported-version boundary. Preserve modern strict validation and Official authority; do not accept invalid historical outcomes merely to make old artifacts green.",
+      "evidence": null
+    },
+    {
+      "number": 80,
+      "title": "Plain local runs report per_case_scoring_eligible false and attempt_ledger_incomplete since 0.6.0; docs example shows true",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Define local play validity, scoring eligibility, provider-attempt completeness and publication authority separately. Empty provider ledger on keyless local play must not invent provider receipts or Official evidence.",
+      "evidence": null
+    },
+    {
+      "number": 85,
+      "title": "Licensing disclosure question: GPL-3.0+ `chess` dependency (via `python-chess`) in MIT-licensed eslams-core is not mentioned in docs",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Repository owner should review third-party license disclosure and distribution obligations. Record the chosen disclosure/dependency policy; this review makes no legal determination and does not automatically change the Core license.",
+      "evidence": null
+    },
+    {
+      "number": 86,
+      "title": "SECURITY.md advertises GitHub private vulnerability reporting, but the feature is disabled on the repository",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Close after the repository owner enables and verifies private vulnerability reporting, or replaces the advertised route with a tested private contact. Settings changes are distinct from code changes.",
+      "evidence": null
+    },
+    {
+      "number": 87,
+      "title": "Hugging Face namespace `ElectronicSlams` does not exist while open draft PRs (#13, #17, #18, #19) reference it (namespace squatting risk)",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "The reviewed quickstart already marks HF as pending, so lack of that caveat is not reproduced. Reserving an org is an owner/operations task, not a Core patch. Recheck current namespace availability only when choosing rollout; do not assert the 2026-09-23 snapshot is current.",
+      "evidence": null
+    },
+    {
+      "number": 88,
+      "title": "Draft Hugging Face dataset card and placeholder collection URL contain links that return 404",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Remove placeholder collection/dataset links from publishable cards, or keep them explicitly unlinked/pending. Close obsolete draft-only defects when the relevant proposal is replaced; creating a collection is not required.",
+      "evidence": null
+    },
+    {
+      "number": 89,
+      "title": "Packaging hygiene: 0.4.0 and 0.5.0 sdists ship internal planning files; fixtures and bundles contain developer local paths",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Audit fresh wheel/sdist allowlists and public fixtures for planning files/local paths. Old published packages are immutable historical evidence; document any retained historical leak/remediation rather than claim a new build changes old bytes.",
+      "evidence": null
+    },
+    {
+      "number": 93,
+      "title": "Hanabi: non-terminal state with no legal actions; 27 of 200 built-in random-vs-random matches end as agent_crash",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Test reachable Hanabi no-action states; model legal discard/play/hint or legitimate game termination without attributing engine deadlock to agent_crash. Pair with cooperative metadata and clue-token rules.",
+      "evidence": null
+    },
+    {
+      "number": 94,
+      "title": "Shogi and Xiangqi: moves that leave the mover's own king in check are legal (catalogue says faithful; differs from Fairy-Stockfish)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose faithful king-safety rules or an explicitly named compact variant. Catalogued faithful claims require correction either way; preserve prior arena versions rather than relabeling old results.",
+      "evidence": null
+    },
+    {
+      "number": 95,
+      "title": "Cribbage: hand and crib scoring deviates from standard rules (ace-high runs, no double-run multiplicity, crib flush, nob never scored)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Use small authoritative cribbage scoring examples for ace-low runs, run multiplicity, crib flush and nob; preserve arena-version boundaries for changed scores.",
+      "evidence": null
+    },
+    {
+      "number": 96,
+      "title": "Cribbage: dealer and crib fixed to player_2 with no alternation (random play wins 67 vs 309), headline score is player_1 only",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Fixed dealer assignment and player_1 score are fairness/product-contract choices as well as possible rule defects. Declare alternation and result aggregation, then implement/version only the chosen rule set.",
+      "evidence": null
+    },
+    {
+      "number": 97,
+      "title": "Pentago: five-in-a-row made by the placement is not a win if the same move's rotation breaks it",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Verify Pentago win timing against the declared rules: placement-phase wins require correct treatment even if rotation would break the line. Add minimal winning/dual-win examples, not a wholesale arena rewrite. Rules reference: [Mindtwister publisher rulebook, mirrored by retailer](https://zacatrus.es/media/instrucciones/Pentago_Reglas_zacatrus.pdf).",
+      "evidence": null
+    },
+    {
+      "number": 98,
+      "title": "Texas hold'em (limit, no-limit) and Leduc: multiway showdown tie gives equal shares to strictly worse hands",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Only best tied showdown hands share a pot; test multiway tied-best plus strictly worse hand and side-pot behavior with deterministic legal examples.",
+      "evidence": null
+    },
+    {
+      "number": 99,
+      "title": "First-price sealed-bid auction: ties always go to player_1, winner utility floored at 0, and winner can contradict scores",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Auction allocation winner need not maximize bidder utility. Separate documented tie-break policy, potentially negative utility and outcome fields; do not redefine auction winner as the highest utility scorer.",
+      "evidence": null
+    },
+    {
+      "number": 100,
+      "title": "Othello: max_turns=64 counts passes, so games with passes end early while a legal move remains",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Use actual Othello placement/pass semantics for a declared horizon. Test pass-heavy games retain legal play until true terminal or explicitly marked truncation.",
+      "evidence": null
+    },
+    {
+      "number": 101,
+      "title": "Runner: float (3.0) and bool (True) actions pass legality then fail or are accepted inconsistently; forfeit and fallback policies ignored",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Validate action shapes/types at the boundary, rejecting bool/nonintegral forms consistently before indexing. Test illegal-action and fallback/forfeit policy and receipt provenance.",
+      "evidence": null
+    },
+    {
+      "number": 102,
+      "title": "Runner: max_turns below natural game length yields a scoring-valid run with no outcome and 0/0 scores (extends #59)",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Mark externally truncated nonterminal runs invalid/incomplete for the agreed scoring contract; preserve replay/diagnostic output and distinguish a declared arena horizon outcome from runner truncation.",
+      "evidence": null
+    },
+    {
+      "number": 103,
+      "title": "0.5.1 changed game behavior in 15 arenas without bumping arena version strings (plus fixed pre-0.5.1 backgammon bear-off crash)",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Inventory exact behavior changes and assign correct future arena versions. Keep historical rules identifiable; do not rewrite prior run hashes or claim all historical comparisons have identical semantics.",
+      "evidence": null
+    },
+    {
+      "number": 107,
+      "title": "PLATFORM_CONTRACTS.md CLI walkthrough fails: `arena step --state session_state.json` (saved `arena start` output) crashes with KeyError: state_id",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Accept only the documented saved session envelope/response shape or fix the walkthrough. Test the copied CLI start-to-step sequence with required explicit secret configuration.",
+      "evidence": null
+    },
+    {
+      "number": 108,
+      "title": "eslams replay HTML overflows a 390 px viewport for most non-chess arenas (gomoku 788 px, nine-mens-morris 1277 px, backgammon 1113 px)",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Constrain layout and preserve usable board scrolling; check representative renderer families.",
+      "evidence": null
+    },
+    {
+      "number": 109,
+      "title": "eslams replay HTML: all move buttons precede Prev/Play/Next in tab order (Play is Tab stop 75 for chess), arrow keys do nothing, focus drops to body",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Put controls first, preserve focus and announce changes; pair #192/#193.",
+      "evidence": null
+    },
+    {
+      "number": 110,
+      "title": "eslams replay HTML shows a raw JSON dump instead of a board for hanabi, blackjack, mancala and most card, physics and negotiation arenas",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide the supported renderer coverage. A truthful structured JSON fallback may be acceptable; do not promise a board for every game unless it is actually supported and tested.",
+      "evidence": null
+    },
+    {
+      "number": 111,
+      "title": "eslams replay HTML labels numeric action 0 as \"move\" (tic-tac-toe cell 0, connect-four column 0)",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Treat action 0 as a real value, not falsy/missing; test cell/column-zero labels in rendered move lists.",
+      "evidence": null
+    },
+    {
+      "number": 113,
+      "title": "PyPI long description uses relative links (docs/, CHANGELOG.md, sample_runs/) that resolve to the PyPI project page",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Render PyPI README with absolute repository/tag-aware links and inspect generated metadata, keeping local README navigation usable.",
+      "evidence": null
+    },
+    {
+      "number": 114,
+      "title": "README install: `pip install eslams-core` fails with externally-managed-environment on Debian 13 and the only venv recipe uses `python`, which does not exist",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Use python3 -m venv and python -m pip plus activation instructions; verify the guide on externally managed Debian Python without recommending system-package override flags.",
+      "evidence": null
+    },
+    {
+      "number": 115,
+      "title": "README/PLATFORM_CONTRACTS example `eslams plan official --suite public-smoke ...` always returns an empty plan (0 models, 0 cases) because no registry model has official_eval enabled",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether the historical Official planner remains supported. Either supply a truthful actionable registry/sample plan or reject/document the unsupported command; never enable all registry rows for Official evaluation to populate the plan.",
+      "evidence": null
+    },
+    {
+      "number": 116,
+      "title": "README/ARTIFACTS signing example uses placeholder `base64:...`; copied literally it crashes the run, and the 32-byte key format is documented nowhere",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Provide a safe throwaway 32-byte key-generation recipe and explicit base64/hex format errors. Test copied examples without real signing keys or granting Official authority.",
+      "evidence": null
+    },
+    {
+      "number": 117,
+      "title": "README says the package ships the TypeScript packages, but the PyPI wheel has none, the sdist only has sources, and npm has neither package",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Document wheel versus TypeScript source/publication honestly. Private flags do not make npm packages available or establish parity; test actual release contents.",
+      "evidence": null
+    },
+    {
+      "number": 118,
+      "title": "No CODE_OF_CONDUCT, issue templates or pull request template (GitHub community health 75%)",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose community templates/code-of-conduct intentionally. A community-health percentage is not itself a runtime defect; close as not planned with rationale or add the agreed minimal templates.",
+      "evidence": null
+    },
+    {
+      "number": 119,
+      "title": "README/CONTRIBUTING are POSIX-only (reading-only) and the Quick Start fails after the run when symlinks are unavailable (simulated Windows)",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Provide documented Windows equivalents and a safe latest-run fallback if symlink creation is unavailable; verify on native Windows before claiming support.",
+      "evidence": null
+    },
+    {
+      "number": 120,
+      "title": "docs/ARTIFACTS.md \"Required structure\" omits replay/index.html and timings/timings.json that every run writes",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Consolidate this narrow layout omission into #165. Close as duplicate only with an explicit parent link and complete coverage of replay/timing members; close parent after docs match generated artifacts.",
+      "evidence": null
+    },
+    {
+      "number": 121,
+      "title": "eslams fixtures artifact deletes unrelated files: sibling <stem>.eslams.d for dotted --out names and latest.eslams pointers in the output directory",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Output ownership must be explicit: avoid deleting sibling .eslams.d directories or unrelated latest pointers. Test dotted names, mixed outputs and existing files.",
+      "evidence": null
+    },
+    {
+      "number": 122,
+      "title": "eslams catalogue games: --include-help, --include-render and --include-animation are accepted but ignored (output byte-identical)",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Implement documented include flags or remove/reject unsupported flags; test semantic output differences without asserting every optional renderer is ready.",
+      "evidence": null
+    },
+    {
+      "number": 123,
+      "title": "eslams catalogue availability (text mode) prints 438,100 lines with only 100 distinct (model dropped); catalogue renderers shows an invented status=ready",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Preserve model identity in text rows and report renderer readiness from actual capabilities; test bounded distinct rows and truthful unavailable/partial statuses.",
+      "evidence": null
+    },
+    {
+      "number": 124,
+      "title": "eslams run creates runs/latest.eslams symlinks with absolute targets: copied or moved project directories get dangling or wrong pointers",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Use a relocatable relative latest pointer or manifest pointer; copy/move a run directory and verify the pointer follows the intended artifact.",
+      "evidence": null
+    },
+    {
+      "number": 125,
+      "title": "fixtures artifact: re-running into an existing file fails with FileExistsError traceback telling the user to pass --overwrite, which the subcommand rejects (0.4.0 replaced the file)",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Choose one documented overwrite/refusal API for fixtures and enforce it safely; re-run a fixture command into existing output and preserve bytes on refusal.",
+      "evidence": null
+    },
+    {
+      "number": 126,
+      "title": "Rock-paper-scissors and prisoners-dilemma: player_1's hidden commit is visible to player_2 in ActRequest.history, the provider prompt and session events (same for sealed-bid auction and goofspiel)",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Project action history/events per viewer and reveal simultaneous commitments only at the declared reveal phase. Test RPS, prisoners-dilemma, sealed auction and goofspiel through HTTP/provider/browser paths.",
+      "evidence": null
+    },
+    {
+      "number": 127,
+      "title": "Chess: arena ends games on claimable draws (board.outcome(claim_draw=True)), so a mate-in-1 at halfmove clock 99 or a twice-seen position is declared drawn before the mover plays",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Automatic acceptance of a claimable draw can be a declared benchmark variant. Implement explicit claim semantics if faithful chess is promised, or version/document the automatic-claim variant; preserve reproducibility.",
+      "evidence": null
+    },
+    {
+      "number": 128,
+      "title": "Paddle-ball: win condition (10 bounces) is unreachable within max_turns=160; a perfect player gets 4 bounces, score capped at 0.4",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether paddle-ball success is completion or a graded score. Align target, physics, horizon and catalogue with that decision; increasing a cap without versioning changes the benchmark.",
+      "evidence": null
+    },
+    {
+      "number": 129,
+      "title": "Negotiation: displayed private_reserve_share is never enforced (accept always legal, utilities ignore it) unlike bargaining",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: A private reserve can be a preference rather than a legality restriction. Define utilities and observation semantics before forbidding accept; close as documented non-issue if the current nonbinding preference is intentional.",
+      "evidence": null
+    },
+    {
+      "number": 130,
+      "title": "Ultimate tic-tac-toe: full-board end rule awards the win on local-board count instead of a draw (303 of 431 no-line playouts); catalogue says faithful/standard",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose standard ultimate-tic-tac-toe draws or the local-board-count variant. Correct the faithful/standard label or version the implementation; do not change historical semantics in place.",
+      "evidence": null
+    },
+    {
+      "number": 131,
+      "title": "Nine men's morris: max_turns=120 ends 15% of random games as 0.5/0.5 turn_limit draws while play is still decisive (OpenSpiel not terminal); catalogue says faithful/standard",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: A finite game horizon is a legitimate benchmark rule when declared. Keep or change it through explicit rules/versioning; disagreement with OpenSpiel alone does not prove a terminal draw is invalid.",
+      "evidence": null
+    },
+    {
+      "number": 132,
+      "title": "Catalogue help.exampleActions: 42 of 50 games have no example token that is a legal action (default token \"0\"), and step_session rejects it with turn.failed",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Catalogue examples must be legal for a declared reproducible initial context or clearly schematic. Test each advertised example through the public step contract.",
+      "evidence": null
+    },
+    {
+      "number": 133,
+      "title": "Alien-shooter: a bullet can share a cell with an alien without a hit and then pass through it (hits resolved before the alien descent)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Fix bullet/alien collision sequencing using small deterministic crossing/overlap examples; version the corrected physics and reassess #134 afterwards.",
+      "evidence": null
+    },
+    {
+      "number": 134,
+      "title": "Alien-shooter: the only win (wave_cleared) is reachable in 2 of 125 seeds; exhaustive search shows 98.4% of seeds cannot be won",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Unwinnable seeds do not alone invalidate a solo-score task. Fix collision mechanics (#133) first; declare graded score versus guaranteed-completion goals and reassess solvability under the corrected physics.",
+      "evidence": null
+    },
+    {
+      "number": 135,
+      "title": "Boxing-style-arena and ice-hockey-style-arena: catalogued as solo_score (no opponent, no winner) but are alternating two-player games with winner, draws and a hidden opponent policy",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Correct solo/head-to-head metadata to the actual seat/outcome contract, or implement the intended solo rules under a new version. Hidden opponent policy needs an explicit reproducibility/visibility contract.",
+      "evidence": null
+    },
+    {
+      "number": 136,
+      "title": "eslams run crashes after the match with UnicodeEncodeError when an agent or model public_explanation contains a lone UTF-16 surrogate (valid JSON); partial artifact left, no result",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Reject or deterministically sanitize lone surrogates at agent input before serialization; test no partial committed artifact or fabricated explanation appears.",
+      "evidence": null
+    },
+    {
+      "number": 137,
+      "title": "NaN confidence from an HTTP agent is accepted and written as bare NaN into artifact JSON; validate says valid, strict JSON parsers fail",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Reject nonfinite numeric values in agent/runtime/output contracts; use strict JSON serialization and schema fixtures across Python and TypeScript.",
+      "evidence": null
+    },
+    {
+      "number": 138,
+      "title": "eslams run crashes after the match when the system clock is before 1980 or after 2107 (ZIP timestamp range); empty archive left",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Choose deterministic valid archive timestamp handling, test clocks outside ZIP range, and stage archives so failures leave no installed empty archive.",
+      "evidence": null
+    },
+    {
+      "number": 139,
+      "title": "Concurrent eslams run into one --output-dir intermittently exits 1 with FileExistsError/FileNotFoundError in _replace_latest_link, losing the result JSON",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Make latest-pointer replacement atomic and concurrent-safe; each completed run must retain its summary and archive. Test two independent writers to one directory.",
+      "evidence": null
+    },
+    {
+      "number": 140,
+      "title": "Reading-only (Windows): write_text without newline=\"\\n\" makes artifact bytes, artifact_id and schema bundle hash differ from Linux",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Write canonical LF bytes explicitly independent of platform; compare schema/artifact hashes on native Windows and Linux. gitattributes (#45) alone does not change runtime writes.",
+      "evidence": null
+    },
+    {
+      "number": 141,
+      "title": "No cap on agent response size or public_explanation: a 100 MB explanation is accepted and expands to a 701 MB artifact tree (650 MB RSS); gzip bomb reaches 960 MB RSS",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Bound wire bytes, decoded body, explanation size and decompression before full buffering; enforce per-attempt and aggregate budgets without reproducing the huge-memory attack during tests.",
+      "evidence": null
+    },
+    {
+      "number": 142,
+      "title": "Provider adapters ignore error, refusal and finish_reason fields: errors in a 200 body are not retried or classified, refusals look like schema errors, receipt finish_reason/finish_status always null",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Classify 200-body provider errors, refusals and finish statuses explicitly, preserving physical attempt/usage receipts and retry policy. Test fixture responses for all supported adapters, not fabricated live success.",
+      "evidence": null
+    },
+    {
+      "number": 143,
+      "title": "eslams providers models --provider openai --live prints ok:false with an empty model list and no reason (missing key, DNS failure and HTTP error look identical)",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Return structured discovery failures with safe provider/status/retry metadata; distinguish missing key, DNS, authorization, empty success and transport failure without echoing keys/URLs.",
+      "evidence": null
+    },
+    {
+      "number": 144,
+      "title": "Low file-descriptor limit makes eslams run exit 0 with a valid-looking summary but an empty 22-byte archive on Python 3.12+ (Path.rglob swallows EMFILE)",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Injected EMFILE must propagate as failure before a success summary/final archive; verify on Python versions where pathlib can suppress traversal errors and pair with atomic output handling.",
+      "evidence": null
+    },
+    {
+      "number": 145,
+      "title": "Backgammon: game stays non-terminal with no legal action for either player (3 of 3000 random playouts); Runner records it as agent_crash with no outcome",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "A blocked backgammon turn can require a pass and fresh roll; both players having no moves under the current roll does not prove game over. Test pass/re-roll, true terminal and malformed-state distinctions.",
+      "evidence": null
+    },
+    {
+      "number": 146,
+      "title": "Backgammon: bear-off legal moves allow bearing off a nearer checker with a larger die while a farther checker remains, and the use-both-dice / larger-die rules are not enforced (4.0% of sampled states)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Enforce the declared backgammon bear-off, both-dice and larger-die rules with tiny legal-state fixtures, preserving the compact board variant/version separately.",
+      "evidence": null
+    },
+    {
+      "number": 147,
+      "title": "Battleship: player_2's hidden fleet is drawn only from cells not used by player_1 (0 overlaps in 20,000 seeds vs 33% expected), so a player's own board leaks information about the opponent's",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Generate opponent fleets independently under the declared independent-board rules; use deterministic structural tests rather than relying only on aggregate overlap frequencies.",
+      "evidence": null
+    },
+    {
+      "number": 148,
+      "title": "Gin Rummy: deadwood evaluator treats the ace as high (Q-K-A is a run, A-2-3 is not) and lets one card count in a set and a run, so knock legality and scoring are wrong",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Compute gin deadwood with disjoint meld selection and the declared ace rule; test overlapping set/run alternatives and knock thresholds.",
+      "evidence": null
+    },
+    {
+      "number": 149,
+      "title": "Card games (hearts, spades, bridge, mahjong, dou-dizhu): session responses list the model seat's legal actions, which are its private hand, in browser-streamable fields",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Public session projections must never enumerate another seat's private legal cards. Project legal actions/viewer-specific descriptors across state, events and HTTP responses; signed full-state envelopes remain service-only unless encrypted/opaque.",
+      "evidence": null
+    },
+    {
+      "number": 150,
+      "title": "Gin Rummy: drawing the last stock card ends the hand at once with an 8-card hand and scores it on deadwood (pagat: hand is cancelled when the stock reaches two cards)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Implement the declared stock-exhaustion/cancellation rule while preserving valid hand size; test last-draw, discard and scoring transitions.",
+      "evidence": null
+    },
+    {
+      "number": 151,
+      "title": "Goofspiel and mahjong: catalogue says drawAllowed=false and winnerRequired=true, but about 9% and 6% of random games end with winner None",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Make drawAllowed/winnerRequired reflect actual permitted terminal outcomes or change rules under a new version. Do not fabricate a winner to satisfy metadata.",
+      "evidence": null
+    },
+    {
+      "number": 152,
+      "title": "README and catalogue label backgammon, battleship and crazy-eights as `faithful` although they are compact variants (5 checkers per side, 5x5 board with three one-cell ships, 5-card deal)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Label compact backgammon/battleship/crazy-eights variants honestly and document exact rules; marketing them as faithful requires implementing full rules under separate versions.",
+      "evidence": null
+    },
+    {
+      "number": 153,
+      "title": "eslams fixtures artifact: --out names with a space, accent, + or parentheses crash with a run_id ValueError traceback (worked in 0.4.0)",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Decouple arbitrary output filenames from the path-safe internal run ID, preserving confinement. Test spaces/Unicode/+/( ) without accepting traversal in internal IDs.",
+      "evidence": null
+    },
+    {
+      "number": 154,
+      "title": "Empty RUNNER_ARTIFACT_SIGNING_KEY_ID: eslams run exits 0 and writes a signed artifact that always fails validation (key_id must be a non-empty string)",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Reject empty/malformed signing key IDs before run output; test every emitted signed artifact verifies under the expected configured key and empty env values fail early.",
+      "evidence": null
+    },
+    {
+      "number": 155,
+      "title": "eslams providers preflight (offline and --live) accepts providers with no adapter and asks for \"environment variable unknown\"; eslams run then raises KeyError",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Preflight must use the actual adapter registry and return unsupported-provider reasons; no unknown env-var placeholder or passing unsupported adapter.",
+      "evidence": null
+    },
+    {
+      "number": 156,
+      "title": "Catalogue marks 72 embedding and reranker models launch_status ready with Arena enabled; the same OpenAI embedding model is not_game_agent_supported under openai",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Disable game-agent/Arena readiness for embedding/reranker-only models based on real adapter capabilities; test provider aliases and model capability rows.",
+      "evidence": null
+    },
+    {
+      "number": 157,
+      "title": "eslams catalogue models: public_slug collides for two together-ai bge-base models and 181 slugs contain @, * or ~",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "A public_slug collision is actionable; @ and ~ are not inherently illegal URL path characters. Define an injective stable slug grammar and encoding/redirect policy, then fix collisions and only prohibited characters.",
+      "evidence": null
+    },
+    {
+      "number": 158,
+      "title": "README and REGISTRY_AVAILABLE_MODELS.md say Core tracks 90 namespaces and 1926 rows, but eslams models list and catalogue models serve 8762 rows from 259 providers",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Generate current registry counts from the published catalogue and explain source versus routable adapter coverage; do not delete registry rows to match an old README count.",
+      "evidence": null
+    },
+    {
+      "number": 159,
+      "title": "eslams run --overwrite has no effect: run ids are always unique and there is no way to choose one, so the documented \"existing artifact paths are refused\" never applies",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "A no-op overwrite option is an API/documentation mismatch, not evidence that current unique-ID runs overwrite prior artifacts. Remove/deprecate it or add a deliberately specified named-run behavior; default refusal remains safe.",
+      "evidence": null
+    },
+    {
+      "number": 160,
+      "title": "docs/ARTIFACTS.md Runner Signatures omits that a signed artifact fails validation (runner_signature_unverified) without RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Document verify-public-key configuration and trusted key authority; test signing/verification with a throwaway key and explain that verified self-signing alone is not Official provenance.",
+      "evidence": null
+    },
+    {
+      "number": 162,
+      "title": "`eslams validate` and `eslams replay` on an existing file that is not an .eslams archive fail with `FileNotFoundError: <that path>`",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Distinguish existing unsupported/corrupt files from missing files with actionable errors; test archive/content identification without reading unrelated data.",
+      "evidence": null
+    },
+    {
+      "number": 163,
+      "title": "Most CLI options have no `--help` text (135 of 143), including `run --max-turns`, `--on-agent-error`, `--on-illegal-action`, `--execution-profile` and `--shard-*`",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Document actual CLI semantics and safe defaults in help for meaningful options; test high-risk parameters and copyable examples rather than locking every help string.",
+      "evidence": null
+    },
+    {
+      "number": 164,
+      "title": "README Quick Start: after `eslams run --expanded` the `runs/latest.eslams` pointer is removed but the next documented step is `eslams validate runs/latest.eslams`",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "After --expanded, show the actual expanded artifact path or correct pointer behavior; execute the full documented run-to-validate walkthrough.",
+      "evidence": null
+    },
+    {
+      "number": 165,
+      "title": "README \"Artifact Anatomy\" lists 20 files; a default run writes 26 (omits public/*, public_reasoning, scores/official_result.json, timings, validation summary)",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Generate or verify canonical artifact anatomy for relevant profiles, including public/reasoning/score/timing/validation outputs and optionality; absorb #120.",
+      "evidence": null
+    },
+    {
+      "number": 166,
+      "title": "README lists `arena.auto_advanced` as an Arena event type; Core never emits it and docs/PLATFORM_CONTRACTS.md says it is reserved",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Mark arena.auto_advanced as reserved unless implemented; align README, schema and consumer expectations without emitting a fake event.",
+      "evidence": null
+    },
+    {
+      "number": 167,
+      "title": "CHANGELOG v0.5.0 states 12 solo / 29 head-to-head / 9 multi-seat games; since 0.5.1 the catalogue has 13 / 31 / 6 and the 0.5.1 entry does not mention the reclassification",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Keep the historical v0.5.0 count accurate for v0.5.0; add the actual v0.5.1 reclassification and version migration note. Do not rewrite history to present-day counts.",
+      "evidence": null
+    },
+    {
+      "number": 168,
+      "title": "CONTRIBUTING.md lists a bare `tsc -p packages/core-contracts/tsconfig.json` that cannot run after the documented setup (no TypeScript installed; CI also checks core-lite)",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Document a reproducible TypeScript installation and checks for both packages, plus version-matched Python typing commands; verify from a clean developer environment.",
+      "evidence": null
+    },
+    {
+      "number": 169,
+      "title": "examples/random_agent.py is not random: it always returns `legal_actions[0]`, identical to the built-in `first-legal` agent",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Rename example to first-legal or implement seeded random choice consistent with its name and documented determinism; test behavior with multiple legal options.",
+      "evidence": null
+    },
+    {
+      "number": 170,
+      "title": "GitHub release notes for v0.4.0 and v0.5.1 contain literal `\\n` sequences and render as one run-on paragraph; v0.4.0 also says PyPI upload was not done",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Review and render intended historical release-note text, then correct only factual formatting/status errors through the repository owner. Preserve historical chronology; a new changelog does not rewrite remote releases.",
+      "evidence": null
+    },
+    {
+      "number": 171,
+      "title": "Wheel and sdist ship no `py.typed` marker although the project is checked with `mypy --strict`, so downstream mypy treats `eslams` as untyped",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Ship py.typed in wheel/sdist and validate downstream mypy sees the installed package as typed from outside the checkout.",
+      "evidence": null
+    },
+    {
+      "number": 172,
+      "title": "`eslams --version` and `-V` are not supported (argparse: \"the following arguments are required: command\")",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Expose the actual installed distribution version consistently for --version/-V and module entry; test without creating output or requiring secrets.",
+      "evidence": null
+    },
+    {
+      "number": 173,
+      "title": "`eslams replay <artifact> <anything>` silently accepts an undocumented second positional and ignores it (a typo still exits 0)",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Remove/reject the ignored positional argument or document and implement it; a typo must not silently look successful.",
+      "evidence": null
+    },
+    {
+      "number": 174,
+      "title": "`eslams catalogue games --json | head -1` exits 1 with a `BrokenPipeError` traceback (also `models list`, `core budgets`)",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Handle BrokenPipeError as normal pipe termination at the real entry point without obscuring actual command failures; test piped output with an early-closing consumer.",
+      "evidence": null
+    },
+    {
+      "number": 175,
+      "title": "`eslams run --shard-index 5 --shard-count 2` (also index -1, count 0) is accepted and the artifact validates as `valid: true`",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Reject invalid shard ranges before output; record the valid shard identity and test no scoring-valid artifacts are written for illegal selections.",
+      "evidence": null
+    },
+    {
+      "number": 176,
+      "title": "Interrupting `eslams run` (Ctrl-C / SIGINT) leaves a half-written `run_*.eslams.d` directory with no `manifest.json`",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Stage artifact trees/archive and commit atomically; distinguish explicit failed/partial diagnostic state from complete artifacts and clean temporary writes on interrupt.",
+      "evidence": null
+    },
+    {
+      "number": 177,
+      "title": "`eslams runner session-create/step/snapshot/close` cannot work from the CLI: each command is a new process, so `session-step` fails with `KeyError: unknown runner session`",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Choose persistent authenticated service CLI commands, explicit snapshot import/export, or remove unsupported process-local session commands. Do not imply an in-memory store survives separate CLI processes.",
+      "evidence": null
+    },
+    {
+      "number": 178,
+      "title": "Shogi start position has rook and bishop on swapped files (player_1 rook on 8h, bishop on 2h; standard is bishop 8h, rook 2h)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Correct standard orientation and differential opening legal moves; pair #94 and bump rules version.",
+      "evidence": null
+    },
+    {
+      "number": 179,
+      "title": "Hanabi is catalogued `head_to_head` with `winnerRequired: true`, but only 1 of 100 random-vs-random matches ends with a winner",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Hanabi is cooperative; a required head-to-head winner is a wrong product contract. Agree cooperative scoring/seat metadata, remove invented winner requirements, and version changes coherently with #93/#182. Rules reference: [Hanabi publisher rulebook](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Hanabi_Reglamento_ES.pdf).",
+      "evidence": null
+    },
+    {
+      "number": 180,
+      "title": "Per-action time budget is enforced with SIGALRM on the main thread only: from a worker thread a 0.3 s budget lets a slow agent run for 4 s",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Enforce elapsed deadlines in worker threads and on supported operating systems, including read/stream time; test bounded execution and cancellation without assuming SIGALRM works everywhere.",
+      "evidence": null
+    },
+    {
+      "number": 181,
+      "title": "`eslams replay` renders a content-tampered artifact with exit 0 and no warning, although `eslams validate` reports `valid: false` (hash mismatch)",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Render tampered/unverified artifacts only under an explicit diagnostic mode with visible trust state, or refuse by default. #26 extraction/HTML changes do not perform artifact validation.",
+      "evidence": null
+    },
+    {
+      "number": 182,
+      "title": "Hanabi: discarding is legal while all 8 clue tokens are available (standard rules forbid it)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Align discard legality with the declared Hanabi rules and clue-token count, coordinating deadlock/scoring metadata fixes; test full-clue and nonfull-clue cases. Rules reference: [Hanabi publisher rulebook](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Hanabi_Reglamento_ES.pdf).",
+      "evidence": null
+    },
+    {
+      "number": 183,
+      "title": "`eslams validate` / `replay` / `public-export` extract the whole archive before judging it: a 300 KB archive expands to 300 MiB in /tmp (no size or member-count cap)",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Preflight and stream-enforce member count, per-member/total expanded bytes and accepted path/member types; clean up on CRC/I/O/security failures. #26 path confinement alone cannot close this.",
+      "evidence": null
+    },
+    {
+      "number": 184,
+      "title": "`ESLAMS_ENABLE_DEBUG_OBSERVATION` is read by Core but documented nowhere (README, docs, SECURITY, CONTRIBUTING, CHANGELOG)",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Document debug-observation exposure and disable it for untrusted/public clients; test projections so enabling server diagnostics cannot silently make public state private.",
+      "evidence": null
+    },
+    {
+      "number": 185,
+      "title": "The published 0.6.1 sdist cannot run its own test suite: `test_wheel_export_matches_source_without_git_checkout` runs `git rev-parse HEAD` and fails outside a git checkout",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Run shipped sdist tests with authentic embedded provenance and no Git checkout; remove test-only Git assumptions while retaining runtime provenance validation.",
+      "evidence": null
+    },
+    {
+      "number": 186,
+      "title": "`eslams plan official|battlefield|public-match --shard-count N` is unbounded: N=1,000,000 prints a 115 MB plan for a suite with 0 cases; 0 and negatives are silently clamped to 1",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Reject invalid/excessive shard counts, bound plan expansion by meaningful workload limits, and never silently clamp a malformed request into apparent success.",
+      "evidence": null
+    },
+    {
+      "number": 187,
+      "title": "`eslams agent serve --port 65536` is accepted; the banner prints `http://127.0.0.1:65536` but the socket listens on a different random port",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Validate port range before socket creation and print the actual bound address/port; test out-of-range values and explicit ephemeral port if intentionally supported.",
+      "evidence": null
+    },
+    {
+      "number": 188,
+      "title": "Declared minimum dependency versions are not security-tested: installing the floors (cryptography 42.0.0, fastapi 0.115.0) gives 29 known vulnerabilities",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Audit compatible declared floors and current resolution, distinguishing runtime reachability from raw advisory count; update constraints or documented supported matrix with scoped reviewed exceptions.",
+      "evidence": null
+    },
+    {
+      "number": 189,
+      "title": "Draft PR #42: the `ruff-format` pre-commit hook would reformat 37 files that already exist on main, and `pre-commit` is not in the dev extras",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Choose baseline formatting policy, then align hook installation and CI.",
+      "evidence": null
+    },
+    {
+      "number": 190,
+      "title": "Draft PR #26 changes the default bind of `eslams agent serve` and `AgentServer.run()` from 0.0.0.0 to 127.0.0.1 but adds no CHANGELOG entry",
+      "work_package": "W2",
+      "status": "pending",
+      "criterion": "Document loopback default and explicit remote/container --host opt-in; verify expected container workflows. Close when revised #26 lands or is withdrawn, rather than reporting an unmerged default as released.",
+      "evidence": null
+    },
+    {
+      "number": 191,
+      "title": "eslams replay HTML: the Details panel always shows chess rows (`FEN n/a`, `Validation check=n/a checkmate=n/a legal=n/a`) for every game",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Render game-specific details or omit inapplicable chess-only rows; verify chess and several non-chess examples.",
+      "evidence": null
+    },
+    {
+      "number": 192,
+      "title": "eslams replay HTML: move-list buttons are 18 px high (go: 121 buttons at 390 and 768 px viewports), below the 24 px WCAG 2.2 AA target size",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "18 px alone is insufficient to conclude WCAG failure because spacing and other exceptions matter. Measure effective target spacing on the rendered page; fix compact targets where needed and verify keyboard access separately.",
+      "evidence": null
+    },
+    {
+      "number": 193,
+      "title": "eslams replay HTML: non-chess boards are plain divs with bare letters (no role, no aria-label), so assistive technology gets no board structure",
+      "work_package": "W8",
+      "status": "pending",
+      "criterion": "Use appropriate board semantics and accessible names/coordinates for rendered games; validate keyboard/screen-reader reading order in representative board and fallback views.",
+      "evidence": null
+    },
+    {
+      "number": 194,
+      "title": "`eslams run --time-budget-ms 0` and negative values are accepted without error and the run is scoring-valid",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Reject nonpositive time budgets before output; test enforced bounded action attempts and no scoring-valid impossible configuration.",
+      "evidence": null
+    },
+    {
+      "number": 195,
+      "title": "Arena `initial_state(seed)` does not validate the seed type: float seed 1.5 is truncated to 1 in metadata and `rng_commitment` changes after the first move",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Require the contract seed type/range without bool/float/string coercion surprises; test state hash/rng commitment stability across public creation and step paths.",
+      "evidence": null
+    },
+    {
+      "number": 196,
+      "title": "Default and README Anthropic model claude-sonnet-4-20250514 is retired by Anthropic (2026-06-15); preflight still reports ok:true",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Choose a currently supported Anthropic default after verifying the provider's current model lifecycle; update registry/docs and classify retired/not-found outcomes honestly. Live checks need separately authorized test credentials.",
+      "evidence": null
+    },
+    {
+      "number": 197,
+      "title": "providers preflight --live and providers models --live read only page 1 of the Models API: Anthropic (20) and Gemini (50) models beyond it are reported not visible",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Follow documented pagination with termination/error limits for each relevant provider; use multi-page fixtures and return full discovery or a clear partial/error state.",
+      "evidence": null
+    },
+    {
+      "number": 198,
+      "title": "A trailing newline, CRLF or space in the provider API key env var fails every request with 'Illegal header value' (exit 0); non-ASCII key crashes with UnicodeEncodeError",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Normalize only allowed surrounding whitespace or reject malformed credentials early; never print key values, and test CRLF/non-ASCII invalid input safely.",
+      "evidence": null
+    },
+    {
+      "number": 199,
+      "title": "ProviderRuntimeConfig.timeout_ms has no effect: a 1000 ms total timeout lets a 3 s response (and a 6.7 s trickled body) succeed",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Enforce an absolute attempt deadline across connection, read and streamed chunks, then record timeout accurately; test slow/trickled local responses and thread mode.",
+      "evidence": null
+    },
+    {
+      "number": 200,
+      "title": "Retry-After from a 429/5xx response is slept without any cap when max_retries > 0 (86400 s header sleeps a day from a worker thread)",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Bound Retry-After by retry/deadline budgets; cancellation must remain responsive and attempts indexed correctly. Test large/malformed/HTTP-date headers without real long sleeps.",
+      "evidence": null
+    },
+    {
+      "number": 201,
+      "title": "Windows checkout with core.autocrlf=true (no .gitattributes): shipped sample publication bundles fail 'eslams publish validate' and 2 tests fail (simulated)",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Validate a fresh native Windows checkout with ordinary autocrlf configuration and packaged samples; gitattributes must preserve exact hashed bytes without regenerating trusted signatures.",
+      "evidence": null
+    },
+    {
+      "number": 202,
+      "title": "Live 'providers preflight' fails for README example models gpt-5-mini and gpt-5-nano (128-token cap consumed by reasoning, reported as schema mismatch)",
+      "work_package": "W6",
+      "status": "pending",
+      "criterion": "Use model-appropriate response/reasoning budgets in preflight and runtime; classify incomplete/refusal distinctly from schema errors. Any retries must have genuine separate attempt receipts and no fabricated completion.",
+      "evidence": null
+    },
+    {
+      "number": 203,
+      "title": "'eslams validate --profile official-case' fails with misleading action_provenance_incomplete when official_eval run had no --case-id",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Reject missing official-case identity before execution/validation with a specific error; do not infer a hidden case or weaken provenance completeness.",
+      "evidence": null
+    },
+    {
+      "number": 204,
+      "title": "Limit/no-limit Texas hold'em and Leduc: a fold that leaves all remaining players matched does not close the betting round, so the bettor can bet again (about 45% of random games)",
+      "work_package": "W4",
+      "status": "pending",
+      "criterion": "Close matched betting rounds correctly after folds and test seat order, pot contributions and repeated betting legality in all three affected poker arenas.",
+      "evidence": null
+    },
+    {
+      "number": 205,
+      "title": "Core-lite (TypeScript) state hashes never match Python for the same game and seed, although core capabilities reports core_lite_ts verifiedAgainst 0.6.1",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Add cross-language semantic and canonical-byte fixtures for each advertised supported game/seed/action/outcome; fix numeric serialization and action hashing. Remove unproven verifiedAgainst claims until fixtures pass.",
+      "evidence": null
+    },
+    {
+      "number": 206,
+      "title": "Core-lite applyAction rejects the contract action shapes \"0\" and {actionId:\"0\"} as illegal; Python core_step accepts them",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Normalize the same public string/object action shapes in Python and TypeScript; test contract-level parity with preserved action IDs and hashes.",
+      "evidence": null
+    },
+    {
+      "number": 207,
+      "title": "Core-lite createInitialState turns seed \"0\" and every non-numeric seed into seed 1 (Python seed 0 is a different game)",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Preserve seed zero and reject invalid seeds with the same contract errors as Python; do not coerce arbitrary strings into a valid seed.",
+      "evidence": null
+    },
+    {
+      "number": 208,
+      "title": "Solo-score games record winner player_2 (a seat that does not exist) in score.json and the public summary; the result contract says solo winner must be null",
+      "work_package": "W3",
+      "status": "pending",
+      "criterion": "Solo results must keep winner null and use the documented score/outcome schema; test non-existent-seat winners are impossible across score/public/publication outputs.",
+      "evidence": null
+    },
+    {
+      "number": 209,
+      "title": "eslams publish export --artifacts <runs dir> exports the newest run twice (latest.eslams symlink plus the real file): duplicate proof rows and double-counted token usage, bundle validates",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Enumerate distinct artifacts by canonical identity, avoiding latest pointers/aliases without merging genuinely distinct runs; test deduplicated proof rows and exact usage totals.",
+      "evidence": null
+    },
+    {
+      "number": 210,
+      "title": "eslams publish export is not deterministic: proof_index.jsonl embeds the absolute input path, so identical artifacts give different bundle hashes from different directories",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Remove absolute local input paths from canonical publication proof rows; compare byte-identical bundles from different roots while retaining private diagnostics separately.",
+      "evidence": null
+    },
+    {
+      "number": 211,
+      "title": "eslams publish export always writes an empty provider_model_rows.jsonl (documented provider/model rows) and cost_unavailable pricing even when the artifact has provider receipts",
+      "work_package": "W1",
+      "status": "pending",
+      "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether provider_model_rows is a supported output. Populate it deterministically from validated receipts and reviewed price cards, or deprecate/document it. Missing cost data must remain unavailable, never invented.",
+      "evidence": null
+    },
+    {
+      "number": 212,
+      "title": "docs/PROTOCOL.md says invalid JSON from an /act agent is retried once and then marked invalid_action; Core does not retry and records agent_crash",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Make malformed /act JSON classification and retry semantics truthful and explicit. Do not add a retry simply because stale prose promises one; any physical retry must preserve attempt provenance.",
+      "evidence": null
+    },
+    {
+      "number": 213,
+      "title": "README and sample_runs/README cite curated chess battle run_d48ff364a0b949df (composer-2.5 vs grok-build-0.1) in sample_runs/model_battle_sample, but the directory holds run_eeab67d58b994ca7, a first-legal vs first-legal run",
+      "work_package": "W9",
+      "status": "pending",
+      "criterion": "Correct stale battle sample IDs/opponent claims to the actual tracked artifact and validate each documented command/profile; take the narrow fix from #22 without its warehouse runtime module.",
+      "evidence": null
+    },
+    {
+      "number": 214,
+      "title": "Four tests use cwd-relative fixture paths: pytest run from tests/ or any directory other than the repo root fails with FileNotFoundError",
+      "work_package": "W7",
+      "status": "pending",
+      "criterion": "Resolve fixtures from the installed/test source context rather than cwd; run targeted and full tests from root, tests directory and a clean outside directory.",
+      "evidence": null
+    },
+    {
+      "number": 215,
+      "title": "Core-lite applyAction on a terminal state returns illegal_action_for_state with recoverable true; Python core_step returns terminal_state with recoverable false",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Use the same terminal-state error/recoverability contract in Python and TypeScript; test terminal action calls without mutating state.",
+      "evidence": null
+    },
+    {
+      "number": 216,
+      "title": "Core-lite applyAction throws a raw TypeError for a malformed state (missing public_state, short or non-array board) where Python core_step returns an ok:false error response",
+      "work_package": "W5",
+      "status": "pending",
+      "criterion": "Validate malformed state shapes and return structured contract errors rather than raw exceptions; test board shape, absent fields and invalid game identity in both runtimes.",
+      "evidence": null
+    }
+  ],
+  "original_prs": [
+    {
+      "number": 13,
+      "head": "cda01fa31ca92bbc49f1019591dc2e65a967f5a0",
+      "title": "[oss][feature] Add LABS.md Quickstart for BYO-key lab runs",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Replace examples with tested supported models and venv instructions; clarify private versus public artifact sharing; align approved product posture; link one canonical guide. Then merge revised PR and close #10."
+    },
+    {
+      "number": 14,
+      "head": "373eea8f1d163356772221f2c0a1c78508f15ed0",
+      "title": "[oss][chore] Classify samples: public-by-default SUCCESS-EXTRACT tiers",
+      "status": "pending",
+      "review_route": "Route / replace",
+      "criterion": "Keep a concise Core sample policy; move inventory, warehouse layout and extraction authority to operations. Close original as replaced only after policy is recorded; #11 must use current acceptance criteria, not obsolete GOOD/BAD tags."
+    },
+    {
+      "number": 15,
+      "head": "331593325ce466b8c6342120653a395ad8b952fe",
+      "title": "[oss][chore] Add /labs page contract for Platform",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Agree the contract with Platform owners, reuse exported schemas, verify current routes and auth flow, and avoid promising unavailable HF surfaces. Land Core contract only; record hosted implementation separately before closing #12."
+    },
+    {
+      "number": 16,
+      "head": "eeb36905d1731236bafa8d54d0988be5504306be",
+      "title": "docs: AGENTS.md and 2026-09-23 Core review",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Preserve actionable findings in this closure register and stable contribution/security docs. Close as superseded after that record exists; do not merge agent workflow history wholesale."
+    },
+    {
+      "number": 17,
+      "head": "098b67bc0237fed85e88a16140ea89da35f686b6",
+      "title": "[oss][docs] P0 HF org/secrets + retired-eval archive clarity (burn wave)",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold availability caveats, actual sample IDs and safe BYO-key guidance into canonical labs/sample docs; route org and warehouse work to operations. Close as superseded."
+    },
+    {
+      "number": 18,
+      "head": "9eaa7f759b2f3c0a01acdcfee4012a670add76d4",
+      "title": "[oss][docs] P0 lab-smoke + pre-HF lab run (burn wave; complements #13)",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Replace with lean offline multi-arena smoke using canonical suite fingerprints; separate execution success from terminal/scoring eligibility. Consolidate useful coverage with #38, then close original."
+    },
+    {
+      "number": 19,
+      "head": "b406bc982652470c2c1b1723c802fcf9fc3fbffd",
+      "title": "[oss][docs] Retire public leaderboard + Official suite (Core)",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Record product posture; retain legacy validation and compatibility readers; distinguish public replay export from private auditor bundles; merge one coherent documentation change and close original."
+    },
+    {
+      "number": 20,
+      "head": "76cad94498d8522ce8e3eaaabe1b1a4da22baf72",
+      "title": "[ops][docs] Wave B public-archive + R2 pull HOLD runbook",
+      "status": "pending",
+      "review_route": "Route / replace",
+      "criterion": "Preserve the read-only runbook in the operations context and close this Core PR as out of scope/replaced. Any future extraction needs verified account, canonical paths, distinct key inventory, no-clobber output and content scrub; no extraction is required for Core backlog closure."
+    },
+    {
+      "number": 21,
+      "head": "40e131af49e78dd4c7b3785ed2820ed0fa789f4e",
+      "title": "fix: runner HTTP authz and fail-closed arena HMAC",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Split service authentication, artifact confinement, trust claims, private/public projections and release-workflow hardening. Bind snapshot game/rules/session context; constrain development mode; test authenticated service versus seat/browser boundaries and approved signing authority. Fix #67/#68 and update env docs before landing."
+    },
+    {
+      "number": 22,
+      "head": "65bb5a7e9dcd35304c4726b84ad13b81f235d814",
+      "title": "fix: A-EX \u226450 plan and honest in-repo lab pack",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Land a focused truthful-sample documentation change for #213/#61. Keep any warehouse selection checker outside Core runtime with explicit limits and separate content review; close original as superseded."
+    },
+    {
+      "number": 23,
+      "head": "484d41937287a251764ee38283ce9f3bd2b6e343",
+      "title": "docs: founder gates and open Core drafts (2026-09-23)",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 24,
+      "head": "ac8d98fa3e601972edb20ab6f3dacc02a09b16a4",
+      "title": "docs: Wave A lab-path index",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 25,
+      "head": "2a6899f880166f9d3a1ee0a01d27dde9b2d19fc9",
+      "title": "docs: contributor holds",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 26,
+      "head": "eda26887caf269abcdb062f97cc98ee1612f32d9",
+      "title": "fix(low): Core review F7\u2013F10 \u2014 replay trust, agent bind, CI hygiene, protocol drift",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Split and retain focused fixes; enforce bounded extraction and cleanup on all failures, test renderer trust handling, document remote bind opt-in (#190), and preserve protocol compatibility. Do not close #181/#183 on traversal/XSS tests alone."
+    },
+    {
+      "number": 27,
+      "head": "cbdb1256f3d726167c70bbdc6e7175c1e21a67dc",
+      "title": "docs: public vs private Core surface",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 28,
+      "head": "3a75e0a6dedd4ff626d28b6a973e4ce6baeb4672",
+      "title": "docs: Core Low F7\u2013F10 status index",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 29,
+      "head": "cc31bf62bbe4dbe96021fade09be5c330d560bed",
+      "title": "docs: local test and smoke",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 30,
+      "head": "5f177821b0ca41c12bba78f5cd643b1ed8d16abb",
+      "title": "docs: open OSS drafts map",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 31,
+      "head": "b99ca9896ce54325ebe88aecf4a30cacede06d60",
+      "title": "docs: PyPI consumer guide for eslams-core 0.6.1",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 32,
+      "head": "b9e116046de4bae84e171adcdc3685217b0b3248",
+      "title": "docs: claim vocabulary (Local Artifact, Official, Grand Slam)",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 33,
+      "head": "46711e80c7cc190b127949aabb650a8659de543c",
+      "title": "docs: contributor holds quickref",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 34,
+      "head": "ce7ae0101589d0887f51925aac106c73d2358ea5",
+      "title": "docs: lab and OSS docs index",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+    },
+    {
+      "number": 35,
+      "head": "728e40dcb8ebd3c775ddf38aa43c35888e8063e1",
+      "title": "chore(core-lite): align unpublished package metadata to 0.6.1",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Combine private-package and version metadata with #39 and the parity work. Advertise verifiedAgainst only for tested game/version pairs; close original after consolidated replacement."
+    },
+    {
+      "number": 36,
+      "head": "4b19d984c02cc7712a81ede93941012b6389f880",
+      "title": "chore: add Dependabot for Actions and Python deps",
+      "status": "pending",
+      "review_route": "Retain, conditional",
+      "criterion": "Verify scoped update groups, supported-Python checks and actionable notification policy; merge after dependency baseline is established. No auto-merge without the same contract gates."
+    },
+    {
+      "number": 37,
+      "head": "f10140fa10dcbaf4499b2218a7584eb985e55b0a",
+      "title": "ci: pin publish workflow actions to commit SHAs",
+      "status": "pending",
+      "review_route": "Retain, conditional",
+      "criterion": "Rebase onto the final hardened publish workflow, preserve read-only checkout permissions and trusted publishing, run workflow lint, then merge; this task does not publish."
+    },
+    {
+      "number": 38,
+      "head": "f72351d79664a05ff12c36b2a564211b96025138",
+      "title": "test: keyless local tic-tac-toe smoke",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Consolidate with revised #18 and existing runner tests after local execution/scoring/billing semantics are explicit; close original with replacement coverage link."
+    },
+    {
+      "number": 39,
+      "head": "d6922eb17191691ff2449fef7128ff7ee720b11d",
+      "title": "chore(core-contracts): mark unpublished package private",
+      "status": "pending",
+      "review_route": "Retain, conditional",
+      "criterion": "Combine or order with final TypeScript metadata changes, typecheck consumers and verify no release job expects npm publication; merge and close."
+    },
+    {
+      "number": 40,
+      "head": "30fc1f2294d30440193038eb3e18989210a03474",
+      "title": "docs: add .env.example for Core environment names",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Document the final env set, distinguish development and service configuration, state explicit export/loading instructions, ignore actual .env files, and validate placeholders without printing secret values. Merge with replacement for #52."
+    },
+    {
+      "number": 41,
+      "head": "6d89cdd62c81d7d06f60b79dd6d1d76ce7e98157",
+      "title": "ci: add SHA-pinned CodeQL workflow",
+      "status": "pending",
+      "review_route": "Retain, conditional",
+      "criterion": "Verify security settings, least permissions and fork behavior, baseline actionable findings and check pinned action; merge one supported analysis configuration."
+    },
+    {
+      "number": 42,
+      "head": "9d1a023c40c181be830454b0898e14906f56ee06",
+      "title": "chore: add local pre-commit hooks for Ruff",
+      "status": "pending",
+      "review_route": "Decline / defer",
+      "criterion": "Close as not planned for this cleanup, resolving #189. A future formatting proposal needs one formatter baseline, documented installation and a separate behavior-free change."
+    },
+    {
+      "number": 43,
+      "head": "cc17a9745c2f56f5974856db812fba42684f5e07",
+      "title": "chore: add root EditorConfig (draft, founder HOLD)",
+      "status": "pending",
+      "review_route": "Retain, conditional",
+      "criterion": "Resolve or explain the failed check on a current head. Ensure pinned fixture bytes are preserved; merge after green supported-version checks."
+    },
+    {
+      "number": 44,
+      "head": "545af6c8ed54f07187e32f504ebae71cd69af23b",
+      "title": "ci: add SHA-pinned pip-audit workflow",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Choose this as the initial dependency audit, replace broad ignores with reviewed reachability/version notes and expiring scoped exceptions, audit runtime and dev constraints across supported Python, then merge revised PR."
+    },
+    {
+      "number": 45,
+      "head": "763fcc33136e0b4617a70645c78ede229d03d3ae",
+      "title": "chore: add root .gitattributes (draft, founder HOLD)",
+      "status": "pending",
+      "review_route": "Retain, conditional",
+      "criterion": "Verify shipped sample hash checks on native Windows and preserve canonical fixture bytes; merge separately from explicit LF serialization fix. Close #201 only after that evidence."
+    },
+    {
+      "number": 46,
+      "head": "6789e80cea560bd0e4b0c1c78789a31af56b4e70",
+      "title": "Add a root Makefile for documented contributor commands",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Retain corrected commands in CONTRIBUTING or a small consolidated Makefile using the selected interpreter; close original after one authoritative developer setup exists."
+    },
+    {
+      "number": 47,
+      "head": "db15a8abdd65e91a81e291daa900c840fe2cbeb5",
+      "title": "ci: add SHA-pinned Bandit workflow",
+      "status": "pending",
+      "review_route": "Decline / defer",
+      "criterion": "Close as not planned for the initial cleanup; keep specific static checks only where they add findings beyond existing lint/CodeQL and justify exceptions locally. Do not claim scanner coverage proves service safety."
+    },
+    {
+      "number": 48,
+      "head": "33e0ddd9e75686167bb8d462835e2f2c5fcc5788",
+      "title": "ci: add SHA-pinned wheel smoke workflow",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Run wheel/sdist checks outside the checkout: console entry, keyless run, schema export with embedded provenance, validation and public export. Include supported-Python compatibility and Twine metadata support, then merge revised workflow."
+    },
+    {
+      "number": 49,
+      "head": "f1e2b7603d5453d735402a31a37dbddfe8ffeb9b",
+      "title": "ci: add SHA-pinned actionlint workflow",
+      "status": "pending",
+      "review_route": "Retain, conditional",
+      "criterion": "Use a pinned lint tool with verifiable artifact checksum or equivalent reviewed installer path, test failure propagation and final combined workflows, then merge."
+    },
+    {
+      "number": 50,
+      "head": "d4f1d28564ce5c79ee598d4ae7c52dd48d8f9f87",
+      "title": "test: offline schema export smoke",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Fold meaningful determinism/schema assertions into packaged-provenance coverage using the proven source/embedded commit helper; pass no-Git sdist test mode before closing #185 and this PR."
+    },
+    {
+      "number": 51,
+      "head": "581a746dc255e9286a69f221a8c7200f334633f3",
+      "title": "chore: raise cryptography and pytest caps for a clean pip-audit",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Select reviewed compatible bounds, test minimum and current dependency sets on Python 3.9\u20133.12, run the chosen audit without unexplained suppression, and document unsupported upstream combinations. Then merge and close #69/#188 to their scoped evidence."
+    },
+    {
+      "number": 52,
+      "head": "93c55a65839c2bc2cb42fa6b8245d5fa4d82a4d7",
+      "title": "test: keep .env.example aligned with src env names",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Replace with concise coverage of a single configuration registry or documented env source; test the actual combined tree and redact diagnostic values. Close original/#71 after compatible replacement or explicit withdrawal."
+    },
+    {
+      "number": 53,
+      "head": "205792c657fc80ed08d3c81955841ea81f87892a",
+      "title": "ci: add SHA-pinned OSV-Scanner workflow",
+      "status": "pending",
+      "review_route": "Supersede / consolidate",
+      "criterion": "Close as superseded by the chosen reviewed audit (#44 replacement). Reintroduce OSV only if it adds measurable coverage with reproducible scanner bytes and an actionable baseline."
+    },
+    {
+      "number": 161,
+      "head": "bc34625d38ef0eb348bedb6f70c7fa6e76903289",
+      "title": "fix: surface artifact traversal errors",
+      "status": "pending",
+      "review_route": "Retain, conditional",
+      "criterion": "Rebase onto artifact-confinement work, run supported-version CI including injected EMFILE, ensure no success summary or installed final archive on failed write, and test symlink handling. Merge; close #144 only to the demonstrated failure mode."
+    },
+    {
+      "number": 217,
+      "head": "7e7d68953152ef419c5406bbb7fefebbabf4b3ec",
+      "title": "fix(cli): print clean error messages instead of tracebacks for runtime errors",
+      "status": "pending",
+      "review_route": "Revise / split",
+      "criterion": "Put handling in the actual installed entry path, retain debug tracebacks consistently, handle expected user errors specifically, test console executable and module entry, then merge and close #57."
+    }
+  ]
+}
