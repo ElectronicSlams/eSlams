@@ -52,9 +52,9 @@
       "number": 55,
       "title": "Documented `mypy src` / `mypy src/eslams` fails on Python >=3.10 (pyproject python_version=3.9 + anyio 4.15 `match` syntax)",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; strict typing verified on Python 3.9 and 3.12",
       "criterion": "Use version-matched mypy configuration/tool compatibility and test the exact documented command on each supported Python, rather than ignoring dependency parse errors.",
-      "evidence": null
+      "evidence": "Reproduced anyio pattern-matching parse failure on Python 3.12 with forced 3.9 target. Removed global mypy python_version so documented commands use active interpreter, while CI checks each supported version explicitly. python -m mypy src passes all 95 modules on both Python 3.9.6 and 3.12.13; remaining native versions are final matrix gates."
     },
     {
       "number": 56,
@@ -1654,12 +1654,33 @@
   "test_reduction_checkpoint": {
     "removed_original_cases": 11,
     "remaining_removal_target": 44,
-    "passing_cases": 340,
-    "covered_lines": 10450,
-    "statements": 12185,
-    "line_coverage": 85.76118178087813,
-    "coverage_change_percentage_points": 0.4282962129157397,
+    "passing_cases": 366,
+    "covered_lines": 10461,
+    "statements": 12194,
+    "line_coverage": 85.78809250451042,
+    "coverage_change_percentage_points": 0.4552069365480236,
     "scope": "src/eslams; full pytest including packaged provenance; Python 3.9.6",
     "note": "Intermediate checkpoint only; remaining removals and final coverage gate outstanding."
-  }
+  },
+  "verification_checkpoints": [
+    {
+      "source_commit": "9feabc3",
+      "platform": "macOS arm64",
+      "python_versions": {
+        "3.9.6": {
+          "pytest": "366 passed",
+          "strict_typing": "95 source files passed",
+          "line_coverage": 85.78809250451042
+        },
+        "3.12.13": {
+          "pytest": "366 passed",
+          "strict_typing": "95 source files passed",
+          "ruff": "all repository checks passed"
+        }
+      },
+      "installed_wheel_prior_commit": "b651238",
+      "installed_wheel_checks": 11,
+      "remaining_final_gates": "All pending issues/PRs; 44 remaining baseline test removals; native OS/Python matrix; Platform consumer compatibility; final integrated wheel/sdist checks."
+    }
+  ]
 }

@@ -14,7 +14,10 @@ python -m mypy src/eslams
 tsc -p packages/core-contracts/tsconfig.json
 ```
 
-Python 3.9, 3.10, 3.11, and 3.12 are supported. Before a release, run the
+Python 3.9, 3.10, 3.11, and 3.12 are supported. Mypy uses the active
+interpreter version so installed dependency syntax is checked correctly; CI
+checks each supported version explicitly. Run mypy from that interpreter’s
+virtual environment. Before a release, run the
 suite in each interpreter, build the wheel and sdist, run `twine check`, export
 the schema bundle twice, and compare the bytes.
 

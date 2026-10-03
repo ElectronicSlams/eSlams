@@ -62,12 +62,19 @@ entry-point gate for #57 / #174 / #172 and PR #217; the final matrix remains.
   workload and a ceiling of 1024, rather than silently clamping or generating
   unbounded empty shards.
 
+- #55: mypy now targets the active interpreter. The documented command checks
+  all 95 source modules on Python 3.9 and 3.12; explicit CI matrix targets remain.
+
+Full suites pass on macOS/Python 3.9.6 and 3.12.13: 366 cases each. Repository
+lint also passes with the Python 3.12 development environment. Native Windows,
+Linux, other supported interpreters and final consumer checks remain gates.
+
 ## Test reduction checkpoint
 
 Removed 11 of the required 55 original cases: ten redundant family registry-only
 checks and one obsolete zero-turn acceptance test, replaced by rejection checks. Retained Runner tests create the same named arenas and validate their
 artifacts; the retained all-arena smoke now checks exact public-catalogue
-membership. Full suite: 340 passing cases; line coverage 85.761182%, above the
+membership. Full suite: 366 passing cases; line coverage 85.788093%, above the
 85.332886% baseline. Each removal and retained check is recorded in the JSON
 ledger. Another 44 original cases remain to be assessed and removed.
 
