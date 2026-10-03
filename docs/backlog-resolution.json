@@ -316,9 +316,9 @@
       "number": 101,
       "title": "Runner: float (3.0) and bool (True) actions pass legality then fail or are accepted inconsistently; forfeit and fallback policies ignored",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; full local verification on Python 3.9",
       "criterion": "Validate action shapes/types at the boundary, rejecting bool/nonintegral forms consistently before indexing. Test illegal-action and fallback/forfeit policy and receipt provenance.",
-      "evidence": null
+      "evidence": "Arena legality compares JSON values with strict types, including nested lists/dicts and finite floats; bool/int/float aliases cannot pass membership and fail later while bypassing failure policy. Policy tests cover invalid-match/forfeit/fallback for True and 3.0; rejected mocked provider action stays unapplied/non-scoring when fallback is used. Full Python 3.9 suite passed; native matrix pending."
     },
     {
       "number": 102,
@@ -1654,11 +1654,11 @@
   "test_reduction_checkpoint": {
     "removed_original_cases": 11,
     "remaining_removal_target": 44,
-    "passing_cases": 366,
-    "covered_lines": 10461,
-    "statements": 12194,
-    "line_coverage": 85.78809250451042,
-    "coverage_change_percentage_points": 0.4552069365480236,
+    "passing_cases": 373,
+    "covered_lines": 10472,
+    "statements": 12205,
+    "line_coverage": 85.80090126997132,
+    "coverage_change_percentage_points": 0.46801570200892684,
     "scope": "src/eslams; full pytest including packaged provenance; Python 3.9.6",
     "note": "Intermediate checkpoint only; remaining removals and final coverage gate outstanding."
   },

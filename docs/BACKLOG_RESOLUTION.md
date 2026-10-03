@@ -69,12 +69,17 @@ Full suites pass on macOS/Python 3.9.6 and 3.12.13: 366 cases each. Repository
 lint also passes with the Python 3.12 development environment. Native Windows,
 Linux, other supported interpreters and final consumer checks remain gates.
 
+- #101: action legality uses strict JSON type/value equality. Boolean/float
+  aliases follow illegal-action policies consistently; provider receipts never
+  claim an applied action when a fallback replaced the rejected response.
+  Latest Python 3.9 full suite: 373 passing cases.
+
 ## Test reduction checkpoint
 
 Removed 11 of the required 55 original cases: ten redundant family registry-only
 checks and one obsolete zero-turn acceptance test, replaced by rejection checks. Retained Runner tests create the same named arenas and validate their
 artifacts; the retained all-arena smoke now checks exact public-catalogue
-membership. Full suite: 366 passing cases; line coverage 85.788093%, above the
+membership. Full suite: 373 passing cases; line coverage 85.800901%, above the
 85.332886% baseline. Each removal and retained check is recorded in the JSON
 ledger. Another 44 original cases remain to be assessed and removed.
 

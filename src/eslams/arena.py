@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 from typing import Any, Protocol
 
@@ -43,7 +44,10 @@ class Arena(ABC):
         return list(state.legal_actions_by_player.get(player_id, []))
 
     def is_legal(self, state: ArenaState, player_id: str, action: Any) -> bool:
-        return action in self.legal_actions_for(state, player_id)
+        return any(
+            _same_json_action(action, candidate)
+            for candidate in self.legal_actions_for(state, player_id)
+        )
 
     def failure_action(self, state: ArenaState, player_id: str, reason: str) -> Any | None:
         legal = self.legal_actions_for(state, player_id)
@@ -70,3 +74,21 @@ class ArenaRegistry:
 
 
 registry = ArenaRegistry()
+
+
+def _same_json_action(left: Any, right: Any) -> bool:
+    """Compare JSON action values without Python's bool/int/float equivalence."""
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(
+            isinstance(key, str) and _same_json_action(value, right[key])
+            for key, value in left.items()
+        )
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            _same_json_action(a, b) for a, b in zip(left, right)
+        )
+    if isinstance(left, float):
+        return math.isfinite(left) and left == right
+    return type(left) in (str, int, bool, type(None)) and left == right

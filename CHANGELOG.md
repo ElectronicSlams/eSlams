@@ -49,6 +49,9 @@
 - Plan shard counts must be positive integers, at most the number of cases
   (one diagnostic shard for an empty plan), and no more than 1024.
 
+- Action legality uses strict JSON types: boolean and floating-point aliases
+  cannot impersonate integer moves or bypass illegal-action failure policies.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed
