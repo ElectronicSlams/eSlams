@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Correct Shogi initial rook/bishop placement and reject Shogi/Xiangqi moves
+  that leave their king/general attacked, including discovered attacks and drops.
+- End compact Hanabi after one final turn per player following the last draw,
+  preventing exhausted-hand dead ends. These three arena versions are 1.0.1.
+
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

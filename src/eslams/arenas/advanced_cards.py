@@ -397,7 +397,7 @@ class CribbageArena(Arena):
 
 class HanabiArena(Arena):
     id = "hanabi"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {
         "type": "string",
@@ -485,7 +485,15 @@ class HanabiArena(Arena):
                     hints[target][index].append(clue)
             event["target"] = target
             event["clue"] = clue
+        final_turns = state.metadata.get("final_turns_remaining")
+        if final_turns is not None:
+            final_turns = max(0, int(final_turns) - 1)
+        elif state.public_state["deck_count"] > 0 and not deck:
+            # Drawing the last card starts one final turn for each player.
+            final_turns = len(PLAYERS)
         outcome = _hanabi_outcome(fireworks, lives, deck, hands)
+        if outcome is None and final_turns == 0:
+            outcome = _hanabi_result(fireworks, reason="final_round_complete")
         history = [*state.public_state["history"], event]
         return self._state(
             hands=hands,
@@ -500,6 +508,7 @@ class HanabiArena(Arena):
             hints=hints,
             history=history,
             outcome=outcome,
+            final_turns_remaining=final_turns,
         )
 
     def score(self, state: ArenaState) -> dict[str, float]:
@@ -520,7 +529,10 @@ class HanabiArena(Arena):
         hints: dict[str, list[list[str]]],
         history: list[dict[str, Any]],
         outcome: dict[str, Any] | None,
+        final_turns_remaining: int | None = None,
     ) -> ArenaState:
+        if final_turns_remaining is None and not deck:
+            final_turns_remaining = len(PLAYERS)
         terminal = outcome is not None or turn >= self.max_turns
         if outcome is None and terminal:
             outcome = _hanabi_result(fireworks, reason="turn_limit")
@@ -548,7 +560,7 @@ class HanabiArena(Arena):
             outcome=outcome,
             rng_commitment=sha256_text(f"hanabi:{seed}"),
             render_hints={"renderer": "hanabi-table"},
-            metadata={"seed": seed},
+            metadata={"seed": seed, "final_turns_remaining": final_turns_remaining},
         )
 
 
