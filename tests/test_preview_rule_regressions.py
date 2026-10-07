@@ -3,15 +3,15 @@ import random
 
 import pytest
 
-from eslams.arenas.east_asian_board import ShogiArena, XiangqiArena
 from eslams.arenas.advanced_cards import HanabiArena
+from eslams.arenas.east_asian_board import ShogiArena, XiangqiArena
 
 
 def board_state(arena, pieces, hands=None):
     board = [[None] * 9 for _ in range(9 if arena.id == 'shogi' else 10)]
     for row, col, piece in pieces:
         board[row][col] = piece
-    kwargs = dict(board=board, turn=0, active='player_1', seed=0, outcome=None)
+    kwargs = {'board': board, 'turn': 0, 'active': 'player_1', 'seed': 0, 'outcome': None}
     if arena.id == 'shogi':
         kwargs['hands'] = hands or {'player_1': {}, 'player_2': {}}
     return arena._state(**kwargs)
