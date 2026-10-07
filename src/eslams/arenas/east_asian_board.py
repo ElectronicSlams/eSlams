@@ -635,8 +635,8 @@ def _shogi_legal_actions(
 def _shogi_safe_action(board: Board, player_id: str, action: str) -> bool:
     trial = _clone_board(board)
     if "*" in action:
-        piece, row, col = _parse_shogi_drop(action)
-        trial[row][col] = _owned_piece(piece, player_id)
+        drop_piece, row, col = _parse_shogi_drop(action)
+        trial[row][col] = _owned_piece(drop_piece, player_id)
     else:
         (sr, sc), (er, ec), promote = _parse_shogi_move(action)
         piece = trial[sr][sc]
