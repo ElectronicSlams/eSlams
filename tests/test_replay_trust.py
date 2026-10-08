@@ -1,4 +1,3 @@
-
 import pytest
 
 from eslams.artifacts import ArtifactValidator
@@ -9,7 +8,9 @@ from eslams.runner import RunConfig, Runner
 
 def test_normal_replay_refuses_tampering_and_diagnostic_output_is_visibly_untrusted(tmp_path):
     result = Runner().run(RunConfig(arena_id="tic-tac-toe", output_dir=tmp_path))
-    with (result.artifact_path / "traces/public_trace.jsonl").open("a", encoding="utf-8", newline="\n") as stream:
+    with (result.artifact_path / "traces/public_trace.jsonl").open(
+        "a", encoding="utf-8", newline="\n"
+    ) as stream:
         stream.write('{"unexpected":"<script>untrusted</script>"}\n')
     assert ArtifactValidator().validate_report(result.artifact_path).valid is False
     output = tmp_path / "replay.html"
