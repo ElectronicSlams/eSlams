@@ -1,8 +1,9 @@
 import json
 from pathlib import Path
 
+from eslams.artifacts import ArtifactValidator
 from eslams.cli import main
-from eslams.hashing import canonical_json
+from eslams.hashing import canonical_json, sha256_file
 from eslams.planning import battlefield_plan
 from eslams.publication_export import export_publication_bundle, validate_publication_bundle
 from eslams.runner import RunConfig, Runner
@@ -92,6 +93,29 @@ def test_sample_run_publication_bundles_validate_against_current_contract():
 
     assert fixture.exists()
     assert validate_publication_bundle(fixture)["valid"] is True
+    inventory = json.loads((ROOT / "sample_runs/samples.json").read_text(encoding="utf-8"))
+    assert len(inventory) == 2
+    for row in inventory:
+        source = ROOT / row["github_path"]
+        assert sha256_file(source) == row["sha256"]
+        report = ArtifactValidator().validate_report(source, profile=row["validation_profile"])
+        assert report.valid and report.artifact_id == row["artifact_id"]
+        assert row["classification"] == "LOCAL_FIXTURE"
+        assert row["official_trust"] is False and row["dual_home"] is False
+        assert row["hf_url"] is None
+        import zipfile
+
+        with zipfile.ZipFile(source) as archive:
+            for member in archive.namelist():
+                body = archive.read(member)
+                assert b"/Users/" not in body and b"/private/tmp/" not in body
+        official_report = ArtifactValidator().validate_report(source, profile="official-bundle")
+        assert not official_report.valid
+        assert "runner_signature_missing" in official_report.errors
+        bundle = source.parent / "publication_bundle"
+        for proof in _read_jsonl(bundle / "proof_index.jsonl"):
+            assert str(proof["artifact"]).startswith("sha256:")
+            assert proof["aggregate_leaderboard_eligible"] is False
 
 
 def test_cli_publish_export_and_validate(tmp_path: Path):

@@ -687,3 +687,17 @@ draw, and identical team scores for both seats. A perfect game still has
 `winner: null`. Display the team score; do not enter the seats as opponents in
 a head-to-head leaderboard. Its `battlefield` and `benchmark` surfaces are
 disabled and its Official surface is not eligible.
+
+## Initial-state budget scope
+
+`eslams core budgets --json` checks all 50 initial states at the supplied seed.
+Compact observation sizes count UTF-8 bytes. Prompt tokens are an approximation,
+not measured provider usage. Gomoku has a documented 6,000-token bound for up to
+225 placement descriptors/output-schema values; Pentago has an 8,000-token bound
+for up to 288 placement/rotation actions. Other limits retain their existing
+bounds. Native CI runs this check; later-state/history growth needs its own
+measurement and does not follow from an initial-state pass.
+
+The Core inputs and acceptance criteria for hosted Labs onboarding are in
+[LABS_PAGE_CONTRACT.md](LABS_PAGE_CONTRACT.md). Local/public/Official custody
+boundaries are in [PUBLIC_CUSTODY.md](PUBLIC_CUSTODY.md).

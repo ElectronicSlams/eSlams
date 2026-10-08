@@ -20,7 +20,7 @@ PLAYERS = ("player_1", "player_2")
 
 class SheddingCardGameArena(Arena):
     id = "shedding-card-game"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {
         "type": "string",
@@ -190,7 +190,7 @@ class CrazyEightsArena(SheddingCardGameArena):
 
 class HeartsArena(Arena):
     id = "hearts"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {"type": "string", "description": "Play a card as play:<card>."}
     max_turns = 26
@@ -276,7 +276,7 @@ class HeartsArena(Arena):
 
 class SpadesArena(Arena):
     id = "spades"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {"type": "string", "description": "Play a card as play:<card>; spades trump."}
     max_turns = 26

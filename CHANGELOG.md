@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Add one tested lab quickstart, sample classification/checksum inventory,
+  private/public custody guidance, Platform Labs handoff and canonical docs
+  index. Replace mislabeled/truncated or legacy-HMAC newcomer samples with
+  current complete keyless Local fixtures and evidence-only publication shapes.
+  Add an explicit source-distribution include list and community templates.
+- Bump the remaining historically changed card/Bargaining/Dilemma arenas to
+  1.0.1; preserve already advanced arena versions. Add all-50-arena versioned
+  trajectory fingerprints to native CI. Historical 0.5.1 version collisions
+  remain producer-specific and are documented in docs/ARENA_VERSIONING.md.
+- Document bounded Gomoku/Pentago initial-prompt overrides for enumerated
+  legal actions, count compact observation UTF-8 bytes correctly and gate all
+  initial-state budgets in native CI. CLI options now include meaningful help.
+- Escape untrusted replay JSON and unknown chess piece text; browser checks
+  cover mixed-case script terminators and injected element attempts.
+
 - Enforce elapsed provider deadlines through queue admission and streamed
   response bodies, bounded by the complete action budget across retries. Cancel
   expired HTTP streams. Worker/no-SIGALRM Runner calls return at their deadline,

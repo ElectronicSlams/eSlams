@@ -22,6 +22,9 @@ catalogue listed below.
 
 ## Contents
 
+- [Local lab quickstart](docs/LABS.md)
+- [Docs index](docs/DOCS_INDEX.md)
+
 - [Install](#install)
 - [Quick Start](#quick-start)
 - [Run Model Agents](#run-model-agents)
@@ -485,16 +488,19 @@ material, or private reasoning.
 
 ## Sample Runs
 
-Curated sample runs live in [sample_runs/](https://github.com/ElectronicSlams/eSlams/tree/main/sample_runs/). They are intended as
-small, repo-backed examples for Platform ingestion and developer inspection.
+The [sample tree](sample_runs/README.md) contains keyless Local fixtures and
+validated publication shapes, with [checksums and expected status](docs/SAMPLE_CLASSIFICATION.md).
 
-- `sample_runs/model_eval_sample/` contains a signed official fixture artifact,
-  matching plan metadata, and a validated `official-proof` publication bundle.
-- `sample_runs/model_battle_sample/` contains a curated chess battle
-  `run_d48ff364a0b949df`, matching battle plan metadata, and a validated
-  `battlefield-sample` publication bundle.
+- `model_battle_sample/sample_builtin_chess.eslams` is a completed built-in
+  first-legal versus first-legal chess run; it is not a provider model battle.
+- `model_eval_sample/local_eval_fixture.eslams` is an unsigned tic-tac-toe
+  fixture exported with the `official-proof` bundle kind. Its rows establish
+  no Official or Grand Slam trust.
 
-The sample README documents the selection criteria for tracked sample artifacts.
+The former `run_d48ff364a0b949df` model-battle claim did not match the tracked
+file. Historical invalid/HMAC samples are replaced, rather than described as
+current validated proofs. Producer commits and unchanged historical limitations
+are explicit in [sample classification](docs/SAMPLE_CLASSIFICATION.md).
 
 ## Upload to eslams.com
 

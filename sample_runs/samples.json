@@ -1,0 +1,32 @@
+[
+  {
+    "sample_id": "sample_builtin_chess",
+    "sha256": "sha256:248824254065dc07b8910be0d93f00b478e101a3bbff395c75b44c9f9f61fc84",
+    "artifact_id": "sha256:db15829096c8af07371665bfe0967c81a2b6ead81c441307127b45efe37572e5",
+    "kind": "battlefield-sample",
+    "classification": "LOCAL_FIXTURE",
+    "producer_core_version": "0.6.1",
+    "dual_home": false,
+    "hf_url": null,
+    "validation_profile": "runner_bundle",
+    "validation_valid": true,
+    "official_trust": false,
+    "github_path": "sample_runs/model_battle_sample/sample_builtin_chess.eslams",
+    "producer_commit": "27888a89493c39d60d9aeeb356e5e911c727565d"
+  },
+  {
+    "sample_id": "fixture_local_tic_tac_toe",
+    "sha256": "sha256:0cd11f4ab7079c52df2a9c73430e10982ba02263d8d209519fe5659787d8bd1e",
+    "artifact_id": "sha256:9852e16ee17ff8303c97278ee3da31f6d7f6d415e4f0fb29542c54b1094375db",
+    "kind": "official-proof",
+    "classification": "LOCAL_FIXTURE",
+    "producer_core_version": "0.6.1",
+    "dual_home": false,
+    "hf_url": null,
+    "validation_profile": "runner_bundle",
+    "validation_valid": true,
+    "official_trust": false,
+    "github_path": "sample_runs/model_eval_sample/local_eval_fixture.eslams",
+    "producer_commit": "27888a89493c39d60d9aeeb356e5e911c727565d"
+  }
+]

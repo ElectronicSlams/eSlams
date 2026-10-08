@@ -29,7 +29,7 @@ from eslams.model_actions import (
     parse_model_action,
     streaming_action_status,
 )
-from eslams.observation_budgets import observation_budget_report
+from eslams.observation_budgets import all_observation_budget_reports, observation_budget_report
 from eslams.runner_session import RunnerSessionStore
 
 
@@ -194,6 +194,11 @@ def test_benchmark_budgets_golden_schemas_and_generated_contracts(tmp_path: Path
 
     budget = observation_budget_report(game_id="tic-tac-toe")
     assert budget["ok"] is True
+    reports = all_observation_budget_reports()
+    assert len(reports) == 50 and all(row["ok"] for row in reports)
+    for row in reports:
+        if row["gameId"] in {"gomoku", "pentago"}:
+            assert row["budget"]["documentedOverride"]
 
     golden = golden_fixture_bundle(game_ids=["tic-tac-toe", "connect-four"])
     assert golden["coreVersion"] == CORE_PACKAGE_VERSION

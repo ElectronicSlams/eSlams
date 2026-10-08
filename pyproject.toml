@@ -49,6 +49,14 @@ Issues = "https://github.com/ElectronicSlams/eSlams/issues"
 [project.scripts]
 eslams = "eslams.cli:main"
 
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src", "/tests", "/fixtures", "/sample_runs", "/packages", "/scripts", "/docs",
+  "/.github", "/.gitattributes", "/.editorconfig", "/.gitignore", "/.env.example",
+  "/pyproject.toml", "/hatch_build.py", "/README.md", "/CHANGELOG.md",
+  "/CONTRIBUTING.md", "/CODE_OF_CONDUCT.md", "/SECURITY.md", "/LICENSE", "/Makefile"
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/eslams", "src/eslams_core"]
 

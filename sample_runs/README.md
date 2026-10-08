@@ -1,22 +1,17 @@
-Sample Runs
-===========
+# Sample runs
 
-This directory contains curated sample run material for Platform ingestion and
-developer inspection.
+These are keyless Local fixtures for inspection and integration. They establish
+no Official or Grand Slam trust and are not provider model evaluation results.
+The [inventory](samples.json) records exact checksums and producer commits.
 
-Selection criteria:
+| Sample | Contents | Expected current validation |
+| --- | --- | --- |
+| [Built-in chess](model_battle_sample/README.md) | Completed first-legal vs first-legal run and `battlefield-sample` publication shape | Runner bundle and publication pass |
+| [Local eval shape](model_eval_sample/README.md) | Unsigned tic-tac-toe fixture and `official-proof` publication shape | Runner bundle and publication pass; Official profile fails because unsigned |
 
-- the source artifact validates under its intended profile;
-- deterministic replay validation passes;
-- the run has no recorded error-log entries;
-- model-battle samples must not rely on missing-key fallback actions;
-- publication bundles validate with `eslams publish validate`.
-
-Included samples:
-
-- `model_eval_sample/` uses the signed official fixture artifact as a compact
-  model-eval publication example.
-- `model_battle_sample/` uses `run_d48ff364a0b949df`, a curated chess battle
-  between `composer-2.5` and `grok-build-0.1`.
-
-Scratch harness state and exploratory local runs are intentionally omitted.
+They are generated using `scripts/generate_sample_fixtures.py --out <new-directory>`.
+No provider key is needed. Fixed fixture creation time is test metadata; measured
+timing sidecars are diagnostics. Keep raw archives in private custody; only
+allowlisted public exports are public replay inputs. See
+[classification](../docs/SAMPLE_CLASSIFICATION.md) and
+[custody](../docs/PUBLIC_CUSTODY.md).

@@ -20,25 +20,34 @@
       "number": 10,
       "title": "[oss][feature] Add LABS.md Quickstart for BYO-key lab runs",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Close after one tested keyless/BYO-key lab guide lands with honest availability and trust claims; absorb #13/#18/#31 rather than keep three overlapping entry points.",
-      "evidence": null
+      "evidence": {
+        "implementation": "docs/LABS.md supplies a fresh-venv published 0.6.1 walkthrough, separate unreleased-source instructions, five BYO-key variables, explicit live opt-in/costs, validated public export and honest trust/availability. All eight published keyless commands passed outside the checkout; provider metadata/live preflight already covered without calling paid providers.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 11,
       "title": "[oss][chore] Classify good/bad samples for GitHub+HF dual-home",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose current sample classification and custody policy; replace obsolete GOOD/BAD requirements. Sample metadata validation cannot authorize hidden-suite publication or prove byte-level scrubbing.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Replaced obsolete GOOD/BAD and public-by-default extraction proposals with docs/SAMPLE_CLASSIFICATION.md and a two-item samples.json inventory: content IDs, byte checksums, producer pins, LOCAL_FIXTURE, no Official trust, dual_home=false and hf_url=null. No warehouse extraction, scrub certification or HF ownership is claimed.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 12,
       "title": "[oss][chore] Add /labs page contract for Platform",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether /labs is a supported product goal. A Core handoff contract can close this scoped issue only after owner agreement; implementing hosted routes belongs to Platform.",
-      "evidence": null
+      "evidence": {
+        "implementation": "docs/LABS_PAGE_CONTRACT.md supplies the requested Core handoff, canonical Quickstart/Samples/Upload inputs and concrete Platform acceptance criteria. Hosted routing, authentication, custody and deployment remain Platform work; the superseded draft falsely implied current hosted/HF availability. This issue requests a Core contract, not deployment.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 54,
@@ -205,17 +214,23 @@
       "number": 60,
       "title": "`eslams core budgets --json` (documented) exits 1: gomoku and pentago exceed Core prompt-token budgets",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Budget-check exit 1 is correct for an exceeded enforced budget. Reduce prompt usage or deliberately revise budget thresholds; do not force a green diagnostic without a documented decision.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Count observation UTF-8 bytes correctly. Deliberately document 6000/8000 approximate-token initial-state limits for Gomoku/Pentago because their full legal-action descriptions can reach 225/288 actions. All 50 budget reports pass; assertions preserve genuine failure behavior and native CI now enforces the documented limits. No claim of provider-tokenizer or whole-history bounds.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 61,
       "title": "sample_runs/model_eval_sample official_signed.eslams does not validate under its documented command (official-bundle); docs inconsistent",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Document and test the actual intended fixture validation profile/key trust. A fixture signature is not live Official evidence; do not loosen Official validation to make an example pass.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Replace the legacy HMAC sample with a complete unsigned Local fixture; runner-bundle and publication validation pass, official-bundle explicitly fails runner_signature_missing. Correct commands, names and trust claims in all sample READMEs. Legacy HMAC remains covered as untrusted; no validator is relaxed or result re-signed.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 62,
@@ -297,9 +312,12 @@
       "number": 68,
       "title": "Draft PRs #19 and #21 give contradictory README upload guidance (private runner bundle vs public replay package)",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Revised canonical guidance must distinguish private runner/auditor bundles from public replay packages; withdrawal of conflicting drafts also resolves this PR-only report.",
-      "evidence": "README now distinguishes private runner intake from public replay export. Full runner archives contain private auditor/judge/agent I/O data; only the validated public export is appropriate for public sharing."
+      "evidence": {
+        "implementation": "README, LABS, ARTIFACTS and PUBLIC_CUSTODY consistently distinguish private runner/auditor archives from validated public replay projections. Neither upload nor publication kind confers Official authority. Contradictory original drafts are superseded.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 69,
@@ -339,9 +357,12 @@
       "number": 70,
       "title": "Open PR set (#13-#53) has 20 conflicting pairs and cannot be merged in arbitrary order; landing order needed",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Close when the retained/revised subset has a tested integration order and superseded proposals are withdrawn. A mergeable flag is insufficient; no need to merge every current branch.",
-      "evidence": null
+      "evidence": {
+        "implementation": "The retained implementations are integrated in one replacement PR #218, with exact-head native, distribution, browser and parity gates. Each original PR has reviewed-head evidence and a concrete incorporated/declined disposition; arbitrary merging of conflicting originals is unnecessary and unsafe.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 71,
@@ -601,25 +622,34 @@
       "number": 87,
       "title": "Hugging Face namespace `ElectronicSlams` does not exist while open draft PRs (#13, #17, #18, #19) reference it (namespace squatting risk)",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "The reviewed quickstart already marks HF as pending, so lack of that caveat is not reproduced. Reserving an org is an owner/operations task, not a Core patch. Recheck current namespace availability only when choosing rollout; do not assert the 2026-09-23 snapshot is current.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Canonical guides omit unverified HF namespace/download promises. samples.json explicitly records no mirrors. Reserving a namespace is not required or performed; the old dated availability assertion is not represented as current. Draft-only namespace assumptions are withdrawn with their originals.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 88,
       "title": "Draft Hugging Face dataset card and placeholder collection URL contain links that return 404",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Remove placeholder collection/dataset links from publishable cards, or keep them explicitly unlinked/pending. Close obsolete draft-only defects when the relevant proposal is replaced; creating a collection is not required.",
-      "evidence": null
+      "evidence": {
+        "implementation": "No placeholder Collection/dataset links are published by the replacement guides. GitHub samples are real, checksum-verified objects; future external URLs require ownership and matching bytes. Obsolete draft cards/links are withdrawn, without creating external services.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 89,
       "title": "Packaging hygiene: 0.4.0 and 0.5.0 sdists ship internal planning files; fixtures and bundles contain developer local paths",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Audit fresh wheel/sdist allowlists and public fixtures for planning files/local paths. Old published packages are immutable historical evidence; document any retained historical leak/remediation rather than claim a new build changes old bytes.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Explicit sdist include roots and isolated archive hygiene checks exclude root internal plans, .env, Git and bytecode material. Regenerated fixtures and publication proof indices contain no developer filesystem paths; proof identities are content hashes. Published historical 0.4.0/0.5.0 bytes remain immutable and their limitation is documented.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 93,
@@ -886,9 +916,12 @@
       "number": 103,
       "title": "0.5.1 changed game behavior in 15 arenas without bumping arena version strings (plus fixed pre-0.5.1 backgammon bear-off crash)",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Inventory exact behavior changes and assign correct future arena versions. Keep historical rules identifiable; do not rewrite prior run hashes or claim all historical comparisons have identical semantics.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Inventory all 15 historical 0.5.1 arena behavior changes against tag diffs in docs/ARENA_VERSIONING.md. Assign distinct current versions to the remaining six affected implementations (including inherited Crazy Eights), retain existing advanced versions, and add four-seed/two-policy state/action/outcome fingerprints for all 50 arenas to every native job. Historical same-version collisions require producer commits, not rewritten history.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 107,
@@ -1192,9 +1225,12 @@
       "number": 118,
       "title": "No CODE_OF_CONDUCT, issue templates or pull request template (GitHub community health 75%)",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose community templates/code-of-conduct intentionally. A community-health percentage is not itself a runtime defect; close as not planned with rationale or add the agreed minimal templates.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Add a concise Code of Conduct, bug/feature issue templates and PR template, linked from CONTRIBUTING. Concrete community files are included; no unmerged-main GitHub health percentage is asserted.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 119,
@@ -2280,11 +2316,18 @@
       "number": 163,
       "title": "Most CLI options have no `--help` text (135 of 143), including `run --max-turns`, `--on-agent-error`, `--on-illegal-action`, `--execution-profile` and `--shard-*`",
       "work_package": "W8",
-      "status": "implemented: awaiting native verification",
+      "status": "closed: completed",
       "criterion": "Document actual CLI semantics and safe defaults in help for meaningful options; test high-risk parameters and copyable examples rather than locking every help string.",
       "evidence": {
         "implementation": "Added meaningful help for every CLI option: 40 leaf commands and 139 leaf arguments have no missing help. Defaults, provider listing versus inference, failure policies, action deadlines, sharding, and validation profiles match the implemented behavior. Full command audit recorded in cli-help-review.json.",
-        "verification": "Full native Core, browser, distribution, audit, lint and CodeQL gate pending on the next commit."
+        "verification": "Native Core CI (five Python/OS environments), browser regressions, cross-host byte parity, TypeScript parity, isolated wheel/sdist consumers, dependency audit, actionlint and CodeQL all pass on 27888a89493c39d60d9aeeb356e5e911c727565d. macOS transient 50 ms performance assertion passed the failed-job rerun without a code or assertion change. Local 509 tests pass on Python 3.12 and floor Python 3.10; coverage 88.629563%."
+      },
+      "closure": {
+        "state": "CLOSED",
+        "reason": "COMPLETED",
+        "closed_at": "2026-10-08T11:12:44Z",
+        "implementation_commit": "27888a89493c39d60d9aeeb356e5e911c727565d",
+        "consolidation_pr": 218
       }
     },
     {
@@ -2468,9 +2511,12 @@
       "number": 170,
       "title": "GitHub release notes for v0.4.0 and v0.5.1 contain literal `\\n` sequences and render as one run-on paragraph; v0.4.0 also says PyPI upload was not done",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Review and render intended historical release-note text, then correct only factual formatting/status errors through the repository owner. Preserve historical chronology; a new changelog does not rewrite remote releases.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Corrected the EXISTING v0.4.0 and v0.5.1 GitHub release bodies: actual line breaks replace literal backslash-n, and v0.4.0 PyPI status matches primary PyPI wheel/sdist upload metadata (2026-06-11). Read-back bodies exactly match reviewed files. No tag or release was created.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 171,
@@ -2705,7 +2751,7 @@
       "number": 180,
       "title": "Per-action time budget is enforced with SIGALRM on the main thread only: from a worker thread a 0.3 s budget lets a slow agent run for 4 s",
       "work_package": "W3",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Enforce elapsed deadlines in worker threads and on supported operating systems, including read/stream time; test bounded execution and cancellation without assuming SIGALRM works everywhere.",
       "evidence": {
         "source": [
@@ -2721,7 +2767,14 @@
           "CHANGELOG.md"
         ],
         "implementation": "Actual elapsed per-attempt deadline includes provider rate/concurrency admission and asynchronous header/body streaming; shared action context bounds retry and repair waits. Cancel expired HTTP futures/streams through a shared bounded loop supporting existing asyncio callers. Worker/no-alarm callbacks use bounded daemon waits, isolated request copies, frozen timeout receipts and cross-context quarantine of unfinished agents; late actions never apply. Explicitly document that arbitrary Python callbacks cannot be forcibly killed and require managed process isolation for that guarantee.",
-        "verification": "509 tests pass on Python 3.12 and direct-minimum Python 3.10; both cover 11848/13368 lines (88.629563%). Ruff and strict mypy pass. Six elapsed-deadline regressions and retained response-size/compression tests pass. Native/distribution/browser/parity checks pending; fake local keys only, no release."
+        "verification": "Native Core CI (five Python/OS environments), browser regressions, cross-host byte parity, TypeScript parity, isolated wheel/sdist consumers, dependency audit, actionlint and CodeQL all pass on 27888a89493c39d60d9aeeb356e5e911c727565d. macOS transient 50 ms performance assertion passed the failed-job rerun without a code or assertion change. Local 509 tests pass on Python 3.12 and floor Python 3.10; coverage 88.629563%."
+      },
+      "closure": {
+        "state": "CLOSED",
+        "reason": "COMPLETED",
+        "closed_at": "2026-10-08T11:12:41Z",
+        "implementation_commit": "27888a89493c39d60d9aeeb356e5e911c727565d",
+        "consolidation_pr": 218
       }
     },
     {
@@ -2961,11 +3014,18 @@
       "number": 190,
       "title": "Draft PR #26 changes the default bind of `eslams agent serve` and `AgentServer.run()` from 0.0.0.0 to 127.0.0.1 but adds no CHANGELOG entry",
       "work_package": "W2",
-      "status": "implemented: awaiting native verification",
+      "status": "closed: completed",
       "criterion": "Document loopback default and explicit remote/container --host opt-in; verify expected container workflows. Close when revised #26 lands or is withdrawn, rather than reporting an unmerged default as released.",
       "evidence": {
         "implementation": "Unreleased compatibility entry documents the new loopback default of AgentServer.run() and agent serve, explicit --host/run(host=...) opt-in for containers and remote callers, and the unauthenticated sample endpoints.",
-        "verification": "Full native Core, browser, distribution, audit, lint and CodeQL gate pending on the next commit."
+        "verification": "Native Core CI (five Python/OS environments), browser regressions, cross-host byte parity, TypeScript parity, isolated wheel/sdist consumers, dependency audit, actionlint and CodeQL all pass on 27888a89493c39d60d9aeeb356e5e911c727565d. macOS transient 50 ms performance assertion passed the failed-job rerun without a code or assertion change. Local 509 tests pass on Python 3.12 and floor Python 3.10; coverage 88.629563%."
+      },
+      "closure": {
+        "state": "CLOSED",
+        "reason": "COMPLETED",
+        "closed_at": "2026-10-08T11:12:45Z",
+        "implementation_commit": "27888a89493c39d60d9aeeb356e5e911c727565d",
+        "consolidation_pr": 218
       }
     },
     {
@@ -3191,7 +3251,7 @@
       "number": 199,
       "title": "ProviderRuntimeConfig.timeout_ms has no effect: a 1000 ms total timeout lets a 3 s response (and a 6.7 s trickled body) succeed",
       "work_package": "W6",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Enforce an absolute attempt deadline across connection, read and streamed chunks, then record timeout accurately; test slow/trickled local responses and thread mode.",
       "evidence": {
         "source": [
@@ -3207,7 +3267,14 @@
           "CHANGELOG.md"
         ],
         "implementation": "Actual elapsed per-attempt deadline includes provider rate/concurrency admission and asynchronous header/body streaming; shared action context bounds retry and repair waits. Cancel expired HTTP futures/streams through a shared bounded loop supporting existing asyncio callers. Worker/no-alarm callbacks use bounded daemon waits, isolated request copies, frozen timeout receipts and cross-context quarantine of unfinished agents; late actions never apply. Explicitly document that arbitrary Python callbacks cannot be forcibly killed and require managed process isolation for that guarantee.",
-        "verification": "509 tests pass on Python 3.12 and direct-minimum Python 3.10; both cover 11848/13368 lines (88.629563%). Ruff and strict mypy pass. Six elapsed-deadline regressions and retained response-size/compression tests pass. Native/distribution/browser/parity checks pending; fake local keys only, no release."
+        "verification": "Native Core CI (five Python/OS environments), browser regressions, cross-host byte parity, TypeScript parity, isolated wheel/sdist consumers, dependency audit, actionlint and CodeQL all pass on 27888a89493c39d60d9aeeb356e5e911c727565d. macOS transient 50 ms performance assertion passed the failed-job rerun without a code or assertion change. Local 509 tests pass on Python 3.12 and floor Python 3.10; coverage 88.629563%."
+      },
+      "closure": {
+        "state": "CLOSED",
+        "reason": "COMPLETED",
+        "closed_at": "2026-10-08T11:12:42Z",
+        "implementation_commit": "27888a89493c39d60d9aeeb356e5e911c727565d",
+        "consolidation_pr": 218
       }
     },
     {
@@ -3580,9 +3647,12 @@
       "number": 213,
       "title": "README and sample_runs/README cite curated chess battle run_d48ff364a0b949df (composer-2.5 vs grok-build-0.1) in sample_runs/model_battle_sample, but the directory holds run_eeab67d58b994ca7, a first-legal vs first-legal run",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented/disposition recorded; final native verification pending",
       "criterion": "Correct stale battle sample IDs/opponent claims to the actual tracked artifact and validate each documented command/profile; take the narrow fix from #22 without its warehouse runtime module.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Replace the wrongly identified/truncated battle example with sample_builtin_chess.eslams, a complete first-legal versus first-legal Local fixture. Inventory, README, plan and regenerated publication bundle agree on identity and opponents; no composer/grok or model-performance claim remains.",
+        "verification": "509 tests pass on Python 3.12 and direct-floor Python 3.10, 11851/13368 covered lines (88.652005%); ruff and mypy pass. Final source/fixture native integration pending."
+      }
     },
     {
       "number": 214,
@@ -3659,183 +3729,317 @@
       "number": 13,
       "head": "cda01fa31ca92bbc49f1019591dc2e65a967f5a0",
       "title": "[oss][feature] Add LABS.md Quickstart for BYO-key lab runs",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Revise / split",
-      "criterion": "Replace examples with tested supported models and venv instructions; clarify private versus public artifact sharing; align approved product posture; link one canonical guide. Then merge revised PR and close #10."
+      "criterion": "Replace examples with tested supported models and venv instructions; clarify private versus public artifact sharing; align approved product posture; link one canonical guide. Then merge revised PR and close #10.",
+      "evidence": {
+        "implementation": "Canonical LABS.md retains useful keyless/BYO guidance with tested published and source paths. Decline stale provider IDs, unverified HF links and unsupported hosted-upload claims.",
+        "reviewed_head": "cda01fa31ca92bbc49f1019591dc2e65a967f5a0",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 14,
       "head": "373eea8f1d163356772221f2c0a1c78508f15ed0",
       "title": "[oss][chore] Classify samples: public-by-default SUCCESS-EXTRACT tiers",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Route / replace",
-      "criterion": "Keep a concise Core sample policy; move inventory, warehouse layout and extraction authority to operations. Close original as replaced only after policy is recorded; #11 must use current acceptance criteria, not obsolete GOOD/BAD tags."
+      "criterion": "Keep a concise Core sample policy; move inventory, warehouse layout and extraction authority to operations. Close original as replaced only after policy is recorded; #11 must use current acceptance criteria, not obsolete GOOD/BAD tags.",
+      "evidence": {
+        "implementation": "Keep a truthful sample inventory and explicit Local/historical/private classifications. Decline public-by-default raw archives, warehouse tiers and unaudited success-extract/scrub authority.",
+        "reviewed_head": "373eea8f1d163356772221f2c0a1c78508f15ed0",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 15,
       "head": "331593325ce466b8c6342120653a395ad8b952fe",
       "title": "[oss][chore] Add /labs page contract for Platform",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Revise / split",
-      "criterion": "Agree the contract with Platform owners, reuse exported schemas, verify current routes and auth flow, and avoid promising unavailable HF surfaces. Land Core contract only; record hosted implementation separately before closing #12."
+      "criterion": "Agree the contract with Platform owners, reuse exported schemas, verify current routes and auth flow, and avoid promising unavailable HF surfaces. Land Core contract only; record hosted implementation separately before closing #12.",
+      "evidence": {
+        "implementation": "Replace with the Core Labs handoff and concrete acceptance criteria. Decline obsolete route assertions, external placeholders and product claims not established by Core.",
+        "reviewed_head": "331593325ce466b8c6342120653a395ad8b952fe",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 16,
       "head": "eeb36905d1731236bafa8d54d0988be5504306be",
       "title": "docs: AGENTS.md and 2026-09-23 Core review",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Preserve actionable findings in this closure register and stable contribution/security docs. Close as superseded after that record exists; do not merge agent workflow history wholesale."
+      "criterion": "Preserve actionable findings in this closure register and stable contribution/security docs. Close as superseded after that record exists; do not merge agent workflow history wholesale.",
+      "evidence": {
+        "implementation": "Actionable review findings are addressed in the ledger and stable security/contribution docs. Decline new agent authority/account restrictions and a stale historical review presented as current defects.",
+        "reviewed_head": "eeb36905d1731236bafa8d54d0988be5504306be",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 17,
       "head": "098b67bc0237fed85e88a16140ea89da35f686b6",
       "title": "[oss][docs] P0 HF org/secrets + retired-eval archive clarity (burn wave)",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold availability caveats, actual sample IDs and safe BYO-key guidance into canonical labs/sample docs; route org and warehouse work to operations. Close as superseded."
+      "criterion": "Fold availability caveats, actual sample IDs and safe BYO-key guidance into canonical labs/sample docs; route org and warehouse work to operations. Close as superseded.",
+      "evidence": {
+        "implementation": "Retain honest BYO, availability and sample custody guidance. Decline unverified namespace ownership, retired-suite inventories and warehouse/secret provisioning outside Core.",
+        "reviewed_head": "098b67bc0237fed85e88a16140ea89da35f686b6",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 18,
       "head": "9eaa7f759b2f3c0a01acdcfee4012a670add76d4",
       "title": "[oss][docs] P0 lab-smoke + pre-HF lab run (burn wave; complements #13)",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Replace with lean offline multi-arena smoke using canonical suite fingerprints; separate execution success from terminal/scoring eligibility. Consolidate useful coverage with #38, then close original."
+      "criterion": "Replace with lean offline multi-arena smoke using canonical suite fingerprints; separate execution success from terminal/scoring eligibility. Consolidate useful coverage with #38, then close original.",
+      "evidence": {
+        "implementation": "Reuse canonical all-50-arena smoke, deterministic fingerprints, distribution consumers and documented keyless walkthrough. Decline a second custom suite whose 8-turn capped runs falsely assume successful completion.",
+        "reviewed_head": "9eaa7f759b2f3c0a01acdcfee4012a670add76d4",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 19,
       "head": "b406bc982652470c2c1b1723c802fcf9fc3fbffd",
       "title": "[oss][docs] Retire public leaderboard + Official suite (Core)",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Revise / split",
-      "criterion": "Record product posture; retain legacy validation and compatibility readers; distinguish public replay export from private auditor bundles; merge one coherent documentation change and close original."
+      "criterion": "Record product posture; retain legacy validation and compatibility readers; distinguish public replay export from private auditor bundles; merge one coherent documentation change and close original.",
+      "evidence": {
+        "implementation": "Preserve Local versus Official/Grand Slam claims, legacy validation and safe public projections. Decline unrequested global leaderboard/suite retirement and infrastructure policy changes.",
+        "reviewed_head": "b406bc982652470c2c1b1723c802fcf9fc3fbffd",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 20,
       "head": "76cad94498d8522ce8e3eaaabe1b1a4da22baf72",
       "title": "[ops][docs] Wave B public-archive + R2 pull HOLD runbook",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Route / replace",
-      "criterion": "Preserve the read-only runbook in the operations context and close this Core PR as out of scope/replaced. Any future extraction needs verified account, canonical paths, distinct key inventory, no-clobber output and content scrub; no extraction is required for Core backlog closure."
+      "criterion": "Preserve the read-only runbook in the operations context and close this Core PR as out of scope/replaced. Any future extraction needs verified account, canonical paths, distinct key inventory, no-clobber output and content scrub; no extraction is required for Core backlog closure.",
+      "evidence": {
+        "implementation": "Decline production R2 extraction and unverifiable census/public-archive assertions outside Core. The proposed pull stub lacks adequate path/symlink/hash guarantees; it is not executed or incorporated. Custody requirements are documented without authorizing extraction.",
+        "reviewed_head": "76cad94498d8522ce8e3eaaabe1b1a4da22baf72",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 21,
       "head": "40e131af49e78dd4c7b3785ed2820ed0fa789f4e",
       "title": "fix: runner HTTP authz and fail-closed arena HMAC",
-      "status": "partially incorporated; final integration pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Revise / split",
       "criterion": "Split service authentication, artifact confinement, trust claims, private/public projections and release-workflow hardening. Bind snapshot game/rules/session context; constrain development mode; test authenticated service versus seat/browser boundaries and approved signing authority. Fix #67/#68 and update env docs before landing.",
-      "evidence": "Authenticated runner HTTP, bounded replay cache/request size, fail-closed secrets, bound snapshots, privacy guidance and manifest confinement incorporated with strengthening. Workflow injection fix and final integration remain."
+      "evidence": {
+        "implementation": "Incorporate and strengthen authenticated runner HTTP, fail-closed arena HMAC, bound game/rules/session snapshots, bounded replay cache, artifact confinement, private recipient projections and safe release workflows. Decline conditional game binding and incomplete public-field stripping; all integrated security boundaries have behavioral regressions.",
+        "reviewed_head": "40e131af49e78dd4c7b3785ed2820ed0fa789f4e",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 22,
       "head": "65bb5a7e9dcd35304c4726b84ad13b81f235d814",
       "title": "fix: A-EX \u226450 plan and honest in-repo lab pack",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Land a focused truthful-sample documentation change for #213/#61. Keep any warehouse selection checker outside Core runtime with explicit limits and separate content review; close original as superseded."
+      "criterion": "Land a focused truthful-sample documentation change for #213/#61. Keep any warehouse selection checker outside Core runtime with explicit limits and separate content review; close original as superseded.",
+      "evidence": {
+        "implementation": "Retain accurate sample names, keyless commands and custody limits. Replace archives and bundles with genuinely validated Local fixtures. Decline a duplicate warehouse/release-policy runtime with shallow scrub, alias-diversity and stale mirror assumptions; it cannot attest raw content or Official authority.",
+        "reviewed_head": "65bb5a7e9dcd35304c4726b84ad13b81f235d814",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 23,
       "head": "484d41937287a251764ee38283ce9f3bd2b6e343",
       "title": "docs: founder gates and open Core drafts (2026-09-23)",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "Replace dated founder/open-draft gates with stable CONTRIBUTING, LABS, security and custody docs. Do not introduce new account authority or stale PR maps.",
+        "reviewed_head": "484d41937287a251764ee38283ce9f3bd2b6e343",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 24,
       "head": "ac8d98fa3e601972edb20ab6f3dacc02a09b16a4",
       "title": "docs: Wave A lab-path index",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "Consolidate useful lab entry links into DOCS_INDEX and LABS with checked current paths; supersede duplicate dated wave index.",
+        "reviewed_head": "ac8d98fa3e601972edb20ab6f3dacc02a09b16a4",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 25,
       "head": "2a6899f880166f9d3a1ee0a01d27dde9b2d19fc9",
       "title": "docs: contributor holds",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "Keep existing contribution/security and custody boundaries in CONTRIBUTING. Decline unrequested founder gates and duplicated hold policy.",
+        "reviewed_head": "2a6899f880166f9d3a1ee0a01d27dde9b2d19fc9",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 26,
       "head": "eda26887caf269abcdb062f97cc98ee1612f32d9",
       "title": "fix(low): Core review F7\u2013F10 \u2014 replay trust, agent bind, CI hygiene, protocol drift",
-      "status": "reviewed: incorporated with strengthened safety; awaiting native verification",
+      "status": "superseded: closed; incorporated in #218",
       "review_route": "Revise / split",
       "criterion": "Split and retain focused fixes; enforce bounded extraction and cleanup on all failures, test renderer trust handling, document remote bind opt-in (#190), and preserve protocol compatibility. Do not close #181/#183 on traversal/XSS tests alone.",
       "evidence": {
         "implementation": "Retained loopback binding, confined ZIP extraction, least-privilege pinned CI, private Core-lite parity, receipt-v2 protocol, .env exclusion, structured provider discovery and replay trust validation. Added HTML/JSON escaping against mixed-case script terminators and unknown FEN glyphs, with browser regressions. Declined failure-swallowing provider scans and replay loaders that bypass validation. Documented invalid-match CLI defaults and loopback migration.",
         "reviewed_head": "eda26887caf269abcdb062f97cc98ee1612f32d9",
-        "diff": "pr-review/26.diff (536 lines, fully reviewed)"
+        "diff": "pr-review/26.diff (536 lines, fully reviewed)",
+        "verification": "All five native workflow groups passed 27888a89493c39d60d9aeeb356e5e911c727565d"
+      },
+      "closure": {
+        "state": "CLOSED",
+        "closed_at": "2026-10-08T11:12:47Z",
+        "reviewed_head": "eda26887caf269abcdb062f97cc98ee1612f32d9",
+        "implementation_commit": "27888a89493c39d60d9aeeb356e5e911c727565d",
+        "consolidation_pr": 218,
+        "branch_deleted": false
       }
     },
     {
       "number": 27,
       "head": "cbdb1256f3d726167c70bbdc6e7175c1e21a67dc",
       "title": "docs: public vs private Core surface",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "PUBLIC_CUSTODY and ARTIFACTS define private/public boundaries and accurate trust claims. Tests are validation evidence, not Local Artifacts; obsolete draft references are omitted.",
+        "reviewed_head": "cbdb1256f3d726167c70bbdc6e7175c1e21a67dc",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 28,
       "head": "3a75e0a6dedd4ff626d28b6a973e4ce6baeb4672",
       "title": "docs: Core Low F7\u2013F10 status index",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "Resolved F7-F10 behavior, migration and verification are recorded in canonical docs and the ledger; supersede a stale low-priority status index.",
+        "reviewed_head": "3a75e0a6dedd4ff626d28b6a973e4ce6baeb4672",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 29,
       "head": "cc31bf62bbe4dbe96021fade09be5c330d560bed",
       "title": "docs: local test and smoke",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "Retain useful test/smoke commands in CONTRIBUTING and LABS. Existing all-arena and distribution checks provide the evidence; supersede duplicate guide.",
+        "reviewed_head": "cc31bf62bbe4dbe96021fade09be5c330d560bed",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 30,
       "head": "5f177821b0ca41c12bba78f5cd643b1ed8d16abb",
       "title": "docs: open OSS drafts map",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "DOCS_INDEX links supported canonical documents. Supersede a dated open-draft map rather than preserve obsolete PR topology.",
+        "reviewed_head": "5f177821b0ca41c12bba78f5cd643b1ed8d16abb",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 31,
       "head": "b99ca9896ce54325ebe88aecf4a30cacede06d60",
       "title": "docs: PyPI consumer guide for eslams-core 0.6.1",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "Keep published 0.6.1 pin and venv instructions, explicitly distinguish its Python 3.9 floor from unreleased Python 3.10 source. Eight published keyless commands pass in a fresh external environment.",
+        "reviewed_head": "b99ca9896ce54325ebe88aecf4a30cacede06d60",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 32,
       "head": "b9e116046de4bae84e171adcdc3685217b0b3248",
       "title": "docs: claim vocabulary (Local Artifact, Official, Grand Slam)",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "Retain clear Local/Official/Grand Slam vocabulary in custody/artifact/sample docs. A passing test or wire kind is not independent authority; no product retirement is inferred.",
+        "reviewed_head": "b9e116046de4bae84e171adcdc3685217b0b3248",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 33,
       "head": "46711e80c7cc190b127949aabb650a8659de543c",
       "title": "docs: contributor holds quickref",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "Consolidate useful contributor security constraints without new founder/account permissions or duplicate dated holds.",
+        "reviewed_head": "46711e80c7cc190b127949aabb650a8659de543c",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 34,
       "head": "ce7ae0101589d0887f51925aac106c73d2358ea5",
       "title": "docs: lab and OSS docs index",
-      "status": "pending",
+      "status": "reviewed; superseded disposition recorded; final native verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement."
+      "criterion": "Fold any unique useful content into README/LABS, ARTIFACTS, SECURITY or CONTRIBUTING after the relevant behavior/policy is settled; close original as superseded with links to replacement.",
+      "evidence": {
+        "implementation": "DOCS_INDEX and README supply one current canonical docs entry point; supersede the duplicate lab/OSS index.",
+        "reviewed_head": "ce7ae0101589d0887f51925aac106c73d2358ea5",
+        "diff": "Full original diff reviewed; replacement in #218, original branch preserved.",
+        "verification": "Final native/distribution integration pending; local full tests, coverage, ruff and mypy pass."
+      }
     },
     {
       "number": 35,
@@ -4800,13 +5004,13 @@
   "test_reduction_checkpoint": {
     "removed_original_cases": 55,
     "remaining_removal_target": 0,
-    "passing_cases": 471,
-    "covered_lines": 11182,
-    "statements": 12802,
-    "line_coverage": 87.34572723012029,
-    "coverage_change_percentage_points": 2.0128416621578964,
+    "passing_cases": 509,
+    "covered_lines": 11851,
+    "statements": 13368,
+    "line_coverage": 88.65200478755236,
+    "coverage_change_percentage_points": 3.3191192195899646,
     "scope": "src/eslams; full suite with all 55 baseline removals; current Py3.12 and direct-floor Py3.10",
-    "note": "Required 20% (55/275) original case reduction complete; original assertions consolidated into retained workflows. Same-scope coverage is above baseline. Native final-head CI still pending; unresolved backlog remains."
+    "note": "55/275 original cases removed (20%); useful assertions retained. Final native integration pending; local full-suite coverage exceeds baseline."
   },
   "verification_checkpoints": [
     {

@@ -197,12 +197,41 @@ def main() -> None:
         unpacked = root / "source"
         unpacked.mkdir()
         with tarfile.open(sdist) as archive:
+            allowed_roots = {
+                "src",
+                "tests",
+                "fixtures",
+                "sample_runs",
+                "packages",
+                "scripts",
+                "docs",
+                ".github",
+                ".gitattributes",
+                ".editorconfig",
+                ".gitignore",
+                ".env.example",
+                "pyproject.toml",
+                "hatch_build.py",
+                "README.md",
+                "CHANGELOG.md",
+                "CONTRIBUTING.md",
+                "CODE_OF_CONDUCT.md",
+                "SECURITY.md",
+                "LICENSE",
+                "Makefile",
+                "PKG-INFO",
+            }
             for member in archive.getmembers():
                 path = unpacked / member.name
                 if not path.resolve().is_relative_to(unpacked.resolve()) or not (
                     member.isfile() or member.isdir()
                 ):
                     raise RuntimeError("unexpected source distribution member")
+                parts = Path(member.name).parts
+                if len(parts) > 1 and parts[1] not in allowed_roots:
+                    raise RuntimeError(f"source distribution contains unapproved root: {parts[1]}")
+                if ".env" in parts or ".git" in parts or "__pycache__" in parts:
+                    raise RuntimeError("source distribution contains local environment material")
             for member in archive.getmembers():
                 path = unpacked / member.name
                 if member.isdir():

@@ -94,7 +94,7 @@ class RockPaperScissorsArena(Arena):
 class PrisonersDilemmaArena(Arena):
     pending_action_key = "pending_action"
     id = "prisoners-dilemma"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",

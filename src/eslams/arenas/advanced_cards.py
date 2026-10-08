@@ -159,7 +159,7 @@ class GinRummyArena(Arena):
 
 class EuchreArena(Arena):
     id = "euchre"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {"type": "string", "description": "call:<suit>, pass, or play:<card>."}
     max_turns = 16

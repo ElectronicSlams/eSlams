@@ -123,6 +123,24 @@ Run `eslams schemas export --out <empty-directory>` and inspect
 `schema_bundle_manifest.json` before opening the pull request. Do not hand-edit
 an exported schema or deterministic build ID.
 
+## Community and reports
+
+Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Bug reports should include
+version/commit, OS, Python, exact commands, expected/actual behavior and redacted
+output. GitHub issue and PR templates collect this context. Security reports use
+[SECURITY.md](SECURITY.md), not public reproduction details containing secrets.
+
+Source contribution does not authorize a deployment, storage extract or data
+publication. Keep such operations in a separately scoped task. The canonical
+[docs index](docs/DOCS_INDEX.md) and resolution ledger replace the old overlapping
+draft maps; proposed draft account/founder policies are not silently adopted.
+
+Run `python scripts/verify_arena_versions.py` and `eslams core budgets --json`
+alongside the relevant rules tests. Behavior changes need an arena version bump
+and reviewed trajectory fingerprints; see [versioning](docs/ARENA_VERSIONING.md).
+The budget command checks initial states, using approximate prompt tokens,
+not all future turns or a provider tokenizer.
+
 ## Pull Requests
 
 Include:

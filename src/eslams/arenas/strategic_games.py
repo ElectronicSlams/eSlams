@@ -499,7 +499,7 @@ class LiarsDiceArena(Arena):
 
 class BargainingArena(Arena):
     id = "bargaining"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
