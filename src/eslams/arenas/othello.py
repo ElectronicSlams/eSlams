@@ -23,7 +23,7 @@ DIRECTIONS = (
 
 class OthelloArena(Arena):
     id = "othello"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1", "player_2")
     action_schema = {
         "oneOf": [
@@ -40,7 +40,7 @@ class OthelloArena(Arena):
             {"const": "pass", "description": "Pass only when no placement is legal."},
         ]
     }
-    max_turns = SIZE * SIZE
+    max_turns = 2 * (SIZE * SIZE - 4)
 
     def initial_state(self, seed: int) -> ArenaState:
         validate_seed(seed)
@@ -96,9 +96,7 @@ class OthelloArena(Arena):
     ) -> ArenaState:
         if outcome is None and (_board_full(board) or not _has_any_legal_move(board)):
             outcome = _final_outcome(board, "finished")
-        terminal = outcome is not None or turn >= self.max_turns
-        if outcome is None and terminal:
-            outcome = _final_outcome(board, "max_turns")
+        terminal = outcome is not None
         legal: list[Any] = [] if terminal else _legal_actions(board, _disc(active))
         if not legal and not terminal:
             legal = ["pass"]

@@ -290,7 +290,7 @@ class EuchreArena(Arena):
 
 class CribbageArena(Arena):
     id = "cribbage"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {"type": "string", "description": "Discard two cards as discard:<card>,<card>."}
     max_turns = 2
@@ -777,7 +777,7 @@ def _cribbage_outcome(
 ) -> dict[str, Any]:
     hand_scores = {player: _cribbage_hand_score([*hands[player], starter]) for player in PLAYERS}
     crib_cards = [*discards["player_1"], *discards["player_2"], starter]
-    hand_scores[dealer] += _cribbage_hand_score(crib_cards)
+    hand_scores[dealer] += _cribbage_hand_score(crib_cards, crib=True)
     if hand_scores["player_1"] == hand_scores["player_2"]:
         winner = None
     else:
@@ -785,31 +785,37 @@ def _cribbage_outcome(
     return {"winner": winner, "reason": reason, "hand_scores": hand_scores, "starter": starter}
 
 
-def _cribbage_hand_score(cards: list[str]) -> int:
+def _cribbage_hand_score(cards: list[str], *, crib: bool = False) -> int:
+    """Score four retained cards and their starter, using ACC show rules."""
+    if len(cards) != 5:
+        raise ValueError("cribbage show requires four cards and a starter")
     values = [_crib_value(card) for card in cards]
-    score = 0
-    for size in range(2, len(cards) + 1):
-        for combo in itertools.combinations(values, size):
-            if sum(combo) == 15:
-                score += 2
+    score = sum(
+        2
+        for size in range(2, 6)
+        for combo in itertools.combinations(values, size)
+        if sum(combo) == 15
+    )
     counts = Counter(_rank(card) for card in cards)
-    score += sum(count * (count - 1) for count in counts.values() if count >= 2)
-    ordered = sorted({RANKS.index(_rank(card)) for card in cards})
-    run = 1
-    best_run = 0
-    for previous, current in zip(ordered, ordered[1:]):
-        if current == previous + 1:
-            run += 1
-            best_run = max(best_run, run)
-        else:
-            run = 1
-    if best_run >= 3:
-        score += best_run
-    suits = [_suit(card) for card in cards[:-1]]
-    if suits and len(set(suits)) == 1:
-        score += 4
+    score += sum(count * (count - 1) for count in counts.values())
+    # Count each physical combination in the longest run only. Duplicate ranks
+    # multiply runs, but a four-card run must not also count its three-card subsets.
+    ranks = [("A", *RANKS[:-1]).index(_rank(card)) for card in cards]
+    for size in range(5, 2, -1):
+        runs = sum(
+            len(set(combo)) == size and max(combo) - min(combo) == size - 1
+            for combo in itertools.combinations(ranks, size)
+        )
+        if runs:
+            score += size * runs
+            break
+    suits = [_suit(card) for card in cards[:4]]
+    if len(set(suits)) == 1:
         if _suit(cards[-1]) == suits[0]:
-            score += 1
+            score += 5
+        elif not crib:
+            score += 4
+    score += sum(_rank(card) == "J" and _suit(card) == _suit(cards[-1]) for card in cards[:4])
     return score
 
 

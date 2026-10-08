@@ -11,6 +11,14 @@
 
 ### Fixed
 
+- Cribbage 1.0.1 corrects show scoring; Pentago 1.0.1 preserves placement wins
+  before rotation; Othello 1.0.1 allows passes without truncating legal play.
+- Chess 1.2.0 makes draw claims explicit actions and keeps automatic fivefold/
+  75-move adjudication and checkmate precedence. FEN fullmove numbers no longer
+  count toward the runner action horizon in injected/resumed positions.
+- Leduc and both Texas Hold'em arenas 1.0.1 split tied showdown scores only
+  among best hands and advance a matched betting round after a final fold.
+
 - Canonical schema and text writers use explicit LF newlines across platforms.
   Git checkout attributes preserve `.eslams` archives as binary data.
 - Contributor commands cover POSIX and Windows virtual environments and both

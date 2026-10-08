@@ -17,7 +17,7 @@ SUITS = ("C", "D", "H", "S")
 
 class LeducHoldemArena(Arena):
     id = "leduc-holdem"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {
         "type": "string",
@@ -62,7 +62,7 @@ class LeducHoldemArena(Arena):
 
 class LimitTexasHoldemArena(Arena):
     id = "limit-texas-holdem"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {
         "type": "string",
@@ -165,24 +165,25 @@ def _apply_poker_action(
             committed[player_id] += amount
         pot += amount
         street_actions.append(action)
-        if _street_closed(street_actions, committed, folded):
-            street, board, deck, committed, street_actions, active, outcome = _advance_street(
-                arena=arena,
-                hole=hole,
-                board=board,
-                deck=deck,
-                committed=committed,
-                folded=folded,
-                street=street,
-                active=active,
-                pot=pot,
-            )
     elif action in {"bet", "raise", "bet:2", "bet:4", "raise:4", "all-in"}:
         amount = _bet_amount(action, player_id, stacks, to_call, limit_bet, no_limit)
         stacks[player_id] -= amount
         committed[player_id] += amount
         pot += amount
         street_actions = [action]
+
+    if outcome is None and _street_closed(street_actions, committed, folded):
+        street, board, deck, committed, street_actions, active, outcome = _advance_street(
+            arena=arena,
+            hole=hole,
+            board=board,
+            deck=deck,
+            committed=committed,
+            folded=folded,
+            street=street,
+            active=active,
+            pot=pot,
+        )
 
     history.append(
         {
@@ -541,8 +542,15 @@ def _winner_scores(outcome: dict[str, Any] | None) -> dict[str, float]:
     folded = [str(player) for player in outcome.get("folded", [])]
     active_players = _active_players(folded)
     if outcome.get("winner") is None:
-        share = 1.0 / len(active_players) if active_players else 0.0
-        return {player: (share if player in active_players else 0.0) for player in PLAYERS}
+        values = outcome.get("hand_values", {})
+        ranked = {player: values[player] for player in active_players if player in values}
+        if ranked:
+            best = max(ranked.values())
+            tied_best = [player for player, value in ranked.items() if value == best]
+        else:
+            tied_best = active_players
+        share = 1.0 / len(tied_best) if tied_best else 0.0
+        return {player: (share if player in tied_best else 0.0) for player in PLAYERS}
     winner = str(outcome["winner"])
     return {player: (1.0 if player == winner else 0.0) for player in PLAYERS}
 

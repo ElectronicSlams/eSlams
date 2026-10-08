@@ -379,9 +379,12 @@
       "number": 95,
       "title": "Cribbage: hand and crib scoring deviates from standard rules (ace-high runs, no double-run multiplicity, crib flush, nob never scored)",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Use small authoritative cribbage scoring examples for ace-low runs, run multiplicity, crib flush and nob; preserve arena-version boundaries for changed scores.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Cribbage 1.0.1 show scoring: ace-low physical-combination runs, nobs and distinct hand/crib flush rules; ACC examples including 29-point hand.",
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+      }
     },
     {
       "number": 96,
@@ -395,17 +398,23 @@
       "number": 97,
       "title": "Pentago: five-in-a-row made by the placement is not a win if the same move's rotation breaks it",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Verify Pentago win timing against the declared rules: placement-phase wins require correct treatment even if rotation would break the line. Add minimal winning/dual-win examples, not a wholesale arena rewrite. Rules reference: [Mindtwister publisher rulebook, mirrored by retailer](https://zacatrus.es/media/instrucciones/Pentago_Reglas_zacatrus.pdf).",
-      "evidence": null
+      "evidence": {
+        "implementation": "Pentago 1.0.1 checks placement win before optional encoded rotation; publisher rules; destructive rotation reproduction.",
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+      }
     },
     {
       "number": 98,
       "title": "Texas hold'em (limit, no-limit) and Leduc: multiway showdown tie gives equal shares to strictly worse hands",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Only best tied showdown hands share a pot; test multiway tied-best plus strictly worse hand and side-pot behavior with deterministic legal examples.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Table poker 1.0.1 shares normalized score among tied best hands only; exact four-seat reproduction and natural seed-4/12 showdowns.",
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+      }
     },
     {
       "number": 99,
@@ -419,9 +428,12 @@
       "number": 100,
       "title": "Othello: max_turns=64 counts passes, so games with passes end early while a legal move remains",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Use actual Othello placement/pass semantics for a declared horizon. Test pass-heavy games retain legal play until true terminal or explicitly marked truncation.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Othello 1.0.1 terminal only with neither player able to place; 120-action bound includes passes; seed 134 completes beyond 64.",
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+      }
     },
     {
       "number": 101,
@@ -618,9 +630,12 @@
       "number": 127,
       "title": "Chess: arena ends games on claimable draws (board.outcome(claim_draw=True)), so a mate-in-1 at halfmove clock 99 or a twice-seen position is declared drawn before the mover plays",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Automatic acceptance of a claimable draw can be a declared benchmark variant. Implement explicit claim semantics if faithful chess is promised, or version/document the automatic-claim variant; preserve reproducibility.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Chess 1.2.0 explicit current/intended-move draw claims; fivefold and 75-move automatic; mate precedence and artifact replay; FEN clock excluded from action horizon.",
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+      }
     },
     {
       "number": 128,
@@ -1434,9 +1449,12 @@
       "number": 204,
       "title": "Limit/no-limit Texas hold'em and Leduc: a fold that leaves all remaining players matched does not close the betting round, so the bettor can bet again (about 45% of random games)",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Close matched betting rounds correctly after folds and test seat order, pot contributions and repeated betting legality in all three affected poker arenas.",
-      "evidence": null
+      "evidence": {
+        "implementation": "All three table poker arenas close matched betting rounds after folds as well as calls/checks; matched and still-unmatched sequences checked.",
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+      }
     },
     {
       "number": 205,

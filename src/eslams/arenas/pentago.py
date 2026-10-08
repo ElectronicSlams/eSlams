@@ -17,7 +17,7 @@ LINES = ((1, 0), (0, 1), (1, 1), (1, -1))
 
 class PentagoArena(Arena):
     id = "pentago"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
@@ -47,7 +47,9 @@ class PentagoArena(Arena):
         row, col = divmod(cell, SIZE)
         board = [list(existing_row) for existing_row in state.public_state["board"]]
         board[row][col] = _marble(player_id)
-        _rotate(board, quadrant, direction)
+        # A placement win ends the game before the encoded rotation.
+        if not _has_line(board, _marble(player_id)):
+            _rotate(board, quadrant, direction)
         winners = [player for player in self.players if _has_line(board, _marble(player))]
         outcome: dict[str, Any] | None = None
         if len(winners) == 1:

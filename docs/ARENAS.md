@@ -146,3 +146,31 @@ All public arena `initial_state(seed)` calls require a Python integer excluding
 booleans. Zero, negative integers and large integers are supported. JSON/session
 callers must send an integer, rather than a string or floating-point seed. The
 seed metadata and RNG commitment remain constant after actions.
+
+## Corrected standard rule boundaries
+
+Cribbage 1.0.1 counts ace-low runs with physical-card multiplicity, nobs and
+hand/crib flushes according to the [ACC show scoring chart](https://www.cribbage.org/NewSite/rules/rulebook_2025.pdf).
+It remains a single-hand compact discard/show variant without pegging or a
+121-point match. Dealer balance is tracked separately in issue #96.
+
+Pentago 1.0.1 ends immediately on a placement win, ignoring the rotation part
+of that action. Otherwise it rotates and checks both players; simultaneous
+lines draw, following the [publisher's rules guide](https://bville.com.ua/userfiles/files/Manual/41501104_pentago_rules.pdf).
+Othello 1.0.1 finishes only when neither seat can place, following the
+[World Othello Federation](https://www.worldothello.org/about/about-othello/othello-rules/official-rules/english).
+Its 120-action runner horizon accommodates 60 placements and intervening passes.
+
+Chess 1.2.0 uses automatic fivefold/75-move draws rather than forcing optional
+claims. `claim-draw` is legal when the current position qualifies; an intended
+move claim uses `claim-draw:<uci>` only when that legal move would produce a
+qualifying repetition or fifty-move position. The intended move is declared,
+not played. Checkmate takes precedence. `legal_uci` and SAN/move descriptors
+remain actual moves; the full `legal_actions` list also includes claims. These
+conditions use [python-chess's rule checks](https://python-chess.readthedocs.io/en/latest/core.html).
+
+The three table poker arenas use 1.0.1 rules: only tied best hands share the
+normalized showdown score, and a final fold closes a betting round when all
+remaining commitments match. They retain their compact ante-based table,
+profiled bet sizes and normalized winner shares; these scores are not net chip
+returns or a full side-pot accounting implementation.
