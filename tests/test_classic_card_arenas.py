@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from eslams.arenas.classic_cards import (
     CrazyEightsArena,
@@ -6,15 +5,6 @@ from eslams.arenas.classic_cards import (
     SheddingCardGameArena,
     SpadesArena,
 )
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
-
-CLASSIC_CARD_ARENAS = {
-    "crazy-eights",
-    "hearts",
-    "shedding-card-game",
-    "spades",
-}
 
 
 def test_shedding_card_game_hides_opponent_hand_and_allows_matching_play():
@@ -164,13 +154,3 @@ def test_spades_treats_ace_as_high_card():
 
     assert terminal.public_state["tricks"]["player_2"] == 1
     assert terminal.scores["player_2"] == 1.0
-
-
-def test_runner_generates_valid_artifacts_for_classic_card_arenas(tmp_path: Path):
-    for arena_id in sorted(CLASSIC_CARD_ARENAS):
-        output_dir = tmp_path / arena_id
-        result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=41, max_turns=12, output_dir=output_dir)
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []

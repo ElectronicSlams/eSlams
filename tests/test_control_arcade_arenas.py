@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from eslams.arenas.control_arcade import (
     AlienShooterArena,
@@ -8,17 +7,6 @@ from eslams.arenas.control_arcade import (
     MountainCarArena,
     PaddleBallArena,
 )
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
-
-CONTROL_ARCADE_ARENAS = {
-    "alien-shooter",
-    "boxing-style-arena",
-    "cartpole",
-    "ice-hockey-style-arena",
-    "mountain-car",
-    "paddle-ball",
-}
 
 
 def test_cartpole_applies_physics_and_keeps_observation_public():
@@ -129,13 +117,3 @@ def test_ice_hockey_shot_scores_from_scoring_lane():
 
     assert next_state.public_state["goals"]["player_1"] == 1
     assert next_state.public_state["puck_owner"] == "player_2"
-
-
-def test_runner_generates_valid_artifacts_for_control_arcade_arenas(tmp_path: Path):
-    for arena_id in sorted(CONTROL_ARCADE_ARENAS):
-        output_dir = tmp_path / arena_id
-        result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=67, max_turns=16, output_dir=output_dir)
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []

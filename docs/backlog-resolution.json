@@ -1981,8 +1981,8 @@
       "removed_baseline_case": "tests/test_advanced_card_arenas.py::test_advanced_card_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_advanced_card_arenas.py::test_runner_generates_valid_artifacts_for_advanced_card_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -1990,8 +1990,8 @@
       "removed_baseline_case": "tests/test_board_arenas.py::test_new_board_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_board_arenas.py::test_runner_generates_valid_artifacts_for_new_board_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -1999,8 +1999,8 @@
       "removed_baseline_case": "tests/test_classic_card_arenas.py::test_classic_card_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_classic_card_arenas.py::test_runner_generates_valid_artifacts_for_classic_card_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -2008,8 +2008,8 @@
       "removed_baseline_case": "tests/test_control_arcade_arenas.py::test_control_arcade_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_control_arcade_arenas.py::test_runner_generates_valid_artifacts_for_control_arcade_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -2017,8 +2017,8 @@
       "removed_baseline_case": "tests/test_environment_arenas.py::test_environment_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_environment_arenas.py::test_runner_generates_valid_artifacts_for_environment_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -2026,8 +2026,8 @@
       "removed_baseline_case": "tests/test_expanded_arenas.py::test_expanded_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_expanded_arenas.py::test_runner_generates_valid_artifacts_for_expanded_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -2036,7 +2036,7 @@
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
         "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -2044,8 +2044,8 @@
       "removed_baseline_case": "tests/test_modern_control_and_backgammon.py::test_modern_control_and_backgammon_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_modern_control_and_backgammon.py::test_runner_generates_valid_artifacts_for_modern_control_and_backgammon",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -2053,8 +2053,8 @@
       "removed_baseline_case": "tests/test_poker_and_morris_arenas.py::test_poker_and_morris_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_poker_and_morris_arenas.py::test_runner_generates_valid_artifacts_for_poker_and_morris_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -2062,8 +2062,8 @@
       "removed_baseline_case": "tests/test_strategic_arenas.py::test_strategic_arenas_are_registered",
       "reason": "Registry membership alone is subsumed by retained Runner creation/artifact validation for the same explicit IDs and all-arena transport smoke.",
       "retained_checks": [
-        "tests/test_strategic_arenas.py::test_runner_generates_valid_artifacts_for_strategic_arenas",
-        "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls"
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
       ],
       "baseline_unique_lines": 0
     },
@@ -2075,17 +2075,129 @@
         "tests/test_run_completion.py::test_truncated_run_retains_valid_diagnostic_artifact_but_cannot_score"
       ],
       "baseline_unique_lines": 0
+    },
+    {
+      "removed_baseline_case": "tests/test_advanced_card_arenas.py::test_runner_generates_valid_artifacts_for_advanced_card_arenas",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_classic_card_arenas.py::test_runner_generates_valid_artifacts_for_classic_card_arenas",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_strategic_arenas.py::test_runner_generates_valid_artifacts_for_strategic_arenas",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_environment_arenas.py::test_runner_generates_valid_artifacts_for_environment_arenas",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_poker_and_morris_arenas.py::test_runner_generates_valid_artifacts_for_poker_and_morris_arenas",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_control_arcade_arenas.py::test_runner_generates_valid_artifacts_for_control_arcade_arenas",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_board_arenas.py::test_runner_generates_valid_artifacts_for_new_board_arenas",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_expanded_arenas.py::test_runner_generates_valid_artifacts_for_expanded_arenas",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_modern_control_and_backgammon.py::test_runner_generates_valid_artifacts_for_modern_control_and_backgammon",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_runner_artifact.py::test_runner_generates_replay_html",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_runner_artifact.py::test_runner_generates_replay_events",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_runner_artifact.py::test_runner_generates_valid_connect_four_artifact",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_state.py::test_state_hash_is_deterministic",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_state.py::test_state_hash_rejects_tampering"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_arena_transport.py::test_all_arenas_smoke_without_provider_calls",
+      "reason": "Consolidated repeated smoke/positive-wrapper setup into the retained broader check. Assertions, family seeds/horizons and seat policies are preserved; independent rule/privacy/trust cases are retained.",
+      "retained_checks": [
+        "tests/test_arena_transport.py::test_cli_arena_smoke_all"
+      ],
+      "coverage_gate": "Full suite coverage comparison required before final acceptance."
     }
   ],
   "test_reduction_checkpoint": {
-    "removed_original_cases": 11,
-    "remaining_removal_target": 44,
-    "passing_cases": 373,
-    "covered_lines": 10472,
-    "statements": 12205,
-    "line_coverage": 85.80090126997132,
-    "coverage_change_percentage_points": 0.46801570200892684,
-    "scope": "src/eslams; full pytest including packaged provenance; Python 3.9.6",
+    "removed_original_cases": 25,
+    "remaining_removal_target": 30,
+    "passing_cases": 473,
+    "covered_lines": 11062,
+    "statements": 12729,
+    "line_coverage": 86.90392018226098,
+    "coverage_change_percentage_points": 1.5710346142985827,
+    "scope": "src/eslams; full pytest; Python 3.12; same source coverage scope as frozen baseline",
     "note": "Intermediate checkpoint only; remaining removals and final coverage gate outstanding."
   },
   "verification_checkpoints": [

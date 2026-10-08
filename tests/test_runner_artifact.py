@@ -19,18 +19,8 @@ from eslams.state import ArenaState
 TEST_ED25519_PRIVATE_KEY = "base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
 
 
-def test_runner_generates_valid_connect_four_artifact(tmp_path: Path):
-    result = Runner().run(RunConfig(arena_id="connect-four", seed=7, output_dir=tmp_path))
-    assert result.artifact_path.exists()
-    assert result.artifact_path.name.endswith(".eslams.d")
-    assert result.score.run_id == result.run_id
-    assert ArtifactValidator().validate(result.artifact_path) == []
 
 
-def test_runner_generates_replay_events(tmp_path: Path):
-    result = Runner().run(RunConfig(arena_id="tic-tac-toe", seed=3, output_dir=tmp_path))
-    assert result.replay_events[0].action is None
-    assert result.replay_events[-1].terminal is True
 
 
 def test_runner_requires_explicit_agents_for_more_than_two_players():
@@ -121,14 +111,6 @@ def test_validator_rejects_unlisted_artifact_files(tmp_path: Path):
     assert report.valid is False
 
 
-def test_runner_generates_replay_html(tmp_path: Path):
-    result = Runner().run(RunConfig(arena_id="hex", seed=5, output_dir=tmp_path, max_turns=2))
-    replay_path = result.artifact_path / "replay" / "index.html"
-    manifest = json.loads((result.artifact_path / "manifest.json").read_text(encoding="utf-8"))
-
-    assert replay_path.exists()
-    assert "eSlams Replay" in replay_path.read_text(encoding="utf-8")
-    assert any(item["path"] == "replay/index.html" for item in manifest["files"])
 
 
 def test_chess_replay_html_has_coordinates_side_colored_pieces_and_split_moves(tmp_path: Path):

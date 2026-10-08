@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from eslams.arenas.nine_mens_morris import NineMensMorrisArena
 from eslams.arenas.poker import (
@@ -6,22 +5,6 @@ from eslams.arenas.poker import (
     LimitTexasHoldemArena,
     NoLimitTexasHoldemArena,
 )
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
-
-TABLE_AGENTS = {
-    "player_1": "first-legal",
-    "player_2": "first-legal",
-    "player_3": "first-legal",
-    "player_4": "first-legal",
-}
-
-POKER_AND_MORRIS_ARENAS = {
-    "leduc-holdem",
-    "limit-texas-holdem",
-    "nine-mens-morris",
-    "no-limit-texas-holdem",
-}
 
 
 def test_leduc_hides_private_hole_cards_and_keeps_board_betting_round():
@@ -132,20 +115,3 @@ def test_nine_mens_morris_forms_mill_and_captures_piece():
     assert next_state.public_state["board"][2] == "player_1"
     assert next_state.public_state["board"][3] is None
     assert next_state.public_state["reserves"]["player_1"] == 6
-
-
-def test_runner_generates_valid_artifacts_for_poker_and_morris_arenas(tmp_path: Path):
-    for arena_id in sorted(POKER_AND_MORRIS_ARENAS):
-        output_dir = tmp_path / arena_id
-        agents = TABLE_AGENTS if "holdem" in arena_id else None
-        result = Runner().run(
-            RunConfig(
-                arena_id=arena_id,
-                seed=53,
-                max_turns=16,
-                output_dir=output_dir,
-                agents=agents,
-            )
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []

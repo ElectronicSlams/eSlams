@@ -1,10 +1,7 @@
-from pathlib import Path
 
 from eslams.arenas.gomoku import GomokuArena
 from eslams.arenas.hex import HexArena
 from eslams.arenas.othello import OthelloArena
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
 
 
 def test_othello_initial_move_flips_disc():
@@ -50,13 +47,3 @@ def test_hex_detects_top_bottom_connection():
     assert state.terminal is True
     assert state.outcome == {"winner": "player_1", "reason": "connected_sides"}
     assert state.scores["player_1"] == 1.0
-
-
-def test_runner_generates_valid_artifacts_for_new_board_arenas(tmp_path: Path):
-    for arena_id in ("othello", "gomoku", "hex"):
-        output_dir = tmp_path / arena_id
-        result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=5, max_turns=4, output_dir=output_dir)
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []

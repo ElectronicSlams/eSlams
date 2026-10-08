@@ -1,16 +1,6 @@
-from pathlib import Path
 
 from eslams.arenas.battleship import BattleshipArena
 from eslams.arenas.gridworld import CliffWalkingArena, FrozenLakeArena, TaxiArena
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
-
-ENVIRONMENT_ARENAS = {
-    "battleship",
-    "cliff-walking",
-    "frozen-lake",
-    "taxi",
-}
 
 
 def test_frozen_lake_reaches_goal_on_safe_path():
@@ -76,13 +66,3 @@ def test_battleship_hides_ship_layout_and_scores_hits():
     assert terminal.terminal is True
     assert terminal.outcome["winner"] == "player_1"
     assert terminal.public_state["hits"]["player_1"] == 1
-
-
-def test_runner_generates_valid_artifacts_for_environment_arenas(tmp_path: Path):
-    for arena_id in sorted(ENVIRONMENT_ARENAS):
-        output_dir = tmp_path / arena_id
-        result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=31, max_turns=12, output_dir=output_dir)
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []

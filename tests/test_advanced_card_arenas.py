@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from eslams.arenas.advanced_cards import (
     CribbageArena,
@@ -6,15 +5,6 @@ from eslams.arenas.advanced_cards import (
     GinRummyArena,
     HanabiArena,
 )
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
-
-ADVANCED_CARD_ARENAS = {
-    "cribbage",
-    "euchre",
-    "gin-rummy",
-    "hanabi",
-}
 
 
 def test_gin_rummy_hides_opponent_hand_and_detects_undercut():
@@ -124,13 +114,3 @@ def test_hanabi_observation_shows_partner_hand_but_hides_own_cards():
 
     assert next_state.public_state["fireworks"]["R"] == 1
     assert next_state.scores["player_1"] > 0
-
-
-def test_runner_generates_valid_artifacts_for_advanced_card_arenas(tmp_path: Path):
-    for arena_id in sorted(ADVANCED_CARD_ARENAS):
-        output_dir = tmp_path / arena_id
-        result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=73, max_turns=16, output_dir=output_dir)
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []

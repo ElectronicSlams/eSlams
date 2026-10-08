@@ -1,5 +1,4 @@
 from dataclasses import replace
-from pathlib import Path
 
 import pytest
 
@@ -9,15 +8,6 @@ from eslams.arenas.modern_control import (
     CarRacingArena,
     LunarLanderArena,
 )
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
-
-MODERN_CONTROL_AND_BACKGAMMON = {
-    "backgammon",
-    "bipedal-walker",
-    "car-racing",
-    "lunar-lander",
-}
 
 
 def test_lunar_lander_soft_landing_scores_success():
@@ -175,13 +165,3 @@ def test_backgammon_malformed_legal_action_raises_controlled_error():
 
     with pytest.raises(ValueError, match="Invalid backgammon action format"):
         arena.apply_action(malformed, "player_1", "not-a-move")
-
-
-def test_runner_generates_valid_artifacts_for_modern_control_and_backgammon(tmp_path: Path):
-    for arena_id in sorted(MODERN_CONTROL_AND_BACKGAMMON):
-        output_dir = tmp_path / arena_id
-        result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=79, max_turns=18, output_dir=output_dir)
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []

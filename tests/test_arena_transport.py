@@ -11,7 +11,6 @@ from eslams.arena_transport import (
     initial_state,
     legal_actions,
     legal_actions_page,
-    smoke_all_arenas,
     start_session,
     state_hash,
     step,
@@ -49,13 +48,6 @@ def test_stateless_arena_transport_round_trip_and_step():
     assert next_state["state_hash"] != state["state_hash"]
 
 
-def test_all_arenas_smoke_without_provider_calls():
-    payload = smoke_all_arenas()
-
-    assert payload["ok"] is True
-    assert payload["game_count"] == 50
-    assert {row["arena_id"] for row in payload["rows"]} == set(PUBLIC_GAME_CATALOGUE_BY_ID)
-    assert all(row["legal_action_count"] >= 0 for row in payload["rows"])
 
 
 def test_deserialize_state_strict_hash_fails_and_trusted_repair_diagnoses():
@@ -81,6 +73,8 @@ def test_cli_arena_smoke_all(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["ok"] is True
     assert payload["game_count"] == 50
+    assert {row["arena_id"] for row in payload["rows"]} == set(PUBLIC_GAME_CATALOGUE_BY_ID)
+    assert all(row["legal_action_count"] >= 0 for row in payload["rows"])
 
 
 def test_arena_session_start_and_one_step_all_games_are_public_safe():

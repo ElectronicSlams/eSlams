@@ -1,21 +1,9 @@
-from pathlib import Path
 
 from eslams.arenas.checkers import CheckersArena
 from eslams.arenas.mancala import MancalaArena
 from eslams.arenas.matrix_games import PrisonersDilemmaArena, RockPaperScissorsArena
 from eslams.arenas.pentago import PentagoArena
 from eslams.arenas.ultimate_tic_tac_toe import UltimateTicTacToeArena
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
-
-EXPANDED_ARENAS = {
-    "checkers",
-    "mancala",
-    "pentago",
-    "ultimate-tic-tac-toe",
-    "rock-paper-scissors",
-    "prisoners-dilemma",
-}
 
 
 def test_checkers_initial_moves_and_capture():
@@ -129,13 +117,3 @@ def test_matrix_games_score_terminal_rounds():
 
     assert cooperate_state.scores == {"player_1": 0.6, "player_2": 0.6}
     assert defect_state.scores == {"player_1": 0.2, "player_2": 0.2}
-
-
-def test_runner_generates_valid_artifacts_for_expanded_arenas(tmp_path: Path):
-    for arena_id in sorted(EXPANDED_ARENAS):
-        output_dir = tmp_path / arena_id
-        result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=17, max_turns=8, output_dir=output_dir)
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []
