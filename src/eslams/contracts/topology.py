@@ -5,9 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from eslams.contracts.versions import GAME_TOPOLOGY_SCHEMA_VERSION
+from eslams.contracts.versions import (
+    COOPERATIVE_TOPOLOGY_SCHEMA_VERSION,
+    GAME_TOPOLOGY_SCHEMA_VERSION,
+)
 
-TOPOLOGY_MODES = {"solo_score", "head_to_head", "multi_seat"}
+TOPOLOGY_MODES = {"solo_score", "head_to_head", "multi_seat", "cooperative"}
 
 
 @dataclass(frozen=True)
@@ -57,6 +60,22 @@ def solo_score_topology(*, score_type: str = "reward") -> GameTopology:
         draw_allowed=False,
         placements_allowed=False,
         score_type=score_type,
+    )
+
+
+def cooperative_topology() -> GameTopology:
+    return GameTopology(
+        mode="cooperative",
+        controlled_players=("player_1", "player_2"),
+        environment_players=(),
+        min_players=2,
+        max_players=2,
+        default_players=2,
+        winner_required=False,
+        draw_allowed=False,
+        placements_allowed=False,
+        score_type="cooperative_score",
+        schema_version=COOPERATIVE_TOPOLOGY_SCHEMA_VERSION,
     )
 
 
@@ -126,7 +145,24 @@ def validate_topology(payload: dict[str, Any]) -> list[str]:
         if not (min_players <= default_players <= max_players):
             errors.append("topology player counts must satisfy min <= default <= max")
 
-    if mode == "solo_score":
+    if mode == "cooperative":
+        if payload.get("schemaVersion") != COOPERATIVE_TOPOLOGY_SCHEMA_VERSION:
+            errors.append("cooperative topology requires v2")
+        if controlled != ["player_1", "player_2"] or environment != []:
+            errors.append("cooperative topology must control the two team seats")
+        if any(
+            type(value) is not int or value != 2
+            for value in (min_players, max_players, default_players)
+        ):
+            errors.append("cooperative topology must have exactly two seats")
+        if any(
+            payload.get(key) is not False
+            for key in ("winnerRequired", "drawAllowed", "placementsAllowed")
+        ):
+            errors.append("cooperative topology cannot require winners, draws or placements")
+        if payload.get("scoreType") != "cooperative_score":
+            errors.append("cooperative topology must use cooperative_score")
+    elif mode == "solo_score":
         if payload.get("evaluatedPlayer") != "player_1":
             errors.append("solo_score topology must evaluate player_1")
         if controlled != ["player_1"]:

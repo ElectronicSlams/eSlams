@@ -657,3 +657,18 @@ live nonces. Nonce state is process-local: deploy with session affinity and a
 shared nonce store or gateway if multiple workers share a key. On restart, use a
 new request key or an external replay cache when replay resistance must span
 restarts.
+
+## Cooperative catalogue consumers
+
+Schema bundle `eslams-schema-bundle-v5` adds `eslams.game.topology.v2` and
+`eslams.game.result.v2` for the two-seat cooperative mode. The existing v1
+topology/result contracts continue to describe solo and competitive games.
+Consumers must dispatch on the nested `schemaVersion` and recognize cooperative
+mode before accepting Hanabi catalogue rows. TypeScript cooperative interfaces
+are exported by `packages/core-contracts`.
+
+Hanabi has two controlled seats, no environment seat, no individual winner or
+draw, and identical team scores for both seats. A perfect game still has
+`winner: null`. Display the team score; do not enter the seats as opponents in
+a head-to-head leaderboard. Its `battlefield` and `benchmark` surfaces are
+disabled and its Official surface is not eligible.

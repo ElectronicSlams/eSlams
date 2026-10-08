@@ -252,17 +252,59 @@
       "number": 93,
       "title": "Hanabi: non-terminal state with no legal actions; 27 of 200 built-in random-vs-random matches end as agent_crash",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Test reachable Hanabi no-action states; model legal discard/play/hint or legitimate game termination without attributing engine deadlock to agent_crash. Pair with cooperative metadata and clue-token rules.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/arenas/advanced_cards.py",
+          "src/eslams/arenas/east_asian_board.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/contracts/topology.py",
+          "src/eslams/contracts/result.py",
+          "src/eslams/contracts/json_schema.py",
+          "src/eslams/public_catalogue.py"
+        ],
+        "tests": [
+          "tests/test_preview_rule_regressions.py",
+          "tests/test_hanabi_cooperative_contract.py"
+        ],
+        "verification": "200 seeded direct Hanabi playouts, full-clue discard, exact final round, no individual winner, schema/runtime/TS cooperative contracts, king safety including pins/drop blocks/cannon screens. Full suites before final compact-fidelity assertion: 466 passed on Python 3.9 and 3.12; final matrix pending.",
+        "rules_versions": {
+          "shogi": "1.0.1",
+          "xiangqi": "1.0.1",
+          "hanabi": "1.1.0"
+        },
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+      }
     },
     {
       "number": 94,
       "title": "Shogi and Xiangqi: moves that leave the mover's own king in check are legal (catalogue says faithful; differs from Fairy-Stockfish)",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose faithful king-safety rules or an explicitly named compact variant. Catalogued faithful claims require correction either way; preserve prior arena versions rather than relabeling old results.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/arenas/advanced_cards.py",
+          "src/eslams/arenas/east_asian_board.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/contracts/topology.py",
+          "src/eslams/contracts/result.py",
+          "src/eslams/contracts/json_schema.py",
+          "src/eslams/public_catalogue.py"
+        ],
+        "tests": [
+          "tests/test_preview_rule_regressions.py",
+          "tests/test_hanabi_cooperative_contract.py"
+        ],
+        "verification": "200 seeded direct Hanabi playouts, full-clue discard, exact final round, no individual winner, schema/runtime/TS cooperative contracts, king safety including pins/drop blocks/cannon screens. Full suites before final compact-fidelity assertion: 466 passed on Python 3.9 and 3.12; final matrix pending.",
+        "rules_versions": {
+          "shogi": "1.0.1",
+          "xiangqi": "1.0.1",
+          "hanabi": "1.1.0"
+        },
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+      }
     },
     {
       "number": 95,
@@ -708,9 +750,9 @@
       "number": 154,
       "title": "Empty RUNNER_ARTIFACT_SIGNING_KEY_ID: eslams run exits 0 and writes a signed artifact that always fails validation (key_id must be a non-empty string)",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Reject empty/malformed signing key IDs before run output; test every emitted signed artifact verifies under the expected configured key and empty env values fail early.",
-      "evidence": null
+      "evidence": "Signing key IDs are checked before agent creation/calls and artifact output; explicit empty/whitespace/multiline/overlong IDs fail. Missing IDs retain the documented nonempty default. Six tests prove no call/output and valid signed artifacts."
     },
     {
       "number": 155,
@@ -756,9 +798,9 @@
       "number": 160,
       "title": "docs/ARTIFACTS.md Runner Signatures omits that a signed artifact fails validation (runner_signature_unverified) without RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Document verify-public-key configuration and trusted key authority; test signing/verification with a throwaway key and explain that verified self-signing alone is not Official provenance.",
-      "evidence": null
+      "evidence": "ARTIFACTS explains missing verifier key failures, signing-process derivation, public-key-only auditor custody, fixture keys without Official authority, and a matching Ed25519 private/public recipe. Signed replay missing-key regression confirms fail-closed validation."
     },
     {
       "number": 162,
@@ -892,17 +934,59 @@
       "number": 178,
       "title": "Shogi start position has rook and bishop on swapped files (player_1 rook on 8h, bishop on 2h; standard is bishop 8h, rook 2h)",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Correct standard orientation and differential opening legal moves; pair #94 and bump rules version.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/arenas/advanced_cards.py",
+          "src/eslams/arenas/east_asian_board.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/contracts/topology.py",
+          "src/eslams/contracts/result.py",
+          "src/eslams/contracts/json_schema.py",
+          "src/eslams/public_catalogue.py"
+        ],
+        "tests": [
+          "tests/test_preview_rule_regressions.py",
+          "tests/test_hanabi_cooperative_contract.py"
+        ],
+        "verification": "200 seeded direct Hanabi playouts, full-clue discard, exact final round, no individual winner, schema/runtime/TS cooperative contracts, king safety including pins/drop blocks/cannon screens. Full suites before final compact-fidelity assertion: 466 passed on Python 3.9 and 3.12; final matrix pending.",
+        "rules_versions": {
+          "shogi": "1.0.1",
+          "xiangqi": "1.0.1",
+          "hanabi": "1.1.0"
+        },
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+      }
     },
     {
       "number": 179,
       "title": "Hanabi is catalogued `head_to_head` with `winnerRequired: true`, but only 1 of 100 random-vs-random matches ends with a winner",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Hanabi is cooperative; a required head-to-head winner is a wrong product contract. Agree cooperative scoring/seat metadata, remove invented winner requirements, and version changes coherently with #93/#182. Rules reference: [Hanabi publisher rulebook](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Hanabi_Reglamento_ES.pdf).",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/arenas/advanced_cards.py",
+          "src/eslams/arenas/east_asian_board.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/contracts/topology.py",
+          "src/eslams/contracts/result.py",
+          "src/eslams/contracts/json_schema.py",
+          "src/eslams/public_catalogue.py"
+        ],
+        "tests": [
+          "tests/test_preview_rule_regressions.py",
+          "tests/test_hanabi_cooperative_contract.py"
+        ],
+        "verification": "200 seeded direct Hanabi playouts, full-clue discard, exact final round, no individual winner, schema/runtime/TS cooperative contracts, king safety including pins/drop blocks/cannon screens. Full suites before final compact-fidelity assertion: 466 passed on Python 3.9 and 3.12; final matrix pending.",
+        "rules_versions": {
+          "shogi": "1.0.1",
+          "xiangqi": "1.0.1",
+          "hanabi": "1.1.0"
+        },
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+      }
     },
     {
       "number": 180,
@@ -916,17 +1000,38 @@
       "number": 181,
       "title": "`eslams replay` renders a content-tampered artifact with exit 0 and no warning, although `eslams validate` reports `valid: false` (hash mismatch)",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Render tampered/unverified artifacts only under an explicit diagnostic mode with visible trust state, or refuse by default. #26 extraction/HTML changes do not perform artifact validation.",
-      "evidence": null
+      "evidence": "External replay validates before writing. Invalid artifacts fail without output; explicit --diagnostic emits a visible escaped untrusted banner. Unsigned content is labeled unsigned; embedded previews instruct complete validation. Four regressions verify tampering, missing key, unsigned content and latest aliases."
     },
     {
       "number": 182,
       "title": "Hanabi: discarding is legal while all 8 clue tokens are available (standard rules forbid it)",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Align discard legality with the declared Hanabi rules and clue-token count, coordinating deadlock/scoring metadata fixes; test full-clue and nonfull-clue cases. Rules reference: [Hanabi publisher rulebook](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Hanabi_Reglamento_ES.pdf).",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/arenas/advanced_cards.py",
+          "src/eslams/arenas/east_asian_board.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/contracts/topology.py",
+          "src/eslams/contracts/result.py",
+          "src/eslams/contracts/json_schema.py",
+          "src/eslams/public_catalogue.py"
+        ],
+        "tests": [
+          "tests/test_preview_rule_regressions.py",
+          "tests/test_hanabi_cooperative_contract.py"
+        ],
+        "verification": "200 seeded direct Hanabi playouts, full-clue discard, exact final round, no individual winner, schema/runtime/TS cooperative contracts, king safety including pins/drop blocks/cannon screens. Full suites before final compact-fidelity assertion: 466 passed on Python 3.9 and 3.12; final matrix pending.",
+        "rules_versions": {
+          "shogi": "1.0.1",
+          "xiangqi": "1.0.1",
+          "hanabi": "1.1.0"
+        },
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+      }
     },
     {
       "number": 183,
@@ -1278,9 +1383,10 @@
       "number": 21,
       "head": "40e131af49e78dd4c7b3785ed2820ed0fa789f4e",
       "title": "fix: runner HTTP authz and fail-closed arena HMAC",
-      "status": "pending",
+      "status": "partially incorporated; final integration pending",
       "review_route": "Revise / split",
-      "criterion": "Split service authentication, artifact confinement, trust claims, private/public projections and release-workflow hardening. Bind snapshot game/rules/session context; constrain development mode; test authenticated service versus seat/browser boundaries and approved signing authority. Fix #67/#68 and update env docs before landing."
+      "criterion": "Split service authentication, artifact confinement, trust claims, private/public projections and release-workflow hardening. Bind snapshot game/rules/session context; constrain development mode; test authenticated service versus seat/browser boundaries and approved signing authority. Fix #67/#68 and update env docs before landing.",
+      "evidence": "Authenticated runner HTTP, bounded replay cache/request size, fail-closed secrets, bound snapshots, privacy guidance and manifest confinement incorporated with strengthening. Workflow injection fix and final integration remain."
     },
     {
       "number": 22,
@@ -1560,9 +1666,18 @@
       "number": 220,
       "head": "7731e2f3d712e5f4714d640df670fc0224feede1",
       "title": "Fix preview-discovered Shogi, Xiangqi and Hanabi rules",
-      "status": "pending",
+      "status": "incorporated with cooperative metadata, discard rules and explicit compact claims; final integration pending",
       "review_route": "critical review then incorporate",
-      "criterion": "Verify self-check filtering, canonical Shogi opening, exact Hanabi final turns, deterministic state evidence and version changes; incorporate useful implementation into #218."
+      "criterion": "Verify self-check filtering, canonical Shogi opening, exact Hanabi final turns, deterministic state evidence and version changes; incorporate useful implementation into #218.",
+      "evidence": {
+        "reviewed_head": "7731e2f3d712e5f4714d640df670fc0224feede1",
+        "replacement_pr": 218,
+        "tests": [
+          "tests/test_preview_rule_regressions.py",
+          "tests/test_hanabi_cooperative_contract.py"
+        ],
+        "changes": "Retained king-safety/opening/final-round fixes; versioned scoring semantics and two cooperative schemas, disabled competitive Hanabi surfaces, corrected full-clue discards; compact limits documented."
+      }
     }
   ],
   "consolidation_pr": "https://github.com/ElectronicSlams/eSlams/pull/218",
@@ -1714,6 +1829,14 @@
       "tests": "412 passing on Python 3.9 with full coverage scope, before final core replay projection addition",
       "coverage": 86.41847087960375,
       "notes": "Restored fresh isolated dependencies after temporary environments lost metadata. Lint and strict mypy pass. Authentication/snapshot tests incorporate and strengthen PR21. Final matrix and all remaining items incomplete."
+    },
+    {
+      "date": "2026-10-08",
+      "commit": "a517fd6 + game-rule and cooperative contract changes",
+      "python39": "466 passing; 86.766453% line coverage",
+      "python312": "466 passing; 86.775420% line coverage",
+      "github_ci": "a517fd6 Linux Python 3.9\u20133.12 and TypeScript passed run 37742689611",
+      "pending": "Final compact-fidelity assertion and final combined matrix/wheel/native Windows checks; original test removals remain 11/55."
     }
   ],
   "inventory_recheck": {

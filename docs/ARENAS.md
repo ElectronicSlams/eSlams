@@ -126,3 +126,18 @@ recipient and must be privately routed to that person. Model-seat lists stay
 inside the trusted runner, obtainable from the server-side state. Public views
 omit legal action lists. Pending sealed actions and their explanations remain
 hidden until the arena reveal phase.
+
+## Compact Hanabi cooperative rules
+
+Hanabi 1.1.0 uses two colors, three ranks and four copies of each card, with two
+controlled seats sharing the same normalized team score. It is a compact variant,
+not the complete commercial deck. `winner` is always null; `team_success` indicates
+perfect fireworks. The last draw starts exactly one further turn for each seat,
+and discards are illegal while all eight clues are available. These timing and
+clue rules follow the [publisher rulebook](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Hanabi_Reglamento_ES.pdf).
+
+Shogi 1.0.1 corrects the initial bishop/rook files and applies own-king safety to
+moves and drops, consistent with the [Japan Shogi Association's check rules](https://www.shogi.or.jp/knowledge/shogi/04.php). Xiangqi 1.0.1 also checks general
+safety after every move. These remain compact adapters: Shogi pawn-drop mate,
+repetition/impasse and Xiangqi perpetual check/chase adjudication are not modeled.
+Historical ruleset versions and artifact bytes are unchanged.

@@ -4,6 +4,16 @@
 
 ### Fixed
 
+- Shogi 1.0.1 uses the standard rook/bishop opening squares and filters moves
+  and drops that expose its own king. Xiangqi 1.0.1 filters moves exposing the
+  general, including cannon checks.
+- Compact Hanabi 1.1.0 ends after one final turn per seat following the last
+  draw and disallows discarding with eight clues. Both seats share a team score;
+  even a perfect game has no individual winner. Cooperative catalogue topology
+  and result contracts use new v2 schemas in schema bundle v5; existing
+  competitive/solo v1 schemas retain their meaning. Hanabi is excluded from
+  head-to-head battlefield and Official evaluation surfaces.
+
 - Manifest and signature paths are confined to the artifact root. Expanded
   artifact links/special members are rejected before reading payloads; archive
   member reads use the same bounded extractor. Invalid reports make every

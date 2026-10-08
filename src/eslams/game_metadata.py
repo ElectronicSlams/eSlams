@@ -11,6 +11,7 @@ from eslams.contracts.result import result_contract_for_topology
 from eslams.contracts.surface import GameSurface, validate_surface
 from eslams.contracts.topology import (
     GameTopology,
+    cooperative_topology,
     head_to_head_topology,
     multi_seat_topology,
     solo_score_topology,
@@ -65,7 +66,6 @@ ADVANCED_HEAD_TO_HEAD_GAMES = {
     "negotiation",
     "crazy-eights",
     "euchre",
-    "hanabi",
     "hearts",
     "shedding-card-game",
     "spades",
@@ -184,6 +184,8 @@ def core_0_5_metadata(
 
 
 def topology_for_game(public: PublicGameMetadata) -> GameTopology:
+    if public.game_id == "hanabi":
+        return cooperative_topology()
     if public.game_id in SOLO_SCORE_GAMES:
         survival_games = {"cartpole", "mountain-car", "bipedal-walker"}
         score_type = "survival" if public.game_id in survival_games else "reward"
@@ -200,6 +202,16 @@ def topology_for_game(public: PublicGameMetadata) -> GameTopology:
 
 
 def surface_for_game(game_id: str) -> GameSurface:
+    if game_id == "hanabi":
+        return GameSurface(
+            arena="advanced_arena",
+            battlefield="disabled",
+            benchmark="disabled",
+            official="not_eligible",
+            public_reason=(
+                "Cooperative team scoring; competitive head-to-head results do not apply."
+            ),
+        )
     if game_id in SOLO_SCORE_GAMES:
         return GameSurface(
             arena="disabled",
@@ -244,6 +256,32 @@ def help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameH
         if public.game_id in HIDDEN_INFO_GAMES
         else None
     )
+    if mode == "cooperative":
+        return GameHelp(
+            objective="Build the two-color, three-rank fireworks together as one team.",
+            turn_rules=(
+                "Two teammates alternate play, discard, or hint actions.",
+                "Discard is unavailable with all eight clues; "
+                "the last draw gives each seat one final turn.",
+            ),
+            legal_action_summary=(
+                "Play a concealed own card by index, discard when a clue is spent, "
+                "or hint to your partner."
+            ),
+            scoring_summary="Both seats receive the same normalized team fireworks score.",
+            win_loss_draw_summary="There is no individual winner or competitive draw.",
+            hidden_info_summary=(
+                "You see your partner's hand and your own hints, not your own cards."
+            ),
+            first_move_tip="Give your partner a useful color or rank hint.",
+            example_actions=(
+                {
+                    "token": "hint:player_2:R",
+                    "label": "Hint red",
+                    "explanation": "Marks red cards in your partner's hand.",
+                },
+            ),
+        )
     if mode == "solo_score":
         return GameHelp(
             objective=f"Control the agent in {public.name} to maximize the benchmark score.",
@@ -293,8 +331,7 @@ def help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameH
     return GameHelp(
         objective=f"Win {public.name} by making legal moves that satisfy the game objective.",
         turn_rules=(
-            "Player 1 and Player 2 alternate or commit actions according to the "
-            "variant rules.",
+            "Player 1 and Player 2 alternate or commit actions according to the variant rules.",
         ),
         legal_action_summary="Choose one legal action shown by the current game state.",
         scoring_summary="The result contract reports winner, draw, points, and final scores.",
