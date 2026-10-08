@@ -45,15 +45,6 @@ def test_catalogue_exports_games_models_and_availability_rows():
     assert by_game["chess"]["public_display_group"] == "Board & Strategy"
     assert by_game["liars-dice"]["public_display_group"] == "Card & Hidden-Info"
 
-
-def test_game_catalogue_skips_missing_renderer_rows(monkeypatch):
-    monkeypatch.setattr(catalogue_module, "renderer_vocabulary_rows", lambda: [])
-
-    assert catalogue_module.game_catalogue_rows() == []
-
-
-def test_game_catalogue_matches_transcribed_platform_identity_for_all_games():
-    games = game_catalogue_rows()
     by_game = {row["game_id"]: row for row in games}
 
     assert set(by_game) == set(PUBLIC_GAME_CATALOGUE_BY_ID)
@@ -68,8 +59,6 @@ def test_game_catalogue_matches_transcribed_platform_identity_for_all_games():
         assert row["variant_slug"] == expected.variant
         assert row["public_variant_label"] == expected.variant_label
 
-
-def test_game_catalogue_non_solo_topology_matches_registered_arena_players():
     for row in game_catalogue_rows():
         arena = registry.create(row["game_id"])
         topology = row["topology"]
@@ -82,6 +71,12 @@ def test_game_catalogue_non_solo_topology_matches_registered_arena_players():
         assert controlled_players == arena.players
         assert row["default_players"] == len(arena.players)
         assert row["player_count"] == len(arena.players)
+
+
+def test_game_catalogue_skips_missing_renderer_rows(monkeypatch):
+    monkeypatch.setattr(catalogue_module, "renderer_vocabulary_rows", lambda: [])
+
+    assert catalogue_module.game_catalogue_rows() == []
 
 
 def test_renderer_vocabulary_classifies_all_arenas_as_safe_or_explicit_absence():

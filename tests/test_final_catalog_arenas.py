@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from eslams.arenas import registry
-from eslams.arenas.east_asian_board import GoArena, ShogiArena, XiangqiArena
+from eslams.arenas.east_asian_board import GoArena
 from eslams.arenas.tile_card_games import BridgeArena, DouDizhuArena, MahjongArena
 from eslams.artifacts import ArtifactValidator
 from eslams.runner import RunConfig, Runner
@@ -19,18 +19,6 @@ def test_go_two_passes_reaches_scored_terminal_state() -> None:
     assert state.outcome is not None
     assert state.outcome["reason"] == "two_passes"
     assert set(state.scores) == {"player_1", "player_2"}
-
-
-def test_shogi_and_xiangqi_have_legal_opening_moves() -> None:
-    for arena in (ShogiArena(), XiangqiArena()):
-        state = arena.initial_state(seed=7)
-        action = state.legal_actions_by_player[state.active_player][0]
-
-        next_state = arena.apply_action(state, state.active_player, action)
-
-        assert next_state.turn == 1
-        assert next_state.active_player == "player_2"
-        assert next_state.terminal is False
 
 
 def test_mahjong_hides_other_hands_and_advances_draw_discard_cycle() -> None:

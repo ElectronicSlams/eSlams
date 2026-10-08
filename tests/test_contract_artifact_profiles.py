@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
 from eslams.agents import HttpAgent, MockProviderAgent, ModelProviderAgent
 from eslams.artifacts import (
     ArtifactValidator,
@@ -13,7 +15,7 @@ from eslams.contracts import schema_versions
 from eslams.contracts.artifact import no_secret_examples as artifact_examples
 from eslams.contracts.catalogue import no_secret_examples as catalogue_examples
 from eslams.contracts.eval_plan import no_secret_examples as eval_plan_examples
-from eslams.contracts.json_schema import export_schemas
+from eslams.contracts.json_schema import export_schemas, schema_for_version
 from eslams.contracts.json_schema import no_secret_examples as schema_examples
 from eslams.contracts.provider import no_secret_examples as provider_examples
 from eslams.contracts.publication import no_secret_examples as publication_examples
@@ -25,6 +27,8 @@ from eslams.runner import RunConfig, Runner
 
 
 def test_schema_versions_have_no_secret_examples_and_export_deterministically(tmp_path: Path):
+    for version in schema_versions():
+        Draft202012Validator.check_schema(schema_for_version(version))
     examples = {}
     for provider in (
         artifact_examples,

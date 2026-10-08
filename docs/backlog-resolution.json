@@ -2618,17 +2618,128 @@
         "tests/test_arena_transport.py::test_cli_arena_smoke_all"
       ],
       "coverage_gate": "Full suite coverage comparison required before final acceptance."
+    },
+    {
+      "removed_baseline_case": "tests/test_protocol.py::test_act_response_accepts_required_action_only",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_protocol.py::test_act_request_round_trip"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_state.py::test_public_view_does_not_expose_private_metadata_seed",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_state.py::test_state_hash_rejects_tampering"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_publication_export.py::test_publication_battlefield_sample_fixture_validates",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_publication_export.py::test_sample_run_publication_bundles_validate_against_current_contract"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_fixtures.py::test_public_replay_fixture_is_safe_jsonl",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_fixtures.py::test_provider_fixtures_are_redacted_and_cover_mock_scenarios"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_fixtures.py::test_publication_plan_fixture_is_no_secret_plan_envelope",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_fixtures.py::test_provider_fixtures_are_redacted_and_cover_mock_scenarios"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_provider_registry.py::test_registry_includes_requested_provider_organizations",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_provider_registry.py::test_registry_resolves_known_and_unknown_models_safely"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_provider_registry.py::test_registry_distinguishes_provider_controlled_and_native_reasoning",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_provider_registry.py::test_registry_resolves_known_and_unknown_models_safely"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_provider_registry.py::test_direct_bedrock_and_openrouter_routes_are_first_class_registry_entries",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_provider_registry.py::test_registry_resolves_known_and_unknown_models_safely"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_provider_registry.py::test_anthropic_registry_exposes_only_the_supported_thinking_control",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_provider_registry.py::test_registry_resolves_known_and_unknown_models_safely"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_runner_contracts.py::test_runner_health_payload_includes_hashes_and_game_count",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_runner_contracts.py::test_cli_runner_health"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_catalogue_and_planning.py::test_game_catalogue_matches_transcribed_platform_identity_for_all_games",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_catalogue_and_planning.py::test_catalogue_exports_games_models_and_availability_rows"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_catalogue_and_planning.py::test_game_catalogue_non_solo_topology_matches_registered_arena_players",
+      "reason": "Redundant static/positive wrapper consolidated into the broader check of the same contract or catalogue. Distinct assertions remain, with shared registry/state/CLI setup where possible.",
+      "retained_checks": [
+        "tests/test_catalogue_and_planning.py::test_catalogue_exports_games_models_and_availability_rows"
+      ],
+      "coverage_gate": "Full source coverage and actual collected-case delta must remain within the frozen baseline gate."
+    },
+    {
+      "removed_baseline_case": "tests/test_provider_attempt_contract_v06.py::test_every_exported_schema_is_valid_draft_2020_12",
+      "reason": "Standalone positive schema syntax wrapper duplicated schema-export traversal; check_schema now runs for every version in the retained deterministic export/no-secret contract test.",
+      "retained_checks": [
+        "tests/test_contract_artifact_profiles.py::test_schema_versions_have_no_secret_examples_and_export_deterministically"
+      ]
+    },
+    {
+      "removed_baseline_case": "tests/test_final_catalog_arenas.py::test_shogi_and_xiangqi_have_legal_opening_moves",
+      "reason": "Generic first-move smoke is covered by deterministic artifact playouts for both arenas and strengthened opening/king-safety regressions; it checks no independent rule boundary.",
+      "retained_checks": [
+        "tests/test_final_catalog_arenas.py::test_runner_generates_valid_artifacts_for_final_catalog_arenas",
+        "tests/test_preview_rule_regressions.py"
+      ]
     }
   ],
   "test_reduction_checkpoint": {
-    "removed_original_cases": 25,
-    "remaining_removal_target": 30,
-    "passing_cases": 473,
-    "covered_lines": 11062,
-    "statements": 12729,
-    "line_coverage": 86.90392018226098,
-    "coverage_change_percentage_points": 1.5710346142985827,
-    "scope": "src/eslams; full pytest; Python 3.12; same source coverage scope as frozen baseline",
+    "removed_original_cases": 39,
+    "remaining_removal_target": 16,
+    "passing_cases": 471,
+    "covered_lines": 11145,
+    "statements": 12781,
+    "line_coverage": 87.1997496283546,
+    "coverage_change_percentage_points": 1.8668640603922029,
+    "scope": "src/eslams; full pytest; current Python 3.12 and declared direct-floor Python 3.10",
     "note": "Intermediate checkpoint only; remaining removals and final coverage gate outstanding."
   },
   "verification_checkpoints": [
@@ -2693,6 +2804,15 @@
       "audit": "https://github.com/ElectronicSlams/eSlams/actions/runs/37749235936",
       "actionlint": "https://github.com/ElectronicSlams/eSlams/actions/runs/37749235883",
       "closures": "24 issues and 9 originals verified CLOSED; full goal remains active"
+    },
+    {
+      "commit": "c91d997 plus assertion-preserving test consolidations",
+      "full_pytest": "471 passed on current Python 3.12 and direct-floor Python 3.10",
+      "coverage_percent": 87.1997496283546,
+      "removed_original_cases": 39,
+      "remaining_removals": 16,
+      "distribution_consumers": "https://github.com/ElectronicSlams/eSlams/actions/runs/37750782505 \u2014 isolated wheel/sdist and extracted no-Git full suite passed on Linux Python 3.10/3.12, Windows/macOS Python 3.12",
+      "pending": "Final test reduction and unresolved issue/PR work remain."
     }
   ],
   "inventory_recheck": {

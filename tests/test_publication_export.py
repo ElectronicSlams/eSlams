@@ -9,6 +9,7 @@ from eslams.runner import RunConfig, Runner
 
 ROOT = Path(__file__).resolve().parents[1]
 
+
 def test_publication_bundle_export_is_deterministic_and_storage_free(tmp_path: Path):
     result = Runner().run(
         RunConfig(arena_id="tic-tac-toe", seed=3, output_dir=tmp_path, archive=True)
@@ -78,13 +79,6 @@ def test_publication_bundle_validation_rejects_implicit_leaderboard_predicate(tm
     assert any("leaderboard predicate" in error for error in validation["errors"])
 
 
-def test_publication_battlefield_sample_fixture_validates():
-    fixture = ROOT / "fixtures/publication/battlefield_sample_bundle"
-
-    assert fixture.exists()
-    assert validate_publication_bundle(fixture)["valid"] is True
-
-
 def test_sample_run_publication_bundles_validate_against_current_contract():
     official = ROOT / "sample_runs/model_eval_sample/publication_bundle"
     battlefield = ROOT / "sample_runs/model_battle_sample/publication_bundle"
@@ -93,6 +87,11 @@ def test_sample_run_publication_bundles_validate_against_current_contract():
     assert battlefield.exists()
     assert validate_publication_bundle(official)["valid"] is True
     assert validate_publication_bundle(battlefield)["valid"] is True
+
+    fixture = ROOT / "fixtures/publication/battlefield_sample_bundle"
+
+    assert fixture.exists()
+    assert validate_publication_bundle(fixture)["valid"] is True
 
 
 def test_cli_publish_export_and_validate(tmp_path: Path):
@@ -121,9 +120,7 @@ def test_cli_publish_export_and_validate(tmp_path: Path):
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 
