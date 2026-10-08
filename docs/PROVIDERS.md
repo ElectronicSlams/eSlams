@@ -216,3 +216,18 @@ eslams replay runs/latest.eslams
 For an official case, use `--profile official-case`. A signature is necessary
 but not sufficient: fallback, agent errors, route mismatch, incomplete
 usage/cost, or a broken trace/replay/receipt join still fails validation.
+
+## Elapsed deadlines
+
+`ProviderRuntimeConfig.timeout_ms` bounds each elapsed request attempt, including
+rate/concurrency admission, connection, headers and all body chunks. Phase
+connect/read limits can expire earlier; trickled bytes do not reset the total.
+The `/act` request time budget also bounds the complete action across retries,
+rate waits and action repair. Inline retry waits that cannot fit are refused
+before another attempt. Timeout receipts retain failed attempt identity and
+unknown usage/cost; a partial body is not accepted as an action.
+
+Core uses a shared bounded asynchronous HTTP loop behind its synchronous adapter
+API. Expired requests are cancelled and their network streams are closed; it
+also works when the caller already has an asyncio loop or is a worker thread.
+Network concurrency is bounded to 32 active requests in a process.

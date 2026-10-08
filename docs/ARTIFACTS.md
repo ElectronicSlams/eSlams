@@ -383,3 +383,20 @@ provided chess FEN/validation data appears in the Details panel; winner comes
 from recorded outcomes rather than inferred nonterminal scores. The browser
 regression job checks all 50 arenas at 390, 768 and 1440 pixels, initial/final
 frames, control order, arrows, focus retention, targets, labels and numeric zero.
+
+## Worker action deadlines
+
+Runner bounds elapsed agent calls in worker threads and on hosts without
+SIGALRM. Timed-out actions are rejected and the run follows its configured
+failure policy. The callback receives a separate request copy, and receipt
+evidence is frozen at the deadline. A late response cannot become a game action
+or alter the already written artifact.
+
+Python cannot safely terminate an arbitrary in-process callback. Such callbacks
+may continue until they return; Core quarantines the agent object during that
+time, rejects reuse in any calling context and permits at most 32 outstanding
+worker callbacks per process. Provider/HTTP adapters cooperate by cancelling
+network requests at the deadline. Run untrusted callbacks requiring hard
+termination or external-side-effect isolation in a separately managed process.
+Do not share one mutable agent instance across concurrent runs. POSIX main-thread
+calls retain signal interruption; the timeout contract also applies without it.

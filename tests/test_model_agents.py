@@ -35,7 +35,7 @@ def _request() -> ActRequest:
         legal_actions=[0, 1, 2],
         action_schema={"type": "integer"},
         history=[],
-        time_budget_ms=1000,
+        time_budget_ms=30_000,
         memory_policy="current_observation_plus_public_history",
     )
 
@@ -487,7 +487,9 @@ def test_provider_agent_uses_generic_gateway_base_url(monkeypatch):
     ) -> httpx.Response:
         assert url == "https://gateway.example/v1/responses"
         assert isinstance(timeout, httpx.Timeout)
-        assert timeout.as_dict() == {"connect": 2.0, "read": 12.0, "write": 12.0, "pool": 2.0}
+        assert timeout.connect == timeout.pool == 2.0
+        assert 11.9 < timeout.read <= 12.0
+        assert timeout.write == timeout.read
         return httpx.Response(
             200,
             json=_openai_wire('{"action": 1}'),

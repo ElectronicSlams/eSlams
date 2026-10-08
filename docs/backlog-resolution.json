@@ -930,7 +930,7 @@
       "number": 108,
       "title": "eslams replay HTML overflows a 390 px viewport for most non-chess arenas (gomoku 788 px, nine-mens-morris 1277 px, backgammon 1113 px)",
       "work_package": "W8",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Constrain layout and preserve usable board scrolling; check representative renderer families.",
       "evidence": {
         "source": [
@@ -942,14 +942,24 @@
           "CHANGELOG.md"
         ],
         "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
-        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending.",
+        "integration": "Native Core CI 37765433744 including Replay browser regressions and five-host deterministic byte parity, distribution consumers 37765433620, dependency audit 37765433694, workflow lint 37765433622 and Python/TypeScript CodeQL 37765433736 all passed at d678a61b33aa3785414d43fa1e3bebf8cbaf5362. All 50 validated keyless pages pass 300 browser viewport checks plus keyboard/focus/target/semantic regressions. Local 503 tests pass on Python 3.12/direct-minimum 3.10 with 88.644966% coverage. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:50:44Z",
+        "number": 108,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/108",
+        "kind": "issue",
+        "resolution_commit": "d678a61b33aa3785414d43fa1e3bebf8cbaf5362",
+        "replacement_pr": 218
       }
     },
     {
       "number": 109,
       "title": "eslams replay HTML: all move buttons precede Prev/Play/Next in tab order (Play is Tab stop 75 for chess), arrow keys do nothing, focus drops to body",
       "work_package": "W8",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Put controls first, preserve focus and announce changes; pair #192/#193.",
       "evidence": {
         "source": [
@@ -961,14 +971,24 @@
           "CHANGELOG.md"
         ],
         "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
-        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending.",
+        "integration": "Native Core CI 37765433744 including Replay browser regressions and five-host deterministic byte parity, distribution consumers 37765433620, dependency audit 37765433694, workflow lint 37765433622 and Python/TypeScript CodeQL 37765433736 all passed at d678a61b33aa3785414d43fa1e3bebf8cbaf5362. All 50 validated keyless pages pass 300 browser viewport checks plus keyboard/focus/target/semantic regressions. Local 503 tests pass on Python 3.12/direct-minimum 3.10 with 88.644966% coverage. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:50:46Z",
+        "number": 109,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/109",
+        "kind": "issue",
+        "resolution_commit": "d678a61b33aa3785414d43fa1e3bebf8cbaf5362",
+        "replacement_pr": 218
       }
     },
     {
       "number": 110,
       "title": "eslams replay HTML shows a raw JSON dump instead of a board for hanabi, blackjack, mancala and most card, physics and negotiation arenas",
       "work_package": "W8",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide the supported renderer coverage. A truthful structured JSON fallback may be acceptable; do not promise a board for every game unless it is actually supported and tested.",
       "evidence": {
         "source": [
@@ -980,14 +1000,24 @@
           "CHANGELOG.md"
         ],
         "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
-        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending.",
+        "integration": "Native Core CI 37765433744 including Replay browser regressions and five-host deterministic byte parity, distribution consumers 37765433620, dependency audit 37765433694, workflow lint 37765433622 and Python/TypeScript CodeQL 37765433736 all passed at d678a61b33aa3785414d43fa1e3bebf8cbaf5362. All 50 validated keyless pages pass 300 browser viewport checks plus keyboard/focus/target/semantic regressions. Local 503 tests pass on Python 3.12/direct-minimum 3.10 with 88.644966% coverage. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:50:49Z",
+        "number": 110,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/110",
+        "kind": "issue",
+        "resolution_commit": "d678a61b33aa3785414d43fa1e3bebf8cbaf5362",
+        "replacement_pr": 218
       }
     },
     {
       "number": 111,
       "title": "eslams replay HTML labels numeric action 0 as \"move\" (tic-tac-toe cell 0, connect-four column 0)",
       "work_package": "W8",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Treat action 0 as a real value, not falsy/missing; test cell/column-zero labels in rendered move lists.",
       "evidence": {
         "source": [
@@ -999,7 +1029,17 @@
           "CHANGELOG.md"
         ],
         "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
-        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending.",
+        "integration": "Native Core CI 37765433744 including Replay browser regressions and five-host deterministic byte parity, distribution consumers 37765433620, dependency audit 37765433694, workflow lint 37765433622 and Python/TypeScript CodeQL 37765433736 all passed at d678a61b33aa3785414d43fa1e3bebf8cbaf5362. All 50 validated keyless pages pass 300 browser viewport checks plus keyboard/focus/target/semantic regressions. Local 503 tests pass on Python 3.12/direct-minimum 3.10 with 88.644966% coverage. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:50:51Z",
+        "number": 111,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/111",
+        "kind": "issue",
+        "resolution_commit": "d678a61b33aa3785414d43fa1e3bebf8cbaf5362",
+        "replacement_pr": 218
       }
     },
     {
@@ -2662,9 +2702,24 @@
       "number": 180,
       "title": "Per-action time budget is enforced with SIGALRM on the main thread only: from a worker thread a 0.3 s budget lets a slow agent run for 4 s",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Enforce elapsed deadlines in worker threads and on supported operating systems, including read/stream time; test bounded execution and cancellation without assuming SIGALRM works everywhere.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/deadlines.py",
+          "src/eslams/http_io.py",
+          "src/eslams/agents.py",
+          "src/eslams/runner.py",
+          "tests/test_elapsed_deadline_regressions.py",
+          "tests/test_response_boundaries.py",
+          "tests/test_model_agents.py",
+          "docs/PROVIDERS.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Actual elapsed per-attempt deadline includes provider rate/concurrency admission and asynchronous header/body streaming; shared action context bounds retry and repair waits. Cancel expired HTTP futures/streams through a shared bounded loop supporting existing asyncio callers. Worker/no-alarm callbacks use bounded daemon waits, isolated request copies, frozen timeout receipts and cross-context quarantine of unfinished agents; late actions never apply. Explicitly document that arbitrary Python callbacks cannot be forcibly killed and require managed process isolation for that guarantee.",
+        "verification": "509 tests pass on Python 3.12 and direct-minimum Python 3.10; both cover 11848/13368 lines (88.629563%). Ruff and strict mypy pass. Six elapsed-deadline regressions and retained response-size/compression tests pass. Native/distribution/browser/parity checks pending; fake local keys only, no release."
+      }
     },
     {
       "number": 181,
@@ -2911,7 +2966,7 @@
       "number": 191,
       "title": "eslams replay HTML: the Details panel always shows chess rows (`FEN n/a`, `Validation check=n/a checkmate=n/a legal=n/a`) for every game",
       "work_package": "W8",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Render game-specific details or omit inapplicable chess-only rows; verify chess and several non-chess examples.",
       "evidence": {
         "source": [
@@ -2923,14 +2978,24 @@
           "CHANGELOG.md"
         ],
         "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
-        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending.",
+        "integration": "Native Core CI 37765433744 including Replay browser regressions and five-host deterministic byte parity, distribution consumers 37765433620, dependency audit 37765433694, workflow lint 37765433622 and Python/TypeScript CodeQL 37765433736 all passed at d678a61b33aa3785414d43fa1e3bebf8cbaf5362. All 50 validated keyless pages pass 300 browser viewport checks plus keyboard/focus/target/semantic regressions. Local 503 tests pass on Python 3.12/direct-minimum 3.10 with 88.644966% coverage. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:50:52Z",
+        "number": 191,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/191",
+        "kind": "issue",
+        "resolution_commit": "d678a61b33aa3785414d43fa1e3bebf8cbaf5362",
+        "replacement_pr": 218
       }
     },
     {
       "number": 192,
       "title": "eslams replay HTML: move-list buttons are 18 px high (go: 121 buttons at 390 and 768 px viewports), below the 24 px WCAG 2.2 AA target size",
       "work_package": "W8",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "18 px alone is insufficient to conclude WCAG failure because spacing and other exceptions matter. Measure effective target spacing on the rendered page; fix compact targets where needed and verify keyboard access separately.",
       "evidence": {
         "source": [
@@ -2942,14 +3007,24 @@
           "CHANGELOG.md"
         ],
         "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
-        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending.",
+        "integration": "Native Core CI 37765433744 including Replay browser regressions and five-host deterministic byte parity, distribution consumers 37765433620, dependency audit 37765433694, workflow lint 37765433622 and Python/TypeScript CodeQL 37765433736 all passed at d678a61b33aa3785414d43fa1e3bebf8cbaf5362. All 50 validated keyless pages pass 300 browser viewport checks plus keyboard/focus/target/semantic regressions. Local 503 tests pass on Python 3.12/direct-minimum 3.10 with 88.644966% coverage. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:50:54Z",
+        "number": 192,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/192",
+        "kind": "issue",
+        "resolution_commit": "d678a61b33aa3785414d43fa1e3bebf8cbaf5362",
+        "replacement_pr": 218
       }
     },
     {
       "number": 193,
       "title": "eslams replay HTML: non-chess boards are plain divs with bare letters (no role, no aria-label), so assistive technology gets no board structure",
       "work_package": "W8",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Use appropriate board semantics and accessible names/coordinates for rendered games; validate keyboard/screen-reader reading order in representative board and fallback views.",
       "evidence": {
         "source": [
@@ -2961,7 +3036,17 @@
           "CHANGELOG.md"
         ],
         "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
-        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending.",
+        "integration": "Native Core CI 37765433744 including Replay browser regressions and five-host deterministic byte parity, distribution consumers 37765433620, dependency audit 37765433694, workflow lint 37765433622 and Python/TypeScript CodeQL 37765433736 all passed at d678a61b33aa3785414d43fa1e3bebf8cbaf5362. All 50 validated keyless pages pass 300 browser viewport checks plus keyboard/focus/target/semantic regressions. Local 503 tests pass on Python 3.12/direct-minimum 3.10 with 88.644966% coverage. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:50:57Z",
+        "number": 193,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/193",
+        "kind": "issue",
+        "resolution_commit": "d678a61b33aa3785414d43fa1e3bebf8cbaf5362",
+        "replacement_pr": 218
       }
     },
     {
@@ -3100,9 +3185,24 @@
       "number": 199,
       "title": "ProviderRuntimeConfig.timeout_ms has no effect: a 1000 ms total timeout lets a 3 s response (and a 6.7 s trickled body) succeed",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Enforce an absolute attempt deadline across connection, read and streamed chunks, then record timeout accurately; test slow/trickled local responses and thread mode.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/deadlines.py",
+          "src/eslams/http_io.py",
+          "src/eslams/agents.py",
+          "src/eslams/runner.py",
+          "tests/test_elapsed_deadline_regressions.py",
+          "tests/test_response_boundaries.py",
+          "tests/test_model_agents.py",
+          "docs/PROVIDERS.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Actual elapsed per-attempt deadline includes provider rate/concurrency admission and asynchronous header/body streaming; shared action context bounds retry and repair waits. Cancel expired HTTP futures/streams through a shared bounded loop supporting existing asyncio callers. Worker/no-alarm callbacks use bounded daemon waits, isolated request copies, frozen timeout receipts and cross-context quarantine of unfinished agents; late actions never apply. Explicitly document that arbitrary Python callbacks cannot be forcibly killed and require managed process isolation for that guarantee.",
+        "verification": "509 tests pass on Python 3.12 and direct-minimum Python 3.10; both cover 11848/13368 lines (88.629563%). Ruff and strict mypy pass. Six elapsed-deadline regressions and retained response-size/compression tests pass. Native/distribution/browser/parity checks pending; fake local keys only, no release."
+      }
     },
     {
       "number": 200,

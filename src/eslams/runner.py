@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import errno
 import os
 import re
@@ -34,6 +35,14 @@ from eslams.contracts.provider import (
 )
 from eslams.contracts.usage import aggregate_provider_receipts
 from eslams.contracts.versions import RUNNER_VERSION
+from eslams.deadlines import (
+    action_deadline,
+    call_in_thread,
+    current_deadline,
+    ensure_agent_available,
+    receipt_snapshot,
+    remaining_seconds,
+)
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import sha256_json
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, make_act_request
@@ -236,8 +245,12 @@ class Runner:
                 request,
                 time_budget_ms=effective_time_budget_ms,
             )
-            receipt = _last_provider_receipt(agent)
-            attempt_receipts = _provider_attempt_receipts(agent, fallback=receipt)
+            receipt = None
+            if response is not None and "_deadline_receipts" in response.metadata:
+                attempt_receipts = response.metadata.pop("_deadline_receipts")
+            else:
+                receipt = _last_provider_receipt(agent)
+                attempt_receipts = _provider_attempt_receipts(agent, fallback=receipt)
             if attempt_receipts:
                 provider_status[player_id] = _provider_receipt_status(attempt_receipts[-1])
                 enriched_receipts = _enrich_attempt_receipts(
@@ -1094,8 +1107,18 @@ def _call_agent(
     start = time.perf_counter()
     markers: list[str] = []
     try:
-        with _agent_time_limit(time_budget_ms):
-            response = agent.act(request)
+        with action_deadline(time_budget_ms):
+            ensure_agent_available(agent)
+            if _alarm_supported():
+                with _agent_time_limit(time_budget_ms):
+                    response = agent.act(request)
+            else:
+                deadline = current_deadline()
+                assert deadline is not None
+                isolated = copy.deepcopy(request)
+                response = call_in_thread(
+                    agent, lambda: agent.act(isolated), remaining_seconds(deadline),
+                )
         if not isinstance(response, ActResponse):
             if isinstance(response, dict):
                 response = ActResponse.from_mapping(response)
@@ -1109,6 +1132,7 @@ def _call_agent(
             metadata={
                 "error": _safe_error_text(exc),
                 "error_kind": FailureClass.PROVIDER_TIMEOUT.value,
+                "_deadline_receipts": receipt_snapshot(agent),
             },
         )
     except ProviderCallError as exc:
@@ -1151,6 +1175,15 @@ def _call_agent(
     if response is None or response.action is None:
         markers.append("no_action")
     return response, markers, latency_ms
+
+
+def _alarm_supported() -> bool:
+    return (
+        threading.current_thread() is threading.main_thread()
+        and all(getattr(signal, name, None) is not None for name in (
+            "SIGALRM", "ITIMER_REAL", "getitimer", "setitimer",
+        ))
+    )
 
 
 @contextmanager

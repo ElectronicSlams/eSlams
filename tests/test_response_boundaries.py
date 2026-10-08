@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 
 import httpx
 import pytest
@@ -17,18 +17,18 @@ from eslams.protocol import (
 from eslams.runner import RunConfig, Runner
 
 
-class CountedStream(httpx.SyncByteStream):
+class CountedStream(httpx.AsyncByteStream):
     def __init__(self, blocks):
         self.blocks = blocks
         self.reads = 0
         self.closed = False
 
-    def __iter__(self):
+    async def __aiter__(self):
         for block in self.blocks:
             self.reads += 1
             yield block
 
-    def close(self):
+    async def aclose(self):
         self.closed = True
 
 
@@ -38,16 +38,30 @@ def transport_reply(monkeypatch, blocks, headers=None):
         lambda request: httpx.Response(200, headers=headers or {}, stream=stream, request=request)
     )
 
-    @contextmanager
-    def mock_stream(method, url, **kwargs):
-        assert kwargs["headers"]["Accept-Encoding"] == "identity"
-        with (
-            httpx.Client(transport=transport) as client,
-            client.stream(method, url, **kwargs) as reply,
-        ):
-            yield reply
+    class MockClient:
+        async def __aenter__(self):
+            return self
 
-    monkeypatch.setattr("eslams.http_io.httpx.stream", mock_stream)
+        async def __aexit__(self, *args):
+            return None
+
+        @asynccontextmanager
+        async def stream(self, method, url, **kwargs):
+            assert kwargs["headers"]["Accept-Encoding"] == "identity"
+            async with (
+                async_client(transport=transport) as client,
+                client.stream(method, url, **kwargs) as reply,
+            ):
+                yield reply
+
+    actual_client = httpx.AsyncClient
+
+    def client_factory(**kwargs):
+        return MockClient()
+
+    # MockClient's transport uses the original class; avoid recursive patching.
+    async_client = actual_client
+    monkeypatch.setattr("eslams.http_io.httpx.AsyncClient", client_factory)
     return stream
 
 

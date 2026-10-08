@@ -20,8 +20,9 @@ import httpx
 
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.contracts.versions import PROVIDER_RECEIPT_SCHEMA_VERSION
+from eslams.deadlines import action_deadline, current_deadline, remaining_seconds
 from eslams.hashing import sha256_json
-from eslams.http_io import bounded_post
+from eslams.http_io import TotalTimeout, bounded_post
 from eslams.model_actions import (
     coerce_action,
     extract_json,
@@ -131,6 +132,10 @@ class HttpAgent:
     attempt_receipts: list[dict[str, Any]] = field(default_factory=list, init=False)
 
     def act(self, request: ActRequest) -> ActResponse:
+        with action_deadline(request.time_budget_ms):
+            return self._act(request)
+
+    def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
         headers = {"content-type": "application/json"}
@@ -141,7 +146,7 @@ class HttpAgent:
                 self.url,
                 json=request.to_dict(),
                 headers=headers,
-                timeout=max(1.0, request.time_budget_ms / 1000),
+                timeout=max(0.001, request.time_budget_ms / 1000),
             )
             response.raise_for_status()
             payload = response.json()
@@ -213,6 +218,10 @@ class ModelProviderAgent:
         self.capabilities = load_provider_registry().resolve(self.provider, self.model)
 
     def act(self, request: ActRequest) -> ActResponse:
+        with action_deadline(request.time_budget_ms):
+            return self._act(request)
+
+    def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
         self._reasoning_enabled = _reasoning_enabled_for_request(
@@ -736,6 +745,10 @@ class MockProviderAgent:
         self.attempt_receipts: list[dict[str, Any]] = []
 
     def act(self, request: ActRequest) -> ActResponse:
+        with action_deadline(request.time_budget_ms):
+            return self._act(request)
+
+    def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
         if self.scenario == "timeout":
@@ -891,13 +904,17 @@ def _post_json(
     control_key: str,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
-    with _provider_runtime_guard(runtime_config, control_key):
+    deadline = time.monotonic() + (runtime_config.timeout_ms / 1000 if runtime_config else 60.0)
+    action = current_deadline()
+    if action is not None:
+        deadline = min(deadline, action)
+    with _provider_runtime_guard(runtime_config, control_key, deadline=deadline):
         try:
             response = bounded_post(
                 url,
                 headers=headers,
                 json=payload,
-                timeout=_httpx_timeout(runtime_config),
+                timeout=_httpx_timeout(runtime_config, deadline=deadline),
             )
         except ProtocolError as exc:
             raise ProviderCallError(
@@ -977,10 +994,14 @@ def _retry_after_seconds(response: httpx.Response) -> float | None:
 def _provider_runtime_guard(
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    *, deadline: float | None = None,
 ) -> Iterator[None]:
-    _reserve_rate_slot(runtime_config, control_key)
+    _reserve_rate_slot(runtime_config, control_key, deadline=deadline)
     semaphore = _provider_semaphore(runtime_config, control_key)
-    semaphore.acquire()
+    if deadline is None:
+        semaphore.acquire()
+    elif not semaphore.acquire(timeout=remaining_seconds(deadline)):
+        raise TimeoutError("provider concurrency wait exceeded the deadline")
     try:
         yield
     finally:
@@ -1004,6 +1025,7 @@ def _provider_semaphore(
 def _reserve_rate_slot(
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    *, deadline: float | None = None,
 ) -> None:
     rate_limit = runtime_config.rate_limit_per_minute if runtime_config else None
     if rate_limit is None or rate_limit <= 0:
@@ -1012,19 +1034,23 @@ def _reserve_rate_slot(
     with _PROVIDER_CONTROL_LOCK:
         now = time.monotonic()
         reserved_at = max(now, _PROVIDER_RATE_RESERVATIONS.get(control_key, 0.0))
+        if deadline is not None and reserved_at >= deadline:
+            raise TimeoutError("provider rate-limit wait exceeds the action deadline")
         _PROVIDER_RATE_RESERVATIONS[control_key] = reserved_at + interval_seconds
     delay = reserved_at - now
     if delay > 0:
         time.sleep(delay)
 
 
-def _httpx_timeout(runtime_config: ProviderRuntimeConfig | None) -> httpx.Timeout:
-    if runtime_config is None:
-        return httpx.Timeout(timeout=60.0)
-    total = max(1.0, runtime_config.timeout_ms / 1000)
-    connect = max(0.001, runtime_config.connect_timeout_ms / 1000)
-    read = max(0.001, runtime_config.read_timeout_ms / 1000)
-    return httpx.Timeout(timeout=total, connect=connect, read=read, write=read, pool=connect)
+def _httpx_timeout(
+    runtime_config: ProviderRuntimeConfig | None, *, deadline: float | None = None,
+) -> httpx.Timeout:
+    total = runtime_config.timeout_ms / 1000 if runtime_config else 60.0
+    limit = deadline if deadline is not None else time.monotonic() + total
+    seconds = min(total, remaining_seconds(limit))
+    connect = runtime_config.connect_timeout_ms / 1000 if runtime_config else 10.0
+    read = runtime_config.read_timeout_ms / 1000 if runtime_config else 60.0
+    return TotalTimeout(seconds, connect=connect, read=read, deadline=limit)
 
 
 def _max_retries(runtime_config: ProviderRuntimeConfig | None) -> int:
@@ -1041,6 +1067,9 @@ def _sleep_before_retry(
     if retry_after_seconds is not None:
         if not math.isfinite(retry_after_seconds) or retry_after_seconds > 5.0:
             raise TimeoutError("provider retry delay exceeds the 5-second inline retry limit")
+        deadline = current_deadline()
+        if deadline is not None and retry_after_seconds >= remaining_seconds(deadline):
+            raise TimeoutError("provider retry delay exceeds the action deadline")
         time.sleep(retry_after_seconds)
         return
     if runtime_config is None or runtime_config.retry_backoff_ms <= 0:
@@ -1048,6 +1077,9 @@ def _sleep_before_retry(
     delay = runtime_config.retry_backoff_ms / 1000
     if delay > 5.0:
         raise TimeoutError("configured retry delay exceeds the 5-second inline retry limit")
+    deadline = current_deadline()
+    if deadline is not None and delay >= remaining_seconds(deadline):
+        raise TimeoutError("configured retry delay exceeds the action deadline")
     time.sleep(delay)
 
 

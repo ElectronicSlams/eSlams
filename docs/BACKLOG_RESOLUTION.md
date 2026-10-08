@@ -4,14 +4,14 @@ This work consolidates the original backlog into [PR #218](https://github.com/El
 
 ## Verified closures
 
-123 of 149 inventoried issues and 22 of 44 original PRs are closed. The consolidation PR remains draft while the remaining work is completed. Implemented entries awaiting integration checks are separate from verified closures.
+130 of 149 inventoried issues and 22 of 44 original PRs are closed. The consolidation PR remains draft while the remaining work is completed. Implemented entries awaiting integration checks are separate from verified closures.
 
-The latest verified native/distribution checkpoint is `699205d`. The native matrix passes Linux Python 3.10–3.12 and Windows/macOS Python 3.12. The TypeScript job compiles Core-lite and checks 22 initial states and 1,401 complete deterministic step responses against Python authority fixtures. Fresh wheel and sdist consumers verify console/module normal/debug/closed-pipe behavior, downstream mypy, keyless run/validate/replay/public export, schema provenance, metadata and the full extracted no-Git sdist suite.
+The latest verified native/distribution checkpoint is `d678a61`. The native matrix passes Linux Python 3.10–3.12 and Windows/macOS Python 3.12. The TypeScript job compiles Core-lite and checks 22 initial states and 1,401 complete deterministic step responses against Python authority fixtures. Fresh wheel and sdist consumers verify console/module normal/debug/closed-pipe behavior, downstream mypy, keyless run/validate/replay/public export, schema provenance, metadata and the full extracted no-Git sdist suite.
 
-- [Core CI](https://github.com/ElectronicSlams/eSlams/actions/runs/37764545821)
-- [Distribution consumers](https://github.com/ElectronicSlams/eSlams/actions/runs/37764545840)
-- [Dependency audit](https://github.com/ElectronicSlams/eSlams/actions/runs/37764545880)
-- [Workflow lint](https://github.com/ElectronicSlams/eSlams/actions/runs/37764545608)
+- [Core CI](https://github.com/ElectronicSlams/eSlams/actions/runs/37765433744)
+- [Distribution consumers](https://github.com/ElectronicSlams/eSlams/actions/runs/37765433620)
+- [Dependency audit](https://github.com/ElectronicSlams/eSlams/actions/runs/37765433694)
+- [Workflow lint](https://github.com/ElectronicSlams/eSlams/actions/runs/37765433622)
 
 ## Test reduction
 
@@ -21,4 +21,4 @@ At the latest verified checkpoint, 503 cases pass on both Python 3.12 and the di
 
 ## Remaining work
 
-Remaining entries include provider lifecycle/discovery and deadlines, further game-rule corrections, replay accessibility/rendering, publication correctness and coherent lab/sample documentation. The hosted Platform issue requires an explicit scoped disposition. No merge, new release, deployment or paid provider call has occurred.
+Remaining entries include elapsed deadlines, historical game-version and prompt-budget corrections, coherent lab/sample documentation and the remaining original PR dispositions. The hosted Platform issue requires an explicit scoped disposition. No merge, new release, deployment or paid provider call has occurred.

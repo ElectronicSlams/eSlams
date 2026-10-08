@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Enforce elapsed provider deadlines through queue admission and streamed
+  response bodies, bounded by the complete action budget across retries. Cancel
+  expired HTTP streams. Worker/no-SIGALRM Runner calls return at their deadline,
+  discard late actions and quarantine unfinished callbacks within bounded capacity.
+  Arbitrary in-process callbacks cannot be forcibly terminated; see artifacts docs.
+
 - Replay HTML keeps controls reachable first, supports frame-navigation keys
   and preserves move focus. Responsive labeled boards and readable public state
   summaries replace overflowing cells and JSON fallbacks; zero actions retain
