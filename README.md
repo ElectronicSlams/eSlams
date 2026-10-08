@@ -598,6 +598,14 @@ Aliens descend once per twelve actions. A public-observation tracking policy can
 clear all 1,225 possible initial formations within 28 actions, making the full
 score attainable across the seeded layout support.
 
+Backgammon 1.1.0 retains the compact five-checker game and 160-action episode
+limit. Legal moves enforce maximum dice use, the larger-die rule when only one
+number can be played, and bearing off an overshoot only from the farthest checker.
+When the remaining roll is blocked, `pass` records a turn transition and the next
+seat's fresh roll; each pass counts toward the episode limit. Both seats can pass
+without producing an empty-action live state.
+The move constraints follow the [USBGF playing rules](https://usbgf.org/backgammon-basics-how-to-play/).
+
 List arenas from your installed copy:
 
 ```bash

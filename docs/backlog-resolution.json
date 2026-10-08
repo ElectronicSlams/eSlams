@@ -702,11 +702,19 @@
       "number": 99,
       "title": "First-price sealed-bid auction: ties always go to player_1, winner utility floored at 0, and winner can contradict scores",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Auction allocation winner need not maximize bidder utility. Separate documented tie-break policy, potentially negative utility and outcome fields; do not redefine auction winner as the highest utility scorer.",
       "evidence": {
         "implementation": "Auction 1.1.0 preserves signed value-minus-bid utility, a fixed (utility+10)/20 score scale, seed-parity tied allocations and separate allocation/match winners. Negotiation 1.1.0 makes below-reserve accept illegal for the accepter, prevents settlement below either reserve, and expands its price grid to ten-unit steps so every generated reserve combination retains a feasible agreement.",
-        "local_verification": "Exhaustive 10-seed x 121 bid-pair payoff/order/allocation checks pass; overbid and feasible-deal Runner artifacts score and validate. Nine negotiation seed classes enumerate all offers, test exact reserve boundaries, below-reserve rejection, proposer reserve failures and reverse offers. Existing strategic/privacy/help regressions, Ruff and mypy pass. Full native CI pending."
+        "local_verification": "Exhaustive 10-seed x 121 bid-pair payoff/order/allocation checks pass; overbid and feasible-deal Runner artifacts score and validate. Nine negotiation seed classes enumerate all offers, test exact reserve boundaries, below-reserve rejection, proposer reserve failures and reverse offers. Existing strategic/privacy/help regressions, Ruff and mypy pass. Full native CI pending.",
+        "integration": "Verified 9b7a93f: native Core CI 37757504736, distribution consumers 37757504750, audit 37757504741 and workflow lint 37757504743 all passed. Full Python 3.12 and direct-floor Python 3.10 suites: 481 passed each. No release or paid provider calls."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:41:14Z",
+        "number": 99,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/99"
       }
     },
     {
@@ -1191,11 +1199,19 @@
       "number": 129,
       "title": "Negotiation: displayed private_reserve_share is never enforced (accept always legal, utilities ignore it) unlike bargaining",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: A private reserve can be a preference rather than a legality restriction. Define utilities and observation semantics before forbidding accept; close as documented non-issue if the current nonbinding preference is intentional.",
       "evidence": {
         "implementation": "Auction 1.1.0 preserves signed value-minus-bid utility, a fixed (utility+10)/20 score scale, seed-parity tied allocations and separate allocation/match winners. Negotiation 1.1.0 makes below-reserve accept illegal for the accepter, prevents settlement below either reserve, and expands its price grid to ten-unit steps so every generated reserve combination retains a feasible agreement.",
-        "local_verification": "Exhaustive 10-seed x 121 bid-pair payoff/order/allocation checks pass; overbid and feasible-deal Runner artifacts score and validate. Nine negotiation seed classes enumerate all offers, test exact reserve boundaries, below-reserve rejection, proposer reserve failures and reverse offers. Existing strategic/privacy/help regressions, Ruff and mypy pass. Full native CI pending."
+        "local_verification": "Exhaustive 10-seed x 121 bid-pair payoff/order/allocation checks pass; overbid and feasible-deal Runner artifacts score and validate. Nine negotiation seed classes enumerate all offers, test exact reserve boundaries, below-reserve rejection, proposer reserve failures and reverse offers. Existing strategic/privacy/help regressions, Ruff and mypy pass. Full native CI pending.",
+        "integration": "Verified 9b7a93f: native Core CI 37757504736, distribution consumers 37757504750, audit 37757504741 and workflow lint 37757504743 all passed. Full Python 3.12 and direct-floor Python 3.10 suites: 481 passed each. No release or paid provider calls."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:41:16Z",
+        "number": 129,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/129"
       }
     },
     {
@@ -1259,22 +1275,38 @@
       "number": 133,
       "title": "Alien-shooter: a bullet can share a cell with an alien without a hit and then pass through it (hits resolved before the alien descent)",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Fix bullet/alien collision sequencing using small deterministic crossing/overlap examples; version the corrected physics and reassess #134 afterwards.",
       "evidence": {
         "implementation": "Alien-shooter 1.1.0 resolves projectile hits before and after alien descent; duplicate projectiles cannot destroy an alien twice. Descent cadence is twelve actions, visible in public observations/states. A constructive public-state policy completes every possible 35x35 initial formation, removing seed-dependent unattainable full scores.",
-        "local_verification": "All 1225 formation layouts clear within at most 28 actions under the same public-observation tracking policy. Every intermediate state preserves seven total destroyed/remaining aliens and has no projectile/alien overlap. Collision-phase regression and a complete scoring-valid Runner artifact pass; Ruff and mypy pass. Full native CI pending."
+        "local_verification": "All 1225 formation layouts clear within at most 28 actions under the same public-observation tracking policy. Every intermediate state preserves seven total destroyed/remaining aliens and has no projectile/alien overlap. Collision-phase regression and a complete scoring-valid Runner artifact pass; Ruff and mypy pass. Full native CI pending.",
+        "integration": "Verified a80b3fb: native Core CI 37758101663, distribution consumers 37758101981, audit 37758101718 and workflow lint 37758101916 all passed, including Windows/macOS, Python 3.10-3.12, compiled Core-lite parity and fresh no-Git sdist consumers. All 1225 initial alien formations also pass the local constructive policy gate. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:43:49Z",
+        "number": 133,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/133"
       }
     },
     {
       "number": 134,
       "title": "Alien-shooter: the only win (wave_cleared) is reachable in 2 of 125 seeds; exhaustive search shows 98.4% of seeds cannot be won",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Unwinnable seeds do not alone invalidate a solo-score task. Fix collision mechanics (#133) first; declare graded score versus guaranteed-completion goals and reassess solvability under the corrected physics.",
       "evidence": {
         "implementation": "Alien-shooter 1.1.0 resolves projectile hits before and after alien descent; duplicate projectiles cannot destroy an alien twice. Descent cadence is twelve actions, visible in public observations/states. A constructive public-state policy completes every possible 35x35 initial formation, removing seed-dependent unattainable full scores.",
-        "local_verification": "All 1225 formation layouts clear within at most 28 actions under the same public-observation tracking policy. Every intermediate state preserves seven total destroyed/remaining aliens and has no projectile/alien overlap. Collision-phase regression and a complete scoring-valid Runner artifact pass; Ruff and mypy pass. Full native CI pending."
+        "local_verification": "All 1225 formation layouts clear within at most 28 actions under the same public-observation tracking policy. Every intermediate state preserves seven total destroyed/remaining aliens and has no projectile/alien overlap. Collision-phase regression and a complete scoring-valid Runner artifact pass; Ruff and mypy pass. Full native CI pending.",
+        "integration": "Verified a80b3fb: native Core CI 37758101663, distribution consumers 37758101981, audit 37758101718 and workflow lint 37758101916 all passed, including Windows/macOS, Python 3.10-3.12, compiled Core-lite parity and fresh no-Git sdist consumers. All 1225 initial alien formations also pass the local constructive policy gate. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:43:51Z",
+        "number": 134,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/134"
       }
     },
     {
@@ -1522,17 +1554,23 @@
       "number": 145,
       "title": "Backgammon: game stays non-terminal with no legal action for either player (3 of 3000 random playouts); Runner records it as agent_crash with no outcome",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "A blocked backgammon turn can require a pass and fresh roll; both players having no moves under the current roll does not prove game over. Test pass/re-roll, true terminal and malformed-state distinctions.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Backgammon 1.1.0 uses maximum-length dice continuations to select legal first moves and retains their consumed die. Overshoot bear-off is permitted only from the farthest checker, and the larger die is required when only one distinct number can be used. A fully blocked remainder exposes only pass; it advances/records the action counter and next roll even when both seats are blocked. Forged passes while a die is playable are rejected. The compact five-checker/160-action episode is explicitly documented.",
+        "local_verification": "Both-direction farthest/exact bear-off, both-dice preservation, larger-die choice and ambiguous-token die accounting pass. Explicit consecutive blocked-seat passes, 103 seeded playouts (including reported 411/472/1053), per-state checker conservation, and complete scoring-valid random Runner artifacts pass. Existing Backgammon and help regressions, Ruff and mypy pass. Native full CI pending."
+      }
     },
     {
       "number": 146,
       "title": "Backgammon: bear-off legal moves allow bearing off a nearer checker with a larger die while a farther checker remains, and the use-both-dice / larger-die rules are not enforced (4.0% of sampled states)",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Enforce the declared backgammon bear-off, both-dice and larger-die rules with tiny legal-state fixtures, preserving the compact board variant/version separately.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Backgammon 1.1.0 uses maximum-length dice continuations to select legal first moves and retains their consumed die. Overshoot bear-off is permitted only from the farthest checker, and the larger die is required when only one distinct number can be used. A fully blocked remainder exposes only pass; it advances/records the action counter and next roll even when both seats are blocked. Forged passes while a die is playable are rejected. The compact five-checker/160-action episode is explicitly documented.",
+        "local_verification": "Both-direction farthest/exact bear-off, both-dice preservation, larger-die choice and ambiguous-token die accounting pass. Explicit consecutive blocked-seat passes, 103 seeded playouts (including reported 411/472/1053), per-state checker conservation, and complete scoring-valid random Runner artifacts pass. Existing Backgammon and help regressions, Ruff and mypy pass. Native full CI pending."
+      }
     },
     {
       "number": 147,

@@ -293,6 +293,15 @@ def help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameH
             scoring_summary="An accepted deal must meet both private reserve utilities. "
                             "Otherwise it settles as reserve_not_met with zero utilities.",
         )
+    if public.game_id == "backgammon":
+        help_payload = replace(
+            help_payload,
+            legal_action_summary="Move a checker using the maximum playable dice. "
+                                 "Pass only when all remaining dice are blocked.",
+            scoring_summary="This five-checker compact race has a 160-action limit, "
+                            "including explicit passes. Bearing off all checkers wins; "
+                            "otherwise the borne-off count decides the episode result.",
+        )
     return replace(help_payload, example_actions=examples, detail_sections=notes)
 
 

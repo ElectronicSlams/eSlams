@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Backgammon 1.1.0 fixes bearing-off and maximum/larger-die legality, preserves
+  the die associated with ambiguous bear-off tokens, and records blocked rolls
+  as explicit passes. Passes advance the compact 160-action episode limit.
+
 - Alien-shooter 1.1.0 resolves collisions after both motion phases and slows
   descent to once per twelve actions. An exhaustive formation check verifies a
   public-observation policy reaches the full score in every initial layout.

@@ -4,7 +4,7 @@ This work consolidates the original backlog into [PR #218](https://github.com/El
 
 ## Verified closures
 
-98 of 149 inventoried issues and 18 of 44 original PRs are closed. The consolidation PR remains draft while the remaining work is completed. Implemented entries awaiting integration checks are separate from verified closures.
+102 of 149 inventoried issues and 18 of 44 original PRs are closed. The consolidation PR remains draft while the remaining work is completed. Implemented entries awaiting integration checks are separate from verified closures.
 
 The latest verified native/distribution checkpoint is `2d3aafb`. The native matrix passes Linux Python 3.10–3.12 and Windows/macOS Python 3.12. The TypeScript job compiles Core-lite and checks 22 initial states and 1,401 complete deterministic step responses against Python authority fixtures. Fresh wheel and sdist consumers verify console/module normal/debug/closed-pipe behavior, downstream mypy, keyless run/validate/replay/public export, schema provenance, metadata and the full extracted no-Git sdist suite.
 
