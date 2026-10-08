@@ -6,6 +6,7 @@ import errno
 import os
 import re
 import signal
+import stat
 import sys
 import threading
 import time
@@ -909,11 +910,14 @@ def _publish_latest_links(
 
 
 def _assert_latest_paths_replaceable(paths: list[Path]) -> None:
-    collisions = [
-        path
-        for path in paths
-        if (path.exists() or path.is_symlink()) and not path.is_symlink()
-    ]
+    collisions = []
+    for path in paths:
+        try:
+            mode = path.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISLNK(mode):
+            collisions.append(path)
     if collisions:
         joined = ", ".join(str(path) for path in collisions)
         raise FileExistsError(f"refusing to replace non-symlink latest path: {joined}")
@@ -931,9 +935,11 @@ def _replace_latest_link(path: Path, target: Path, *, is_dir: bool) -> None:
 
 
 def _remove_latest_path(path: Path) -> None:
-    if not path.exists() and not path.is_symlink():
+    try:
+        mode = path.lstat().st_mode
+    except FileNotFoundError:
         return
-    if not path.is_symlink():
+    if not stat.S_ISLNK(mode):
         raise FileExistsError(f"refusing to replace non-symlink latest path: {path}")
     path.unlink(missing_ok=True)
 
