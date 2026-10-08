@@ -445,9 +445,19 @@
       "number": 80,
       "title": "Plain local runs report per_case_scoring_eligible false and attempt_ledger_incomplete since 0.6.0; docs example shows true",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Define local play validity, scoring eligibility, provider-attempt completeness and publication authority separately. Empty provider ledger on keyless local play must not invent provider receipts or Official evidence.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifacts.py",
+          "src/eslams/runner.py",
+          "src/eslams/contracts/usage.py",
+          "tests/test_case_eligibility_regressions.py",
+          "docs/ARTIFACTS.md"
+        ],
+        "implementation": "Correct local-agent documentation example: gameplay-valid/scoring_eligible is separate from provider case/publication eligibility. Zero-provider-call summaries name no_provider_calls rather than misleading attempt_ledger_incomplete. Provider-evidence completeness stays fail-closed and does not fabricate zero billed cost or promote Local Artifact to Official.",
+        "verification": "64 focused integrity, raw-wire, accounting, artifact-profile and case tests passed; full local/native checks pending. No paid model calls or release."
+      }
     },
     {
       "number": 85,
@@ -1517,7 +1527,7 @@
       "number": 142,
       "title": "Provider adapters ignore error, refusal and finish_reason fields: errors in a 200 body are not retried or classified, refusals look like schema errors, receipt finish_reason/finish_status always null",
       "work_package": "W6",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Classify 200-body provider errors, refusals and finish statuses explicitly, preserving physical attempt/usage receipts and retry policy. Test fixture responses for all supported adapters, not fabricated live success.",
       "evidence": {
         "source": [
@@ -1530,14 +1540,25 @@
           "docs/PROVIDERS.md"
         ],
         "implementation": "Classify HTTP-200 body/choice errors before text parsing using existing HTTP retry policy; preserve billable usage and actual HTTP status. Reject refusal and incomplete actions (including parseable truncation) with provider_request_rejected, differentiated by finish_status refused/incomplete and safe native finish_reason; no retry/action repair for those. Retain v2 taxonomy rather than introduce incompatible enum values. Failed-run artifact validates and never applies rejected action.",
-        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases.",
+        "integration": "494 tests passed on local Python 3.12 and direct-minimum 3.10, both 11540/13032 lines (88.551%). Native Core CI 37760860363, distribution consumers 37760860375, audit 37760860378, workflow lint 37760860450 all passed at 6edad7b. No billed provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:09:55Z",
+        "number": 142,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/142",
+        "kind": "issue",
+        "resolution_commit": "6edad7b1b5a3ae61cb6c892f363233c3abd32a5c",
+        "replacement_pr": 218
       }
     },
     {
       "number": 143,
       "title": "eslams providers models --provider openai --live prints ok:false with an empty model list and no reason (missing key, DNS failure and HTTP error look identical)",
       "work_package": "W6",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Return structured discovery failures with safe provider/status/retry metadata; distinguish missing key, DNS, authorization, empty success and transport failure without echoing keys/URLs.",
       "evidence": {
         "source": [
@@ -1550,7 +1571,18 @@
           "docs/PROVIDERS.md"
         ],
         "implementation": "Structured live model-discovery diagnostics distinguish missing/invalid key, timeout, transport, HTTP status, malformed page and real empty catalogue. Never echo credential, response body or request URL. Failed discovery blocks live inference without asserting invisibility.",
-        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases.",
+        "integration": "494 tests passed on local Python 3.12 and direct-minimum 3.10, both 11540/13032 lines (88.551%). Native Core CI 37760860363, distribution consumers 37760860375, audit 37760860378, workflow lint 37760860450 all passed at 6edad7b. No billed provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:09:57Z",
+        "number": 143,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/143",
+        "kind": "issue",
+        "resolution_commit": "6edad7b1b5a3ae61cb6c892f363233c3abd32a5c",
+        "replacement_pr": 218
       }
     },
     {
@@ -2679,7 +2711,7 @@
       "number": 196,
       "title": "Default and README Anthropic model claude-sonnet-4-20250514 is retired by Anthropic (2026-06-15); preflight still reports ok:true",
       "work_package": "W6",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Choose a currently supported Anthropic default after verifying the provider's current model lifecycle; update registry/docs and classify retired/not-found outcomes honestly. Live checks need separately authorized test credentials.",
       "evidence": {
         "source": [
@@ -2692,14 +2724,25 @@
           "docs/PROVIDERS.md"
         ],
         "implementation": "Replace retired Anthropic default/examples with claude-sonnet-4-6; official lifecycle override marks old id retired/unavailable and new id active. Retired model fails offline/live preflight before network; active metadata is not proof of account availability.",
-        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases.",
+        "integration": "494 tests passed on local Python 3.12 and direct-minimum 3.10, both 11540/13032 lines (88.551%). Native Core CI 37760860363, distribution consumers 37760860375, audit 37760860378, workflow lint 37760860450 all passed at 6edad7b. No billed provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:10:00Z",
+        "number": 196,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/196",
+        "kind": "issue",
+        "resolution_commit": "6edad7b1b5a3ae61cb6c892f363233c3abd32a5c",
+        "replacement_pr": 218
       }
     },
     {
       "number": 197,
       "title": "providers preflight --live and providers models --live read only page 1 of the Models API: Anthropic (20) and Gemini (50) models beyond it are reported not visible",
       "work_package": "W6",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Follow documented pagination with termination/error limits for each relevant provider; use multi-page fixtures and return full discovery or a clear partial/error state.",
       "evidence": {
         "source": [
@@ -2712,7 +2755,18 @@
           "docs/PROVIDERS.md"
         ],
         "implementation": "Follow all Anthropic after_id/has_more/last_id and Gemini nextPageToken/pageToken pages, request 1000-row pages, deduplicate IDs, normalize aliases and fail on malformed/repeated cursors or >20 pages. Partial discovery never declares an unseen model unavailable. Gemini authentication uses header.",
-        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases.",
+        "integration": "494 tests passed on local Python 3.12 and direct-minimum 3.10, both 11540/13032 lines (88.551%). Native Core CI 37760860363, distribution consumers 37760860375, audit 37760860378, workflow lint 37760860450 all passed at 6edad7b. No billed provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:10:01Z",
+        "number": 197,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/197",
+        "kind": "issue",
+        "resolution_commit": "6edad7b1b5a3ae61cb6c892f363233c3abd32a5c",
+        "replacement_pr": 218
       }
     },
     {
@@ -2817,9 +2871,19 @@
       "number": 203,
       "title": "'eslams validate --profile official-case' fails with misleading action_provenance_incomplete when official_eval run had no --case-id",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Reject missing official-case identity before execution/validation with a specific error; do not infer a hidden case or weaken provenance completeness.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifacts.py",
+          "src/eslams/runner.py",
+          "src/eslams/contracts/usage.py",
+          "tests/test_case_eligibility_regressions.py",
+          "docs/ARTIFACTS.md"
+        ],
+        "implementation": "Official-case validator explicitly reports case_id_missing and validates identity consistency in manifest/score/receipts. Missing case identity no longer masquerades as action_provenance_incomplete. Named identity is required for publication eligibility even when signed gameplay/usage/cost/ledger is valid. Diagnostic official_eval runs remain possible; blank/nonstring provided case IDs fail construction. Two signed same-game fixtures prove no-ID exact failure vs complete named-case pass.",
+        "verification": "64 focused integrity, raw-wire, accounting, artifact-profile and case tests passed; full local/native checks pending. No paid model calls or release."
+      }
     },
     {
       "number": 204,

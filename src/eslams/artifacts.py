@@ -1105,6 +1105,15 @@ def _official_case_integrity_errors(
 
     metrics_value = score.get("metrics")
     metrics = metrics_value if isinstance(metrics_value, dict) else {}
+    suite_context = metrics.get("suite_context")
+    case_id = suite_context.get("case_id") if isinstance(suite_context, dict) else None
+    if not isinstance(case_id, str) or not case_id.strip():
+        errors.append("case_id_missing")
+        case_id = None
+    else:
+        metadata = manifest.get("run_metadata")
+        if not isinstance(metadata, dict) or metadata.get("case_id") != case_id:
+            errors.append("case_id_mismatch")
     evaluated_player = metrics.get("evaluated_player", "player_1")
     statuses = score.get("provider_status_by_player")
     if not isinstance(statuses, dict) or statuses.get(evaluated_player) != "provider_ok":
@@ -1122,6 +1131,7 @@ def _official_case_integrity_errors(
         _official_action_reconciliation_errors(
             artifact_dir,
             evaluated_player=str(evaluated_player),
+            case_id=case_id,
             expected_logical_actions=(
                 logical_actions.get(evaluated_player) if isinstance(logical_actions, dict) else None
             ),
@@ -1145,6 +1155,7 @@ def _official_action_reconciliation_errors(
     artifact_dir: Path,
     *,
     evaluated_player: str,
+    case_id: str | None,
     expected_logical_actions: Any,
 ) -> list[str]:
     read_errors: list[str] = []
@@ -1174,6 +1185,8 @@ def _official_action_reconciliation_errors(
         or len(provider_replays) != expected_logical_actions
     )
     ledger_invalid = False
+    case_invalid = False
+    case_id_mismatch = False
 
     receipts_by_event: dict[str, dict[str, Any]] = {}
     for receipt in receipt_rows:
@@ -1185,6 +1198,9 @@ def _official_action_reconciliation_errors(
             ledger_invalid = True
             continue
         receipts_by_event[event_id] = receipt
+        if case_id is not None and receipt.get("case_id") != case_id:
+            ledger_invalid = True
+            case_id_mismatch = True
 
     referenced_event_ids: list[str] = []
     trace_join_keys: list[tuple[str, str]] = []
@@ -1205,9 +1221,13 @@ def _official_action_reconciliation_errors(
             or joined_receipt.get("outcome") != "ok"
             or joined_receipt.get("status") != "completed"
             or joined_receipt.get("action_applied") is not True
-            or joined_receipt.get("case_valid_for_scoring") is not True
         ):
             provenance_invalid = True
+        if (
+            joined_receipt is not None and case_id is not None
+            and joined_receipt.get("case_valid_for_scoring") is not True
+        ):
+            case_invalid = True
 
     if len(referenced_event_ids) != len(set(referenced_event_ids)):
         provenance_invalid = True
@@ -1236,6 +1256,10 @@ def _official_action_reconciliation_errors(
         errors.append("action_provenance_incomplete")
     if ledger_invalid:
         errors.append("attempt_reconciliation_failed")
+    if case_invalid:
+        errors.append("case_scoring_ineligible")
+    if case_id_mismatch:
+        errors.append("case_id_mismatch")
     return errors
 
 
@@ -1618,8 +1642,11 @@ def _official_result_summary(score: ScoreSummary, arena_id: str) -> dict[str, An
 def _case_publication_eligible(score: ScoreSummary) -> bool:
     """Return the fail-closed eligibility claim for proof/publication surfaces."""
 
+    context = score.metrics.get("suite_context")
+    case_id = context.get("case_id") if isinstance(context, dict) else None
     return bool(
-        score.match_valid_for_scoring
+        isinstance(case_id, str) and case_id.strip()
+        and score.match_valid_for_scoring
         and score.integrity_status == "valid"
         and score.usage_complete
         and score.cost_complete

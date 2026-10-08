@@ -104,13 +104,23 @@ Core artifacts and the scoring-validity posture:
   "illegal_action_count_by_player": { "player_1": 0, "player_2": 0 },
   "fallback_action_count_by_player": { "player_1": 0, "player_2": 0 },
   "per_case_run_valid": true,
-  "per_case_scoring_eligible": true,
-  "proof_row_publication_eligible": true,
+  "per_case_scoring_eligible": false,
+  "proof_row_publication_eligible": false,
   "aggregate_leaderboard_eligible": false,
   "aggregate_ineligibility_reason": "single_case_not_full_suite",
   "provider_status_by_player": { "player_1": "local_agent", "player_2": "local_agent" }
 }
 ```
+
+This example is a completed game with local agents. `scoring_eligible` and
+`per_case_run_valid` describe gameplay validity. `per_case_scoring_eligible` and
+`proof_row_publication_eligible` require a named provider-evaluation case with
+complete model identity, usage, cost and physical-attempt evidence. A local game
+with no provider calls therefore remains a valid Local Artifact while those
+publication flags are false. Its provider-evidence `integrity_status` is
+`incomplete`; the usage summary explains `no_provider_calls`, rather than
+misdiagnosing an incomplete physical-attempt ledger. This does not invalidate
+local gameplay or upgrade it to Official evidence.
 
 Core 0.6 also records `integrity_status`, stable `invalid_reason_codes`,
 provider/logical action counts, `usage_complete`, `cost_complete`,
@@ -148,6 +158,14 @@ Use `--summary-json` to produce the stable
 eslams validate runs/latest.eslams --profile runner-bundle --summary-json
 eslams validate runs/latest.eslams --profile official-case --summary-json
 ```
+
+For `official-case` validation, pass a nonempty `--case-id` to `eslams run`
+(or `RunConfig(case_id=...)`). `--execution-profile official_eval` sets execution
+rules and can also produce diagnostic runs; it does not supply a case identity.
+A diagnostic run without a case ID is excluded from case/publication eligibility
+and fails official-case validation with `case_id_missing`. The case identity must
+match the manifest, score and physical receipts; a mismatch produces
+`case_id_mismatch`.
 
 `official-case` rejects fallback or agent-error counts, non-`provider_ok`
 status for the evaluated seat, mismatched provider/logical action counts,

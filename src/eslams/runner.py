@@ -111,6 +111,10 @@ class RunConfig:
             raise ValueError("shard_index must be a nonnegative integer less than shard_count")
         if self.run_id is not None:
             _validate_run_id(self.run_id)
+        if self.case_id is not None and (
+            not isinstance(self.case_id, str) or not self.case_id.strip()
+        ):
+            raise ValueError("case_id must be a nonempty string when provided")
         for name, value in (
             ("official_run_id", self.official_run_id),
             ("model_lane_id", self.model_lane_id),
