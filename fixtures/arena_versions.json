@@ -1,202 +1,206 @@
 {
-  "alien-shooter": {
-    "sha256": "b70ab53f356adc44fdfce6e11e3313185f149f3380b2ed20594c5f763fc085dd",
-    "version": "1.1.0"
+  "arenas": {
+    "alien-shooter": {
+      "sha256": "c50e38c922723d1028c9cc2b419b6aa3e4d8fa1eb1c6d056400d6566352a801a",
+      "version": "1.1.0"
+    },
+    "backgammon": {
+      "sha256": "e8197c216163974696525b6b764cca1e61550dffc08eff1dc9e2cd0b191fdc20",
+      "version": "1.1.0"
+    },
+    "bargaining": {
+      "sha256": "56eeffc97e1c2c90c5fbb22dabb601884bfac776c30744986e6f970bbe95b6c4",
+      "version": "1.0.1"
+    },
+    "battleship": {
+      "sha256": "3deb74acc48a6f5d47261370edf45a6c24479964a3ef12cbd9ad24ef9ee082ef",
+      "version": "1.1.0"
+    },
+    "bipedal-walker": {
+      "sha256": "e160241fd3b5685f9567d1977a8c3af4f0f1c4b7107bf21332dd41244e40fac9",
+      "version": "1.0.1"
+    },
+    "blackjack": {
+      "sha256": "fd11c1abf40d987bcad5d3a2b43b075a21b63d8d1abea3c12afe1d58a0425f06",
+      "version": "1.0.1"
+    },
+    "boxing-style-arena": {
+      "sha256": "ef7e22c4d45791f20c697bf3ac6f58f9dabc768b128bc890f3e0f683dba98009",
+      "version": "1.0.0"
+    },
+    "bridge": {
+      "sha256": "cc908893307affc3e043affb9704c6cdd385eff1f329f92db8e584fe1f4887c6",
+      "version": "1.0.0"
+    },
+    "car-racing": {
+      "sha256": "6889cf8d0a276ee1815c7935f5586190a22464d62d434172c5d3d74458ff61a0",
+      "version": "1.0.1"
+    },
+    "cartpole": {
+      "sha256": "918463a3d95a84e42ebc2414e858a9520793a3f0cd92fb72ff27fbc7cb5718cd",
+      "version": "1.0.1"
+    },
+    "checkers": {
+      "sha256": "ff084672ab128be167b83aad680fd3cb6a280ae42c3bf5f65c6d1473f7c37374",
+      "version": "1.0.0"
+    },
+    "chess": {
+      "sha256": "6e09674a060778693d8749873a65f1574c64ba7ff00ae73184470c2137fb730c",
+      "version": "1.2.0"
+    },
+    "cliff-walking": {
+      "sha256": "336e164d2c210202f0957525364138a8b0fb702705b7b8fed1420a955f75fb99",
+      "version": "1.0.1"
+    },
+    "connect-four": {
+      "sha256": "0f0febd204e38033e9a2439c3528f36ef6311c73191e0dd0fc7d90e6b3f0cd81",
+      "version": "1.0.0"
+    },
+    "crazy-eights": {
+      "sha256": "06dd69c11b868e3e06bd314107f84824a1f910e7040b7aa7084cc742fed529ed",
+      "version": "1.0.1"
+    },
+    "cribbage": {
+      "sha256": "0b6663652bae385116d76d554608787260f58aebcc9858c06de4a9ac1a581139",
+      "version": "1.1.0"
+    },
+    "dou-dizhu": {
+      "sha256": "5c66f48a1688d8214f9bec04aec9f4c3000ccb15f69191007dfb6bab254db72c",
+      "version": "1.0.0"
+    },
+    "euchre": {
+      "sha256": "e9e39c21783929368d89842730df79d363ce5174244175d4b063ef65a08aefdf",
+      "version": "1.0.1"
+    },
+    "first-price-sealed-bid-auction": {
+      "sha256": "7561480d082273a572a8fbd9affb6a33aad3b5ec3382d0bd75af8c438f1fe0fd",
+      "version": "1.1.0"
+    },
+    "frozen-lake": {
+      "sha256": "ab0ce78532da601d216af59e74d2b3478e1123df9b18e669bd7c9bc5ef87d79e",
+      "version": "1.0.1"
+    },
+    "gin-rummy": {
+      "sha256": "a90b35ed99c458c5c95b200267fc6ebc6bc5adcf725797dfb1f53a2637a1e1c4",
+      "version": "1.0.1"
+    },
+    "go": {
+      "sha256": "4582d8dcba2ff2e31a54215be702e1c1c0572da7e7128480f2cf7fbd6ee4230f",
+      "version": "1.0.0"
+    },
+    "gomoku": {
+      "sha256": "2cc7cfbed31ff95b9299a46c330831d79ed726b9c7569b0bbba646e78ed9fd46",
+      "version": "1.0.0"
+    },
+    "goofspiel": {
+      "sha256": "52248a9ab195bfb6b9417f628f5d358b63f37ef779a4f143cfc46c47cb0508c5",
+      "version": "1.0.0"
+    },
+    "hanabi": {
+      "sha256": "a6ab1b3234e9280722c5bbbff3aece2fe8c10a5668c3f19349c3a3357af9dcb1",
+      "version": "1.1.0"
+    },
+    "hearts": {
+      "sha256": "9aed9e65d7c6f3023ecf1c9fe872bb3f5ad7f51fff5c66f9dbc375ca04230fc3",
+      "version": "1.0.1"
+    },
+    "hex": {
+      "sha256": "2601e086474d92c6caa45864e4e0fc3a21205557994c0ce8ed0687534f6ef324",
+      "version": "1.0.0"
+    },
+    "ice-hockey-style-arena": {
+      "sha256": "ce25930a433620b2244f474fa3ed1730fd3a2503bb77a6ba1704d84ce8787fd1",
+      "version": "1.0.0"
+    },
+    "leduc-holdem": {
+      "sha256": "466c6936c7023790baecfdc0690ed358ea20e80f109e93f9dec9a0ffa588fbae",
+      "version": "1.0.1"
+    },
+    "liars-dice": {
+      "sha256": "5c280835eebd85be1d4e411fec26ba6e48b18a37f47af144e4dd90c69c2932e3",
+      "version": "1.0.0"
+    },
+    "limit-texas-holdem": {
+      "sha256": "90a6991d599dd73f4b0e6ed394e12160cbc86f4929335ddcf869bf146f735ca7",
+      "version": "1.0.1"
+    },
+    "lunar-lander": {
+      "sha256": "676dd593073b25c8ca08d81626e2915719d2eb6e8f6c538ded40e7ee97db84ed",
+      "version": "1.0.1"
+    },
+    "mahjong": {
+      "sha256": "24de9e30376cb4c92c2315d4d8801bfcbb0f84dafde43db2f6cd3415bdf4596b",
+      "version": "1.0.0"
+    },
+    "mancala": {
+      "sha256": "41a2c99fef78c0c92d77b6798646525d060484a53c57686ef20e1579ae68d7a7",
+      "version": "1.0.0"
+    },
+    "mountain-car": {
+      "sha256": "4c7b9d0da8e63592d9bd09d67706dc4a0f194b780e3864a443c1e07ee621f23f",
+      "version": "1.0.1"
+    },
+    "negotiation": {
+      "sha256": "8e478ad38d7a159fb1c1b84caa9474794a65c6affaf571046534cc35d1add8de",
+      "version": "1.1.0"
+    },
+    "nine-mens-morris": {
+      "sha256": "c31b767741bbde41727b0a8e5502ef6023f9f6830fe3c4c40bc3b97ba94f41a6",
+      "version": "1.0.0"
+    },
+    "no-limit-texas-holdem": {
+      "sha256": "db8c3a124a62140392dec99e7a39b6a78d3f4d16b6b5c9480ca1966770e97a03",
+      "version": "1.0.1"
+    },
+    "othello": {
+      "sha256": "38235e1438c793d9f975b405353e909abb27ac85e80fb72d9e3ba644d9853214",
+      "version": "1.0.1"
+    },
+    "paddle-ball": {
+      "sha256": "3343e6dc63f65c30fdfd620405fe1e9f3acb40e9307d3b938a3765fcc8d51ad2",
+      "version": "1.1.0"
+    },
+    "pentago": {
+      "sha256": "6865bd9212da71ef4c738c1a164c831d997d705e2cb4435a2160dab177787c01",
+      "version": "1.0.1"
+    },
+    "prisoners-dilemma": {
+      "sha256": "3e6b3e7c34093361ebd7bcf18803a5bb97a7974d1d5523e120b7422ca7010455",
+      "version": "1.0.1"
+    },
+    "rock-paper-scissors": {
+      "sha256": "e9eed8ce9924783cc839fd94ae0f11e0c7dcfc4925456203da49947bc6b0a4e4",
+      "version": "1.0.0"
+    },
+    "shedding-card-game": {
+      "sha256": "60bebce7e59ab92df595136040a2228210d8c9a254b361f1c5a53a816d922ae5",
+      "version": "1.0.1"
+    },
+    "shogi": {
+      "sha256": "94aaa5b4d4a16420455756c5e8ed127222c744ac07b18d9bba9cdb88453f392c",
+      "version": "1.0.1"
+    },
+    "spades": {
+      "sha256": "67af7db782271b568b891a14fa91ff0b7cc779791f13c95716314602c5fbbd2d",
+      "version": "1.0.1"
+    },
+    "taxi": {
+      "sha256": "182fb65ddb34ee4b1a76e6fad91ad360ecbc8b120e66ca5b587e4e9bfc03840c",
+      "version": "1.0.1"
+    },
+    "tic-tac-toe": {
+      "sha256": "550a278599a9cc496f144e36d61d7c55ef09ee28bd544b4fc07020acc3f8221f",
+      "version": "1.0.0"
+    },
+    "ultimate-tic-tac-toe": {
+      "sha256": "68c4c70e73af4fe8ff3ed2fa6ee039c807e69b7095cf35a5dd4f7f2428bce74b",
+      "version": "1.1.0"
+    },
+    "xiangqi": {
+      "sha256": "cbb8387242fabd0796f49fad88ad0be781af26ad2b8c6720c9822239f727ac77",
+      "version": "1.0.1"
+    }
   },
-  "backgammon": {
-    "sha256": "bb7981fe370ac11b12348ccf24fcfd003d0647ea9e7cb1e6d74e24ef1c2be73b",
-    "version": "1.1.0"
-  },
-  "bargaining": {
-    "sha256": "a7329a56898b49b4f6e8c398823c46825dd7eedcb4e81622eaebe1bd6329b722",
-    "version": "1.0.1"
-  },
-  "battleship": {
-    "sha256": "cd392acd15902d64ac230300513de866d96b0b0fa2a82c82d8c4312ed9c1c7cd",
-    "version": "1.1.0"
-  },
-  "bipedal-walker": {
-    "sha256": "57b78301e30a334aaa45fcdb04c9bd278112d6204d081fb7b9a3a816d5485205",
-    "version": "1.0.1"
-  },
-  "blackjack": {
-    "sha256": "d83ae2b64c5e7047fc2a26023175c2ed5e81b10398088ea073d1b8e21710e6d1",
-    "version": "1.0.1"
-  },
-  "boxing-style-arena": {
-    "sha256": "0857a57034ed2c9cae19ad317bedce5f7b58acc857f31019ae10525de58b7c70",
-    "version": "1.0.0"
-  },
-  "bridge": {
-    "sha256": "971dff088eaacc2374ec082b279a25f6e7d6cc9e04c3cd31d5bae7f985f7594c",
-    "version": "1.0.0"
-  },
-  "car-racing": {
-    "sha256": "2681a1744a84e7f86abcc65360fb8992ec907bec726f8aeb582d9d72ec4233fd",
-    "version": "1.0.1"
-  },
-  "cartpole": {
-    "sha256": "bd4d7c692c1c2414a92f71df5487a6dd32171c6276ae0f581f13f4008feafe31",
-    "version": "1.0.1"
-  },
-  "checkers": {
-    "sha256": "30ab7d458fc64466a80fb87a6284abc045eb36cc127c357e06fdaab4e9f0af03",
-    "version": "1.0.0"
-  },
-  "chess": {
-    "sha256": "05765ff216b51de53f0cc1060aa1708cc50a676b6b503b54318e74bacd705b68",
-    "version": "1.2.0"
-  },
-  "cliff-walking": {
-    "sha256": "62b50250594e4442fe927fcc92bff321801d9924f6565f4046b95d8ddf60e4fc",
-    "version": "1.0.1"
-  },
-  "connect-four": {
-    "sha256": "ea9da90eeec8b04061981fd9823c0e9b917ae4ed2e71039235c53464728ee104",
-    "version": "1.0.0"
-  },
-  "crazy-eights": {
-    "sha256": "4b324688b41fcef3be178566ec20bf63f7830b2fce1803135c40dbc25995f633",
-    "version": "1.0.1"
-  },
-  "cribbage": {
-    "sha256": "0ebbce5a69cf254ae8b40910bf5fb1aa5f0f690a7cf909e6d6526d98005a779e",
-    "version": "1.1.0"
-  },
-  "dou-dizhu": {
-    "sha256": "9249cefa9744d63fba2baf33a55c16458e96bd327c5e12523fdb15aa171f3c55",
-    "version": "1.0.0"
-  },
-  "euchre": {
-    "sha256": "fd6a154ee163cfea0407564012d4dcaa29acb96363c5891cdba9ab3c0da70a33",
-    "version": "1.0.1"
-  },
-  "first-price-sealed-bid-auction": {
-    "sha256": "2f28fb2b90b8abb8a5c7350d6e5da390ad595dc5a7f270bba47a87b76e018d2f",
-    "version": "1.1.0"
-  },
-  "frozen-lake": {
-    "sha256": "b3ab314d0af8c2403d917a0389fb415840e50469b54b36566727cb443c857928",
-    "version": "1.0.1"
-  },
-  "gin-rummy": {
-    "sha256": "6735372066c05cd47881f8bf2927c9abc805d982ca80b538a4f34f7116cb0ace",
-    "version": "1.0.1"
-  },
-  "go": {
-    "sha256": "e33c88539e5f3a47f81efac120ae3f663e549cb6f9da6b696c1323132b5a6a76",
-    "version": "1.0.0"
-  },
-  "gomoku": {
-    "sha256": "fb9204bba744a11a1607b00a8561912108edc833c4b0026e37dfc4c8d2248f2a",
-    "version": "1.0.0"
-  },
-  "goofspiel": {
-    "sha256": "7b0ee2286273c9ee1de3518b44a41c9b7b269aaa3dcb6aadd78b2ba98a154796",
-    "version": "1.0.0"
-  },
-  "hanabi": {
-    "sha256": "1561dbd85c06a068b57d1cb748e03e9c55300d2d11f933fe204c044feb9692fc",
-    "version": "1.1.0"
-  },
-  "hearts": {
-    "sha256": "2f451230132708eb53027c722be2e07453cc91b518a360b67e22a1b2aefcfb7c",
-    "version": "1.0.1"
-  },
-  "hex": {
-    "sha256": "b91ffc44499bc5532a7f4ce8071561a8df0b1f1af312500520672214462c486c",
-    "version": "1.0.0"
-  },
-  "ice-hockey-style-arena": {
-    "sha256": "b14cbd371b606b1fc14211b2683972524a1b3609aed18b4a7aa255e572769910",
-    "version": "1.0.0"
-  },
-  "leduc-holdem": {
-    "sha256": "862050627a6754587dbb534f230ca3b0ce922279759a3c92fdf8ab263464f9c0",
-    "version": "1.0.1"
-  },
-  "liars-dice": {
-    "sha256": "894ddb400b957d86624d4ca8a9bd89967312372e9c5920c65aa1f45ad8540b1c",
-    "version": "1.0.0"
-  },
-  "limit-texas-holdem": {
-    "sha256": "bf0b58e166c308d06c92b8ad0479b0bae16d73fbd843b5506026e6fd9e9b52d9",
-    "version": "1.0.1"
-  },
-  "lunar-lander": {
-    "sha256": "acd828e7c605db477c054c86620579eb0feb22084d88c44a0824b737ae35e8cf",
-    "version": "1.0.1"
-  },
-  "mahjong": {
-    "sha256": "3ae4078d1d1b5dda6329fef08294116f888601f8f340de53688ee67652fe4aa1",
-    "version": "1.0.0"
-  },
-  "mancala": {
-    "sha256": "728c53f40af2a86c0e55c788fb2dd8bcf81df664390daa1d1c6e38809b5092e5",
-    "version": "1.0.0"
-  },
-  "mountain-car": {
-    "sha256": "69329670188d94c4cea99ed3e6a9a6b8e839b1548ef6f85976ca2739c05cdf42",
-    "version": "1.0.1"
-  },
-  "negotiation": {
-    "sha256": "7ad75c2e6186742e6da486b2b821c0529e9745c3627ef1e12c937baf887ffc2f",
-    "version": "1.1.0"
-  },
-  "nine-mens-morris": {
-    "sha256": "a3cf1263cec8d512d5a7a52e3f0cc41fcf90b54d2843c4055a3c01829e23f994",
-    "version": "1.0.0"
-  },
-  "no-limit-texas-holdem": {
-    "sha256": "eec0d087b44df848358aaf3d1b1398b96958650330a3c11b251b83ba7f24eb6a",
-    "version": "1.0.1"
-  },
-  "othello": {
-    "sha256": "816de9c3d1a743859fffd66db4638ba6bdec8d5d36e5354e939219babb87c085",
-    "version": "1.0.1"
-  },
-  "paddle-ball": {
-    "sha256": "ae99de5b4d9b0c534c39d20e90f69d0fcee5e28f41161df6c26f9660b46d5bc4",
-    "version": "1.1.0"
-  },
-  "pentago": {
-    "sha256": "8dba66fb546eb68348f110503858fa2a93593871e40c318cf78af633f351e1cb",
-    "version": "1.0.1"
-  },
-  "prisoners-dilemma": {
-    "sha256": "c11f1d5fea9a825c601492c98f9f2e198833b0642e60c14affcb554e5bc869cd",
-    "version": "1.0.1"
-  },
-  "rock-paper-scissors": {
-    "sha256": "863e4e7ba8048eed071f04444e4ed496bdcd758418a97eaa372f813400f81bc6",
-    "version": "1.0.0"
-  },
-  "shedding-card-game": {
-    "sha256": "5cbbac42e1d2b7a15dd8e54221cfb662eab2322a38571f33964a04a79272d941",
-    "version": "1.0.1"
-  },
-  "shogi": {
-    "sha256": "7700b3080bf057ef7869707d27b0e84e9e0542f53a52997c96513e92332c6bbf",
-    "version": "1.0.1"
-  },
-  "spades": {
-    "sha256": "68692853ef0fb6eb1a20ef1daadc902d2288a2fafa15020f3267921450c47e24",
-    "version": "1.0.1"
-  },
-  "taxi": {
-    "sha256": "b2b13915879d3d17b913b73386eda62ceae9d89b8a796c29798643a21e0ccbde",
-    "version": "1.0.1"
-  },
-  "tic-tac-toe": {
-    "sha256": "351c879471fd231aee12cd1571c386139d9fdd10c45930117645df53a8b861e9",
-    "version": "1.0.0"
-  },
-  "ultimate-tic-tac-toe": {
-    "sha256": "9c9736471afc5862d704741b7e83888320a0794df969434bedf70a794faf20bf",
-    "version": "1.1.0"
-  },
-  "xiangqi": {
-    "sha256": "bd457802586fbdf0e0c3d0f91e8f82cd4232a7314c903ea12188aaf3adbf418c",
-    "version": "1.0.1"
-  }
+  "float_decimal_places": 10,
+  "format": "eslams.arena-behavior-fingerprints.v1"
 }

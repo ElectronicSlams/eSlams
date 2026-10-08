@@ -12,10 +12,39 @@ import hashlib
 import json
 import random
 from pathlib import Path
+from typing import Any
 
 import eslams.arenas  # noqa: F401
 from eslams.arena import registry
 from eslams.hashing import canonical_json
+from eslams.state import ArenaState
+
+FINGERPRINT_FORMAT = "eslams.arena-behavior-fingerprints.v1"
+FLOAT_DECIMAL_PLACES = 10
+
+
+def normalize_fingerprint(value: Any) -> Any:
+    """Normalize libm's last-bit drift for this diagnostic, never engine state."""
+    if isinstance(value, float):
+        normalized = round(value, FLOAT_DECIMAL_PLACES)
+        return 0.0 if normalized == 0.0 else normalized
+    elif isinstance(value, dict):
+        return {key: normalize_fingerprint(item) for key, item in value.items()}
+    elif isinstance(value, (list, tuple)):
+        return [normalize_fingerprint(item) for item in value]
+    return value
+
+
+def fingerprint_json(value: Any) -> str:
+    return canonical_json(normalize_fingerprint(value))
+
+
+def fingerprint_state(state: ArenaState) -> dict[str, Any]:
+    value = state.to_dict()
+    # The derived raw hash preserves libm differences; hash the normalized
+    # source fields here instead. Runtime state hashes remain exact.
+    value.pop("state_hash")
+    return value
 
 
 def fingerprints() -> dict[str, dict[str, str]]:
@@ -27,7 +56,9 @@ def fingerprints() -> dict[str, dict[str, str]]:
             for policy in ("first-legal", "random"):
                 rng = random.Random(seed)
                 state = arena.initial_state(seed)
-                digest.update(canonical_json([seed, policy, state.to_dict()]).encode("utf-8"))
+                digest.update(
+                    fingerprint_json([seed, policy, fingerprint_state(state)]).encode("utf-8")
+                )
                 for _ in range(512):
                     if state.terminal:
                         break
@@ -36,8 +67,10 @@ def fingerprints() -> dict[str, dict[str, str]]:
                         raise ValueError(f"{name}: nonterminal state has no legal actions")
                     action = legal[0] if policy == "first-legal" else rng.choice(legal)
                     state = arena.apply_action(state, state.active_player, action)
-                    digest.update(canonical_json([legal, action, state.to_dict()]).encode("utf-8"))
-                digest.update(canonical_json(arena.score(state)).encode("utf-8"))
+                    digest.update(
+                        fingerprint_json([legal, action, fingerprint_state(state)]).encode("utf-8")
+                    )
+                digest.update(fingerprint_json(arena.score(state)).encode("utf-8"))
         rows[name] = {"version": arena.version, "sha256": digest.hexdigest()}
     return rows
 
@@ -50,10 +83,27 @@ def main() -> None:
     current = fingerprints()
     if args.write is not None:
         with args.write.open("x", encoding="utf-8", newline="\n") as handle:
-            handle.write(json.dumps(current, indent=2, sort_keys=True) + "\n")
+            handle.write(
+                json.dumps(
+                    {
+                        "format": FINGERPRINT_FORMAT,
+                        "float_decimal_places": FLOAT_DECIMAL_PLACES,
+                        "arenas": current,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
         print(f"Wrote fingerprints for {len(current)} arenas")
         return
-    baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
+    document = json.loads(args.baseline.read_text(encoding="utf-8"))
+    if (document["format"], document["float_decimal_places"]) != (
+        FINGERPRINT_FORMAT,
+        FLOAT_DECIMAL_PLACES,
+    ):
+        raise ValueError("fingerprint format changed; review the diagnostic baseline")
+    baseline = document["arenas"]
     if current.keys() != baseline.keys():
         raise ValueError("arena roster changed; review and record its version fingerprints")
     for name, row in current.items():

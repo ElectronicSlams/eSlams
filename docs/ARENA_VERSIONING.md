@@ -53,6 +53,15 @@ scores for four seeds under first-legal and seeded-random policies. Each path
 is bounded at 512 actions; a nonterminal path is diagnostic. This is a drift
 guard, not exhaustive proof of game correctness or full-fidelity rules.
 
+The versioned diagnostic format rounds floating values to ten decimal places
+and hashes source state fields instead of their redundant raw `state_hash`.
+Platform math libraries can differ in the final bits of trigonometric results
+(observed in Mountain Car), even when visible state and behavior agree. Integer
+actions, order and terminal outcomes stay exact. This normalization affects
+only this diagnostic; runtime state hashes, replay validation and the separate
+native byte-parity gate remain exact. It cannot detect numeric changes below
+its declared precision.
+
 For an intentional behavior change, bump the arena version, inspect the
 changed trajectories and write candidate fingerprints with
 `--write <new-file>`. Review the diff before replacing the baseline. Never

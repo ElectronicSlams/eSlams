@@ -5120,6 +5120,13 @@
       "check": "Windows HTTP cancellation fixture",
       "implementation": "Catch ConnectionAbortedError alongside BrokenPipeError/ConnectionResetError in the local HTTP server test; retain elapsed deadline and observed socket-disconnection assertions. Windows WinError 10053 is a legitimate cancellation acknowledgement.",
       "previous_run": 37766572362
+    },
+    {
+      "check": "Portable arena behavior diagnostic",
+      "previous_run": 37769615822,
+      "finding": "Linux and Windows libm last-bit differences in Mountain Car metadata/score change raw state hashes; all 509 tests and isolated consumers pass. The new raw fingerprint diagnostic was too strict for cross-libm trajectory comparison.",
+      "implementation": "Use an explicit v1 diagnostic format with ten-decimal float normalization and hash source state fields instead of their redundant raw state_hash. No engine state/hash/validation change; native exact byte-parity gate preserved.",
+      "verification": "Six control arenas retain identical fingerprints with +/-1 ULP sin/cos perturbations, while changed Mountain Car physics (+1e-7 cosine perturbation) changes its fingerprint. Re-baseline changes diagnostic format, not arena behavior/version."
     }
   ]
 }
