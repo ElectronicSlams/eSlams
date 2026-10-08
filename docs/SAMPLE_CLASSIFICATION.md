@@ -32,8 +32,10 @@ python scripts/generate_sample_fixtures.py --out /path/to/new/scratch-directory
 
 Review the archives and bundles before installing them in the sample tree.
 Fixed fixture timestamps are test metadata; measured timing sidecars remain
-diagnostic. The producer commit is part of the artifact and must be preserved
-in the inventory. Current artifacts contain no developer filesystem paths;
+diagnostic. The generation inventory records the clean producer commit alongside
+the archive checksum; the legacy archive manifest itself records runner and
+arena versions, not the source commit. Preserve the inventory with the archive.
+Current artifacts contain no developer filesystem paths;
 public proof indices use content IDs instead of source paths.
 
 For future mirrors, add an exact project-controlled URL only after fetching
