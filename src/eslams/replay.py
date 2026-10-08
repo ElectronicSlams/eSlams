@@ -174,11 +174,16 @@ def _html(events_json: str, status: str) -> str:
     }
     .move {
       width: 100%;
-      min-height: 0;
+      min-height: 40px;
+      flex: 0 0 auto;
       text-align: left;
       padding: 8px 9px;
       background: #0b111a;
     }
+    button:focus-visible { outline: 3px solid var(--line-hot); outline-offset: 2px; }
+    #leftAgents { order: 1; }
+    #rightAgents { order: 3; }
+    .stage { order: 2; }
     .move[aria-current="true"] {
       border-color: var(--line-hot);
       background: rgba(120, 239, 195, .14);
@@ -246,6 +251,7 @@ def _html(events_json: str, status: str) -> str:
       display: grid;
       place-items: center;
       min-height: 0;
+      min-width: 0;
       max-width: 100%;
     }
     .chess-frame {
@@ -319,8 +325,9 @@ def _html(events_json: str, status: str) -> str:
     }
     .grid-board {
       display: grid;
-      gap: 8px;
+      gap: 2px;
       width: min(100%, 560px);
+      min-width: 0;
     }
     .grid-cell {
       aspect-ratio: 1;
@@ -329,9 +336,20 @@ def _html(events_json: str, status: str) -> str:
       border: 1px solid var(--line);
       border-radius: 6px;
       background: #0b111a;
-      font-size: 34px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      overflow: hidden;
+      font-size: clamp(9px, 3vw, 28px);
       font-weight: 900;
     }
+    .board-row { display: contents; }
+    .state-summary { width: 100%; min-width: 0; overflow-wrap: anywhere; }
+    .state-summary dl { display: grid; grid-template-columns: minmax(70px, .6fr) minmax(0, 1fr); gap: 8px; margin: 0; }
+    .state-summary dt { color: var(--muted); }
+    .state-summary dd { margin: 0; min-width: 0; }
+    .state-summary ul, .state-summary ol { padding-left: 20px; margin: 0; }
+    .state-summary li { margin-bottom: 4px; }
+    #artifactTrust, #sourceLabel, #runId { overflow-wrap: anywhere; min-width: 0; }
     .disc-r { color: #ff6575; }
     .disc-y { color: var(--gold); }
     .details {
@@ -366,6 +384,7 @@ def _html(events_json: str, status: str) -> str:
       header { align-items: start; flex-direction: column; }
       h1 { font-size: 36px; }
       .shell { grid-template-columns: 1fr; min-height: 0; }
+      .stage { order: 0; }
       .agent { max-height: 280px; }
       .details { grid-template-columns: 1fr; }
       .status { grid-template-columns: 1fr; }
@@ -391,19 +410,19 @@ def _html(events_json: str, status: str) -> str:
   </header>
   <p role="status" id="artifactTrust">""" + html.escape(status) + """</p>
   <section class="shell">
-    <div class="agent-column" id="leftAgents"></div>
     <section class="stage">
       <div class="status">
-        <div class="turn" id="turnStatus"></div>
+        <div class="turn" id="turnStatus" role="status" aria-live="polite" aria-atomic="true"></div>
         <div class="controls">
-          <button id="prev" type="button">Prev</button>
+          <button id="prev" type="button" aria-controls="board" aria-keyshortcuts="ArrowLeft">Prev</button>
           <button id="play" type="button">Play</button>
-          <button id="next" type="button">Next</button>
+          <button id="next" type="button" aria-controls="board" aria-keyshortcuts="ArrowRight">Next</button>
         </div>
       </div>
       <div class="board-host" id="board"></div>
       <div class="details" id="details"></div>
     </section>
+    <div class="agent-column" id="leftAgents"></div>
     <div class="agent-column" id="rightAgents"></div>
   </section>
 </main>
@@ -483,10 +502,12 @@ function currentMove() {
 function labelForAction(item) {
   if (!item) return 'initial';
   const state = item.event.public_state || {};
-  return state.last_move_san || state.last_move_uci || item.event.action || 'move';
+  const label = state.last_move_san ?? state.last_move_uci ?? item.event.action_label ?? item.event.action;
+  return label == null ? 'hidden action' : typeof label === 'object' ? JSON.stringify(label) : String(label);
 }
 
 function setSelected(index) {
+  if (timer) { clearInterval(timer); timer = null; }
   selected = Math.max(0, Math.min(index, events.length - 1));
   render();
 }
@@ -516,15 +537,25 @@ function renderMoves(player) {
   const list = document.getElementById(`moves-${player}`);
   if (!list) return;
   const items = moveEntries().filter((item) => item.mover === player);
-  list.innerHTML = items.map((item) => `
-    <button class="move" type="button" aria-current="${item.index === selected}" onclick="setSelected(${item.index})">
-      <span class="move-title">
-        <span>Turn ${escapeHtml(item.event.turn_id)}</span>
-        <span>${escapeHtml(labelForAction(item))}</span>
-      </span>
-      <span class="move-hash">${escapeHtml(shortHash(item.event.state_hash))}</span>
-    </button>
-  `).join('') || '<div class="muted">No moves yet</div>';
+  if (!list.dataset.initialized) {
+    list.dataset.initialized = 'true';
+    list.setAttribute('aria-label', `${player} moves`);
+    list.innerHTML = items.map((item) => `
+      <button class="move" type="button" data-event-index="${item.index}" aria-current="false" onclick="setSelected(${item.index})">
+        <span class="move-title">
+          <span>Turn ${escapeHtml(item.event.turn_id)}</span>
+          <span>${escapeHtml(labelForAction(item))}</span>
+        </span>
+        <span class="move-hash">${escapeHtml(shortHash(item.event.state_hash))}</span>
+      </button>
+    `).join('') || '<div class="muted">No moves yet</div>';
+  }
+  const anchor = items.find((item) => item.index === selected) || items.filter((item) => item.index < selected).at(-1) || items[0];
+  for (const button of list.querySelectorAll('button')) {
+    const index = Number(button.dataset.eventIndex);
+    button.setAttribute('aria-current', String(index === selected));
+    button.tabIndex = index === anchor?.index ? 0 : -1;
+  }
 }
 
 function renderChess(event) {
@@ -535,7 +566,7 @@ function renderChess(event) {
   const lastSquares = new Set(last.length >= 4 ? [last.slice(0, 2), last.slice(2, 4)] : []);
   const stacked = window.matchMedia('(max-width: 980px)').matches;
   const frameLimit = stacked ? 322 : 620;
-  const frameWidth = Math.floor(Math.max(240, Math.min(frameLimit, window.innerWidth - 68)));
+  const frameWidth = Math.floor(Math.max(1, Math.min(frameLimit, window.innerWidth - 68)));
   const cells = [];
   placement.split('/').forEach((rank, row) => {
     let col = 0;
@@ -552,7 +583,7 @@ function renderChess(event) {
   return `
     <div class="chess-frame" style="width: ${frameWidth}px">
       <div class="rank-labels">${ranks.map((rank) => `<span>${rank}</span>`).join('')}</div>
-      <div class="chessboard" aria-label="Chess board">${cells.join('')}</div>
+      <div class="chessboard" role="table" aria-label="Chess board" aria-rowcount="8" aria-colcount="8">${chunkBoard(cells, 8).map((row) => `<div class="board-row" role="row">${row.join('')}</div>`).join('')}</div>
       <div></div>
       <div class="file-labels">${files.map((file) => `<span>${file}</span>`).join('')}</div>
     </div>
@@ -565,20 +596,48 @@ function chessCell(row, col, piece, lastSquares) {
   const side = piece ? (piece === piece.toUpperCase() ? 'white' : 'black') : '';
   const last = lastSquares.has(square) ? ' last' : '';
   const content = piece ? `<span class="piece piece-${side}" aria-label="${side} ${piece}">${glyphs[piece] || piece}</span>` : '';
-  return `<div class="square ${tone}${last}" data-square="${square}">${content}</div>`;
+  const names = {p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king'};
+  const label = piece ? `${side} ${names[piece.toLowerCase()] || piece}` : 'empty';
+  return `<div class="square ${tone}${last}" role="cell" aria-label="${square}: ${label}" data-square="${square}">${content}</div>`;
+}
+
+function cellDescription(cell) {
+  if (cell == null || cell === '') return 'empty';
+  if (typeof cell === 'object') return Object.entries(cell).map(([key, value]) => `${key}: ${value}`).join(', ');
+  const names = {X: 'X marker', O: 'O marker', B: 'black stone', W: 'white stone', R: 'red marker', Y: 'yellow marker'};
+  return names[cell] || String(cell);
 }
 
 function renderGrid(event) {
   const state = event.public_state || {};
-  const board = state.board;
-  if (!Array.isArray(board)) return `<pre>${escapeHtml(JSON.stringify(state, null, 2))}</pre>`;
+  const board = state.board || state.grid;
+  if (!Array.isArray(board) || !board.length) return renderSummary(state);
   const rows = Array.isArray(board[0]) ? board : chunkBoard(board, state.rows || 3);
-  const cols = rows[0]?.length || 1;
-  const cells = rows.flat().map((cell) => {
+  const cols = Math.max(1, ...rows.map((row) => row.length));
+  const cells = rows.map((row, r) => `<div class="board-row" role="row">${row.map((cell, c) => {
     const cls = cell === 'R' ? 'disc-r' : cell === 'Y' ? 'disc-y' : '';
-    return `<div class="grid-cell ${cls}">${escapeHtml(cell || '')}</div>`;
-  }).join('');
-  return `<div class="grid-board" style="grid-template-columns: repeat(${cols}, 1fr)">${cells}</div>`;
+    const content = cell == null ? '' : typeof cell === 'object' ? (cell.count ?? cellDescription(cell)) : String(cell);
+    return `<div class="grid-cell ${cls}" role="cell" aria-label="Row ${r + 1}, column ${c + 1}: ${escapeHtml(cellDescription(cell))}">${escapeHtml(content)}</div>`;
+  }).join('')}</div>`).join('');
+  return `<div class="grid-board" role="table" aria-label="Public game board" aria-rowcount="${rows.length}" aria-colcount="${cols}" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr))">${cells}</div>`;
+}
+
+function fieldName(key) { return String(key).replaceAll('_', ' '); }
+function renderValue(value, depth = 0) {
+  if (value == null) return '<span class="muted">Not available</span>';
+  if (typeof value !== 'object') return escapeHtml(value);
+  if (depth >= 5) return '<span class="muted">Nested public state</span>';
+  if (Array.isArray(value)) {
+    if (!value.length) return '<span class="muted">None</span>';
+    const visible = value.slice(-40);
+    return `${value.length > visible.length ? `<p>Showing latest ${visible.length} of ${value.length}</p>` : ''}<ol>${visible.map((item) => `<li>${renderValue(item, depth + 1)}</li>`).join('')}</ol>`;
+  }
+  const entries = Object.entries(value);
+  if (!entries.length) return '<span class="muted">None</span>';
+  return `<dl>${entries.map(([key, item]) => `<dt>${escapeHtml(fieldName(key))}</dt><dd>${renderValue(item, depth + 1)}</dd>`).join('')}</dl>`;
+}
+function renderSummary(state) {
+  return `<section class="state-summary" aria-label="Public game state"><h2>Public state</h2>${renderValue(state)}</section>`;
 }
 
 function chunkBoard(board, rows) {
@@ -596,31 +655,19 @@ function renderBoard(event) {
 
 function renderDetails(event, move) {
   const state = event.public_state || {};
-  const validation = state.final_validation || {};
-  const terminal = state.terminal_reason || event.terminal;
-  return [
+  const outcome = event.outcome || {};
+  const rows = [
     ['Move', move ? `${move.mover} -> ${labelForAction(move)}` : 'initial'],
-    ['FEN', state.fen || 'n/a'],
-    ['Validation', `check=${validation.check ?? 'n/a'} checkmate=${validation.checkmate ?? 'n/a'} legal=${validation.legal_move_count ?? 'n/a'}`],
-    ['Winner', state.winner || event.scores && winnerFromScores(event.scores) || 'none'],
-    ['Terminal', terminal || 'false'],
-    ['Scores', JSON.stringify(event.scores || {})]
-  ].map(([label, value]) => `
-    <div class="detail">
-      <strong>${escapeHtml(label)}</strong>
-      <span>${escapeHtml(value)}</span>
-    </div>
-  `).join('');
+    ['Winner', outcome.winner ?? state.winner ?? 'none'],
+    ['Terminal', state.terminal_reason ?? outcome.reason ?? String(Boolean(event.terminal))],
+    ['Scores', Object.entries(event.scores || {}).map(([player, score]) => `${player}: ${score}`).join(', ') || 'none'],
+  ];
+  if (state.fen) rows.push(['FEN', state.fen]);
+  if (state.final_validation && Object.keys(state.final_validation).length) rows.push(['Validation', Object.entries(state.final_validation).map(([key, value]) => `${fieldName(key)}: ${value}`).join(', ')]);
+  if (state.phase != null) rows.push(['Phase', state.phase]);
+  return rows.map(([label, value]) => `<div class="detail"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>`).join('');
 }
 
-function winnerFromScores(scores) {
-  const entries = Object.entries(scores);
-  if (!entries.length) return null;
-  const max = Math.max(...entries.map(([, score]) => Number(score)));
-  if (max <= 0) return null;
-  const winners = entries.filter(([, score]) => Number(score) === max);
-  return winners.length === 1 ? winners[0][0] : null;
-}
 
 function render() {
   const event = events[selected] || {};
@@ -646,6 +693,16 @@ renderPlayerPanels();
 document.getElementById('prev').addEventListener('click', () => setSelected(selected - 1));
 document.getElementById('next').addEventListener('click', () => setSelected(selected + 1));
 document.getElementById('play').addEventListener('click', togglePlay);
+document.addEventListener('keydown', (event) => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault();
+    setSelected(selected + (event.key === 'ArrowRight' ? 1 : -1));
+  } else if (event.key === 'Home' || event.key === 'End') {
+    event.preventDefault();
+    setSelected(event.key === 'Home' ? 0 : events.length - 1);
+  }
+});
 window.addEventListener('resize', render);
 render();
 </script>

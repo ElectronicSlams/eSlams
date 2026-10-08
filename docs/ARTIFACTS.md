@@ -367,3 +367,19 @@ hashes across Linux Python 3.10–3.12, Windows and macOS Python 3.12. The compa
 fixes the fixture wall clock and run ID. Measured timing sidecars are deliberately
 outside deterministic identity, so complete production ZIPs need not be byte
 identical when their actual timing diagnostics differ.
+
+## Local replay presentation
+
+Replay controls precede move lists in keyboard order. Left/Right step frames;
+Home/End select the first/last frame. Selecting a move preserves its button focus.
+Each player's list has one Tab stop and frame status is announced politely.
+Move buttons keep a 40-pixel minimum height without flex shrinking.
+
+Chess and generic public boards have labeled table/row/cell structure. Other
+public state shapes use readable labeled values and lists rather than a JSON
+dump; nested histories show their most recent 40 entries with an explicit count.
+These are public-state summaries, not bespoke interactive simulators. Only
+provided chess FEN/validation data appears in the Details panel; winner comes
+from recorded outcomes rather than inferred nonterminal scores. The browser
+regression job checks all 50 arenas at 390, 768 and 1440 pixels, initial/final
+frames, control order, arrows, focus retention, targets, labels and numeric zero.

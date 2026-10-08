@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Replay HTML keeps controls reachable first, supports frame-navigation keys
+  and preserves move focus. Responsive labeled boards and readable public state
+  summaries replace overflowing cells and JSON fallbacks; zero actions retain
+  their identity, and chess details appear only when supplied. Browser CI covers
+  all 50 arenas at mobile/tablet/desktop widths.
+
 - Backgammon 1.1.0 fixes bearing-off and maximum/larger-die legality, preserves
   the die associated with ambiguous bear-off tokens, and records blocked rolls
   as explicit passes. Passes advance the compact 160-action episode limit.

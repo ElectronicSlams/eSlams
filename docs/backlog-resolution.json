@@ -453,7 +453,7 @@
       "number": 78,
       "title": "Missing or corrupt inputs to publish export, plan and official merge exit 0 and produce valid-looking output (unknown arena silently replaced)",
       "work_package": "W1",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Missing/corrupt input, unknown arena and absent required plans must fail clearly without producing a valid-looking bundle; test source validation before output creation and no fabricated unknown-arena replacements.",
       "evidence": {
         "source": [
@@ -472,14 +472,24 @@
           "CHANGELOG.md"
         ],
         "implementation": "Validate explicit plans/schema/hash/case partitions, reject empty or invalid aggregate artifact inputs, unknown suites/arenas and malformed model references; reject negative counts and non-finite progress timings. Staged publication output stays absent on failure.",
-        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls.",
+        "integration": "503 tests and 88.644966% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37764545821 including five-environment artifact/schema/publication byte parity, distribution consumers 37764545840, dependency audit 37764545880, workflow lint 37764545608 and Python/TypeScript CodeQL 37764545867 all passed at 699205d9cb61ef52c04d563eb6a1cc82210aa6ef. Historical artifacts are preserved under an explicit validation boundary, not retroactively accepted or modified. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:42:15Z",
+        "number": 78,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/78",
+        "kind": "issue",
+        "resolution_commit": "699205d9cb61ef52c04d563eb6a1cc82210aa6ef",
+        "replacement_pr": 218
       }
     },
     {
       "number": 79,
       "title": "Artifacts produced by Core 0.2.0 to 0.5.0 fail validation on 0.5.1 and later (terminal outcome mismatch), with no compatibility note",
       "work_package": "W3",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose tested legacy read support versus an explicit unsupported-version boundary. Preserve modern strict validation and Official authority; do not accept invalid historical outcomes merely to make old artifacts green.",
       "evidence": {
         "source": [
@@ -498,7 +508,17 @@
           "CHANGELOG.md"
         ],
         "implementation": "Choose an explicit historical validation boundary rather than reconstruct missing outcomes. Document that some Core 0.2.0\u20130.5.0 artifacts fail the strict 0.5.1+ transition/terminal checks, preserve original bytes, inspect with the producer version in an isolated environment and rerun under current rules for current comparisons. Existing strict tamper checks and Official authority remain enforced.",
-        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls.",
+        "integration": "503 tests and 88.644966% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37764545821 including five-environment artifact/schema/publication byte parity, distribution consumers 37764545840, dependency audit 37764545880, workflow lint 37764545608 and Python/TypeScript CodeQL 37764545867 all passed at 699205d9cb61ef52c04d563eb6a1cc82210aa6ef. Historical artifacts are preserved under an explicit validation boundary, not retroactively accepted or modified. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:42:17Z",
+        "number": 79,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/79",
+        "kind": "issue",
+        "resolution_commit": "699205d9cb61ef52c04d563eb6a1cc82210aa6ef",
+        "replacement_pr": 218
       }
     },
     {
@@ -874,7 +894,7 @@
       "number": 107,
       "title": "PLATFORM_CONTRACTS.md CLI walkthrough fails: `arena step --state session_state.json` (saved `arena start` output) crashes with KeyError: state_id",
       "work_package": "W5",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Accept only the documented saved session envelope/response shape or fix the walkthrough. Test the copied CLI start-to-step sequence with required explicit secret configuration.",
       "evidence": {
         "source": [
@@ -893,40 +913,94 @@
           "CHANGELOG.md"
         ],
         "implementation": "Arena CLI step and legal-actions-page accept either the signed session envelope or a full saved start/step response by extracting the nested envelope without bypassing signature checks. Regression exercises start/page/two saved steps with an explicit test session secret.",
-        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls.",
+        "integration": "503 tests and 88.644966% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37764545821 including five-environment artifact/schema/publication byte parity, distribution consumers 37764545840, dependency audit 37764545880, workflow lint 37764545608 and Python/TypeScript CodeQL 37764545867 all passed at 699205d9cb61ef52c04d563eb6a1cc82210aa6ef. Historical artifacts are preserved under an explicit validation boundary, not retroactively accepted or modified. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:42:19Z",
+        "number": 107,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/107",
+        "kind": "issue",
+        "resolution_commit": "699205d9cb61ef52c04d563eb6a1cc82210aa6ef",
+        "replacement_pr": 218
       }
     },
     {
       "number": 108,
       "title": "eslams replay HTML overflows a 390 px viewport for most non-chess arenas (gomoku 788 px, nine-mens-morris 1277 px, backgammon 1113 px)",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Constrain layout and preserve usable board scrolling; check representative renderer families.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/replay.py",
+          "scripts/generate_replay_fixtures.py",
+          "scripts/verify_replay_browser.cjs",
+          ".github/workflows/ci.yml",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+      }
     },
     {
       "number": 109,
       "title": "eslams replay HTML: all move buttons precede Prev/Play/Next in tab order (Play is Tab stop 75 for chess), arrow keys do nothing, focus drops to body",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Put controls first, preserve focus and announce changes; pair #192/#193.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/replay.py",
+          "scripts/generate_replay_fixtures.py",
+          "scripts/verify_replay_browser.cjs",
+          ".github/workflows/ci.yml",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+      }
     },
     {
       "number": 110,
       "title": "eslams replay HTML shows a raw JSON dump instead of a board for hanabi, blackjack, mancala and most card, physics and negotiation arenas",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide the supported renderer coverage. A truthful structured JSON fallback may be acceptable; do not promise a board for every game unless it is actually supported and tested.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/replay.py",
+          "scripts/generate_replay_fixtures.py",
+          "scripts/verify_replay_browser.cjs",
+          ".github/workflows/ci.yml",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+      }
     },
     {
       "number": 111,
       "title": "eslams replay HTML labels numeric action 0 as \"move\" (tic-tac-toe cell 0, connect-four column 0)",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Treat action 0 as a real value, not falsy/missing; test cell/column-zero labels in rendered move lists.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/replay.py",
+          "scripts/generate_replay_fixtures.py",
+          "scripts/verify_replay_browser.cjs",
+          ".github/workflows/ci.yml",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+      }
     },
     {
       "number": 113,
@@ -989,7 +1063,7 @@
       "number": 115,
       "title": "README/PLATFORM_CONTRACTS example `eslams plan official --suite public-smoke ...` always returns an empty plan (0 models, 0 cases) because no registry model has official_eval enabled",
       "work_package": "W9",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether the historical Official planner remains supported. Either supply a truthful actionable registry/sample plan or reject/document the unsupported command; never enable all registry rows for Official evaluation to populate the plan.",
       "evidence": {
         "source": [
@@ -1008,7 +1082,17 @@
           "CHANGELOG.md"
         ],
         "implementation": "The public registry grants no Official model eligibility. CLI official planning rejects zero cases with an actionable Battlefield showcase alternative. Python helper retains an empty diagnostic envelope, which publication rejects. README/Platform examples now show an actionable showcase plan; no model is falsely enabled.",
-        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls.",
+        "integration": "503 tests and 88.644966% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37764545821 including five-environment artifact/schema/publication byte parity, distribution consumers 37764545840, dependency audit 37764545880, workflow lint 37764545608 and Python/TypeScript CodeQL 37764545867 all passed at 699205d9cb61ef52c04d563eb6a1cc82210aa6ef. Historical artifacts are preserved under an explicit validation boundary, not retroactively accepted or modified. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:42:21Z",
+        "number": 115,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/115",
+        "kind": "issue",
+        "resolution_commit": "699205d9cb61ef52c04d563eb6a1cc82210aa6ef",
+        "replacement_pr": 218
       }
     },
     {
@@ -1576,7 +1660,7 @@
       "number": 140,
       "title": "Reading-only (Windows): write_text without newline=\"\\n\" makes artifact bytes, artifact_id and schema bundle hash differ from Linux",
       "work_package": "W7",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Write canonical LF bytes explicitly independent of platform; compare schema/artifact hashes on native Windows and Linux. gitattributes (#45) alone does not change runtime writes.",
       "evidence": {
         "source": [
@@ -1595,7 +1679,17 @@
           "CHANGELOG.md"
         ],
         "implementation": "Runtime text writes already use explicit LF. Add actual native file-table/schema/publication byte-hash comparison across five Linux/Windows/macOS Python environments. Fix only fixture wall clock/run ID; timing sidecars remain deliberately outside deterministic artifact identity. Local Python 3.10 and 3.12 generate identical outputs; native gate pending.",
-        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls.",
+        "integration": "503 tests and 88.644966% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37764545821 including five-environment artifact/schema/publication byte parity, distribution consumers 37764545840, dependency audit 37764545880, workflow lint 37764545608 and Python/TypeScript CodeQL 37764545867 all passed at 699205d9cb61ef52c04d563eb6a1cc82210aa6ef. Historical artifacts are preserved under an explicit validation boundary, not retroactively accepted or modified. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:42:23Z",
+        "number": 140,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/140",
+        "kind": "issue",
+        "resolution_commit": "699205d9cb61ef52c04d563eb6a1cc82210aa6ef",
+        "replacement_pr": 218
       }
     },
     {
@@ -2817,25 +2911,58 @@
       "number": 191,
       "title": "eslams replay HTML: the Details panel always shows chess rows (`FEN n/a`, `Validation check=n/a checkmate=n/a legal=n/a`) for every game",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Render game-specific details or omit inapplicable chess-only rows; verify chess and several non-chess examples.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/replay.py",
+          "scripts/generate_replay_fixtures.py",
+          "scripts/verify_replay_browser.cjs",
+          ".github/workflows/ci.yml",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+      }
     },
     {
       "number": 192,
       "title": "eslams replay HTML: move-list buttons are 18 px high (go: 121 buttons at 390 and 768 px viewports), below the 24 px WCAG 2.2 AA target size",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "18 px alone is insufficient to conclude WCAG failure because spacing and other exceptions matter. Measure effective target spacing on the rendered page; fix compact targets where needed and verify keyboard access separately.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/replay.py",
+          "scripts/generate_replay_fixtures.py",
+          "scripts/verify_replay_browser.cjs",
+          ".github/workflows/ci.yml",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+      }
     },
     {
       "number": 193,
       "title": "eslams replay HTML: non-chess boards are plain divs with bare letters (no role, no aria-label), so assistive technology gets no board structure",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Use appropriate board semantics and accessible names/coordinates for rendered games; validate keyboard/screen-reader reading order in representative board and fallback views.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/replay.py",
+          "scripts/generate_replay_fixtures.py",
+          "scripts/verify_replay_browser.cjs",
+          ".github/workflows/ci.yml",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Responsive minmax board tracks/cells and wrapped status; controls precede lists in DOM and mobile presentation. Stable move nodes preserve focus, roving list Tab stops bound navigation, Left/Right/Home/End and live status are supported. Labeled table/row/cell boards plus structured public-state fallback; only supplied chess details, actual recorded winners, numeric-zero labels, 40px nonshrinking move targets. No private data is added.",
+        "verification": "50 real validated keyless arena pages pass 300 initial/final Chromium viewport checks (390/768/1440) plus keyboard order/arrows, focus preservation, semantic labels, target sizes, non-chess details and numeric-zero behavior. Playwright 1.62.1 pinned and verified via npm registry. Full native/browser integration pending."
+      }
     },
     {
       "number": 194,
@@ -3204,7 +3331,7 @@
       "number": 209,
       "title": "eslams publish export --artifacts <runs dir> exports the newest run twice (latest.eslams symlink plus the real file): duplicate proof rows and double-counted token usage, bundle validates",
       "work_package": "W1",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Enumerate distinct artifacts by canonical identity, avoiding latest pointers/aliases without merging genuinely distinct runs; test deduplicated proof rows and exact usage totals.",
       "evidence": {
         "source": [
@@ -3223,14 +3350,24 @@
           "CHANGELOG.md"
         ],
         "implementation": "Shared validated artifact selection ignores latest pointers, prefers archive over expanded sibling and deduplicates identical artifact IDs, including renamed copies. Publication validator rejects duplicate proof IDs and mismatched artifact counts. Regressions cover ZIP/expanded/latest/copies and Official merge count.",
-        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls.",
+        "integration": "503 tests and 88.644966% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37764545821 including five-environment artifact/schema/publication byte parity, distribution consumers 37764545840, dependency audit 37764545880, workflow lint 37764545608 and Python/TypeScript CodeQL 37764545867 all passed at 699205d9cb61ef52c04d563eb6a1cc82210aa6ef. Historical artifacts are preserved under an explicit validation boundary, not retroactively accepted or modified. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:42:25Z",
+        "number": 209,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/209",
+        "kind": "issue",
+        "resolution_commit": "699205d9cb61ef52c04d563eb6a1cc82210aa6ef",
+        "replacement_pr": 218
       }
     },
     {
       "number": 210,
       "title": "eslams publish export is not deterministic: proof_index.jsonl embeds the absolute input path, so identical artifacts give different bundle hashes from different directories",
       "work_package": "W1",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Remove absolute local input paths from canonical publication proof rows; compare byte-identical bundles from different roots while retaining private diagnostics separately.",
       "evidence": {
         "source": [
@@ -3249,14 +3386,24 @@
           "CHANGELOG.md"
         ],
         "implementation": "Public proof rows and replay paths derive from content artifact identity. Byte-identical artifacts exported from different directories and renamed files produce exactly identical bundle files/hashes; no absolute input path remains in proof rows.",
-        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls.",
+        "integration": "503 tests and 88.644966% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37764545821 including five-environment artifact/schema/publication byte parity, distribution consumers 37764545840, dependency audit 37764545880, workflow lint 37764545608 and Python/TypeScript CodeQL 37764545867 all passed at 699205d9cb61ef52c04d563eb6a1cc82210aa6ef. Historical artifacts are preserved under an explicit validation boundary, not retroactively accepted or modified. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:42:27Z",
+        "number": 210,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/210",
+        "kind": "issue",
+        "resolution_commit": "699205d9cb61ef52c04d563eb6a1cc82210aa6ef",
+        "replacement_pr": 218
       }
     },
     {
       "number": 211,
       "title": "eslams publish export always writes an empty provider_model_rows.jsonl (documented provider/model rows) and cost_unavailable pricing even when the artifact has provider receipts",
       "work_package": "W1",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether provider_model_rows is a supported output. Populate it deterministically from validated receipts and reviewed price cards, or deprecate/document it. Missing cost data must remain unavailable, never invented.",
       "evidence": {
         "source": [
@@ -3275,7 +3422,17 @@
           "CHANGELOG.md"
         ],
         "implementation": "Project all provider receipt attempts by provider/requested/resolved identity with counts, token totals, usage completeness and receipt cost summaries. Complete USD costs are summed; partial known values remain explicit with unknown total rather than treating unpriced calls as free. Fake local provider run verifies four receipts, one row, exact usage and known costs without external inference.",
-        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls.",
+        "integration": "503 tests and 88.644966% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37764545821 including five-environment artifact/schema/publication byte parity, distribution consumers 37764545840, dependency audit 37764545880, workflow lint 37764545608 and Python/TypeScript CodeQL 37764545867 all passed at 699205d9cb61ef52c04d563eb6a1cc82210aa6ef. Historical artifacts are preserved under an explicit validation boundary, not retroactively accepted or modified. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:42:29Z",
+        "number": 211,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/211",
+        "kind": "issue",
+        "resolution_commit": "699205d9cb61ef52c04d563eb6a1cc82210aa6ef",
+        "replacement_pr": 218
       }
     },
     {
