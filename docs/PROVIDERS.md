@@ -81,6 +81,30 @@ Even parseable truncated output is rejected. These cases preserve usage/cost rec
 never trigger action repair, and never apply an action to the game. Refusal prose and
 raw error-body text are excluded from receipts.
 
+## Catalogue scope and identities
+
+The full registry includes broker/source namespaces beyond the curated 90-provider
+subset. Listing a model does not prove text-action support, direct-adapter support,
+account access or Official eligibility. Embeddings, rerankers, moderation and other
+non-chat tasks cannot be promoted by a text-modality label or capability override.
+[OpenAI embeddings](https://developers.openai.com/api/docs/guides/embeddings),
+[Cohere rerankers](https://docs.cohere.com/docs/reranking-best-practices), and the
+[NVIDIA EmbedCode](https://huggingface.co/nvidia/NV-EmbedCode-7b-v1) and
+[BAAI BGE](https://huggingface.co/BAAI/bge-base-en-v1.5) model cards describe these
+distinct tasks. Broker rows with those known identity markers are conservatively
+excluded even when upstream data mislabels them as chat.
+
+Public slugs use `[a-z0-9._-]`, start with a letter or digit, and are unique in
+the registry. Safe unique existing slugs retain their spelling. Unsafe identifiers
+and collisions receive a stable identity hash suffix; consumers should use the
+exported slug instead of deriving one by lowercasing the model ID. The model ID
+itself keeps its original case.
+
+A source-checkout registry refresh requires an explicit new `--output` snapshot.
+Provider filtering narrows that snapshot; it never implicitly shrinks the packaged
+registry. Models API listings update identity/availability metadata without
+overwriting known capabilities or marking unknown tasks game-supported.
+
 ## Running Each Adapter
 
 ```bash

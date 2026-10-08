@@ -54,6 +54,7 @@ def test_invalid_provider_credentials_fail_before_network_without_revealing_the_
         result = provider_preflight("openai", "gpt-5-mini", "tic-tac-toe", live=True)
         assert not result["ok"]
         assert result["error"]["error_class"] == "provider_auth_failed"
+        assert not key.strip() or key.strip() not in str(result)
 
 
 def test_preflight_distinguishes_catalogue_namespaces_from_available_adapters(monkeypatch):

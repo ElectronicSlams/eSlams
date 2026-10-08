@@ -244,9 +244,23 @@
       "number": 63,
       "title": "README `eslams models update --providers ...` overwrites tracked models.generated.json and shrinks it ~80% (8762 -> 1697)",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Live model refresh must preserve the source registry or use explicit separate generated output/reviewed diff; test partial provider refresh cannot silently shrink the full registry.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/providers/capabilities.py",
+          "src/eslams/providers/registry.py",
+          "src/eslams/cli.py",
+          "scripts/update_provider_registry.py",
+          "scripts/render_provider_registry_docs.py",
+          "tests/test_provider_catalogue_regressions.py",
+          "README.md",
+          "docs/PROVIDERS.md",
+          "docs/REGISTRY_AVAILABLE_MODELS.md"
+        ],
+        "implementation": "Source updater and CLI require an explicit new --output path; existing targets and implicit packaged-data writes are refused. Provider filter scope is documented as a snapshot subset. Source-fetch failures stop output; exclusive file creation prevents overwrites. Local fixture verifies packaged snapshot bytes remain unchanged, source failure produces no output and unknown API-listed tasks cannot override capability evidence.",
+        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release."
+      }
     },
     {
       "number": 67,
@@ -445,7 +459,7 @@
       "number": 80,
       "title": "Plain local runs report per_case_scoring_eligible false and attempt_ledger_incomplete since 0.6.0; docs example shows true",
       "work_package": "W3",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Define local play validity, scoring eligibility, provider-attempt completeness and publication authority separately. Empty provider ledger on keyless local play must not invent provider receipts or Official evidence.",
       "evidence": {
         "source": [
@@ -456,7 +470,18 @@
           "docs/ARTIFACTS.md"
         ],
         "implementation": "Correct local-agent documentation example: gameplay-valid/scoring_eligible is separate from provider case/publication eligibility. Zero-provider-call summaries name no_provider_calls rather than misleading attempt_ledger_incomplete. Provider-evidence completeness stays fail-closed and does not fabricate zero billed cost or promote Local Artifact to Official.",
-        "verification": "64 focused integrity, raw-wire, accounting, artifact-profile and case tests passed; full local/native checks pending. No paid model calls or release."
+        "verification": "64 focused integrity, raw-wire, accounting, artifact-profile and case tests passed; full local/native checks pending. No paid model calls or release.",
+        "integration": "496 tests passed on Python 3.12 and direct-minimum 3.10; 11559/13057 lines (88.527227%). Native Core CI 37761894232, isolated distribution consumers 37761894154, dependency audit 37761894220, workflow lint 37761894148 and Python/TypeScript CodeQL 37761894189 all passed at 32a4b1b. Local Make lint/mypy/TS/schema/benchmark targets and actionlint passed. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:18:56Z",
+        "number": 80,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/80",
+        "kind": "issue",
+        "resolution_commit": "32a4b1b93b8b171584cade6d81fa1144d9fe8f76",
+        "replacement_pr": 218
       }
     },
     {
@@ -1868,25 +1893,67 @@
       "number": 156,
       "title": "Catalogue marks 72 embedding and reranker models launch_status ready with Arena enabled; the same OpenAI embedding model is not_game_agent_supported under openai",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Disable game-agent/Arena readiness for embedding/reranker-only models based on real adapter capabilities; test provider aliases and model capability rows.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/providers/capabilities.py",
+          "src/eslams/providers/registry.py",
+          "src/eslams/cli.py",
+          "scripts/update_provider_registry.py",
+          "scripts/render_provider_registry_docs.py",
+          "tests/test_provider_catalogue_regressions.py",
+          "README.md",
+          "docs/PROVIDERS.md",
+          "docs/REGISTRY_AVAILABLE_MODELS.md"
+        ],
+        "implementation": "Conservative task/endpoint/known non-chat identity exclusions apply across broker namespaces, including embedcode/embedqa and BGE/E5 aliases. Text modalities or raw enabled/ready overrides cannot promote unsupported game tasks. Full 8762-record catalogue has zero embedding/reranker Arena-ready rows, with focused contradictory task/flag fixtures and active chat controls. API listing-only records no longer fabricate gameplay capabilities.",
+        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release."
+      }
     },
     {
       "number": 157,
       "title": "eslams catalogue models: public_slug collides for two together-ai bge-base models and 181 slugs contain @, * or ~",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "A public_slug collision is actionable; @ and ~ are not inherently illegal URL path characters. Define an injective stable slug grammar and encoding/redirect policy, then fix collisions and only prohibited characters.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/providers/capabilities.py",
+          "src/eslams/providers/registry.py",
+          "src/eslams/cli.py",
+          "scripts/update_provider_registry.py",
+          "scripts/render_provider_registry_docs.py",
+          "tests/test_provider_catalogue_regressions.py",
+          "README.md",
+          "docs/PROVIDERS.md",
+          "docs/REGISTRY_AVAILABLE_MODELS.md"
+        ],
+        "implementation": "Preserve safe unique existing slugs; sanitize invalid characters with stable identity suffix, disambiguate actual collision groups while preserving original model case, and fail if final IDs are not unique. All 8762 exported slugs are safe and distinct. Reversed-input fixture verifies stable collision resolution and Unicode/unsafe cases.",
+        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release."
+      }
     },
     {
       "number": 158,
       "title": "README and REGISTRY_AVAILABLE_MODELS.md say Core tracks 90 namespaces and 1926 rows, but eslams models list and catalogue models serve 8762 rows from 259 providers",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Generate current registry counts from the published catalogue and explain source versus routable adapter coverage; do not delete registry rows to match an old README count.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/providers/capabilities.py",
+          "src/eslams/providers/registry.py",
+          "src/eslams/cli.py",
+          "scripts/update_provider_registry.py",
+          "scripts/render_provider_registry_docs.py",
+          "tests/test_provider_catalogue_regressions.py",
+          "README.md",
+          "docs/PROVIDERS.md",
+          "docs/REGISTRY_AVAILABLE_MODELS.md"
+        ],
+        "implementation": "README and generated inventory explicitly separate full CLI registry (8762 rows/259 namespaces) from curated 90-namespace subset. Generator computes actual full/subset counts and describes listing/override flags without claiming live inference attestation.",
+        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release."
+      }
     },
     {
       "number": 159,
@@ -2882,7 +2949,7 @@
       "number": 203,
       "title": "'eslams validate --profile official-case' fails with misleading action_provenance_incomplete when official_eval run had no --case-id",
       "work_package": "W3",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Reject missing official-case identity before execution/validation with a specific error; do not infer a hidden case or weaken provenance completeness.",
       "evidence": {
         "source": [
@@ -2893,7 +2960,18 @@
           "docs/ARTIFACTS.md"
         ],
         "implementation": "Official-case validator explicitly reports case_id_missing and validates identity consistency in manifest/score/receipts. Missing case identity no longer masquerades as action_provenance_incomplete. Named identity is required for publication eligibility even when signed gameplay/usage/cost/ledger is valid. Diagnostic official_eval runs remain possible; blank/nonstring provided case IDs fail construction. Two signed same-game fixtures prove no-ID exact failure vs complete named-case pass.",
-        "verification": "64 focused integrity, raw-wire, accounting, artifact-profile and case tests passed; full local/native checks pending. No paid model calls or release."
+        "verification": "64 focused integrity, raw-wire, accounting, artifact-profile and case tests passed; full local/native checks pending. No paid model calls or release.",
+        "integration": "496 tests passed on Python 3.12 and direct-minimum 3.10; 11559/13057 lines (88.527227%). Native Core CI 37761894232, isolated distribution consumers 37761894154, dependency audit 37761894220, workflow lint 37761894148 and Python/TypeScript CodeQL 37761894189 all passed at 32a4b1b. Local Make lint/mypy/TS/schema/benchmark targets and actionlint passed. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:18:58Z",
+        "number": 203,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/203",
+        "kind": "issue",
+        "resolution_commit": "32a4b1b93b8b171584cade6d81fa1144d9fe8f76",
+        "replacement_pr": 218
       }
     },
     {
@@ -3345,7 +3423,7 @@
       "number": 36,
       "head": "4b19d984c02cc7712a81ede93941012b6389f880",
       "title": "chore: add Dependabot for Actions and Python deps",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: superseded by #218",
       "review_route": "Retain, conditional",
       "criterion": "Verify scoped update groups, supported-Python checks and actionable notification policy; merge after dependency baseline is established. No auto-merge without the same contract gates.",
       "evidence": {
@@ -3354,7 +3432,17 @@
           "CONTRIBUTING.md"
         ],
         "disposition": "Incorporate weekly grouped Python/Actions update proposals with capped open PRs and no automatic merges. Runtime/dev floors and pinned-action audits remain enforced.",
-        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending."
+        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending.",
+        "integration": "496 tests passed on Python 3.12 and direct-minimum 3.10; 11559/13057 lines (88.527227%). Native Core CI 37761894232, isolated distribution consumers 37761894154, dependency audit 37761894220, workflow lint 37761894148 and Python/TypeScript CodeQL 37761894189 all passed at 32a4b1b. Local Make lint/mypy/TS/schema/benchmark targets and actionlint passed. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:19:00Z",
+        "number": 36,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/36",
+        "kind": "pull_request",
+        "resolution_commit": "32a4b1b93b8b171584cade6d81fa1144d9fe8f76",
+        "replacement_pr": 218
       }
     },
     {
@@ -3383,7 +3471,7 @@
       "number": 38,
       "head": "f72351d79664a05ff12c36b2a564211b96025138",
       "title": "test: keyless local tic-tac-toe smoke",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: superseded by #218",
       "review_route": "Supersede / consolidate",
       "criterion": "Consolidate with revised #18 and existing runner tests after local execution/scoring/billing semantics are explicit; close original with replacement coverage link.",
       "evidence": {
@@ -3396,7 +3484,17 @@
           "CONTRIBUTING.md"
         ],
         "disposition": "Supersede duplicate one-game test with existing native/full-no-Git-sdist and isolated wheel/sdist keyless CLI run/validate/replay/export checks and retained Local Artifact/official boundary assertions. Do not add redundant wrappers after completing 20% original-test consolidation.",
-        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending."
+        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending.",
+        "integration": "496 tests passed on Python 3.12 and direct-minimum 3.10; 11559/13057 lines (88.527227%). Native Core CI 37761894232, isolated distribution consumers 37761894154, dependency audit 37761894220, workflow lint 37761894148 and Python/TypeScript CodeQL 37761894189 all passed at 32a4b1b. Local Make lint/mypy/TS/schema/benchmark targets and actionlint passed. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:19:02Z",
+        "number": 38,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/38",
+        "kind": "pull_request",
+        "resolution_commit": "32a4b1b93b8b171584cade6d81fa1144d9fe8f76",
+        "replacement_pr": 218
       }
     },
     {
@@ -3444,7 +3542,7 @@
       "number": 41,
       "head": "6d89cdd62c81d7d06f60b79dd6d1d76ce7e98157",
       "title": "ci: add SHA-pinned CodeQL workflow",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: superseded by #218",
       "review_route": "Retain, conditional",
       "criterion": "Verify security settings, least permissions and fork behavior, baseline actionable findings and check pinned action; merge one supported analysis configuration.",
       "evidence": {
@@ -3453,7 +3551,18 @@
           "CONTRIBUTING.md"
         ],
         "disposition": "Incorporate Python and TypeScript CodeQL scans; repository default setup is not configured, so there is no duplicate setup. Verified v4.38.1 annotated tag peels to proposed SHA 1c5b675653bb5c22dbe9b12b556ec555138e09fd via official GitHub API. Restrict security-events write to analyze job and disable checkout credential persistence.",
-        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending."
+        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending.",
+        "integration": "496 tests passed on Python 3.12 and direct-minimum 3.10; 11559/13057 lines (88.527227%). Native Core CI 37761894232, isolated distribution consumers 37761894154, dependency audit 37761894220, workflow lint 37761894148 and Python/TypeScript CodeQL 37761894189 all passed at 32a4b1b. Local Make lint/mypy/TS/schema/benchmark targets and actionlint passed. No release.",
+        "codeql_followup": "First scan reported one preflight logging alert sourced to environment-name/presence/error diagnostics. Inspected complete alert and actual credential normalization: credential values are not returned. Tighten output to literal presence booleans and a generic credential-validation message; retain key-echo regressions. A fresh scan must verify the change; no query suppression or alert dismissal."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:19:04Z",
+        "number": 41,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/41",
+        "kind": "pull_request",
+        "resolution_commit": "32a4b1b93b8b171584cade6d81fa1144d9fe8f76",
+        "replacement_pr": 218
       }
     },
     {
@@ -3540,7 +3649,7 @@
       "number": 46,
       "head": "6789e80cea560bd0e4b0c1c78789a31af56b4e70",
       "title": "Add a root Makefile for documented contributor commands",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: superseded by #218",
       "review_route": "Supersede / consolidate",
       "criterion": "Retain corrected commands in CONTRIBUTING or a small consolidated Makefile using the selected interpreter; close original after one authoritative developer setup exists.",
       "evidence": {
@@ -3550,7 +3659,17 @@
           "CONTRIBUTING.md"
         ],
         "disposition": "Incorporate contributor Makefile using interpreter-selected python -m commands and active-version mypy. Retain exact pinned TS checks; replace global /tmp/eslams output paths with configurable ignored .checks. Windows direct commands remain documented. No destructive or release targets.",
-        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending."
+        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending.",
+        "integration": "496 tests passed on Python 3.12 and direct-minimum 3.10; 11559/13057 lines (88.527227%). Native Core CI 37761894232, isolated distribution consumers 37761894154, dependency audit 37761894220, workflow lint 37761894148 and Python/TypeScript CodeQL 37761894189 all passed at 32a4b1b. Local Make lint/mypy/TS/schema/benchmark targets and actionlint passed. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:19:07Z",
+        "number": 46,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/46",
+        "kind": "pull_request",
+        "resolution_commit": "32a4b1b93b8b171584cade6d81fa1144d9fe8f76",
+        "replacement_pr": 218
       }
     },
     {

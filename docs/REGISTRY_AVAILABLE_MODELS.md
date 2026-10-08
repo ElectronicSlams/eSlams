@@ -1,8 +1,8 @@
-# Catalogued provider models (registry snapshot)
+# Registry inventory and curated model subset
 
-Core tracks **90 canonical provider/author namespaces**. The original 69 curated organizations are joined by Cursor from a platform API-discovered model row and 20 author namespaces from the release-pinned OpenRouter text-model snapshot.
+The full CLI registry has **8,762 model rows across 259 provider namespaces**. The tables below cover only the **90 curated provider/author namespaces**. The original 69 curated organizations are joined by Cursor from a platform API-discovered model row and 20 author namespaces from the release-pinned OpenRouter text-model snapshot.
 
-This file describes source-backed catalog identities, not direct-adapter or account availability. A model row means an upstream registry source or checked-in override documented the identity. Only `available_from_api=true` is an API verification signal, and public eSlams availability is controlled separately by the deployed platform catalog.
+This file describes source-backed catalog identities, not direct-adapter or account availability. A model row means an upstream registry source or checked-in override documented the identity. `available_from_api=true` records an upstream listing or override flag; it does not attest a successful live inference. and public eSlams availability is controlled separately by the deployed platform catalog.
 
 Generated with `python scripts/render_provider_registry_docs.py` from `models.generated.json`, `overrides.json`, and `REQUESTED_PROVIDER_ORGANIZATIONS`.
 
@@ -10,7 +10,7 @@ Registry snapshot: `2026-07-31T14:48:48Z`
 
 Sources: models.dev, litellm
 
-Catalogued rows: **1925** (3 with `available_from_api=true`)
+Curated-subset rows: **1925** (3 with `available_from_api=true`). Full-registry rows: **8,762**. Use `eslams models list --json` or `eslams catalogue models --json` for all rows.
 
 Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to the same canonical provider keys used by the public `/models/...` routes.
 

@@ -665,16 +665,22 @@ eslams models list --provider openai --game-agent-supported
 eslams models list --provider gemini --game-agent-supported --json
 ```
 
-From a source checkout, refresh the generated registry:
+From a source checkout, generate a separate registry snapshot for review:
 
 ```bash
-eslams models update --providers openai,anthropic,google,openrouter,bedrock
+eslams models update --providers openai,anthropic,google,openrouter,bedrock --output model-registry.snapshot.json
 ```
+
+The updater requires a new `--output` file. A provider filter defines the snapshot
+scope; it can produce a smaller inventory. Inspect it before deliberately replacing
+checked-in data. It never changes the packaged registry implicitly, and a failed
+source fetch does not produce a successful partial snapshot.
 
 Provider organizations tracked by the registry:
 
-Core tracks the same **90 canonical provider/author namespaces** as the public
-eSlams model catalog. The count is source-backed: 69 organizations were in the
+The full CLI registry currently contains **8,762 model rows across 259 provider
+namespaces**. The table below and generated inventory describe a **90-namespace
+curated subset**, rather than the full CLI registry. The curated count is source-backed: 69 organizations were in the
 original curated Core list, Cursor was added from the platform's API-discovered
 Composer model row, and 20 additional author namespaces come from the
 release-pinned OpenRouter text-model snapshot. A listing is a catalog identity,

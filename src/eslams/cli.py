@@ -287,6 +287,10 @@ def _main(argv: list[str] | None = None) -> int:
     )
     models_update.add_argument("--providers", default="")
     models_update.add_argument("--skip-public", action="store_true")
+    models_update.add_argument(
+        "--output", type=Path, required=True,
+        help="Write a new snapshot to this path; never update the packaged registry implicitly.",
+    )
 
     run = sub.add_parser("run", help="Run a local match and create a .eslams artifact.")
     run.add_argument("--arena", default="connect-four", choices=registry.list())
@@ -942,7 +946,7 @@ def _run_registry_update(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    command = [sys.executable, str(script)]
+    command = [sys.executable, str(script), "--output", str(args.output)]
     if args.providers:
         command.extend(["--providers", args.providers])
     if args.skip_public:

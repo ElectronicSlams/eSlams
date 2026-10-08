@@ -10,6 +10,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from eslams.hashing import sha256_json
+
 CapabilityFlagMap = dict[str, dict[str, Any]]
 MODEL_LIFECYCLES = {"active", "deprecated", "retired", "alias", "account-dependent"}
 
@@ -58,7 +60,12 @@ class ModelCapabilities:
         modalities = value.get("modalities")
         if not isinstance(modalities, dict):
             modalities = {"input": ["text"], "output": ["text"]}
-        game_agent_supported = bool(value.get("game_agent_supported", False))
+        game_agent_supported = (
+            value.get("game_agent_supported") is True
+            and "text" in _strings(modalities.get("input"))
+            and "text" in _strings(modalities.get("output"))
+            and not is_non_game_model(value)
+        )
         provider = str(value["provider"]).lower()
         model = str(value["model"])
         supports_reasoning = bool(value.get("supports_reasoning", False))
@@ -135,8 +142,7 @@ class ModelCapabilities:
             launch_status=_launch_status(value.get("launch_status"), game_agent_supported),
             eligibility_reasons=_strings(value.get("eligibility_reasons")),
             source_model_id=_optional_str(value.get("source_model_id")) or str(value["model"]),
-            public_slug=_optional_str(value.get("public_slug"))
-            or _public_slug(str(value["provider"]), str(value["model"])),
+            public_slug=_safe_public_slug(value.get("public_slug"), provider, model),
             display_name=_optional_str(value.get("display_name")) or str(value["model"]),
             modality_summary=_optional_str(value.get("modality_summary"))
             or _modality_summary(modalities),
@@ -389,7 +395,7 @@ def _capability_flags(
             "reason": "not_evaluated",
         },
     }
-    if not isinstance(value, dict):
+    if not isinstance(value, dict) or not game_agent_supported:
         return defaults
     merged: CapabilityFlagMap = dict(defaults)
     for key in ("official_eval", "battlefield", "arena"):
@@ -407,13 +413,48 @@ def _capability_flags(
 
 
 def _launch_status(value: Any, game_agent_supported: bool) -> str:
+    if not game_agent_supported:
+        return "not_evaluated"
     if isinstance(value, str) and value:
         return value
     return "ready" if game_agent_supported else "not_evaluated"
 
 
 def _public_slug(provider: str, model: str) -> str:
-    return f"{provider}-{model}".lower().replace("_", "-").replace("/", "-").replace(":", "-")
+    legacy = f"{provider}-{model}".lower().replace("_", "-").replace("/", "-").replace(":", "-")
+    if re.fullmatch(r"[a-z0-9][a-z0-9._-]*", legacy):
+        return legacy
+    readable = re.sub(r"[^a-z0-9._-]+", "-", legacy).strip("._-") or "model"
+    digest = sha256_json([provider, model]).split(":", 1)[1][:12]
+    return f"{readable}-{digest}"
+
+
+def _safe_public_slug(value: Any, provider: str, model: str) -> str:
+    if isinstance(value, str) and re.fullmatch(r"[a-z0-9][a-z0-9._-]*", value):
+        return value
+    return _public_slug(provider, model)
+
+
+def is_non_game_model(value: dict[str, Any]) -> bool:
+    """Reject explicit non-generative tasks and known non-chat identity markers.
+
+    Some upstream broker rows mislabel embeddings/rerankers as text chat. Text
+    modalities alone cannot override those task/endpoint/identity exclusions.
+    """
+    non_game_tasks = {
+        "embedding", "embeddings", "embed", "rerank", "reranker", "moderation",
+        "image_generation", "image-generation", "audio_transcription", "transcription",
+        "audio_speech", "speech", "text-to-speech", "feature-extraction",
+        "text-classification",
+    }
+    tasks = [value.get(key) for key in ("mode", "task", "model_type", "pipeline_tag")]
+    tasks.extend(_strings(value.get("endpoints")))
+    if any(isinstance(task, str) and task.lower() in non_game_tasks for task in tasks):
+        return True
+    return re.search(
+        r"(?:^|[/_.-])(?:embeddings?|embed(?:code|qa)?|rerank(?:er)?|moderation|bge|e5)(?:$|[/_.-])",
+        str(value.get("model", "")).lower(),
+    ) is not None
 
 
 def _modality_summary(modalities: dict[str, Any]) -> str:

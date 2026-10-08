@@ -23,6 +23,8 @@ def markdown_cell(value: str) -> str:
 
 def render() -> str:
     registry = load_provider_registry()
+    all_rows = registry.list_models()
+    all_providers = {record.provider for record in all_rows}
     provider_names = dict(REQUESTED_PROVIDER_ORGANIZATIONS)
     rows = [
         record
@@ -41,16 +43,19 @@ def render() -> str:
     )
     source_names = ", ".join(registry.sources) or "none recorded"
     lines = [
-        "# Catalogued provider models (registry snapshot)",
+        "# Registry inventory and curated model subset",
         "",
-        f"Core tracks **{len(provider_names)} canonical provider/author namespaces**. "
+        f"The full CLI registry has **{len(all_rows):,} model rows across "
+        f"{len(all_providers)} provider namespaces**. The tables below cover only the "
+        f"**{len(provider_names)} curated provider/author namespaces**. "
         f"The original {original_count} curated organizations are joined by Cursor from a "
         "platform API-discovered model row and 20 author namespaces from the release-pinned "
         "OpenRouter text-model snapshot.",
         "",
         "This file describes source-backed catalog identities, not direct-adapter or account "
         "availability. A model row means an upstream registry source or checked-in override "
-        "documented the identity. Only `available_from_api=true` is an API verification signal, "
+        "documented the identity. `available_from_api=true` records an upstream listing or "
+        "override flag; it does not attest a successful live inference. "
         "and public eSlams availability is controlled separately by the deployed platform catalog.",
         "",
         "Generated with `python scripts/render_provider_registry_docs.py` from "
@@ -60,7 +65,9 @@ def render() -> str:
         "",
         f"Sources: {source_names}",
         "",
-        f"Catalogued rows: **{len(rows)}** ({api_verified} with `available_from_api=true`)",
+        f"Curated-subset rows: **{len(rows)}** ({api_verified} with `available_from_api=true`). "
+        f"Full-registry rows: **{len(all_rows):,}**. "
+        "Use `eslams models list --json` or `eslams catalogue models --json` for all rows.",
         "",
         "Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to the "
         "same canonical provider keys used by the public `/models/...` routes.",

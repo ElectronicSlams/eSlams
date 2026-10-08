@@ -46,23 +46,27 @@ def provider_preflight(
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
-    api_key_env = DEFAULT_PROVIDER_ENV.get(record.provider)
+    credential_environment = DEFAULT_PROVIDER_ENV.get(record.provider)
     credential_error = None
-    try:
-        api_key_configured = bool(api_key_env and provider_key(api_key_env))
-    except ValueError as exc:
-        api_key_configured = False
-        credential_error = str(exc)
+    credential_present = False
+    if credential_environment:
+        try:
+            if provider_key(credential_environment) is not None:
+                credential_present = True
+        except ValueError:
+            credential_error = (
+                "API key must contain printable ASCII without internal whitespace"
+            )
     checks: dict[str, bool | None] = {
         "registry_entry": record.known,
-        "adapter_available": api_key_env is not None,
+        "adapter_available": credential_environment is not None,
         "game_agent_supported": record.allows_text_game_agent(),
         "model_lifecycle_available": (
             record.lifecycle != "retired" and record.available_from_api is not False
         ),
         "arena_available": True,
         "legal_action_available": bool(legal_actions),
-        "api_key_configured": api_key_configured,
+        "api_key_configured": credential_present,
         "account_model_visible": None,
         "minimal_inference": False,
         "response_parsing": False,
@@ -72,7 +76,7 @@ def provider_preflight(
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
 
-    if api_key_env is None:
+    if credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
@@ -91,10 +95,10 @@ def provider_preflight(
         error = {"error_class": "provider_auth_failed", "message": credential_error}
     elif not live:
         warnings.append("This registry-only preflight did not verify live provider availability.")
-    elif not api_key_env or not api_key_configured:
+    elif not credential_environment or not credential_present:
         error = {
             "error_class": "provider_auth_failed",
-            "message": f"missing API key environment variable {api_key_env or 'unknown'}",
+            "message": f"missing API key environment variable {credential_environment}",
         }
     else:
         try:
@@ -138,7 +142,7 @@ def provider_preflight(
             agent = ModelProviderAgent(
                 provider=record.provider,
                 model=model,
-                api_key_env=api_key_env,
+                api_key_env=credential_environment,
                 max_output_tokens=1024 if record.supports_reasoning else 128,
                 runtime_config=ProviderRuntimeConfig(
                     timeout_ms=30_000,
