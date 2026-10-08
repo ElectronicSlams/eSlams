@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Add table-seat CLI agents, explicit run IDs with safe overwrite, and optional
+  `--require-scoring-valid` status for automation that needs a scoreable match.
+- Remove ignored catalogue include flags: full JSON already includes help,
+  rendering and animation. Text availability now summarizes counts; renderer
+  text uses actual replay/timeline fields.
+- Correct artifact layout, signing-key format, reserved Arena events and the
+  random-agent example. Historical topology counts describe their release;
+  the 0.5.1 catalogue changed to 13 solo / 31 head-to-head / 6 multi-seat games.
+  Unreleased Hanabi uses a cooperative topology.
+
 - Gin Rummy 1.0.1 fixes ace-low/disjoint meld evaluation and final stock discard
   cancellation; cancelled hands award no points. The compact hand and omitted
   full-match rules are documented.

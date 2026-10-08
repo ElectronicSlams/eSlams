@@ -44,9 +44,22 @@
       "number": 54,
       "title": "`eslams agent test` always reports \"ok\": true / exit 0, even when the agent is unreachable or returns illegal actions",
       "work_package": "W8",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Agent-test ok/exit status must reflect unreachable/illegal responses; test successful, transport-failed and illegal-action agents using local fixtures.",
-      "evidence": "agent test now bases ok/exit status on tested logical actions and absence of agent errors, illegal actions and fallbacks, with failure reason/counts. Four local mocked endpoint regressions cover success, connection failure, illegal action and malformed response; artifacts validate for both successful and failed diagnostics."
+      "evidence": {
+        "implementation": "agent test now bases ok/exit status on tested logical actions and absence of agent errors, illegal actions and fallbacks, with failure reason/counts. Four local mocked endpoint regressions cover success, connection failure, illegal action and malformed response; artifacts validate for both successful and failed diagnostics.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:03Z",
+        "number": 54,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/54",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 55,
@@ -86,7 +99,7 @@
       "number": 56,
       "title": "`twine check` fails on a fresh build with the dev-extra twine (<7): '2.5' is not a valid metadata version",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Build fresh wheel/sdist, require a Twine version that supports generated metadata, and run twine check on both. No PyPI publication is necessary to verify this.",
       "evidence": {
         "source": [
@@ -102,32 +115,80 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:05Z",
+        "number": 56,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/56",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
       "number": 57,
       "title": "CLI prints raw Python tracebacks for ordinary user errors (unknown agent/arena, missing file, bad JSON)",
       "work_package": "W8",
-      "status": "implemented; installed-wheel verification on macOS/Python 3.9",
+      "status": "closed: completed",
       "criterion": "Keep open; require console-entry-point handling and actual installed-command verification.",
-      "evidence": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite)."
+      "evidence": {
+        "implementation": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite).",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:07Z",
+        "number": 57,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/57",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 58,
       "title": "`eslams run` exits 0 when the run is invalid for scoring (e.g. provider auth failure)",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Define CLI execution exit status separately from scoring eligibility. Retaining exit 0 for a completed diagnostic run is defensible if clearly documented; add an explicit strict mode if needed without silently breaking existing automation.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 59,
       "title": "`eslams run --max-turns 0` / negative accepted; zero-turn run is match_valid_for_scoring: true",
       "work_package": "W3",
-      "status": "implemented; full local verification",
+      "status": "closed: completed",
       "criterion": "Reject zero/negative turn caps before output creation; test that no scoring-valid empty run is emitted. Resolve jointly with #102.",
-      "evidence": "RunConfig rejects nonpositive/noninteger/bool turn caps before output creation. External nonterminal truncation emits run_truncated, scoring-invalid diagnostic artifact and non-scoring physical receipts; declared arena horizon remains valid. Validator rejects refreshed score/manifest/publication claims on nonterminal replay. Completed mocked provider case runs to a real terminal state; signed/local fixtures regenerated as complete games. Full Python 3.9/macOS suite passed; cross-version/native OS gates remain."
+      "evidence": {
+        "implementation": "RunConfig rejects nonpositive/noninteger/bool turn caps before output creation. External nonterminal truncation emits run_truncated, scoring-invalid diagnostic artifact and non-scoring physical receipts; declared arena horizon remains valid. Validator rejects refreshed score/manifest/publication claims on nonterminal replay. Completed mocked provider case runs to a real terminal state; signed/local fixtures regenerated as complete games. Full Python 3.9/macOS suite passed; cross-version/native OS gates remain.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:09Z",
+        "number": 59,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/59",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 60,
@@ -149,12 +210,23 @@
       "number": 62,
       "title": "pip install from GitHub source archive (tag tarball / Download ZIP / git archive) fails: 'cannot build Core without immutable source provenance'",
       "work_package": "W7",
-      "status": "implemented; distribution verification pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: The immutable-provenance refusal is deliberate. Support source archives only with authenticated embedded provenance, or document Git/wheel installation; never fabricate a commit or weaken fail-closed provenance.",
       "evidence": {
         "commit": "89e9e1a",
         "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
-        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:12Z",
+        "number": 62,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/62",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -169,9 +241,22 @@
       "number": 67,
       "title": "Arena start example in README fails after draft PR #21 (fail-closed session secret); README and CHANGELOG not updated",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Treat README, environment names and changelog as #21 acceptance criteria.",
-      "evidence": "README and Platform CLI examples generate and retain an explicit local secret. Unreleased changelog covers fail-closed secrets, unsigned-state migration, authenticated HTTP and removed process-local shell workflow. Python/CLI session and authentication regression checks pass."
+      "evidence": {
+        "implementation": "README and Platform CLI examples generate and retain an explicit local secret. Unreleased changelog covers fail-closed secrets, unsigned-state migration, authenticated HTTP and removed process-local shell workflow. Python/CLI session and authentication regression checks pass.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:14Z",
+        "number": 67,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/67",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 68,
@@ -261,25 +346,62 @@
       "number": 75,
       "title": "Data loss: artifact public-export, publish export and fixtures replay delete the --out directory before validating input (--out . deletes the current directory)",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Validate inputs and canonical source/destination relationships first; refuse dangerous/preexisting destinations by default; stage output atomically. Test current directory, ancestor, source directory, symlink aliases and existing unrelated-file preservation for every affected command.",
-      "evidence": "tests/test_output_safety.py; publication, fixture and runner artifact regressions pass"
+      "evidence": {
+        "implementation": "tests/test_output_safety.py; publication, fixture and runner artifact regressions pass",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:16Z",
+        "number": 75,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/75",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 76,
       "title": "`eslams replay --output` and `core golden --out` overwrite the input artifact without warning",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Reject input/output aliasing, directories and unintended existing outputs before writing; test replay and golden exports preserve source bytes with explicit overwrite behavior only when safe.",
-      "evidence": "tests/test_output_safety.py: source/file/hardlink preservation, explicit overwrite, replay extra-argument error; 54 relevant tests pass; changed sources Ruff and mypy pass"
+      "evidence": {
+        "implementation": "tests/test_output_safety.py: source/file/hardlink preservation, explicit overwrite, replay extra-argument error; 54 relevant tests pass; changed sources Ruff and mypy pass",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:18Z",
+        "number": 76,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/76",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 77,
       "title": "6 of 50 advertised arenas cannot be run from the CLI (bridge, dou-dizhu, mahjong, leduc-holdem, limit-texas-holdem, no-limit-texas-holdem): raw traceback, no per-seat agent option",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Add an explicit per-seat agent mapping, or give actionable unsupported-mode errors and accurate capability docs. Run an actual supported CLI match for each affected multi-seat game.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 78,
@@ -309,7 +431,7 @@
       "number": 85,
       "title": "Licensing disclosure question: GPL-3.0+ `chess` dependency (via `python-chess`) in MIT-licensed eslams-core is not mentioned in docs",
       "work_package": "W7",
-      "status": "implemented; documentation review complete",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Repository owner should review third-party license disclosure and distribution obligations. Record the chosen disclosure/dependency policy; this review makes no legal determination and does not automatically change the Core license.",
       "evidence": {
         "files": [
@@ -321,7 +443,18 @@
           "https://pypi.org/project/chess/1.11.2/",
           "https://python-chess.readthedocs.io/en/latest/#license"
         ],
-        "disposition": "Disclose required GPL-3.0-or-later dependencies separately from MIT Core. Required dependency unchanged; no legal conclusion or release action."
+        "disposition": "Disclose required GPL-3.0-or-later dependencies separately from MIT Core. Required dependency unchanged; no legal conclusion or release action.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:20Z",
+        "number": 85,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/85",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -553,17 +686,43 @@
       "number": 101,
       "title": "Runner: float (3.0) and bool (True) actions pass legality then fail or are accepted inconsistently; forfeit and fallback policies ignored",
       "work_package": "W3",
-      "status": "implemented; full local verification on Python 3.9 and 3.12",
+      "status": "closed: completed",
       "criterion": "Validate action shapes/types at the boundary, rejecting bool/nonintegral forms consistently before indexing. Test illegal-action and fallback/forfeit policy and receipt provenance.",
-      "evidence": "Arena legality compares JSON values with strict types, including nested lists/dicts and finite floats; bool/int/float aliases cannot pass membership and fail later while bypassing failure policy. Policy tests cover invalid-match/forfeit/fallback for True and 3.0; rejected mocked provider action stays unapplied/non-scoring when fallback is used. Full Python 3.9 suite passed; native matrix pending. Full Python 3.12 suite also passed (373 cases), with strict typing across 95 modules."
+      "evidence": {
+        "implementation": "Arena legality compares JSON values with strict types, including nested lists/dicts and finite floats; bool/int/float aliases cannot pass membership and fail later while bypassing failure policy. Policy tests cover invalid-match/forfeit/fallback for True and 3.0; rejected mocked provider action stays unapplied/non-scoring when fallback is used. Full Python 3.9 suite passed; native matrix pending. Full Python 3.12 suite also passed (373 cases), with strict typing across 95 modules.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:23Z",
+        "number": 101,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/101",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 102,
       "title": "Runner: max_turns below natural game length yields a scoring-valid run with no outcome and 0/0 scores (extends #59)",
       "work_package": "W3",
-      "status": "implemented; full local verification",
+      "status": "closed: completed",
       "criterion": "Mark externally truncated nonterminal runs invalid/incomplete for the agreed scoring contract; preserve replay/diagnostic output and distinguish a declared arena horizon outcome from runner truncation.",
-      "evidence": "RunConfig rejects nonpositive/noninteger/bool turn caps before output creation. External nonterminal truncation emits run_truncated, scoring-invalid diagnostic artifact and non-scoring physical receipts; declared arena horizon remains valid. Validator rejects refreshed score/manifest/publication claims on nonterminal replay. Completed mocked provider case runs to a real terminal state; signed/local fixtures regenerated as complete games. Full Python 3.9/macOS suite passed; cross-version/native OS gates remain."
+      "evidence": {
+        "implementation": "RunConfig rejects nonpositive/noninteger/bool turn caps before output creation. External nonterminal truncation emits run_truncated, scoring-invalid diagnostic artifact and non-scoring physical receipts; declared arena horizon remains valid. Validator rejects refreshed score/manifest/publication claims on nonterminal replay. Completed mocked provider case runs to a real terminal state; signed/local fixtures regenerated as complete games. Full Python 3.9/macOS suite passed; cross-version/native OS gates remain.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:25Z",
+        "number": 102,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/102",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 103,
@@ -617,12 +776,23 @@
       "number": 113,
       "title": "PyPI long description uses relative links (docs/, CHANGELOG.md, sample_runs/) that resolve to the PyPI project page",
       "work_package": "W9",
-      "status": "implemented; distribution verification pending",
+      "status": "closed: completed",
       "criterion": "Render PyPI README with absolute repository/tag-aware links and inspect generated metadata, keeping local README navigation usable.",
       "evidence": {
         "commit": "89e9e1a",
         "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
-        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:28Z",
+        "number": 113,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/113",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -671,20 +841,42 @@
       "number": 116,
       "title": "README/ARTIFACTS signing example uses placeholder `base64:...`; copied literally it crashes the run, and the 32-byte key format is documented nowhere",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Provide a safe throwaway 32-byte key-generation recipe and explicit base64/hex format errors. Test copied examples without real signing keys or granting Official authority.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 117,
       "title": "README says the package ships the TypeScript packages, but the PyPI wheel has none, the sdist only has sources, and npm has neither package",
       "work_package": "W7",
-      "status": "implemented; distribution verification pending",
+      "status": "closed: completed",
       "criterion": "Document wheel versus TypeScript source/publication honestly. Private flags do not make npm packages available or establish parity; test actual release contents.",
       "evidence": {
         "commit": "89e9e1a",
         "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
-        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:30Z",
+        "number": 117,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/117",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -699,73 +891,167 @@
       "number": 119,
       "title": "README/CONTRIBUTING are POSIX-only (reading-only) and the Quick Start fails after the run when symlinks are unavailable (simulated Windows)",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Provide documented Windows equivalents and a safe latest-run fallback if symlink creation is unavailable; verify on native Windows before claiming support.",
       "evidence": {
         "commit": "9aadbc0",
         "checks": "tests/test_latest_links.py + original non-symlink preservation checks; relocation, 24 concurrent runs, simulated EPERM; native/full gates pending final head",
-        "docs": "README expanded-path and symlink fallback guidance"
+        "docs": "README expanded-path and symlink fallback guidance",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:32Z",
+        "number": 119,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/119",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
       "number": 120,
       "title": "docs/ARTIFACTS.md \"Required structure\" omits replay/index.html and timings/timings.json that every run writes",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Consolidate this narrow layout omission into #165. Close as duplicate only with an explicit parent link and complete coverage of replay/timing members; close parent after docs match generated artifacts.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 121,
       "title": "eslams fixtures artifact deletes unrelated files: sibling <stem>.eslams.d for dotted --out names and latest.eslams pointers in the output directory",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Output ownership must be explicit: avoid deleting sibling .eslams.d directories or unrelated latest pointers. Test dotted names, mixed outputs and existing files.",
-      "evidence": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite."
+      "evidence": {
+        "implementation": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:34Z",
+        "number": 121,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/121",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 122,
       "title": "eslams catalogue games: --include-help, --include-render and --include-animation are accepted but ignored (output byte-identical)",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Implement documented include flags or remove/reject unsupported flags; test semantic output differences without asserting every optional renderer is ready.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 123,
       "title": "eslams catalogue availability (text mode) prints 438,100 lines with only 100 distinct (model dropped); catalogue renderers shows an invented status=ready",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Preserve model identity in text rows and report renderer readiness from actual capabilities; test bounded distinct rows and truthful unavailable/partial statuses.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 124,
       "title": "eslams run creates runs/latest.eslams symlinks with absolute targets: copied or moved project directories get dangling or wrong pointers",
       "work_package": "W1",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Use a relocatable relative latest pointer or manifest pointer; copy/move a run directory and verify the pointer follows the intended artifact.",
       "evidence": {
         "commit": "9aadbc0",
         "checks": "tests/test_latest_links.py + original non-symlink preservation checks; relocation, 24 concurrent runs, simulated EPERM; native/full gates pending final head",
-        "docs": "README expanded-path and symlink fallback guidance"
+        "docs": "README expanded-path and symlink fallback guidance",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:36Z",
+        "number": 124,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/124",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
       "number": 125,
       "title": "fixtures artifact: re-running into an existing file fails with FileExistsError traceback telling the user to pass --overwrite, which the subcommand rejects (0.4.0 replaced the file)",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Choose one documented overwrite/refusal API for fixtures and enforce it safely; re-run a fixture command into existing output and preserve bytes on refusal.",
-      "evidence": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite."
+      "evidence": {
+        "implementation": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:39Z",
+        "number": 125,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/125",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 126,
       "title": "Rock-paper-scissors and prisoners-dilemma: player_1's hidden commit is visible to player_2 in ActRequest.history, the provider prompt and session events (same for sealed-bid auction and goofspiel)",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Project action history/events per viewer and reveal simultaneous commitments only at the declared reveal phase. Test RPS, prisoners-dilemma, sealed auction and goofspiel through HTTP/provider/browser paths.",
-      "evidence": "An arena-level reveal rule suppresses sealed actions/explanations/reasoning references from public trace, replay, live session events/display frames and opponent request history until the reveal phase. Auditor actions remain complete and deterministic replay validates. Eight new regressions cover all four arenas, including successive Goofspiel rounds."
+      "evidence": {
+        "implementation": "An arena-level reveal rule suppresses sealed actions/explanations/reasoning references from public trace, replay, live session events/display frames and opponent request history until the reveal phase. Auditor actions remain complete and deterministic replay validates. Eight new regressions cover all four arenas, including successive Goofspiel rounds.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:42Z",
+        "number": 126,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/126",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 127,
@@ -927,20 +1213,44 @@
       "number": 138,
       "title": "eslams run crashes after the match when the system clock is before 1980 or after 2107 (ZIP timestamp range); empty archive left",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Choose deterministic valid archive timestamp handling, test clocks outside ZIP range, and stage archives so failures leave no installed empty archive.",
-      "evidence": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate."
+      "evidence": {
+        "implementation": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:45Z",
+        "number": 138,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/138",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 139,
       "title": "Concurrent eslams run into one --output-dir intermittently exits 1 with FileExistsError/FileNotFoundError in _replace_latest_link, losing the result JSON",
       "work_package": "W1",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Make latest-pointer replacement atomic and concurrent-safe; each completed run must retain its summary and archive. Test two independent writers to one directory.",
       "evidence": {
         "commit": "9aadbc0",
         "checks": "tests/test_latest_links.py + original non-symlink preservation checks; relocation, 24 concurrent runs, simulated EPERM; native/full gates pending final head",
-        "docs": "README expanded-path and symlink fallback guidance"
+        "docs": "README expanded-path and symlink fallback guidance",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:47Z",
+        "number": 139,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/139",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -1021,9 +1331,22 @@
       "number": 144,
       "title": "Low file-descriptor limit makes eslams run exit 0 with a valid-looking summary but an empty 22-byte archive on Python 3.12+ (Path.rglob swallows EMFILE)",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Injected EMFILE must propagate as failure before a success summary/final archive; verify on Python versions where pathlib can suppress traversal errors and pair with atomic output handling.",
-      "evidence": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate."
+      "evidence": {
+        "implementation": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:50Z",
+        "number": 144,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/144",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 145,
@@ -1045,9 +1368,22 @@
       "number": 147,
       "title": "Battleship: player_2's hidden fleet is drawn only from cells not used by player_1 (0 overlaps in 20,000 seeds vs 33% expected), so a player's own board leaks information about the opponent's",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Generate opponent fleets independently under the declared independent-board rules; use deterministic structural tests rather than relying only on aggregate overlap frequencies.",
-      "evidence": "Both Battleship fleets are sampled from the full grid, permitting overlap without conditioning either board on the other. Version bumped to 1.1.0. Structural RNG test proves identical full populations; repeatability/private observation regression retained."
+      "evidence": {
+        "implementation": "Both Battleship fleets are sampled from the full grid, permitting overlap without conditioning either board on the other. Version bumped to 1.1.0. Structural RNG test proves identical full populations; repeatability/private observation regression retained.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:52Z",
+        "number": 147,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/147",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 148,
@@ -1066,9 +1402,22 @@
       "number": 149,
       "title": "Card games (hearts, spades, bridge, mahjong, dou-dizhu): session responses list the model seat's legal actions, which are its private hand, in browser-streamable fields",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Public session projections must never enumerate another seat's private legal cards. Project legal actions/viewer-specific descriptors across state, events and HTTP responses; signed full-state envelopes remain service-only unless encrypted/opaque.",
-      "evidence": "Model-seat legal actions/descriptors are absent from start, step and pagination responses; public_view omits legal_actions_by_player. Eight regressions cover private card hands. Human action lists are recipient-specific, requiring trusted Platform routing; signed envelopes remain server-only."
+      "evidence": {
+        "implementation": "Model-seat legal actions/descriptors are absent from start, step and pagination responses; public_view omits legal_actions_by_player. Eight regressions cover private card hands. Human action lists are recipient-specific, requiring trusted Platform routing; signed envelopes remain server-only.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:54Z",
+        "number": 149,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/149",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 150,
@@ -1103,17 +1452,43 @@
       "number": 153,
       "title": "eslams fixtures artifact: --out names with a space, accent, + or parentheses crash with a run_id ValueError traceback (worked in 0.4.0)",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Decouple arbitrary output filenames from the path-safe internal run ID, preserving confinement. Test spaces/Unicode/+/( ) without accepting traversal in internal IDs.",
-      "evidence": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite."
+      "evidence": {
+        "implementation": "Fixture Runner outputs and latest pointers live only in an owned temporary root; install only the requested archive via atomic file helper. Portable fixed internal run id independent of filename; CLI/API explicit overwrite supported. 27 related cases passed including dotted/Unicode/spaced filenames, sibling data/latest preservation and interrupted overwrite.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:50:57Z",
+        "number": 153,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/153",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 154,
       "title": "Empty RUNNER_ARTIFACT_SIGNING_KEY_ID: eslams run exits 0 and writes a signed artifact that always fails validation (key_id must be a non-empty string)",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Reject empty/malformed signing key IDs before run output; test every emitted signed artifact verifies under the expected configured key and empty env values fail early.",
-      "evidence": "Signing key IDs are checked before agent creation/calls and artifact output; explicit empty/whitespace/multiline/overlong IDs fail. Missing IDs retain the documented nonempty default. Six tests prove no call/output and valid signed artifacts."
+      "evidence": {
+        "implementation": "Signing key IDs are checked before agent creation/calls and artifact output; explicit empty/whitespace/multiline/overlong IDs fail. Missing IDs retain the documented nonempty default. Six tests prove no call/output and valid signed artifacts.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:01Z",
+        "number": 154,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/154",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 155,
@@ -1151,25 +1526,62 @@
       "number": 159,
       "title": "eslams run --overwrite has no effect: run ids are always unique and there is no way to choose one, so the documented \"existing artifact paths are refused\" never applies",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "A no-op overwrite option is an API/documentation mismatch, not evidence that current unique-ID runs overwrite prior artifacts. Remove/deprecate it or add a deliberately specified named-run behavior; default refusal remains safe.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 160,
       "title": "docs/ARTIFACTS.md Runner Signatures omits that a signed artifact fails validation (runner_signature_unverified) without RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Document verify-public-key configuration and trusted key authority; test signing/verification with a throwaway key and explain that verified self-signing alone is not Official provenance.",
-      "evidence": "ARTIFACTS explains missing verifier key failures, signing-process derivation, public-key-only auditor custody, fixture keys without Official authority, and a matching Ed25519 private/public recipe. Signed replay missing-key regression confirms fail-closed validation."
+      "evidence": {
+        "implementation": "ARTIFACTS explains missing verifier key failures, signing-process derivation, public-key-only auditor custody, fixture keys without Official authority, and a matching Ed25519 private/public recipe. Signed replay missing-key regression confirms fail-closed validation.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:03Z",
+        "number": 160,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/160",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 162,
       "title": "`eslams validate` and `eslams replay` on an existing file that is not an .eslams archive fail with `FileNotFoundError: <that path>`",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Distinguish existing unsupported/corrupt files from missing files with actionable errors; test archive/content identification without reading unrelated data.",
-      "evidence": "tests/test_archive_safety.py: preflight member/byte bounds, portable traversal/alias/link rejection, CRC/interrupt cleanup and all archive consumers; existing nonarchives get ValueError rather than FileNotFoundError"
+      "evidence": {
+        "implementation": "tests/test_archive_safety.py: preflight member/byte bounds, portable traversal/alias/link rejection, CRC/interrupt cleanup and all archive consumers; existing nonarchives get ValueError rather than FileNotFoundError",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:06Z",
+        "number": 162,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/162",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 163,
@@ -1183,37 +1595,81 @@
       "number": 164,
       "title": "README Quick Start: after `eslams run --expanded` the `runs/latest.eslams` pointer is removed but the next documented step is `eslams validate runs/latest.eslams`",
       "work_package": "W9",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "After --expanded, show the actual expanded artifact path or correct pointer behavior; execute the full documented run-to-validate walkthrough.",
       "evidence": {
         "commit": "9aadbc0",
         "checks": "tests/test_latest_links.py + original non-symlink preservation checks; relocation, 24 concurrent runs, simulated EPERM; native/full gates pending final head",
-        "docs": "README expanded-path and symlink fallback guidance"
+        "docs": "README expanded-path and symlink fallback guidance",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:08Z",
+        "number": 164,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/164",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
       "number": 165,
       "title": "README \"Artifact Anatomy\" lists 20 files; a default run writes 26 (omits public/*, public_reasoning, scores/official_result.json, timings, validation summary)",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Generate or verify canonical artifact anatomy for relevant profiles, including public/reasoning/score/timing/validation outputs and optionality; absorb #120.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 166,
       "title": "README lists `arena.auto_advanced` as an Arena event type; Core never emits it and docs/PLATFORM_CONTRACTS.md says it is reserved",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Mark arena.auto_advanced as reserved unless implemented; align README, schema and consumer expectations without emitting a fake event.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 167,
       "title": "CHANGELOG v0.5.0 states 12 solo / 29 head-to-head / 9 multi-seat games; since 0.5.1 the catalogue has 13 / 31 / 6 and the 0.5.1 entry does not mention the reclassification",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Keep the historical v0.5.0 count accurate for v0.5.0; add the actual v0.5.1 reclassification and version migration note. Do not rewrite history to present-day counts.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 168,
@@ -1253,9 +1709,20 @@
       "number": 169,
       "title": "examples/random_agent.py is not random: it always returns `legal_actions[0]`, identical to the built-in `first-legal` agent",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Rename example to first-legal or implement seeded random choice consistent with its name and documented determinism; test behavior with multiple legal options.",
-      "evidence": null
+      "evidence": {
+        "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
+        "source": [
+          "src/eslams/cli.py",
+          "src/eslams/runner.py",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "CHANGELOG.md",
+          "examples/random_agent.py"
+        ],
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+      }
     },
     {
       "number": 170,
@@ -1269,61 +1736,150 @@
       "number": 171,
       "title": "Wheel and sdist ship no `py.typed` marker although the project is checked with `mypy --strict`, so downstream mypy treats `eslams` as untyped",
       "work_package": "W7",
-      "status": "implemented; distribution verification pending",
+      "status": "closed: completed",
       "criterion": "Ship py.typed in wheel/sdist and validate downstream mypy sees the installed package as typed from outside the checkout.",
       "evidence": {
         "commit": "89e9e1a",
         "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
-        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:10Z",
+        "number": 171,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/171",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
       "number": 172,
       "title": "`eslams --version` and `-V` are not supported (argparse: \"the following arguments are required: command\")",
       "work_package": "W8",
-      "status": "implemented; installed-wheel verification on macOS/Python 3.9",
+      "status": "closed: completed",
       "criterion": "Expose the actual installed distribution version consistently for --version/-V and module entry; test without creating output or requiring secrets.",
-      "evidence": "Global --version/-V argparse action prints shared CORE_PACKAGE_VERSION before required subcommands. Both flags verified with module invocation; installed-wheel command verification pending. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite)."
+      "evidence": {
+        "implementation": "Global --version/-V argparse action prints shared CORE_PACKAGE_VERSION before required subcommands. Both flags verified with module invocation; installed-wheel command verification pending. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite).",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:12Z",
+        "number": 172,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/172",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 173,
       "title": "`eslams replay <artifact> <anything>` silently accepts an undocumented second positional and ignores it (a typo still exits 0)",
       "work_package": "W8",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Remove/reject the ignored positional argument or document and implement it; a typo must not silently look successful.",
-      "evidence": "tests/test_output_safety.py: source/file/hardlink preservation, explicit overwrite, replay extra-argument error; 54 relevant tests pass; changed sources Ruff and mypy pass"
+      "evidence": {
+        "implementation": "tests/test_output_safety.py: source/file/hardlink preservation, explicit overwrite, replay extra-argument error; 54 relevant tests pass; changed sources Ruff and mypy pass",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:14Z",
+        "number": 173,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/173",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 174,
       "title": "`eslams catalogue games --json | head -1` exits 1 with a `BrokenPipeError` traceback (also `models list`, `core budgets`)",
       "work_package": "W8",
-      "status": "implemented; installed-wheel verification on macOS/Python 3.9",
+      "status": "closed: completed",
       "criterion": "Handle BrokenPipeError as normal pipe termination at the real entry point without obscuring actual command failures; test piped output with an early-closing consumer.",
-      "evidence": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite)."
+      "evidence": {
+        "implementation": "Shared console/module CLI wrapper reports expected input/file errors, preserves unexpected failures, supports ESLAMS_DEBUG and handles closed output pipes. Six subprocess/error regressions plus output/archive regressions passed (30 cases); installed-wheel verification remains a final gate. Actual wheel installed outside checkout passed console/module normal/debug error, version and closed-pipe checks at b651238 (11 installed checks including fixture overwrite).",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:16Z",
+        "number": 174,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/174",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 175,
       "title": "`eslams run --shard-index 5 --shard-count 2` (also index -1, count 0) is accepted and the artifact validates as `valid: true`",
       "work_package": "W3",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Reject invalid shard ranges before output; record the valid shard identity and test no scoring-valid artifacts are written for illegal selections.",
-      "evidence": "RunConfig rejects nonpositive/noninteger/bool/missing time budgets, invalid case-attempt integers and negative/noninteger shard indices/counts; enforces index<count when a count is supplied. Valid values are recorded without clamping. Sixteen input-boundary regression cases plus runner/integrity tests passed; final matrix pending."
+      "evidence": {
+        "implementation": "RunConfig rejects nonpositive/noninteger/bool/missing time budgets, invalid case-attempt integers and negative/noninteger shard indices/counts; enforces index<count when a count is supplied. Valid values are recorded without clamping. Sixteen input-boundary regression cases plus runner/integrity tests passed; final matrix pending.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:19Z",
+        "number": 175,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/175",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 176,
       "title": "Interrupting `eslams run` (Ctrl-C / SIGINT) leaves a half-written `run_*.eslams.d` directory with no `manifest.json`",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Stage artifact trees/archive and commit atomically; distinguish explicit failed/partial diagnostic state from complete artifacts and clean temporary writes on interrupt.",
-      "evidence": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate."
+      "evidence": {
+        "implementation": "Stage complete artifact directory/ZIP before installation; roll back replaced outputs on failed install; strict os.walk/lstat refuses suppressed errors and links; fixed ZIP member timestamp. Fault-injection tests cover EMFILE, KeyboardInterrupt, failed archive install, existing-output preservation, symlinks and out-of-range mtimes. 70 related cases and full suite passed on Python 3.9/macOS; native OS/version matrix remains a final gate.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:22Z",
+        "number": 176,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/176",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 177,
       "title": "`eslams runner session-create/step/snapshot/close` cannot work from the CLI: each command is a new process, so `session-step` fails with `KeyError: unknown runner session`",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Choose persistent authenticated service CLI commands, explicit snapshot import/export, or remove unsupported process-local session commands. Do not imply an in-memory store survives separate CLI processes.",
-      "evidence": "Removed shell session-create/step/snapshot/close commands that could not persist across invocations. Library store and authenticated HTTP remain supported; docs explain process affinity/restart limits. CLI invalid-choice regression prevents returning a misleading created session."
+      "evidence": {
+        "implementation": "Removed shell session-create/step/snapshot/close commands that could not persist across invocations. Library store and authenticated HTTP remain supported; docs explain process affinity/restart limits. CLI invalid-choice regression prevents returning a misleading created session.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:24Z",
+        "number": 177,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/177",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 178,
@@ -1417,9 +1973,22 @@
       "number": 181,
       "title": "`eslams replay` renders a content-tampered artifact with exit 0 and no warning, although `eslams validate` reports `valid: false` (hash mismatch)",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Render tampered/unverified artifacts only under an explicit diagnostic mode with visible trust state, or refuse by default. #26 extraction/HTML changes do not perform artifact validation.",
-      "evidence": "External replay validates before writing. Invalid artifacts fail without output; explicit --diagnostic emits a visible escaped untrusted banner. Unsigned content is labeled unsigned; embedded previews instruct complete validation. Four regressions verify tampering, missing key, unsigned content and latest aliases."
+      "evidence": {
+        "implementation": "External replay validates before writing. Invalid artifacts fail without output; explicit --diagnostic emits a visible escaped untrusted banner. Unsigned content is labeled unsigned; embedded previews instruct complete validation. Four regressions verify tampering, missing key, unsigned content and latest aliases.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:27Z",
+        "number": 181,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/181",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 182,
@@ -1465,9 +2034,22 @@
       "number": 183,
       "title": "`eslams validate` / `replay` / `public-export` extract the whole archive before judging it: a 300 KB archive expands to 300 MiB in /tmp (no size or member-count cap)",
       "work_package": "W1",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Preflight and stream-enforce member count, per-member/total expanded bytes and accepted path/member types; clean up on CRC/I/O/security failures. #26 path confinement alone cannot close this.",
-      "evidence": "tests/test_archive_safety.py: preflight member/byte bounds, portable traversal/alias/link rejection, CRC/interrupt cleanup and all archive consumers; existing nonarchives get ValueError rather than FileNotFoundError"
+      "evidence": {
+        "implementation": "tests/test_archive_safety.py: preflight member/byte bounds, portable traversal/alias/link rejection, CRC/interrupt cleanup and all archive consumers; existing nonarchives get ValueError rather than FileNotFoundError",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:29Z",
+        "number": 183,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/183",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 184,
@@ -1507,29 +2089,66 @@
       "number": 185,
       "title": "The published 0.6.1 sdist cannot run its own test suite: `test_wheel_export_matches_source_without_git_checkout` runs `git rev-parse HEAD` and fails outside a git checkout",
       "work_package": "W7",
-      "status": "implemented; distribution verification pending",
+      "status": "closed: completed",
       "criterion": "Run shipped sdist tests with authentic embedded provenance and no Git checkout; remove test-only Git assumptions while retaining runtime provenance validation.",
       "evidence": {
         "commit": "89e9e1a",
         "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
-        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:32Z",
+        "number": 185,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/185",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
       "number": 186,
       "title": "`eslams plan official|battlefield|public-match --shard-count N` is unbounded: N=1,000,000 prints a 115 MB plan for a suite with 0 cases; 0 and negatives are silently clamped to 1",
       "work_package": "W3",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Reject invalid/excessive shard counts, bound plan expansion by meaningful workload limits, and never silently clamp a malformed request into apparent success.",
-      "evidence": "All planners reject noninteger/nonpositive counts, counts exceeding the case workload (one diagnostic shard for empty plans), and counts over 1024. Cases are sorted once and sliced deterministically, replacing repeated full scans. CLI invalid counts and public-match partition/workload bounds pass with existing planning/publication cases (25 tests)."
+      "evidence": {
+        "implementation": "All planners reject noninteger/nonpositive counts, counts exceeding the case workload (one diagnostic shard for empty plans), and counts over 1024. Cases are sorted once and sliced deterministically, replacing repeated full scans. CLI invalid counts and public-match partition/workload bounds pass with existing planning/publication cases (25 tests).",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:35Z",
+        "number": 186,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/186",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 187,
       "title": "`eslams agent serve --port 65536` is accepted; the banner prints `http://127.0.0.1:65536` but the socket listens on a different random port",
       "work_package": "W8",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Validate port range before socket creation and print the actual bound address/port; test out-of-range values and explicit ephemeral port if intentionally supported.",
-      "evidence": "CLI validates ports 1..65535 with argparse exit 2; AgentServer.run rejects noninteger, boolean and out-of-range values before uvicorn. Port zero is deliberately unsupported because the helper does not discover/return an ephemeral port. Boundary/default/explicit-container tests pass."
+      "evidence": {
+        "implementation": "CLI validates ports 1..65535 with argparse exit 2; AgentServer.run rejects noninteger, boolean and out-of-range values before uvicorn. Port zero is deliberately unsupported because the helper does not discover/return an ephemeral port. Boundary/default/explicit-container tests pass.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:38Z",
+        "number": 187,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/187",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 188,
@@ -1619,9 +2238,22 @@
       "number": 194,
       "title": "`eslams run --time-budget-ms 0` and negative values are accepted without error and the run is scoring-valid",
       "work_package": "W3",
-      "status": "implemented; targeted verification",
+      "status": "closed: completed",
       "criterion": "Reject nonpositive time budgets before output; test enforced bounded action attempts and no scoring-valid impossible configuration.",
-      "evidence": "RunConfig rejects nonpositive/noninteger/bool/missing time budgets, invalid case-attempt integers and negative/noninteger shard indices/counts; enforces index<count when a count is supplied. Valid values are recorded without clamping. Sixteen input-boundary regression cases plus runner/integrity tests passed; final matrix pending."
+      "evidence": {
+        "implementation": "RunConfig rejects nonpositive/noninteger/bool/missing time budgets, invalid case-attempt integers and negative/noninteger shard indices/counts; enforces index<count when a count is supplied. Valid values are recorded without clamping. Sixteen input-boundary regression cases plus runner/integrity tests passed; final matrix pending.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:40Z",
+        "number": 194,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/194",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 195,
@@ -1869,12 +2501,23 @@
       "number": 214,
       "title": "Four tests use cwd-relative fixture paths: pytest run from tests/ or any directory other than the repo root fails with FileNotFoundError",
       "work_package": "W7",
-      "status": "implemented; distribution verification pending",
+      "status": "closed: completed",
       "criterion": "Resolve fixtures from the installed/test source context rather than cwd; run targeted and full tests from root, tests directory and a clean outside directory.",
       "evidence": {
         "commit": "89e9e1a",
         "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
-        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:42Z",
+        "number": 214,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/214",
+        "kind": "issue",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -2100,12 +2743,22 @@
       "number": 37,
       "head": "f10140fa10dcbaf4499b2218a7584eb985e55b0a",
       "title": "ci: pin publish workflow actions to commit SHAs",
-      "status": "incorporated with revisions; final integration pending",
+      "status": "superseded: closed; incorporated in #218",
       "review_route": "Retain, conditional",
       "criterion": "Rebase onto the final hardened publish workflow, preserve read-only checkout permissions and trusted publishing, run workflow lint, then merge; this task does not publish.",
       "evidence": {
         "replacement_pr": 218,
-        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:44Z",
+        "number": 37,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/37",
+        "kind": "pr",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -2265,13 +2918,23 @@
       "number": 48,
       "head": "33e0ddd9e75686167bb8d462835e2f2c5fcc5788",
       "title": "ci: add SHA-pinned wheel smoke workflow",
-      "status": "incorporated with revisions; distribution verification pending",
+      "status": "superseded: closed; incorporated in #218",
       "review_route": "Revise / split",
       "criterion": "Run wheel/sdist checks outside the checkout: console entry, keyless run, schema export with embedded provenance, validation and public export. Include supported-Python compatibility and Twine metadata support, then merge revised workflow.",
       "evidence": {
         "replacement_pr": 218,
         "commit": "89e9e1a",
-        "gate": "Distribution consumers workflow and verify_distributions.py; portable isolated installs and no-Git sdist suite."
+        "gate": "Distribution consumers workflow and verify_distributions.py; portable isolated installs and no-Git sdist suite.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:46Z",
+        "number": 48,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/48",
+        "kind": "pr",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -2300,13 +2963,23 @@
       "number": 50,
       "head": "d4f1d28564ce5c79ee598d4ae7c52dd48d8f9f87",
       "title": "test: offline schema export smoke",
-      "status": "incorporated with revisions; distribution verification pending",
+      "status": "superseded: closed; incorporated in #218",
       "review_route": "Supersede / consolidate",
       "criterion": "Fold meaningful determinism/schema assertions into packaged-provenance coverage using the proven source/embedded commit helper; pass no-Git sdist test mode before closing #185 and this PR.",
       "evidence": {
         "replacement_pr": 218,
         "commit": "89e9e1a",
-        "gate": "Distribution consumers workflow and verify_distributions.py; portable isolated installs and no-Git sdist suite."
+        "gate": "Distribution consumers workflow and verify_distributions.py; portable isolated installs and no-Git sdist suite.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:49Z",
+        "number": 50,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/50",
+        "kind": "pr",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
       }
     },
     {
@@ -2374,19 +3047,43 @@
       "number": 161,
       "head": "bc34625d38ef0eb348bedb6f70c7fa6e76903289",
       "title": "fix: surface artifact traversal errors",
-      "status": "incorporated with stronger traversal and staged writing; matrix pending",
+      "status": "superseded: closed; incorporated in #218",
       "review_route": "Retain, conditional",
       "criterion": "Rebase onto artifact-confinement work, run supported-version CI including injected EMFILE, ensure no success summary or installed final archive on failed write, and test symlink handling. Merge; close #144 only to the demonstrated failure mode.",
-      "evidence": "Adopted os.walk(onerror=raise) intent across hash, validation, source-size and ZIP enumeration, replaced is_file suppression with lstat regular-file checks and rejected directory links. Added staged installation and failure rollback so EMFILE cannot publish an empty final archive."
+      "evidence": {
+        "implementation": "Adopted os.walk(onerror=raise) intent across hash, validation, source-size and ZIP enumeration, replaced is_file suppression with lstat regular-file checks and rejected directory links. Added staged installation and failure rollback so EMFILE cannot publish an empty final archive.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:51Z",
+        "number": 161,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/161",
+        "kind": "pr",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 217,
       "head": "7e7d68953152ef419c5406bbb7fefebbabf4b3ec",
       "title": "fix(cli): print clean error messages instead of tracebacks for runtime errors",
-      "status": "incorporated with revisions; installed-wheel verification on macOS/Python 3.9",
+      "status": "superseded: closed; incorporated in #218",
       "review_route": "Revise / split",
       "criterion": "Put handling in the actual installed entry path, retain debug tracebacks consistently, handle expected user errors specifically, test console executable and module entry, then merge and close #57.",
-      "evidence": "Shared main wrapper replaces entry-specific behavior; module and console target subprocesses cover normal/debug errors and an early-closing pipe. Installed command gate remains outstanding. Actual installed wheel console and module commands verified outside checkout at b651238."
+      "evidence": {
+        "implementation": "Shared main wrapper replaces entry-specific behavior; module and console target subprocesses cover normal/debug errors and an early-closing pipe. Installed command gate remains outstanding. Actual installed wheel console and module commands verified outside checkout at b651238.",
+        "integration": "Native full suite + isolated wheel/sdist consumers at f5971d7: Core CI 37751738060; consumers 37751738110; audit 37751738120; actionlint 37751738093. Console/module normal/debug/pipe, downstream mypy, embedded commit, Twine metadata, no-Git full sdist suite verified. All passed. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:51:53Z",
+        "number": 217,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/217",
+        "kind": "pr",
+        "resolution_commit": "f5971d7c73f15115ed40dc83cd3d418617926ad3",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 220,

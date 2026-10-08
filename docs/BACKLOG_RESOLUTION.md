@@ -1,101 +1,46 @@
 # Backlog consolidation
 
-This is a work-in-progress resolution record for one consolidation PR. Original
-issues and PRs remain open until their required behavior, disposition and
-verification are demonstrated. No release is published by this work.
+This work consolidates the original backlog into [PR #218](https://github.com/ElectronicSlams/eSlams/pull/218). No release has been published. Issues and original PRs close only after their resolution and verification are recorded in [the individual ledger](backlog-resolution.json).
 
-The original baseline is 275 passing collected cases / 243 test functions and
-85.332886% line coverage over `src/eslams`. Final coverage
-must be compared using the same scope; coverage gains cannot substitute for
-retaining trust, privacy, provenance and behavioral checks. Test removal is
-tracked explicitly against the original suite, with necessary new regression
-coverage recorded separately.
+## Verified closures
 
-## Completed implementation awaiting final integration gates
+68 of the 149 inventoried issues and 16 of the 44 original PRs are closed.
+The consolidation PR remains draft. The remaining entries include implemented
+changes awaiting integration checks and unresolved work; neither is complete.
 
-- #75: exports refuse existing/input-alias destinations and install staged
-  output after success. Regression checks preserve unrelated files, reject
-  working-directory/source/symlink destinations and exercise writer conflicts.
+The latest verified distribution checkpoint is `f5971d7`. Native full-suite,
+Ruff, strict typing and TypeScript checks pass on Linux Python 3.10–3.12 and
+Windows/macOS Python 3.12. Separate fresh wheel and sdist installations pass
+console/module normal and debug errors, closed-pipe behavior, downstream mypy,
+keyless run/validate/replay/public export, schema provenance and metadata checks.
+The extracted sdist runs its full suite outside a Git checkout.
 
-- #76: replay/golden exports require explicit file overwrite; replay refuses input
-  and hardlink aliases and writes outside expanded artifacts.
-- #173: normal replay rejects an ignored extra positional argument while
-  retaining the validate-public compatibility command.
+- [Core CI](https://github.com/ElectronicSlams/eSlams/actions/runs/37751738060)
+- [Distribution consumers](https://github.com/ElectronicSlams/eSlams/actions/runs/37751738110)
+- [Dependency audit](https://github.com/ElectronicSlams/eSlams/actions/runs/37751738120)
+- [Workflow lint](https://github.com/ElectronicSlams/eSlams/actions/runs/37751738093)
 
-- #162 / #183: shared bounded archive extraction and cleanup now cover validation,
-  replay and public export. Unsupported existing files are distinguished from
-  missing files. This incorporates and extends the archive part of PR #26.
+## Test reduction
 
-- #57 / #174: console/module entry points share expected-error reporting, debug
-  tracebacks and clean termination when an output pipe closes early. The actual
-  installed-wheel command remains a final integration gate (revised PR #217).
+The frozen baseline at `7f6bb418974739986e76049d45dfb7de2109a780` has
+275 passing cases and 85.332886% line coverage over `src/eslams`.
+39 of the required 55 original cases have been removed, mainly by combining
+redundant wrappers and preserving their assertions in retained tests.
+16 removals remain. New behavioral, privacy and integrity regressions are
+tracked separately from the baseline removals.
 
-- #138 / #144 / #176: artifact writing stages complete outputs, rolls back
-  failed replacements, propagates traversal/stat errors and uses fixed portable
-  ZIP member timestamps. This incorporates PR #161 with additional symlink and
-  failure safeguards. Native OS/Python matrix checks remain outstanding.
-
-- #121 / #125 / #153: fixture generation uses an owned temporary root and
-  installs only the requested archive. Filenames no longer determine run IDs;
-  explicit overwrite is available without deleting siblings or latest links.
-
-- #172: global `--version` / `-V` prints the shared package version and exits
-  successfully. Installed-wheel verification remains outstanding.
-
-- #54: agent protocol test reports failure and exits 1 for unreachable,
-  malformed or illegal-action endpoints, while retaining valid diagnostic
-  artifacts and reporting action/error counts.
-
-- #59 / #102: nonpositive turn caps are rejected; externally truncated games
-  retain valid diagnostics while failing scoring eligibility. Validation rejects
-  refreshed eligibility claims on a nonterminal replay. Declared arena horizons
-  remain complete games; fixtures and positive provider tests now finish games.
-
-Actual installed-wheel console/module checks passed outside the checkout on
-macOS/Python 3.9 (11 checks at commit b651238). This resolves the local packaging
-entry-point gate for #57 / #174 / #172 and PR #217; the final matrix remains.
-
-- #175 / #194: runner shard ranges and time-budget integers are validated
-  before any output is created; budgets are no longer silently clamped.
-
-- #186: all planners reject malformed/excessive shard counts, bounded by
-  workload and a ceiling of 1024, rather than silently clamping or generating
-  unbounded empty shards.
-
-- #55: mypy now targets the active interpreter. The documented command checks
-  all 95 source modules on Python 3.9 and 3.12; explicit CI matrix targets remain.
-
-Full suites pass on macOS/Python 3.9.6 and 3.12.13: 366 cases each. Repository
-lint also passes with the Python 3.12 development environment. Native Windows,
-Linux, other supported interpreters and final consumer checks remain gates.
-
-- #101: action legality uses strict JSON type/value equality. Boolean/float
-  aliases follow illegal-action policies consistently; provider receipts never
-  claim an applied action when a fallback replaced the rejected response.
-  Latest Python 3.9 and 3.12 full suites: 373 passing cases each.
-
-## Test reduction checkpoint
-
-Removed 11 of the required 55 original cases: ten redundant family registry-only
-checks and one obsolete zero-turn acceptance test, replaced by rejection checks. Retained Runner tests create the same named arenas and validate their
-artifacts; the retained all-arena smoke now checks exact public-catalogue
-membership. Full suite: 373 passing cases; line coverage 85.800901%, above the
-85.332886% baseline. Each removal and retained check is recorded in the JSON
-ledger. Another 44 original cases remain to be assessed and removed.
+The last measured consolidation checkpoint has 471 passing cases on current
+Python 3.12 and direct-floor Python 3.10, covering 11,145 / 12,781 lines
+(87.199750%). This is an intermediate checkpoint; new changes still require
+a final full-suite and same-scope coverage gate.
 
 ## Remaining work
 
-All 148 original issues and 43 original PRs, with captured PR heads and
-individual acceptance criteria, are tracked in [backlog-resolution.json](backlog-resolution.json).
-Each pending entry must receive implementation or an evidence-based disposition.
-Package/OS/consumer compatibility, coverage retention and repository closure
-are final gates. A passing narrow test does not establish completion of the
-overall backlog.
+The JSON ledger records every issue and original PR, captured original heads,
+acceptance criteria, implementation evidence and actual closure state. Remaining
+work includes Core-lite/Python contract parity, provider lifecycle/discovery and
+deadlines, further game-rule corrections, replay accessibility/rendering,
+publication correctness and coherent lab/sample documentation. The hosted
+Platform issue must receive an explicit scoped disposition.
 
-Inventory recheck: all 148 issues and 43 original PRs remain open; no new
-items or changed original PR heads were found. Consolidation PR #218 remains
-draft. No release has been published.
-
-- #126 / #147 / #149 / #187 / #190: sealed-action privacy, independent fleets,
-  private model legal actions and safe agent binding/port validation implemented.
-  Thirty-seven relevant cases pass; final integration gates remain.
+No merge, new release, deployment or paid provider call has been performed.

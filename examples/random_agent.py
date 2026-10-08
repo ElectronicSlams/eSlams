@@ -1,3 +1,5 @@
+import random
+
 from eslams.agent import AgentServer
 
 server = AgentServer(agent_id="example-random-agent", version="1.0.0")
@@ -6,9 +8,9 @@ server = AgentServer(agent_id="example-random-agent", version="1.0.0")
 @server.act
 def act(request):
     return {
-        "action": request.legal_actions[0],
+        "action": random.choice(request.legal_actions),
         "confidence": 0.5,
-        "public_explanation": "Example agent selected the first legal action.",
+        "public_explanation": "Example agent sampled a legal action uniformly.",
     }
 
 

@@ -534,9 +534,7 @@ class Runner:
             expected_by_player=config.model_id_by_player or {},
         )
         complete_case_evidence = (
-            match_valid_for_scoring
-            and bool(config.case_id)
-            and model_identity_verified
+            match_valid_for_scoring and bool(config.case_id) and model_identity_verified
         )
         for provider_receipt in provider_receipts:
             provider_receipt["case_valid_for_scoring"] = bool(
@@ -612,9 +610,10 @@ class Runner:
                 archive=config.archive,
             )
         except OSError as exc:
-            if exc.errno not in {errno.EPERM, errno.EACCES, errno.ENOTSUP} and getattr(
-                exc, "winerror", None
-            ) != 1314:
+            if (
+                exc.errno not in {errno.EPERM, errno.EACCES, errno.ENOTSUP}
+                and getattr(exc, "winerror", None) != 1314
+            ):
                 raise
             print(
                 f"Warning: latest links were not updated; use artifact path {output}",
@@ -649,6 +648,8 @@ def _reject_official_inline_retries(agents: list[Any]) -> None:
 
 def _agents_for_arena(arena: Arena, config: RunConfig) -> dict[str, Any]:
     provided = dict(config.agents or {})
+    if unknown := set(provided) - set(arena.players):
+        raise ValueError(f"Unknown agent seats for {arena.id}: {', '.join(sorted(unknown))}")
     agents: dict[str, Any] = {}
     for index, player_id in enumerate(arena.players):
         if player_id in provided:
@@ -660,7 +661,7 @@ def _agents_for_arena(arena: Arena, config: RunConfig) -> dict[str, Any]:
         else:
             raise ValueError(
                 f"Arena {arena.id} requires an explicit agent for {player_id}; "
-                "pass RunConfig.agents for arenas with more than two players."
+                "use --seat-agent PLAYER=AGENT or RunConfig.agents for table arenas."
             )
         agents[player_id] = _agent(value, seed=config.seed + index)
     return agents
@@ -1349,9 +1350,9 @@ def _score_summary(
         outcome=state.outcome,
         metrics={
             "turns": len(trace_events),
-            "run_status": "completed" if state.terminal else (
-                "truncated" if "run_truncated" in invalid_reason_codes else "failed"
-            ),
+            "run_status": "completed"
+            if state.terminal
+            else ("truncated" if "run_truncated" in invalid_reason_codes else "failed"),
             "elapsed_ms": elapsed_ms,
             "illegal_action_rate": illegal / total_turns,
             "timeout_rate": timeouts / total_turns,

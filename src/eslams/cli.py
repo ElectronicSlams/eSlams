@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -181,11 +182,9 @@ def _main(argv: list[str] | None = None) -> int:
     catalogue_sub = catalogue.add_subparsers(dest="catalogue_command", required=True)
     for name in ("games", "models", "availability", "renderers"):
         command = catalogue_sub.add_parser(name, help=f"Export {name} catalogue rows.")
-        command.add_argument("--json", action="store_true")
-        if name == "games":
-            command.add_argument("--include-help", action="store_true")
-            command.add_argument("--include-render", action="store_true")
-            command.add_argument("--include-animation", action="store_true")
+        command.add_argument(
+            "--json", action="store_true", help="Emit complete catalogue rows as JSON."
+        )
 
     plan = sub.add_parser("plan", help="Create deterministic no-secret eval plans.")
     plan_sub = plan.add_subparsers(dest="plan_command", required=True)
@@ -301,6 +300,24 @@ def _main(argv: list[str] | None = None) -> int:
         default="first-legal",
         help="Agent for player_2: random, first-legal, URL, or provider:model.",
     )
+    run.add_argument(
+        "--seat-agent",
+        action="append",
+        default=[],
+        metavar="PLAYER=AGENT",
+        help=(
+            "Assign an agent to a named seat; repeat for table arenas. "
+            "Overrides --agent/--opponent."
+        ),
+    )
+    run.add_argument(
+        "--run-id", help="Explicit path-safe run ID; existing output requires --overwrite."
+    )
+    run.add_argument(
+        "--require-scoring-valid",
+        action="store_true",
+        help="Exit 1 after writing diagnostics if the match is invalid for scoring.",
+    )
     run.add_argument("--seed", type=int, default=1)
     run.add_argument("--max-turns", type=int)
     run.add_argument(
@@ -358,7 +375,9 @@ def _main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Path to a complete eslams.price-card-reference.v1 JSON object.",
     )
-    run.add_argument("--overwrite", action="store_true")
+    run.add_argument(
+        "--overwrite", action="store_true", help="Replace existing output for an explicit --run-id."
+    )
     run.add_argument("--verification-level", default="Local Artifact")
     run.add_argument("--eval-suite-version", default="public-smoke:1.0.0")
     run.add_argument("--runner-version", default=RUNNER_VERSION)
@@ -392,8 +411,11 @@ def _main(argv: list[str] | None = None) -> int:
     replay.add_argument("artifact")
     replay.add_argument("extra", nargs="?")
     replay.add_argument("--output", type=Path)
-    replay.add_argument("--diagnostic", action="store_true",
-                        help="Inspect an invalid artifact with a visible untrusted warning.")
+    replay.add_argument(
+        "--diagnostic",
+        action="store_true",
+        help="Inspect an invalid artifact with a visible untrusted warning.",
+    )
     replay.add_argument("--overwrite", action="store_true", help="Replace an existing HTML file.")
 
     agent = sub.add_parser("agent", help="Agent helper commands.")
@@ -407,7 +429,8 @@ def _main(argv: list[str] | None = None) -> int:
     agent_publish.add_argument("--url", required=True)
     agent_serve = agent_sub.add_parser("serve", help="Serve a sample first-legal /act endpoint.")
     agent_serve.add_argument(
-        "--host", default="127.0.0.1",
+        "--host",
+        default="127.0.0.1",
         help="Bind address (default: local loopback; use 0.0.0.0 for containers/remote access).",
     )
     agent_serve.add_argument("--port", type=_agent_port, default=8000)
@@ -459,12 +482,26 @@ def _main(argv: list[str] | None = None) -> int:
         )
         agent_1 = _agent_arg(args.agent, runtime_config=provider_runtime)
         agent_2 = _agent_arg(args.opponent, runtime_config=provider_runtime)
+        seat_agents: dict[str, Any] = {}
+        for assignment in args.seat_agent:
+            player, separator, agent = assignment.partition("=")
+            if not separator or player not in registry.create(args.arena).players or not agent:
+                raise ValueError(
+                    "--seat-agent must be PLAYER=AGENT for a seat in the selected arena"
+                )
+            if player in seat_agents:
+                raise ValueError(f"duplicate --seat-agent assignment for {player}")
+            seat_agents[player] = _agent_arg(agent, runtime_config=provider_runtime)
+        agent_1 = seat_agents.get("player_1", agent_1)
+        agent_2 = seat_agents.get("player_2", agent_2)
         _print_run_preflight(args, agent_1, agent_2)
         result = Runner().run(
             RunConfig(
                 arena_id=args.arena,
                 agent_1=agent_1,
                 agent_2=agent_2,
+                agents=seat_agents,
+                run_id=args.run_id,
                 seed=args.seed,
                 max_turns=args.max_turns,
                 time_budget_ms=args.time_budget_ms,
@@ -493,7 +530,12 @@ def _main(argv: list[str] | None = None) -> int:
                 job_id=result.run_id,
             )
             print(json.dumps(job_result.to_dict(), indent=2))
-            return 0 if job_result.validation_status == "valid" else 1
+            return (
+                0
+                if job_result.validation_status == "valid"
+                and (not args.require_scoring_valid or result.score.match_valid_for_scoring)
+                else 1
+            )
         payload = {
             "run_id": result.run_id,
             "artifact": str(result.artifact_path),
@@ -519,7 +561,7 @@ def _main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         print(json.dumps(payload, indent=2))
-        return 0
+        return 0 if not args.require_scoring_valid or result.score.match_valid_for_scoring else 1
     if args.command == "validate":
         report = ArtifactValidator().validate_report(args.artifact, profile=args.profile)
         payload = report.to_dict()
@@ -704,9 +746,27 @@ def _catalogue_command(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(rows, indent=2))
         return 0
+    if args.catalogue_command == "availability":
+        counts = Counter(
+            (str(row["game_id"]), str(row["status"]), str(row.get("reason") or "none"))
+            for row in rows
+        )
+        print(
+            f"Availability summary: {len(rows)} model/game rows. Use --json for individual models."
+        )
+        for (game, status, reason), count in sorted(counts.items()):
+            print(f"{game} status={status} reason={reason} models={count}")
+        return 0
     for row in rows:
+        if args.catalogue_command == "renderers":
+            print(
+                f"{row['game_id']} replay_availability={row['replay_availability']} "
+                f"timeline_completeness={row['timeline_completeness']}"
+            )
+            continue
         label = row.get("game_id") or f"{row.get('provider')}:{row.get('model')}"
-        print(f"{label} status={row.get('launch_status') or row.get('status') or 'ready'}")
+        status = row.get("launch_status") or row.get("official_eval_availability") or "unknown"
+        print(f"{label} status={status}")
     return 0
 
 
@@ -1077,8 +1137,9 @@ def _agent_command(args: argparse.Namespace) -> int:
                     "run_id": result.run_id,
                     "artifact": str(result.artifact_path),
                     "checks": checks,
-                    "failure_reason": None if ok else result.score.invalid_reason
-                    or "agent_not_exercised",
+                    "failure_reason": None
+                    if ok
+                    else result.score.invalid_reason or "agent_not_exercised",
                 },
                 indent=2,
             )

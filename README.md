@@ -210,6 +210,20 @@ eslams replay runs/latest.eslams
 reported separately. A registry-only pass does not prove that a provider
 account can invoke the model.
 
+A completed diagnostic run exits 0 even if `summary.match_valid_for_scoring`
+is false. For scoring automation, add `--require-scoring-valid`: it preserves
+the diagnostic artifact and exits 1 on an invalid match. Input/execution errors
+also exit nonzero. `--runner-result-json` continues to report validation status.
+
+Table arenas require explicit agents for seats beyond player_2. For example:
+
+```bash
+eslams run --arena bridge --seat-agent player_3=first-legal --seat-agent player_4=random
+```
+
+Repeat `--seat-agent PLAYER=AGENT` for each seat; assignments override the
+corresponding `--agent` / `--opponent` option. Unknown or duplicate seats fail.
+
 The default failure policies are fail-closed (`invalid-match`). For model
 comparison runs, keep them explicit in automation:
 
@@ -245,8 +259,8 @@ Failure policies:
 Execution profiles are `interactive`, `smoke`, and `official_eval`.
 `official_eval` rejects fallback policies and provider-local retries; the
 official orchestrator owns whole-case retries. Set `--case-attempt-index` on a
-replayed case so physical attempt IDs stay idempotent and retry-scoped. Existing
-artifact paths are refused unless `--overwrite` is explicit.
+replayed case so physical attempt IDs stay idempotent and retry-scoped. Each run normally has a unique ID. Use `--run-id NAME` to select a fixed
+artifact path; existing output is refused unless `--overwrite` is explicit.
 
 Reasoning is controlled with `--reasoning disabled|enabled|auto`. Core sends
 only model-supported controls. Anthropic manual thinking requires a budget of
@@ -446,8 +460,10 @@ action sets can be paged or searched with `legal_actions_page`.
 
 Arena event types include `session.started`, `human.action.accepted`,
 `state.applied`, `model.action.requested`, `model.action.accepted`,
-`arena.auto_advanced`, `turn.ready_for_human`, `match.completed`, and
-`turn.failed`. Events and display frames are public-safe and never include
+`turn.ready_for_human`, `match.completed`, and
+`turn.failed`. `arena.auto_advanced` is reserved and is not emitted.
+Human legal-action lists are recipient-specific and must be routed privately;
+signed full-state envelopes stay on the trusted server. Public projections omit
 prompts, raw responses, private observations, provider receipts, hidden eval
 material, or private reasoning.
 
@@ -725,31 +741,8 @@ through an HTTP `/act` agent.
 
 ## Artifact Anatomy
 
-Expanded artifacts use this shape:
-
-```text
-run_<id>.eslams.d/
-  manifest.json
-  traces/public_trace.jsonl
-  traces/agent_visible_trace.jsonl
-  traces/private_judge_trace.jsonl
-  traces/auditor_trace.jsonl
-  replay/replay_events.jsonl
-  replay/display_frames.jsonl
-  replay/replay_manifest.json
-  replay/index.html
-  scores/score.json
-  scores/metrics.json
-  logs/runner.log
-  logs/agent_io.jsonl
-  logs/errors.jsonl
-  receipts/provider_receipts.jsonl
-  environment/lockfile.json
-  environment/container_digest.txt
-  environment/package_versions.json
-  broadcast/broadcast_manifest.json
-  broadcast/vod_metadata.json
-```
+See the canonical [expanded package layout](https://github.com/ElectronicSlams/eSlams/blob/main/docs/ARTIFACTS.md#package-layout),
+including optional signatures and volatile timing sidecars.
 
 `manifest.json` contains:
 
@@ -770,12 +763,15 @@ When `RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY` is set, Core writes an Ed25519 runner
 signature:
 
 ```bash
-export RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY=base64:...
+export RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY="$(python -c 'import base64; from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption; key = Ed25519PrivateKey.generate(); print("base64:" + base64.b64encode(key.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())).decode())')"
 export RUNNER_ARTIFACT_SIGNING_KEY_ID=local-ci-key
 eslams run --arena connect-four --agent random
 eslams validate runs/latest.eslams
 ```
 
+The private key is exactly 32 raw Ed25519 bytes encoded as `base64:` or `hex:`.
+Malformed keys fail before agent calls or output. For a separate verifier, use
+[the matching public-key recipe](https://github.com/ElectronicSlams/eSlams/blob/main/docs/ARTIFACTS.md#replay-trust-and-local-verification-keys).
 The private signing key is never written to the artifact. Legacy HMAC
 signatures remain readable for old artifacts, but only Ed25519 v2 signatures can
 satisfy official bundle trust.

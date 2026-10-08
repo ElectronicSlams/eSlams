@@ -51,7 +51,7 @@ Every serious run produces a `.eslams` proof package. `.eslams` is the
 portable zip-compatible archive. The expanded inspection directory uses the
 `.eslams.d` suffix.
 
-Required structure:
+Current Runner output (signatures are optional; timing is a volatile sidecar):
 
 ```text
 run.eslams.d/
@@ -63,8 +63,10 @@ run.eslams.d/
   replay/replay_events.jsonl
   replay/display_frames.jsonl
   replay/replay_manifest.json
+  replay/index.html
   scores/score.json
   scores/metrics.json
+  timings/timings.json
   logs/runner.log
   logs/agent_io.jsonl
   logs/errors.jsonl
@@ -80,6 +82,10 @@ run.eslams.d/
   broadcast/broadcast_manifest.json
   broadcast/vod_metadata.json
 ```
+
+`timings/timings.json` is excluded from the manifest hash table; the manifest
+is the authority for hashed members. A configured signing key adds
+`signatures/runner_signature.json`.
 
 `manifest.json` contains file hashes and an artifact id derived from the
 manifest file table. It also records the deterministic replay contract for new
@@ -110,8 +116,9 @@ Core 0.6 also records `integrity_status`, stable `invalid_reason_codes`,
 provider/logical action counts, `usage_complete`, `cost_complete`,
 `attempt_ledger_complete`, `model_identity_verified`, aggregate usage/cost, and
 the deterministic `match_fingerprint`. The execution `run_id` is unique; it is
-not the configuration fingerprint. Existing artifact paths are refused unless
-overwrite is explicit.
+not the configuration fingerprint. Use CLI `--run-id NAME` or library `RunConfig(run_id=...)` to choose a fixed
+identity; existing artifact paths are refused unless `--overwrite` /
+`overwrite=True` is explicit. The usual generated ID creates a new artifact.
 
 `runs/latest.eslams` points at the latest archive when a run produced one.
 `runs/latest.eslams.d` points at the latest expanded copy.
@@ -284,6 +291,9 @@ signature proves custody relative to that key, not Official authority. Obtain
 Official verification keys from the authorized runner operator. The published
 fixture key is test-only, is reproducible by anyone, and establishes no
 Official authority.
+
+Private/public Ed25519 values contain exactly 32 raw bytes each, encoded with
+a `base64:` or `hex:` prefix. Invalid signing material fails before a match.
 
 For a throwaway local key, generate the private and public values together:
 
