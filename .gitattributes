@@ -12,3 +12,6 @@
 
 # Arena bundles (*.eslams) are zip archives.
 *.eslams binary -eol
+
+# Preserve the exported commit in source archives without a .git directory.
+src/eslams/_build_provenance.py export-subst

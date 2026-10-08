@@ -1,0 +1,142 @@
+"""Verify built distributions using isolated installs outside the checkout."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tarfile
+import tempfile
+import venv
+from pathlib import Path
+
+
+def clean_environment() -> dict[str, str]:
+    sensitive = ("SECRET", "TOKEN", "API_KEY", "ESLAMS", "SIGNING", "HF_", "CLOUDFLARE")
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if not any(part in key.upper() for part in sensitive)
+        and key not in {"PYTHONPATH", "PYTHONHOME"}
+    }
+    environment["PYTHONNOUSERSITE"] = "1"
+    return environment
+
+
+def run(command: list[str], cwd: Path, *, expected: int = 0) -> str:
+    result = subprocess.run(
+        command,
+        cwd=cwd,
+        env=clean_environment(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=300,
+    )
+    if result.returncode != expected:
+        raise RuntimeError(
+            f"{command[0]} failed with exit {result.returncode}:\n{result.stdout}\n{result.stderr}"
+        )
+    if expected and "Traceback" in result.stdout + result.stderr:
+        raise RuntimeError("expected CLI error leaked a traceback")
+    return result.stdout
+
+
+def smoke(distribution: Path, root: Path, expected_commit: str) -> None:
+    environment = root / "venv"
+    venv.EnvBuilder(with_pip=True).create(environment)
+    binaries = environment / ("Scripts" if os.name == "nt" else "bin")
+    python = binaries / ("python.exe" if os.name == "nt" else "python")
+    console = binaries / ("eslams.exe" if os.name == "nt" else "eslams")
+    run([str(python), "-m", "pip", "install", str(distribution)], root)
+    version = run([str(console), "--version"], root)
+    assert version == run([str(python), "-m", "eslams", "--version"], root)
+    error = run([str(console), "run", "--arena", "no-such-arena"], root, expected=1)
+    assert "Traceback" not in error
+    source = run(
+        [
+            str(python),
+            "-c",
+            (
+                "import json,eslams; from eslams._build_provenance import core_source_commit;"
+                "print(json.dumps({'module':eslams.__file__,'commit':core_source_commit()}))"
+            ),
+        ],
+        root,
+    )
+    identity = json.loads(source)
+    assert Path(identity["module"]).resolve().is_relative_to(environment.resolve())
+    assert identity["commit"] == expected_commit
+    schemas = root / "schemas"
+    run([str(console), "schemas", "export", "--out", str(schemas)], root)
+    manifest = json.loads((schemas / "schema_bundle_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["core_commit"] == expected_commit
+    result = json.loads(
+        run(
+            [
+                str(console),
+                "run",
+                "--arena",
+                "tic-tac-toe",
+                "--output-dir",
+                str(root / "runs"),
+            ],
+            root,
+        )
+    )
+    artifact = result["artifact"]
+    run([str(console), "validate", artifact], root)
+    replay = root / "replay.html"
+    run([str(console), "replay", artifact, "--output", str(replay)], root)
+    assert "eSlamsReplay" in replay.read_text(encoding="utf-8")
+    public = root / "public"
+    run([str(console), "artifact", "public-export", artifact, "--out", str(public)], root)
+    run([str(console), "validate", str(public), "--profile", "public-replay-package"], root)
+    run([str(console), "core", "golden", "--out", str(root / "golden.json")], root)
+    print(json.dumps({"distribution": distribution.name, "consumer_checks": "passed"}))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dist", required=True, type=Path)
+    parser.add_argument("--expected-commit", required=True)
+    arguments = parser.parse_args()
+    distribution = arguments.dist.resolve()
+    (wheel,) = distribution.glob("*.whl")
+    (sdist,) = distribution.glob("*.tar.gz")
+    with tempfile.TemporaryDirectory(prefix="eslams-consumer-") as temporary:
+        root = Path(temporary)
+        for name, package in (("wheel", wheel), ("sdist", sdist)):
+            consumer = root / name
+            consumer.mkdir()
+            smoke(package, consumer, arguments.expected_commit)
+        unpacked = root / "source"
+        unpacked.mkdir()
+        with tarfile.open(sdist) as archive:
+            for member in archive.getmembers():
+                path = unpacked / member.name
+                if not path.resolve().is_relative_to(unpacked.resolve()) or not (
+                    member.isfile() or member.isdir()
+                ):
+                    raise RuntimeError("unexpected source distribution member")
+            archive.extractall(unpacked)
+        (source,) = unpacked.iterdir()
+        # The host has dev dependencies; conftest imports the extracted source.
+        run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                str(source / "tests"),
+                "--basetemp",
+                str(root / "pytest"),
+            ],
+            root,
+        )
+        print(json.dumps({"sdist_suite_without_git": "passed"}))
+
+
+if __name__ == "__main__":
+    main()

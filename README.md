@@ -95,7 +95,13 @@ This development branch requires Python 3.10+ and tests Python 3.10 through 3.12
 Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
 configuration names; Core does not load `.env` automatically. Export selected
 settings explicitly and keep secrets in ignored local files or service
-configuration. Cross-platform development commands are in [CONTRIBUTING](CONTRIBUTING.md).
+configuration. Cross-platform development commands are in [CONTRIBUTING](https://github.com/ElectronicSlams/eSlams/blob/main/CONTRIBUTING.md).
+
+Source archives exported from commits containing this change preserve their
+commit identity using Git archive substitution. Earlier tag archives retain
+their historical packaging limitation: use the published PyPI sdist/wheel or a
+Git checkout. A copied tree with neither Git nor embedded/exported provenance
+still fails closed. Python distributions include PEP 561 `py.typed` markers.
 
 ## Quick Start
 
@@ -159,7 +165,7 @@ eslams run \
 Provider receipts are written into the artifact without API keys. Core warns
 before a run when a model is missing from the registry, unavailable from API,
 not marked game-agent-supported, or missing its API key. See
-[the provider guide](docs/PROVIDERS.md) for the exact wire adapters, model
+[the provider guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDERS.md) for the exact wire adapters, model
 identity rules, reasoning behavior, usage semantics, and rate-card contract.
 
 Use the verified provider workflow before spending on a run:
@@ -340,10 +346,10 @@ winner, terminal reason, legal count, check/checkmate status, and score.
 ## Platform Contracts
 
 Core exposes stable, no-secret contracts for Platform and runner/container
-integrations. See [docs/PLATFORM_CONTRACTS.md](docs/PLATFORM_CONTRACTS.md) for
+integrations. See [docs/PLATFORM_CONTRACTS.md](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PLATFORM_CONTRACTS.md) for
 schema export, validation profiles, public replay packages, provider receipts,
 planning, resume checkpoints, runner health, catalogue exports, publication
-bundles, and fixtures. See [CHANGELOG.md](CHANGELOG.md) for the release summary
+bundles, and fixtures. See [CHANGELOG.md](https://github.com/ElectronicSlams/eSlams/blob/main/CHANGELOG.md) for the release summary
 of contract and CLI changes.
 
 Common integration commands:
@@ -368,10 +374,11 @@ eslams bench arena-step --games tic-tac-toe,connect-four --iterations 100
 Core v0.4.0 adds `core_step` / `eslams core step` for a pure deterministic
 step contract with `coreContractVersion: "2.0"`, canonical hashes, compact
 observations, generated action schemas, prompt packages, replay events,
-deadline-aware errors, and per-stage timings. The package also ships
-Platform-facing TypeScript contracts in `packages/core-contracts` and a gated
-`packages/core-lite` TypeScript runtime for tic-tac-toe and connect-four
-parity work.
+deadline-aware errors, and per-stage timings. The repository contains
+Platform-facing TypeScript source in `packages/core-contracts` and the gated
+`packages/core-lite` runtime. These are excluded from the Python wheel and
+are not published npm packages; integrate them from a pinned source checkout.
+Core-lite parity repair is tracked in the consolidation backlog.
 
 ## Arena Session Transport
 
@@ -429,7 +436,7 @@ material, or private reasoning.
 
 ## Sample Runs
 
-Curated sample runs live in [sample_runs/](sample_runs/). They are intended as
+Curated sample runs live in [sample_runs/](https://github.com/ElectronicSlams/eSlams/blob/main/sample_runs/). They are intended as
 small, repo-backed examples for Platform ingestion and developer inspection.
 
 - `sample_runs/model_eval_sample/` contains a signed official fixture artifact,
@@ -600,7 +607,7 @@ original curated Core list, Cursor was added from the platform's API-discovered
 Composer model row, and 20 additional author namespaces come from the
 release-pinned OpenRouter text-model snapshot. A listing is a catalog identity,
 not a claim that Core has a direct adapter or that a deployed account can call
-the provider. See [the generated registry inventory](docs/REGISTRY_AVAILABLE_MODELS.md)
+the provider. See [the generated registry inventory](https://github.com/ElectronicSlams/eSlams/blob/main/docs/REGISTRY_AVAILABLE_MODELS.md)
 for the per-model snapshot and verification boundary.
 
 | Provider Key | Organization |

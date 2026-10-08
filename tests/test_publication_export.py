@@ -7,6 +7,7 @@ from eslams.planning import battlefield_plan
 from eslams.publication_export import export_publication_bundle, validate_publication_bundle
 from eslams.runner import RunConfig, Runner
 
+ROOT = Path(__file__).resolve().parents[1]
 
 def test_publication_bundle_export_is_deterministic_and_storage_free(tmp_path: Path):
     result = Runner().run(
@@ -78,15 +79,15 @@ def test_publication_bundle_validation_rejects_implicit_leaderboard_predicate(tm
 
 
 def test_publication_battlefield_sample_fixture_validates():
-    fixture = Path("fixtures/publication/battlefield_sample_bundle")
+    fixture = ROOT / "fixtures/publication/battlefield_sample_bundle"
 
     assert fixture.exists()
     assert validate_publication_bundle(fixture)["valid"] is True
 
 
 def test_sample_run_publication_bundles_validate_against_current_contract():
-    official = Path("sample_runs/model_eval_sample/publication_bundle")
-    battlefield = Path("sample_runs/model_battle_sample/publication_bundle")
+    official = ROOT / "sample_runs/model_eval_sample/publication_bundle"
+    battlefield = ROOT / "sample_runs/model_battle_sample/publication_bundle"
 
     assert official.exists()
     assert battlefield.exists()

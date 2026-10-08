@@ -7,6 +7,8 @@ import subprocess
 from pathlib import Path
 
 PACKAGED_CORE_COMMIT: str | None = None
+# git archive substitutes this only when exporting an actual commit.
+ARCHIVED_CORE_COMMIT = "$Format:%H$"
 
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 
@@ -18,6 +20,9 @@ def core_source_commit() -> str:
         if not _COMMIT_RE.fullmatch(PACKAGED_CORE_COMMIT):
             raise RuntimeError("packaged Core source commit is malformed")
         return PACKAGED_CORE_COMMIT
+
+    if _COMMIT_RE.fullmatch(ARCHIVED_CORE_COMMIT):
+        return ARCHIVED_CORE_COMMIT
 
     root = Path(__file__).resolve().parents[2]
     try:

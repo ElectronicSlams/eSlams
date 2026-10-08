@@ -11,6 +11,14 @@
 
 ### Fixed
 
+- Commit-based source archives embed Git provenance; packaged provenance tests
+  also work in an extracted sdist without Git. Both Python packages include
+  `py.typed`, and fixture tests resolve their paths independently of the cwd.
+- Distribution CI checks metadata and isolated wheel/sdist consumers outside
+  the checkout on Linux, Windows and macOS, then runs the extracted sdist suite.
+- README links use absolute repository URLs on PyPI and accurately describe
+  TypeScript sources as repository integrations rather than wheel contents.
+
 - Cribbage 1.0.1 corrects show scoring; Pentago 1.0.1 preserves placement wins
   before rotation; Othello 1.0.1 allows passes without truncating legal play.
 - Chess 1.2.0 makes draw claims explicit actions and keeps automatic fivefold/

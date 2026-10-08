@@ -13,6 +13,9 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 _COMMIT_RE = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 _CONSTANT_RE = re.compile(r"^PACKAGED_CORE_COMMIT: str \| None = .+$", re.MULTILINE)
+_ARCHIVE_RE = re.compile(
+    r'^ARCHIVED_CORE_COMMIT = "([0-9a-f]{40}(?:[0-9a-f]{24})?)"$', re.MULTILINE
+)
 
 
 class CustomBuildHook(BuildHookInterface):
@@ -81,7 +84,11 @@ def _repository_commit(root: Path) -> str | None:
 
 
 def _embedded_commit(source_path: Path) -> str | None:
-    match = _CONSTANT_RE.search(source_path.read_text(encoding="utf-8"))
+    source = source_path.read_text(encoding="utf-8")
+    archived = _ARCHIVE_RE.search(source)
+    if archived is not None:
+        return archived.group(1)
+    match = _CONSTANT_RE.search(source)
     if match is None:
         return None
     value = match.group(0).partition("=")[2].strip().strip('"')

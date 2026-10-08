@@ -261,7 +261,7 @@ def test_arena_session_cli_start_step_and_page(tmp_path: Path, capsys):
 
 
 def test_arena_session_golden_representative_descriptors():
-    golden_path = Path("fixtures/arena_sessions/golden_v0_3.json")
+    golden_path = Path(__file__).resolve().parents[1] / "fixtures/arena_sessions/golden_v0_3.json"
     golden = json.loads(golden_path.read_text(encoding="utf-8"))
 
     for row in golden["games"]:
