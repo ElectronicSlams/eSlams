@@ -331,3 +331,39 @@ Set the private value only on the local signer, a nonempty
 out of committed files and shared logs. Missing key IDs use
 `runner-artifact-env-key`; explicitly empty/whitespace IDs fail before agents
 run. This recipe is local signing, not an Official evaluation.
+
+## Aggregate selection and receipt projections
+
+Publication export and Official merge require at least one valid artifact.
+Directory selection ignores latest pointers, prefers an archive over its expanded
+sibling, and deduplicates identical artifact identities, including renamed copies.
+An explicit plan must be a valid `eslams.eval.plan.v1` envelope with a matching
+plan hash and at least one case. Invalid inputs leave the destination untouched.
+
+Publication proof rows identify the artifact by its content identity; replay
+directories also derive from that identity. Local file locations and names do not
+change exported bundle bytes. `provider_model_rows.jsonl` groups receipt attempts
+by provider, requested model and resolved model, retaining token totals and
+receipt counts. This evidence includes retry attempts. Receipt costs are summed
+only when each estimate has a valid finite non-negative USD value and source.
+Incomplete aggregates expose `known_cost_usd`, incomplete status and no complete
+`cost_usd`; they never imply an unpriced call was free. Receipt aggregation grants
+no aggregate leaderboard eligibility.
+
+## Historical validation boundary
+
+Core 0.5.1 tightened terminal outcome and deterministic transition validation.
+Some artifacts produced by Core 0.2.0–0.5.0 omit the terminal replay outcome or
+record earlier rules, and fail these modern checks. The current validator does
+not reconstruct missing historical outcomes or accept them for scoring. Preserve
+the original bytes and producing Core version. To examine archived results, use
+an isolated environment pinned to that producing version and treat its verdict
+as historical, without current Official authority. For current comparisons, rerun
+the recorded seed and policies under current rules into a new artifact; retain
+both artifacts and versions. Changing old manifests or hashes is not migration.
+
+Native CI compares real artifact file-table bytes and schema/publication export
+hashes across Linux Python 3.10–3.12, Windows and macOS Python 3.12. The comparison
+fixes the fixture wall clock and run ID. Measured timing sidecars are deliberately
+outside deterministic identity, so complete production ZIPs need not be byte
+identical when their actual timing diagnostics differ.

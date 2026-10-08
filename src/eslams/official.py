@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from eslams.artifact_inputs import artifact_inputs
 from eslams.artifacts import ArtifactValidator, extract_provider_usage, read_member
 from eslams.contracts.versions import OFFICIAL_RESULT_SCHEMA_VERSION
 from eslams.hashing import canonical_json
@@ -13,7 +14,7 @@ from eslams.policy import policy_key, policy_label
 
 
 def merge_official_results(run_dir: Path, output_path: Path) -> Path:
-    artifacts = _artifact_inputs(run_dir)
+    artifacts = artifact_inputs(directory=run_dir)
     rows: list[dict[str, Any]] = []
     aggregate_usage = {
         "input_tokens": 0,
@@ -86,18 +87,6 @@ def merge_official_results(run_dir: Path, output_path: Path) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(canonical_json(payload) + "\n", encoding="utf-8", newline="\n")
     return output_path
-
-
-def _artifact_inputs(run_dir: Path) -> list[Path]:
-    artifacts = []
-    for path in sorted(run_dir.iterdir()):
-        if path.name.startswith("latest.eslams"):
-            continue
-        if path.name.endswith(".eslams") or path.name.endswith(".eslams.d"):
-            if path.name.endswith(".eslams.d") and path.with_suffix("").exists():
-                continue
-            artifacts.append(path.resolve())
-    return artifacts
 
 
 def _read_optional_json(artifact_path: Path, member: str) -> dict[str, Any] | None:

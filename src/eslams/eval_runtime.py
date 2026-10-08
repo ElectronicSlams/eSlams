@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -64,8 +65,7 @@ def write_resume_checkpoint(path: Path, records: list[ResumeCheckpointRecord]) -
     payload = {
         "schema_version": RESUME_CHECKPOINT_SCHEMA_VERSION,
         "records": [
-            record.to_dict()
-            for record in sorted(records, key=lambda item: item.invariant.case_id)
+            record.to_dict() for record in sorted(records, key=lambda item: item.invariant.case_id)
         ],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -125,6 +125,24 @@ def progress_event(
     elapsed_seconds: float,
     provider_latencies_ms: list[int] | None = None,
 ) -> dict[str, Any]:
+    for name, count in (
+        ("completed_cases", completed_cases),
+        ("failed_cases", failed_cases),
+        ("skipped_cases", skipped_cases),
+    ):
+        if type(count) is not int or count < 0:
+            raise ValueError(f"{name} must be a non-negative integer")
+    if (
+        isinstance(elapsed_seconds, bool)
+        or not isinstance(elapsed_seconds, (int, float))
+        or not math.isfinite(elapsed_seconds)
+        or elapsed_seconds < 0
+    ):
+        raise ValueError("elapsed_seconds must be finite and non-negative")
+    if provider_latencies_ms is not None and any(
+        type(value) is not int or value < 0 for value in provider_latencies_ms
+    ):
+        raise ValueError("provider latencies must be non-negative integers")
     total_cases = int(plan.get("case_count_expected") or len(plan_case_ids(plan)))
     processed = completed_cases + failed_cases + skipped_cases
     case_rate = processed / elapsed_seconds if elapsed_seconds > 0 else None

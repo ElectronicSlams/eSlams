@@ -437,10 +437,18 @@ unavailable reason.
 Plan commands are no-secret and deterministic:
 
 ```bash
-eslams plan official --suite public-smoke --providers openai,anthropic --arenas chess,tic-tac-toe --json
 eslams plan battlefield --pairs openai:gpt-5-mini,anthropic:claude-sonnet-4-6 --arenas tic-tac-toe --json
 eslams plan public-match --request request.json --json
 ```
+
+The public registry grants no `official_eval` eligibility. The CLI
+`plan official --suite public-smoke` fails if no eligible models are selected;
+capability flags require explicit trusted eligibility evidence and are not inferred
+from an API model list. The Python `official_plan` helper can return an empty
+diagnostic envelope, which cannot be used as a publication plan. `public-smoke`
+is the supported official planning suite. Unknown arenas, malformed model
+references, supplied plans with invalid hashes, and empty aggregate inputs fail
+without substituting defaults.
 
 Plans contain a stable `plan_hash`, suite fingerprint, registry hash, selected
 models and arenas, expected case count, shard rows, environment variable names,

@@ -244,7 +244,7 @@
       "number": 63,
       "title": "README `eslams models update --providers ...` overwrites tracked models.generated.json and shrinks it ~80% (8762 -> 1697)",
       "work_package": "W6",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Live model refresh must preserve the source registry or use explicit separate generated output/reviewed diff; test partial provider refresh cannot silently shrink the full registry.",
       "evidence": {
         "source": [
@@ -259,7 +259,17 @@
           "docs/REGISTRY_AVAILABLE_MODELS.md"
         ],
         "implementation": "Source updater and CLI require an explicit new --output path; existing targets and implicit packaged-data writes are refused. Provider filter scope is documented as a snapshot subset. Source-fetch failures stop output; exclusive file creation prevents overwrites. Local fixture verifies packaged snapshot bytes remain unchanged, source failure produces no output and unknown API-listed tasks cannot override capability evidence.",
-        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release."
+        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release.",
+        "integration": "499 tests and 88.549385% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37763514925, distribution consumers 37763515037, dependency audit 37763514926, workflow lint 37763515077 and Python/TypeScript CodeQL 37763515181 all passed at e178cd4675360f254dfb6c111c0d8084c2bc7e21. No paid provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:30:28Z",
+        "number": 63,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/63",
+        "kind": "issue",
+        "resolution_commit": "e178cd4675360f254dfb6c111c0d8084c2bc7e21",
+        "replacement_pr": 218
       }
     },
     {
@@ -443,17 +453,53 @@
       "number": 78,
       "title": "Missing or corrupt inputs to publish export, plan and official merge exit 0 and produce valid-looking output (unknown arena silently replaced)",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Missing/corrupt input, unknown arena and absent required plans must fail clearly without producing a valid-looking bundle; test source validation before output creation and no fabricated unknown-arena replacements.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifact_inputs.py",
+          "src/eslams/publication_export.py",
+          "src/eslams/planning.py",
+          "src/eslams/official.py",
+          "src/eslams/eval_runtime.py",
+          "src/eslams/cli.py",
+          "tests/test_publication_input_regressions.py",
+          "scripts/verify_portable_bytes.py",
+          ".github/workflows/ci.yml",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "docs/PLATFORM_CONTRACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Validate explicit plans/schema/hash/case partitions, reject empty or invalid aggregate artifact inputs, unknown suites/arenas and malformed model references; reject negative counts and non-finite progress timings. Staged publication output stays absent on failure.",
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+      }
     },
     {
       "number": 79,
       "title": "Artifacts produced by Core 0.2.0 to 0.5.0 fail validation on 0.5.1 and later (terminal outcome mismatch), with no compatibility note",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose tested legacy read support versus an explicit unsupported-version boundary. Preserve modern strict validation and Official authority; do not accept invalid historical outcomes merely to make old artifacts green.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifact_inputs.py",
+          "src/eslams/publication_export.py",
+          "src/eslams/planning.py",
+          "src/eslams/official.py",
+          "src/eslams/eval_runtime.py",
+          "src/eslams/cli.py",
+          "tests/test_publication_input_regressions.py",
+          "scripts/verify_portable_bytes.py",
+          ".github/workflows/ci.yml",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "docs/PLATFORM_CONTRACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Choose an explicit historical validation boundary rather than reconstruct missing outcomes. Document that some Core 0.2.0\u20130.5.0 artifacts fail the strict 0.5.1+ transition/terminal checks, preserve original bytes, inspect with the producer version in an isolated environment and rerun under current rules for current comparisons. Existing strict tamper checks and Official authority remain enforced.",
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+      }
     },
     {
       "number": 80,
@@ -828,9 +874,27 @@
       "number": 107,
       "title": "PLATFORM_CONTRACTS.md CLI walkthrough fails: `arena step --state session_state.json` (saved `arena start` output) crashes with KeyError: state_id",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Accept only the documented saved session envelope/response shape or fix the walkthrough. Test the copied CLI start-to-step sequence with required explicit secret configuration.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifact_inputs.py",
+          "src/eslams/publication_export.py",
+          "src/eslams/planning.py",
+          "src/eslams/official.py",
+          "src/eslams/eval_runtime.py",
+          "src/eslams/cli.py",
+          "tests/test_publication_input_regressions.py",
+          "scripts/verify_portable_bytes.py",
+          ".github/workflows/ci.yml",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "docs/PLATFORM_CONTRACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Arena CLI step and legal-actions-page accept either the signed session envelope or a full saved start/step response by extracting the nested envelope without bypassing signature checks. Regression exercises start/page/two saved steps with an explicit test session secret.",
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+      }
     },
     {
       "number": 108,
@@ -925,9 +989,27 @@
       "number": 115,
       "title": "README/PLATFORM_CONTRACTS example `eslams plan official --suite public-smoke ...` always returns an empty plan (0 models, 0 cases) because no registry model has official_eval enabled",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether the historical Official planner remains supported. Either supply a truthful actionable registry/sample plan or reject/document the unsupported command; never enable all registry rows for Official evaluation to populate the plan.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifact_inputs.py",
+          "src/eslams/publication_export.py",
+          "src/eslams/planning.py",
+          "src/eslams/official.py",
+          "src/eslams/eval_runtime.py",
+          "src/eslams/cli.py",
+          "tests/test_publication_input_regressions.py",
+          "scripts/verify_portable_bytes.py",
+          ".github/workflows/ci.yml",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "docs/PLATFORM_CONTRACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "The public registry grants no Official model eligibility. CLI official planning rejects zero cases with an actionable Battlefield showcase alternative. Python helper retains an empty diagnostic envelope, which publication rejects. README/Platform examples now show an actionable showcase plan; no model is falsely enabled.",
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+      }
     },
     {
       "number": 116,
@@ -1494,23 +1576,26 @@
       "number": 140,
       "title": "Reading-only (Windows): write_text without newline=\"\\n\" makes artifact bytes, artifact_id and schema bundle hash differ from Linux",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Write canonical LF bytes explicitly independent of platform; compare schema/artifact hashes on native Windows and Linux. gitattributes (#45) alone does not change runtime writes.",
       "evidence": {
         "source": [
-          "pyproject.toml",
+          "src/eslams/artifact_inputs.py",
+          "src/eslams/publication_export.py",
+          "src/eslams/planning.py",
+          "src/eslams/official.py",
+          "src/eslams/eval_runtime.py",
+          "src/eslams/cli.py",
+          "tests/test_publication_input_regressions.py",
+          "scripts/verify_portable_bytes.py",
           ".github/workflows/ci.yml",
-          ".github/workflows/dependency-audit.yml",
-          ".github/workflows/publish.yml",
-          ".github/workflows/actionlint.yml",
-          ".env.example",
-          ".gitignore",
-          ".editorconfig",
-          ".gitattributes",
-          "CONTRIBUTING.md",
-          "README.md"
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "docs/PLATFORM_CONTRACTS.md",
+          "CHANGELOG.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "implementation": "Runtime text writes already use explicit LF. Add actual native file-table/schema/publication byte-hash comparison across five Linux/Windows/macOS Python environments. Fix only fixture wall clock/run ID; timing sidecars remain deliberately outside deterministic artifact identity. Local Python 3.10 and 3.12 generate identical outputs; native gate pending.",
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
       }
     },
     {
@@ -1893,7 +1978,7 @@
       "number": 156,
       "title": "Catalogue marks 72 embedding and reranker models launch_status ready with Arena enabled; the same OpenAI embedding model is not_game_agent_supported under openai",
       "work_package": "W5",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Disable game-agent/Arena readiness for embedding/reranker-only models based on real adapter capabilities; test provider aliases and model capability rows.",
       "evidence": {
         "source": [
@@ -1908,14 +1993,24 @@
           "docs/REGISTRY_AVAILABLE_MODELS.md"
         ],
         "implementation": "Conservative task/endpoint/known non-chat identity exclusions apply across broker namespaces, including embedcode/embedqa and BGE/E5 aliases. Text modalities or raw enabled/ready overrides cannot promote unsupported game tasks. Full 8762-record catalogue has zero embedding/reranker Arena-ready rows, with focused contradictory task/flag fixtures and active chat controls. API listing-only records no longer fabricate gameplay capabilities.",
-        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release."
+        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release.",
+        "integration": "499 tests and 88.549385% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37763514925, distribution consumers 37763515037, dependency audit 37763514926, workflow lint 37763515077 and Python/TypeScript CodeQL 37763515181 all passed at e178cd4675360f254dfb6c111c0d8084c2bc7e21. No paid provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:30:31Z",
+        "number": 156,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/156",
+        "kind": "issue",
+        "resolution_commit": "e178cd4675360f254dfb6c111c0d8084c2bc7e21",
+        "replacement_pr": 218
       }
     },
     {
       "number": 157,
       "title": "eslams catalogue models: public_slug collides for two together-ai bge-base models and 181 slugs contain @, * or ~",
       "work_package": "W5",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "A public_slug collision is actionable; @ and ~ are not inherently illegal URL path characters. Define an injective stable slug grammar and encoding/redirect policy, then fix collisions and only prohibited characters.",
       "evidence": {
         "source": [
@@ -1930,14 +2025,24 @@
           "docs/REGISTRY_AVAILABLE_MODELS.md"
         ],
         "implementation": "Preserve safe unique existing slugs; sanitize invalid characters with stable identity suffix, disambiguate actual collision groups while preserving original model case, and fail if final IDs are not unique. All 8762 exported slugs are safe and distinct. Reversed-input fixture verifies stable collision resolution and Unicode/unsafe cases.",
-        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release."
+        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release.",
+        "integration": "499 tests and 88.549385% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37763514925, distribution consumers 37763515037, dependency audit 37763514926, workflow lint 37763515077 and Python/TypeScript CodeQL 37763515181 all passed at e178cd4675360f254dfb6c111c0d8084c2bc7e21. No paid provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:30:34Z",
+        "number": 157,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/157",
+        "kind": "issue",
+        "resolution_commit": "e178cd4675360f254dfb6c111c0d8084c2bc7e21",
+        "replacement_pr": 218
       }
     },
     {
       "number": 158,
       "title": "README and REGISTRY_AVAILABLE_MODELS.md say Core tracks 90 namespaces and 1926 rows, but eslams models list and catalogue models serve 8762 rows from 259 providers",
       "work_package": "W5",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: addressed in #218",
       "criterion": "Generate current registry counts from the published catalogue and explain source versus routable adapter coverage; do not delete registry rows to match an old README count.",
       "evidence": {
         "source": [
@@ -1952,7 +2057,17 @@
           "docs/REGISTRY_AVAILABLE_MODELS.md"
         ],
         "implementation": "README and generated inventory explicitly separate full CLI registry (8762 rows/259 namespaces) from curated 90-namespace subset. Generator computes actual full/subset counts and describes listing/override flags without claiming live inference attestation.",
-        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release."
+        "verification": "499 tests passed on Python 3.12 and direct-minimum Python 3.10. Both cover 11592/13091 lines (88.549385%). Full ruff and strict mypy passed. Native/distribution/CodeQL checks pending; no provider calls or release.",
+        "integration": "499 tests and 88.549385% coverage on Python 3.12/direct-minimum 3.10. Native Core CI 37763514925, distribution consumers 37763515037, dependency audit 37763514926, workflow lint 37763515077 and Python/TypeScript CodeQL 37763515181 all passed at e178cd4675360f254dfb6c111c0d8084c2bc7e21. No paid provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:30:36Z",
+        "number": 158,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/158",
+        "kind": "issue",
+        "resolution_commit": "e178cd4675360f254dfb6c111c0d8084c2bc7e21",
+        "replacement_pr": 218
       }
     },
     {
@@ -3089,25 +3204,79 @@
       "number": 209,
       "title": "eslams publish export --artifacts <runs dir> exports the newest run twice (latest.eslams symlink plus the real file): duplicate proof rows and double-counted token usage, bundle validates",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Enumerate distinct artifacts by canonical identity, avoiding latest pointers/aliases without merging genuinely distinct runs; test deduplicated proof rows and exact usage totals.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifact_inputs.py",
+          "src/eslams/publication_export.py",
+          "src/eslams/planning.py",
+          "src/eslams/official.py",
+          "src/eslams/eval_runtime.py",
+          "src/eslams/cli.py",
+          "tests/test_publication_input_regressions.py",
+          "scripts/verify_portable_bytes.py",
+          ".github/workflows/ci.yml",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "docs/PLATFORM_CONTRACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Shared validated artifact selection ignores latest pointers, prefers archive over expanded sibling and deduplicates identical artifact IDs, including renamed copies. Publication validator rejects duplicate proof IDs and mismatched artifact counts. Regressions cover ZIP/expanded/latest/copies and Official merge count.",
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+      }
     },
     {
       "number": 210,
       "title": "eslams publish export is not deterministic: proof_index.jsonl embeds the absolute input path, so identical artifacts give different bundle hashes from different directories",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Remove absolute local input paths from canonical publication proof rows; compare byte-identical bundles from different roots while retaining private diagnostics separately.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifact_inputs.py",
+          "src/eslams/publication_export.py",
+          "src/eslams/planning.py",
+          "src/eslams/official.py",
+          "src/eslams/eval_runtime.py",
+          "src/eslams/cli.py",
+          "tests/test_publication_input_regressions.py",
+          "scripts/verify_portable_bytes.py",
+          ".github/workflows/ci.yml",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "docs/PLATFORM_CONTRACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Public proof rows and replay paths derive from content artifact identity. Byte-identical artifacts exported from different directories and renamed files produce exactly identical bundle files/hashes; no absolute input path remains in proof rows.",
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+      }
     },
     {
       "number": 211,
       "title": "eslams publish export always writes an empty provider_model_rows.jsonl (documented provider/model rows) and cost_unavailable pricing even when the artifact has provider receipts",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether provider_model_rows is a supported output. Populate it deterministically from validated receipts and reviewed price cards, or deprecate/document it. Missing cost data must remain unavailable, never invented.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/artifact_inputs.py",
+          "src/eslams/publication_export.py",
+          "src/eslams/planning.py",
+          "src/eslams/official.py",
+          "src/eslams/eval_runtime.py",
+          "src/eslams/cli.py",
+          "tests/test_publication_input_regressions.py",
+          "scripts/verify_portable_bytes.py",
+          ".github/workflows/ci.yml",
+          "README.md",
+          "docs/ARTIFACTS.md",
+          "docs/PLATFORM_CONTRACTS.md",
+          "CHANGELOG.md"
+        ],
+        "implementation": "Project all provider receipt attempts by provider/requested/resolved identity with counts, token totals, usage completeness and receipt cost summaries. Complete USD costs are summed; partial known values remain explicit with unknown total rather than treating unpriced calls as free. Fake local provider run verifies four receipts, one row, exact usage and known costs without external inference.",
+        "verification": "503 tests passed on both Python 3.12/direct-minimum Python 3.10; 11710/13210 lines (88.644966%). Ruff, strict mypy and actionlint pass. Local native-byte fixture identical on both interpreters. Native/distribution/byte parity gates pending; no release or paid calls."
+      }
     },
     {
       "number": 212,
@@ -3553,7 +3722,7 @@
         "disposition": "Incorporate Python and TypeScript CodeQL scans; repository default setup is not configured, so there is no duplicate setup. Verified v4.38.1 annotated tag peels to proposed SHA 1c5b675653bb5c22dbe9b12b556ec555138e09fd via official GitHub API. Restrict security-events write to analyze job and disable checkout credential persistence.",
         "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending.",
         "integration": "496 tests passed on Python 3.12 and direct-minimum 3.10; 11559/13057 lines (88.527227%). Native Core CI 37761894232, isolated distribution consumers 37761894154, dependency audit 37761894220, workflow lint 37761894148 and Python/TypeScript CodeQL 37761894189 all passed at 32a4b1b. Local Make lint/mypy/TS/schema/benchmark targets and actionlint passed. No release.",
-        "codeql_followup": "First scan reported one preflight logging alert sourced to environment-name/presence/error diagnostics. Inspected complete alert and actual credential normalization: credential values are not returned. Tighten output to literal presence booleans and a generic credential-validation message; retain key-echo regressions. A fresh scan must verify the change; no query suppression or alert dismissal."
+        "codeql_followup": "Fresh e178cd4 CodeQL analysis 37763515181 passed. Complete alert 1 most_recent_instance.state is fixed after literal credential-presence booleans/generic validation diagnostics; no suppression or dismissal. Credential-value regression remains covered."
       },
       "closure": {
         "closedAt": "2026-10-08T10:19:04Z",

@@ -214,10 +214,11 @@ def test_cli_catalogue_and_plan_commands(tmp_path: Path, capsys):
                 "--json",
             ]
         )
-        == 0
+        == 1
     )
-    plan = json.loads(capsys.readouterr().out)
-    assert plan["kind"] == "official"
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "no official-eval-enabled models" in captured.err
 
     assert main(["plan", "public-match", "--request", str(request), "--json"]) == 0
     public_plan = json.loads(capsys.readouterr().out)

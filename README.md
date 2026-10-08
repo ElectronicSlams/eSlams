@@ -402,7 +402,7 @@ eslams artifact public-export runs/latest.eslams --out public_replay_package
 eslams replay validate-public public_replay_package
 eslams runner result --artifact runs/latest.eslams --artifact-uri URI --job-id JOB
 eslams providers preflight --provider openai --model gpt-5-mini --arena tic-tac-toe
-eslams plan official --suite public-smoke --providers openai --arenas tic-tac-toe --json
+eslams plan battlefield --pairs openai:gpt-5-mini --arenas tic-tac-toe --json
 eslams publish export --kind uploaded-replay --artifact runs/latest.eslams --out bundle
 eslams publish validate bundle --json
 eslams arena smoke --all --json
@@ -411,6 +411,10 @@ eslams core budgets --json
 eslams core golden --games tic-tac-toe,connect-four --out fixtures/core_golden.json
 eslams bench arena-step --games tic-tac-toe,connect-four --iterations 100
 ```
+
+The shipped public registry enables no models for Official evaluation.
+`plan official --suite public-smoke` rejects an empty selection with an actionable
+error. The Battlefield example above is a showcase plan and grants no Official authority.
 
 Core v0.4.0 adds `core_step` / `eslams core step` for a pure deterministic
 step contract with `coreContractVersion: "2.0"`, canonical hashes, compact

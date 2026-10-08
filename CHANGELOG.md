@@ -53,6 +53,16 @@
 
 ### Compatibility
 
+- Core 0.5.1 terminal/replay validation tightened the historical boundary:
+  some 0.2.0–0.5.0 artifacts require producer-version historical inspection.
+  Current strict scoring checks remain enforced; see `docs/ARTIFACTS.md`.
+- Public Official planning fails clearly when no eligible models are selected.
+  Use Battlefield planning for BYO-key showcase cases. Supplied plans, empty
+  merges and malformed inputs fail before aggregate output is written.
+- Publication exports deduplicate artifact identities and omit local input
+  paths. Provider projections preserve per-model usage and distinguish known
+  partial costs from complete totals. Arena CLI accepts saved start/step outputs.
+
 - The proposed supported minimum is Python 3.10. Patched FastAPI/Starlette,
   pytest and build/publishing tools require it; cryptography and runtime
   dependency floors now select current patched versions. Published historical

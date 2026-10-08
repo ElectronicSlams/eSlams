@@ -700,7 +700,7 @@ def _arena_command(args: argparse.Namespace) -> int:
         return 0
     if args.arena_command == "step":
         payload = step_session(
-            session_state=_read_json_file(args.state),
+            session_state=_read_session_file(args.state),
             player_id=args.player_id,
             action_token=args.action_token,
         )
@@ -708,7 +708,7 @@ def _arena_command(args: argparse.Namespace) -> int:
         return 0 if payload.get("accepted") is True else 1
     if args.arena_command == "legal-actions-page":
         payload = legal_actions_page(
-            session_state=_read_json_file(args.state),
+            session_state=_read_session_file(args.state),
             player_id=args.player_id,
             query=args.query,
             limit=args.limit,
@@ -782,6 +782,11 @@ def _plan_command(args: argparse.Namespace) -> int:
             arenas=_comma_list(args.arenas),
             shard_count=args.shard_count,
         )
+        if payload["case_count_expected"] == 0:
+            raise ValueError(
+                "no official-eval-enabled models selected; the public registry grants no Official "
+                "evaluation eligibility. Use plan battlefield for a BYO-key showcase plan"
+            )
     elif args.plan_command == "battlefield":
         payload = battlefield_plan(
             pairs=_comma_list(args.pairs),
@@ -792,6 +797,9 @@ def _plan_command(args: argparse.Namespace) -> int:
         payload = public_match_plan(request_path=args.request, shard_count=args.shard_count)
     elif args.plan_command == "progress":
         plan_payload = _read_json_file(args.plan)
+        from eslams.planning import validate_plan
+
+        validate_plan(plan_payload)
         payload = progress_event(
             plan=plan_payload,
             current_case=args.current_case,
@@ -997,6 +1005,16 @@ def _read_json_file(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return value
+
+
+def _read_session_file(path: Path) -> dict[str, Any]:
+    payload = _read_json_file(path)
+    if "session_state" in payload:
+        state = payload["session_state"]
+        if not isinstance(state, dict):
+            raise ValueError("session_state must be an object")
+        return state
+    return payload
 
 
 def _read_price_card_reference(path: Path | None) -> PriceCardReference | None:

@@ -36,7 +36,7 @@ def test_plan_shards_are_bounded_by_workload_and_partition_cases(tmp_path):
     for count in (3, True, 1.5):
         with pytest.raises(ValueError, match="between 1 and 2"):
             public_match_plan(request_path=request, shard_count=count)
-    with pytest.raises(ValueError, match="between 1 and 1"):
+    with pytest.raises(ValueError, match="provider:model"):
         battlefield_plan(pairs=[], arenas=["tic-tac-toe"], shard_count=2)
-    with pytest.raises(ValueError, match="between 1 and 1"):
+    with pytest.raises(ValueError, match="known provider"):
         official_plan(suite="public-smoke", providers=[], arenas=["tic-tac-toe"], shard_count=2)

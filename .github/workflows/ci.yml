@@ -35,10 +35,35 @@ jobs:
         run: eslams schemas export --out "${{ runner.temp }}/eslams-schemas"
       - name: Core benchmark smoke
         run: python -m eslams_core.bench arena-step --games tic-tac-toe --iterations 10 --json "${{ runner.temp }}/core-step-bench.json"
+      - name: Deterministic artifact and schema bytes
+        run: python scripts/verify_portable_bytes.py --output "${{ runner.temp }}/portable-bytes/hashes.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deterministic-${{ matrix.os }}-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/portable-bytes/hashes.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Ruff
         run: ruff check .
       - name: Mypy
         run: mypy --python-version ${{ matrix.python-version }} src
+
+  portable-bytes:
+    name: Native deterministic byte parity
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: deterministic-*
+          path: ${{ runner.temp }}/portable-bytes
+      - name: Compare five native environments
+        run: python scripts/verify_portable_bytes.py --compare "${{ runner.temp }}/portable-bytes"
 
   typescript:
     name: TypeScript contracts
