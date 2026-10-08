@@ -262,3 +262,44 @@ checkpoint manifest, and signature/readback manifest. Core validates object
 hashes, projection hashes, public replay packages, aggregate usage shape, and
 proof-row policy without requiring secrets or storage credentials. Proof rows
 are evidence-only by default and do not imply aggregate leaderboard eligibility.
+
+## Replay trust and local verification keys
+
+`eslams replay ARTIFACT` validates content, deterministic replay and signature
+requirements before creating external HTML. Failed validation exits 1 and
+creates no output. To inspect damaged evidence explicitly, use
+`eslams replay ARTIFACT --diagnostic --output diagnostic.html`; the HTML has a
+visible untrusted warning. Embedded `replay/index.html` is generated before the
+manifest exists and tells viewers to validate the complete artifact first.
+Unsigned local content can validate structurally; that does not authenticate a
+runner or establish an Official result.
+
+A signed artifact requires the corresponding trusted
+`RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY` to validate. Without it, the status is
+`unverified_missing_key`, validation fails with `runner_signature_unverified`,
+and all scoring/publication eligibility is false. In a signing process Core
+can derive the verify key from `RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY`; auditors
+should use the public key explicitly and never obtain the private key. A
+signature proves custody relative to that key, not Official authority. Obtain
+Official verification keys from the authorized runner operator. The published
+fixture key is test-only, is reproducible by anyone, and establishes no
+Official authority.
+
+For a throwaway local key, generate the private and public values together:
+
+```bash
+python - <<'PYKEY'
+import base64
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
+key = Ed25519PrivateKey.generate()
+print("private=base64:" + base64.b64encode(key.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())).decode())
+print("public=base64:" + base64.b64encode(key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)).decode())
+PYKEY
+```
+
+Set the private value only on the local signer, a nonempty
+`RUNNER_ARTIFACT_SIGNING_KEY_ID`, and the public value on the verifier. Keep keys
+out of committed files and shared logs. Missing key IDs use
+`runner-artifact-env-key`; explicitly empty/whitespace IDs fail before agents
+run. This recipe is local signing, not an Official evaluation.

@@ -115,7 +115,14 @@ def _member_path(member: zipfile.ZipInfo) -> str:
         raise ValueError("artifact archive contains a link, special or encrypted member")
     if name != member.orig_filename or "\\" in name or name.startswith("/"):
         raise ValueError("unsafe artifact archive path")
-    relative = name[:-1] if member.is_dir() else name
+    return portable_member_path(name, directory=member.is_dir())
+
+
+def portable_member_path(name: str, *, directory: bool = False) -> str:
+    """Validate the shared portable path contract for archive/manifest members."""
+    if "\\" in name or name.startswith("/") or "\0" in name:
+        raise ValueError("unsafe artifact archive path")
+    relative = name[:-1] if directory and name.endswith("/") else name
     parts = relative.split("/")
     if len(relative.encode("utf-8")) > 1024 or any(
         part in ("", ".", "..")

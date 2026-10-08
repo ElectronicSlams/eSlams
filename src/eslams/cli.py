@@ -392,6 +392,8 @@ def _main(argv: list[str] | None = None) -> int:
     replay.add_argument("artifact")
     replay.add_argument("extra", nargs="?")
     replay.add_argument("--output", type=Path)
+    replay.add_argument("--diagnostic", action="store_true",
+                        help="Inspect an invalid artifact with a visible untrusted warning.")
     replay.add_argument("--overwrite", action="store_true", help="Replace an existing HTML file.")
 
     agent = sub.add_parser("agent", help="Agent helper commands.")
@@ -539,7 +541,9 @@ def _main(argv: list[str] | None = None) -> int:
             return 0 if bool(payload.get("valid")) else 1
         if args.extra is not None:
             parser.error("replay accepts only one artifact argument")
-        output = render_replay_html(Path(args.artifact), args.output, overwrite=args.overwrite)
+        output = render_replay_html(
+            Path(args.artifact), args.output, overwrite=args.overwrite, diagnostic=args.diagnostic
+        )
         print(json.dumps({"replay": str(output)}, indent=2))
         return 0
     if args.command == "agent":

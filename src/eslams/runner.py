@@ -17,7 +17,12 @@ from typing import Any, Literal
 from eslams.agents import ProviderCallError, create_builtin_agent
 from eslams.arena import Arena
 from eslams.arenas import registry
-from eslams.artifacts import ArtifactBuildInput, expanded_artifact_path, write_artifact
+from eslams.artifacts import (
+    ArtifactBuildInput,
+    expanded_artifact_path,
+    validate_artifact_signing_configuration,
+    write_artifact,
+)
 from eslams.contracts.integrity import ActionProvenance, FailureClass
 from eslams.contracts.provider import (
     provider_attempt_event_id,
@@ -141,6 +146,7 @@ class Runner:
         self.memory_policy = memory_policy
 
     def run(self, config: RunConfig) -> RunResult:
+        validate_artifact_signing_configuration()
         _validate_failure_policy("on_agent_error", config.on_agent_error)
         _validate_failure_policy("on_illegal_action", config.on_illegal_action)
         arena = registry.create(config.arena_id)

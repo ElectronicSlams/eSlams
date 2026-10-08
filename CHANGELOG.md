@@ -4,6 +4,15 @@
 
 ### Fixed
 
+- Manifest and signature paths are confined to the artifact root. Expanded
+  artifact links/special members are rejected before reading payloads; archive
+  member reads use the same bounded extractor. Invalid reports make every
+  scoring/publication eligibility flag false.
+- External replay HTML validates content first. `--diagnostic` explicitly
+  permits inspection with a visible untrusted warning; embedded previews
+  instruct viewers to validate the complete artifact.
+- Invalid signing key IDs fail before agents run or outputs are created.
+
 - Arena sessions require a configured secret of at least 32 characters. The
   explicit local development opt-in is refused in production/staging. Envelopes
   authenticate private state and must stay on trusted servers. Existing unsigned

@@ -46,7 +46,7 @@ from eslams.policy import artifact_profile_label as policy_artifact_profile_labe
 from eslams.policy import policy_key, policy_label
 from eslams.replay import _write_artifact_replay
 from eslams.replay_projection import display_frame_rows
-from eslams.zip_extract import extract_archive
+from eslams.zip_extract import extract_archive, portable_member_path
 
 ARTIFACT_VERSION = "eslams-artifact-v1"
 RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v2"
@@ -360,6 +360,7 @@ def write_artifact(
 ) -> Path:
     """Write a directory artifact or zip-compatible .eslams archive."""
 
+    validate_artifact_signing_configuration()
     for index, receipt in enumerate(build.provider_receipts):
         receipt_errors = provider_receipt_validation_errors(receipt)
         if receipt_errors:
@@ -724,6 +725,7 @@ def open_artifact(path: Path) -> Iterator[Path]:
 
     artifact_dir, cleanup = _materialize(path)
     try:
+        _artifact_file_paths(artifact_dir)
         yield artifact_dir
     finally:
         if cleanup:
@@ -733,16 +735,11 @@ def open_artifact(path: Path) -> Iterator[Path]:
 def read_member(path: Path, member: str) -> bytes:
     """Read a member from an expanded or archived artifact."""
 
-    member_path = _safe_artifact_subpath(member)
-    if member_path is None:
-        raise ValueError(f"invalid artifact member path {member!r}")
-    path = path.resolve()
-    if path.is_dir():
-        return (path / member_path).read_bytes()
-    if zipfile.is_zipfile(path):
-        with zipfile.ZipFile(path) as zf:
-            return zf.read(member_path.as_posix())
-    raise FileNotFoundError(path)
+    with open_artifact(path) as root:
+        target, error = _confine_artifact_member(root, member)
+        if target is None:
+            raise ValueError(error)
+        return target.read_bytes()
 
 
 def extract_validation_summary(path: Path) -> dict[str, Any] | None:
@@ -793,6 +790,17 @@ class ArtifactValidator:
     ) -> ArtifactValidationReport:
         artifact_dir, cleanup = _materialize(path)
         try:
+            try:
+                _artifact_file_paths(artifact_dir)
+            except ValueError as exc:
+                return ArtifactValidationReport(
+                    errors=[str(exc)], profile=profile, artifact=str(path),
+                    signature=SignatureValidationStatus(status="not_checked"),
+                    deterministic_replay=DeterministicReplayValidationStatus(status="not_checked"),
+                    scoring_eligible=False, per_case_run_valid=False,
+                    per_case_scoring_eligible=False, proof_row_publication_eligible=False,
+                    aggregate_leaderboard_eligible=False,
+                )
             normalized_profile = _normalize_validation_profile(profile, artifact_dir)
             return self._validate_dir(artifact_dir, normalized_profile, path.resolve())
         finally:
@@ -829,6 +837,13 @@ class ArtifactValidator:
                 profile=profile,
                 source_path=source_path,
                 artifact_dir=artifact_dir,
+            )
+        if not isinstance(manifest, dict):
+            return _validation_report(
+                errors=[*errors, "manifest must be a JSON object"],
+                signature=SignatureValidationStatus(status="not_checked"),
+                deterministic_replay=DeterministicReplayValidationStatus(status="not_checked"),
+                profile=profile, source_path=source_path, artifact_dir=artifact_dir,
             )
         if manifest.get("artifact_version") != ARTIFACT_VERSION:
             errors.append("manifest.artifact_version is unsupported")
@@ -901,6 +916,8 @@ def _normalize_validation_profile(profile: str, artifact_dir: Path) -> str:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 return "runner_bundle"
+            if not isinstance(manifest, dict):
+                return "runner_bundle"
             artifact_profile = manifest.get("artifact_profile")
             if isinstance(artifact_profile, str):
                 candidate = PROFILE_ALIASES.get(artifact_profile, artifact_profile).replace(
@@ -929,9 +946,14 @@ def _validate_file_table(
             errors.append("manifest.files contains invalid entry")
             continue
         valid_entries.append(entry)
+        if entry["path"] in listed_paths:
+            errors.append(f"duplicate manifest path: {entry['path']}")
         listed_paths.add(entry["path"])
-        file_path = artifact_dir / entry["path"]
-        if not file_path.exists():
+        file_path, path_error = _confine_artifact_member(artifact_dir, entry["path"])
+        if path_error is not None:
+            errors.append(path_error)
+            continue
+        if file_path is None or not file_path.is_file():
             errors.append(f"manifest file missing on disk: {entry['path']}")
             continue
         expected = entry.get("sha256")
@@ -974,8 +996,11 @@ def _validate_unhashed_file_table(
         paths.add(rel)
         if rel not in UNHASHED_FILE_PATHS:
             errors.append(f"unsupported unhashed artifact file: {rel}")
-        file_path = artifact_dir / rel
-        if not file_path.exists():
+        file_path, path_error = _confine_artifact_member(artifact_dir, rel)
+        if path_error is not None:
+            errors.append(path_error)
+            continue
+        if file_path is None or not file_path.is_file():
             errors.append(f"manifest unhashed file missing on disk: {rel}")
             continue
         expected = entry.get("sha256")
@@ -1296,6 +1321,16 @@ def _validation_report(
     artifact_dir: Path,
     manifest: dict[str, Any] | None = None,
 ) -> ArtifactValidationReport:
+    level = _optional_manifest_str(manifest, "verification_level")
+    level_key = _optional_manifest_str(manifest, "verification_level_key")
+    level_label = _optional_manifest_str(manifest, "verification_level_label")
+    privileged = any(
+        "official" in "".join(char for char in value.lower() if char.isalnum())
+        or "grandslam" in "".join(char for char in value.lower() if char.isalnum())
+        for value in (level, level_key, level_label) if value
+    )
+    if privileged and (errors or not signature.verified):
+        level, level_key, level_label = "Untrusted", "untrusted", "Untrusted"
     return ArtifactValidationReport(
         errors=errors,
         signature=signature,
@@ -1304,7 +1339,7 @@ def _validation_report(
         artifact=str(source_path),
         artifact_id=_optional_manifest_str(manifest, "artifact_id"),
         run_id=_optional_manifest_str(manifest, "run_id"),
-        verification_level=_optional_manifest_str(manifest, "verification_level"),
+        verification_level=level,
         scoring_eligible=(
             False
             if errors
@@ -1312,21 +1347,23 @@ def _validation_report(
         ),
         archive_sha256=_artifact_source_hash(source_path, artifact_dir),
         artifact_size_bytes=_artifact_source_size(source_path, artifact_dir),
-        verification_level_key=_optional_manifest_str(manifest, "verification_level_key"),
-        verification_level_label=_optional_manifest_str(manifest, "verification_level_label"),
+        verification_level_key=level_key,
+        verification_level_label=level_label,
         artifact_profile_key=_optional_manifest_str(manifest, "artifact_profile_key") or profile,
         artifact_profile_label=_optional_manifest_str(manifest, "artifact_profile_label")
         or policy_artifact_profile_label(profile),
-        per_case_run_valid=_optional_manifest_bool(manifest, "per_case_run_valid"),
-        per_case_scoring_eligible=_optional_manifest_bool(
+        per_case_run_valid=(
+            False if errors else _optional_manifest_bool(manifest, "per_case_run_valid")
+        ),
+        per_case_scoring_eligible=False if errors else _optional_manifest_bool(
             manifest,
             "per_case_scoring_eligible",
         ),
-        proof_row_publication_eligible=_optional_manifest_bool(
+        proof_row_publication_eligible=False if errors else _optional_manifest_bool(
             manifest,
             "proof_row_publication_eligible",
         ),
-        aggregate_leaderboard_eligible=_optional_manifest_bool(
+        aggregate_leaderboard_eligible=False if errors else _optional_manifest_bool(
             manifest,
             "aggregate_leaderboard_eligible",
         ),
@@ -2004,7 +2041,7 @@ def _runner_signature(
     signing_key: Ed25519PrivateKey,
 ) -> dict[str, Any]:
     signed_at = utc_now_iso()
-    key_id = os.environ.get(RUNNER_ARTIFACT_SIGNING_KEY_ID_ENV, "runner-artifact-env-key")
+    key_id = _runner_artifact_signing_key_id()
     signed_payload = _signature_payload(
         manifest=manifest,
         manifest_sha256=sha256_file(manifest_path),
@@ -2043,10 +2080,24 @@ def _signature_payload(
     }
 
 
+def validate_artifact_signing_configuration() -> None:
+    """Reject malformed signing configuration before agent/provider work."""
+    _runner_artifact_signing_key()
+
+
+def _runner_artifact_signing_key_id() -> str:
+    key_id = os.environ.get(RUNNER_ARTIFACT_SIGNING_KEY_ID_ENV, "runner-artifact-env-key")
+    if (not key_id or key_id.strip() != key_id or len(key_id) > 128
+            or any(char.isspace() or ord(char) < 32 for char in key_id)):
+        raise ValueError(f"{RUNNER_ARTIFACT_SIGNING_KEY_ID_ENV} must be a nonempty token")
+    return key_id
+
+
 def _runner_artifact_signing_key() -> Ed25519PrivateKey | None:
     value = os.environ.get(RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY_ENV)
-    if value is None or value.strip() == "":
+    if value is None:
         return None
+    _runner_artifact_signing_key_id()
     return Ed25519PrivateKey.from_private_bytes(
         _decode_key_material(value, expected_len=32, label=RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY_ENV)
     )
@@ -2138,7 +2189,10 @@ def _validate_runner_signature(
             ["runner signature path is invalid"],
         )
 
-    signature_path = artifact_dir / signature_subpath
+    signature_path, path_error = _confine_artifact_member(artifact_dir, signature_rel)
+    if signature_path is None:
+        return (SignatureValidationStatus(status="invalid", path=signature_rel),
+                [path_error or "runner signature path is invalid"])
     if not signature_path.exists():
         if manifest_signature_status == "signed":
             return (
@@ -2344,10 +2398,27 @@ def _validate_legacy_runner_signature(
 
 
 def _safe_artifact_subpath(rel: str) -> Path | None:
-    path = Path(rel)
-    if path.is_absolute() or ".." in path.parts or rel == "":
+    try:
+        return Path(portable_member_path(rel))
+    except ValueError:
         return None
-    return path
+
+
+def _confine_artifact_member(artifact_dir: Path, rel: str) -> tuple[Path | None, str | None]:
+    subpath = _safe_artifact_subpath(rel)
+    if subpath is None:
+        return None, f"unsafe manifest member path: {rel!r}"
+    root = artifact_dir.resolve()
+    current = root
+    for part in subpath.parts:
+        current = current / part
+        if current.is_symlink():
+            return None, f"refusing artifact member symlink: {rel!r}"
+    try:
+        current.resolve().relative_to(root)
+    except ValueError:
+        return None, f"manifest path escapes artifact root: {rel!r}"
+    return current, None
 
 
 def _materialize(path: Path) -> tuple[Path, bool]:

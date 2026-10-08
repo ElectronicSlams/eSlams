@@ -3,34 +3,36 @@
 
 from __future__ import annotations
 
+import html
 import json
-import tempfile
-import zipfile
 from pathlib import Path
 from typing import Any
 
 from eslams.output import write_text_file
-from eslams.zip_extract import extract_archive
 
 
 def render_replay_html(
-    artifact_path: Path, output_path: Path | None = None, *, overwrite: bool = False
+    artifact_path: Path, output_path: Path | None = None, *, overwrite: bool = False,
+    diagnostic: bool = False,
 ) -> Path:
+    # Local import avoids the pre-manifest writer's circular dependency.
+    from eslams.artifacts import ArtifactValidator, open_artifact
+
     artifact_path = artifact_path.resolve()
     name = artifact_path.name.removesuffix(".eslams.d").removesuffix(".eslams")
     output = output_path or artifact_path.with_name(f"{name}.replay.html")
-    if artifact_path.is_dir():
-        events = _read_replay_events(artifact_path)
-        return _write_replay(output, events, overwrite=overwrite, source=artifact_path)
-    if zipfile.is_zipfile(artifact_path):
-        with tempfile.TemporaryDirectory(prefix="eslams-replay-") as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            extract_archive(artifact_path, tmp_path)
-            events = _read_replay_events(tmp_path)
-        return _write_replay(output, events, overwrite=overwrite, source=artifact_path)
-    if artifact_path.exists():
-        raise ValueError(f"not an artifact directory or ZIP archive: {artifact_path}")
-    raise FileNotFoundError(artifact_path)
+    with open_artifact(artifact_path) as root:
+        report = ArtifactValidator().validate_report(root, profile="auto")
+        if not report.valid and not diagnostic:
+            raise ValueError("artifact failed validation: " + "; ".join(report.errors))
+        if diagnostic:
+            status = "DIAGNOSTIC — UNTRUSTED REPLAY. " + (
+                "; ".join(report.errors) if report.errors else "Explicit diagnostic mode."
+            )
+        else:
+            status = "Content validated. Signature: " + report.signature.status + "."
+        events = _read_replay_events(root)
+    return _write_replay(output, events, overwrite=overwrite, source=artifact_path, status=status)
 
 
 def _read_replay_events(artifact_path: Path) -> list[dict[str, Any]]:
@@ -53,14 +55,15 @@ def _write_replay(
     *,
     overwrite: bool = False,
     source: Path | None = None,
+    status: str = "Embedded preview — validate the complete artifact before trusting it.",
 ) -> Path:
     payload = json.dumps(events, ensure_ascii=False).replace("</", "<\\/")
     return write_text_file(
-        output_path, _html(payload), overwrite=overwrite, sources=[] if source is None else [source]
+        output_path, _html(payload, status), overwrite=overwrite, sources=[] if source is None else [source]
     )
 
 
-def _html(events_json: str) -> str:
+def _html(events_json: str, status: str) -> str:
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -386,6 +389,7 @@ def _html(events_json: str) -> str:
     </div>
     <div class="muted" id="sourceLabel">Generated from public replay events</div>
   </header>
+  <p role="status" id="artifactTrust">""" + html.escape(status) + """</p>
   <section class="shell">
     <div class="agent-column" id="leftAgents"></div>
     <section class="stage">

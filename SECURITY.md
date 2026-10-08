@@ -88,3 +88,8 @@ session responses. Runner snapshots cryptographically bind the game and ruleset.
 The HTTP signature nonce cache is bounded and process-local; multi-worker or
 restart-resistant deployments need affinity plus an external replay cache or
 request-key rotation.
+
+Artifact readers confine manifest/signature members to the artifact root and
+refuse symlink and special members before reading payloads. ZIP reads share
+bounded extraction. Invalid validation reports force all scoring/publication
+flags false and suppress unverified Official/Grand Slam display claims.
