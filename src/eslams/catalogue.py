@@ -176,6 +176,7 @@ def _fidelity(public: Any) -> str:
         "backgammon",
         "battleship",
         "crazy-eights",
+        "nine-mens-morris",
     }:
         return "compact"
     return str(public.fidelity)

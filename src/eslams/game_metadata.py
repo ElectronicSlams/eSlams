@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
+from eslams.action_descriptors import action_descriptors
+from eslams.arena import registry
 from eslams.contracts.animation import GameAnimationSpec, validate_animation_spec
 from eslams.contracts.help import GameHelp, validate_help
 from eslams.contracts.render import GameRenderSpec, validate_render_spec
@@ -248,6 +251,44 @@ def surface_for_game(game_id: str) -> GameSurface:
 
 
 def help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameHelp:
+    """Use real action descriptors from a named, reproducible example position."""
+    import eslams.arenas  # noqa: F401
+
+    help_payload = _base_help_for_game(public, topology)
+    arena = registry.create(public.game_id)
+    state = arena.initial_state(1)
+    descriptors = action_descriptors(
+        game_id=public.game_id, state=state,
+        actions=arena.legal_actions_for(state, state.active_player),
+    )
+    legal_tokens = {row["token"] for row in descriptors}
+    examples = tuple(row for row in help_payload.example_actions if row["token"] in legal_tokens)
+    if not examples:
+        examples = tuple({
+            "token": str(row["token"]), "label": str(row["label"]),
+            "explanation": "Legal for the active player in the initial seed-1 example position.",
+        } for row in descriptors[:3])
+    notes = (*help_payload.detail_sections, {
+        "title": "Example position",
+        "body": "Example tokens use the initial seed-1 position. Request the current "
+                "state's legal actions before playing, since they change with seed and turn.",
+    })
+    if public.game_id == "nine-mens-morris":
+        help_payload = replace(
+            help_payload,
+            scoring_summary="A mill captures a piece; fewer than three pieces or no legal "
+                            "movement loses. At 120 actions the compact variant draws 0.5/0.5.",
+        )
+        notes = (*notes, {
+            "title": "Compact episode rule",
+            "body": "This variant has a fixed 120-action draw limit. A live position can "
+                    "reach that limit; this result is an episode draw, not a claim of "
+                    "standard-game or OpenSpiel outcome parity.",
+        })
+    return replace(help_payload, example_actions=examples, detail_sections=notes)
+
+
+def _base_help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameHelp:
     override = _HELP_OVERRIDES.get(public.game_id)
     if override is not None:
         return override

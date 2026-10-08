@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Core-lite aligns canonical state/action hashes, action wrappers, seeds and
+  structured terminal/malformed failures with its documented Python parity scope.
+  A compiled cross-runtime CI check covers both supported games and all
+  deterministic response fields. Both TypeScript source packages are private.
+- Paddle-ball 1.1.0 raises the episode limit to 400 actions for the reachable
+  ten-bounce target. Ultimate Tic-Tac-Toe 1.1.0 draws on decided local boards
+  without a global line. Morris is explicitly compact with a 120-action limit;
+  catalogue examples now use legal tokens from the initial seed-1 position.
+
 - Trim pasted provider-key whitespace, reject invalid header credentials
   before calls, and redact credential echoes in provider errors.
 - Preflight now checks that a catalogue provider has a Core inference adapter

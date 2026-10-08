@@ -1169,9 +1169,12 @@
       "number": 128,
       "title": "Paddle-ball: win condition (10 bounces) is unreachable within max_turns=160; a perfect player gets 4 bounces, score capped at 0.4",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether paddle-ball success is completion or a graded score. Align target, physics, horizon and catalogue with that decision; increasing a cap without versioning changes the benchmark.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Paddle-ball 1.1.0 permits 400 actions; a public-observation tracking policy reaches ten bounces and score 1 within the cap. Ultimate Tic-Tac-Toe 1.1.0 draws with no global line after all local boards are decided, preserving global-line wins. Morris catalogue/help explicitly declare its compact 120-action draw rule. All catalogue help examples are legal in documented initial seed-1 positions and every listed token is accepted through signed human-seat sessions.",
+        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending."
+      }
     },
     {
       "number": 129,
@@ -1185,25 +1188,34 @@
       "number": 130,
       "title": "Ultimate tic-tac-toe: full-board end rule awards the win on local-board count instead of a draw (303 of 431 no-line playouts); catalogue says faithful/standard",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose standard ultimate-tic-tac-toe draws or the local-board-count variant. Correct the faithful/standard label or version the implementation; do not change historical semantics in place.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Paddle-ball 1.1.0 permits 400 actions; a public-observation tracking policy reaches ten bounces and score 1 within the cap. Ultimate Tic-Tac-Toe 1.1.0 draws with no global line after all local boards are decided, preserving global-line wins. Morris catalogue/help explicitly declare its compact 120-action draw rule. All catalogue help examples are legal in documented initial seed-1 positions and every listed token is accepted through signed human-seat sessions.",
+        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending."
+      }
     },
     {
       "number": 131,
       "title": "Nine men's morris: max_turns=120 ends 15% of random games as 0.5/0.5 turn_limit draws while play is still decisive (OpenSpiel not terminal); catalogue says faithful/standard",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: A finite game horizon is a legitimate benchmark rule when declared. Keep or change it through explicit rules/versioning; disagreement with OpenSpiel alone does not prove a terminal draw is invalid.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Paddle-ball 1.1.0 permits 400 actions; a public-observation tracking policy reaches ten bounces and score 1 within the cap. Ultimate Tic-Tac-Toe 1.1.0 draws with no global line after all local boards are decided, preserving global-line wins. Morris catalogue/help explicitly declare its compact 120-action draw rule. All catalogue help examples are legal in documented initial seed-1 positions and every listed token is accepted through signed human-seat sessions.",
+        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending."
+      }
     },
     {
       "number": 132,
       "title": "Catalogue help.exampleActions: 42 of 50 games have no example token that is a legal action (default token \"0\"), and step_session rejects it with turn.failed",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Catalogue examples must be legal for a declared reproducible initial context or clearly schematic. Test each advertised example through the public step contract.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Paddle-ball 1.1.0 permits 400 actions; a public-observation tracking policy reaches ten bounces and score 1 within the cap. Ultimate Tic-Tac-Toe 1.1.0 draws with no global line after all local boards are decided, preserving global-line wins. Morris catalogue/help explicitly declare its compact 120-action draw rule. All catalogue help examples are legal in documented initial seed-1 positions and every listed token is accepted through signed human-seat sessions.",
+        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending."
+      }
     },
     {
       "number": 133,
@@ -2671,33 +2683,57 @@
       "number": 205,
       "title": "Core-lite (TypeScript) state hashes never match Python for the same game and seed, although core capabilities reports core_lite_ts verifiedAgainst 0.6.1",
       "work_package": "W5",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Add cross-language semantic and canonical-byte fixtures for each advertised supported game/seed/action/outcome; fix numeric serialization and action hashing. Remove unproven verifiedAgainst claims until fixtures pass.",
       "evidence": {
         "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
-        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run.",
+        "integration": "Verified 4eadc1f: Core CI 37755997666 (including compiled Python/Core-lite parity), distribution consumers 37755997652, dependency audit 37755997708 and workflow lint 37755997693 all passed. Python full suite 475 passed, 87.44% line coverage. Local parity compared 22 initial states and 1401 steps. No publication/release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:25:15Z",
+        "number": 205,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/205"
       }
     },
     {
       "number": 206,
       "title": "Core-lite applyAction rejects the contract action shapes \"0\" and {actionId:\"0\"} as illegal; Python core_step accepts them",
       "work_package": "W5",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Normalize the same public string/object action shapes in Python and TypeScript; test contract-level parity with preserved action IDs and hashes.",
       "evidence": {
         "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
-        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run.",
+        "integration": "Verified 4eadc1f: Core CI 37755997666 (including compiled Python/Core-lite parity), distribution consumers 37755997652, dependency audit 37755997708 and workflow lint 37755997693 all passed. Python full suite 475 passed, 87.44% line coverage. Local parity compared 22 initial states and 1401 steps. No publication/release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:25:17Z",
+        "number": 206,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/206"
       }
     },
     {
       "number": 207,
       "title": "Core-lite createInitialState turns seed \"0\" and every non-numeric seed into seed 1 (Python seed 0 is a different game)",
       "work_package": "W5",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Preserve seed zero and reject invalid seeds with the same contract errors as Python; do not coerce arbitrary strings into a valid seed.",
       "evidence": {
         "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
-        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run.",
+        "integration": "Verified 4eadc1f: Core CI 37755997666 (including compiled Python/Core-lite parity), distribution consumers 37755997652, dependency audit 37755997708 and workflow lint 37755997693 all passed. Python full suite 475 passed, 87.44% line coverage. Local parity compared 22 initial states and 1401 steps. No publication/release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:25:19Z",
+        "number": 207,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/207"
       }
     },
     {
@@ -2826,22 +2862,38 @@
       "number": 215,
       "title": "Core-lite applyAction on a terminal state returns illegal_action_for_state with recoverable true; Python core_step returns terminal_state with recoverable false",
       "work_package": "W5",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Use the same terminal-state error/recoverability contract in Python and TypeScript; test terminal action calls without mutating state.",
       "evidence": {
         "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
-        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run.",
+        "integration": "Verified 4eadc1f: Core CI 37755997666 (including compiled Python/Core-lite parity), distribution consumers 37755997652, dependency audit 37755997708 and workflow lint 37755997693 all passed. Python full suite 475 passed, 87.44% line coverage. Local parity compared 22 initial states and 1401 steps. No publication/release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:25:22Z",
+        "number": 215,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/215"
       }
     },
     {
       "number": 216,
       "title": "Core-lite applyAction throws a raw TypeError for a malformed state (missing public_state, short or non-array board) where Python core_step returns an ok:false error response",
       "work_package": "W5",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Validate malformed state shapes and return structured contract errors rather than raw exceptions; test board shape, absent fields and invalid game identity in both runtimes.",
       "evidence": {
         "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
-        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run.",
+        "integration": "Verified 4eadc1f: Core CI 37755997666 (including compiled Python/Core-lite parity), distribution consumers 37755997652, dependency audit 37755997708 and workflow lint 37755997693 all passed. Python full suite 475 passed, 87.44% line coverage. Local parity compared 22 initial states and 1401 steps. No publication/release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:25:24Z",
+        "number": 216,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/216"
       }
     },
     {
@@ -3035,12 +3087,19 @@
       "number": 35,
       "head": "728e40dcb8ebd3c775ddf38aa43c35888e8063e1",
       "title": "chore(core-lite): align unpublished package metadata to 0.6.1",
-      "status": "implemented: verification pending",
+      "status": "closed: incorporated",
       "review_route": "Supersede / consolidate",
       "criterion": "Combine private-package and version metadata with #39 and the parity work. Advertise verifiedAgainst only for tested game/version pairs; close original after consolidated replacement.",
       "evidence": {
         "implementation": "Unpublished TypeScript packages explicitly private; Core-lite package/dependency/response versions align with current Core 0.6.1. In-tree source consumption and supported parity scope documented. Proposed founder-only publish approval wording is not introduced; no package was published.",
-        "local_verification": "Both PRs fully reviewed; metadata incorporated into consolidation alongside actual contract parity repair. TypeScript compilation and cross-runtime fixtures pass; native CI pending."
+        "local_verification": "Both PRs fully reviewed; metadata incorporated into consolidation alongside actual contract parity repair. TypeScript compilation and cross-runtime fixtures pass; native CI pending.",
+        "integration": "Verified 4eadc1f: Core CI 37755997666 (including compiled Python/Core-lite parity), distribution consumers 37755997652, dependency audit 37755997708 and workflow lint 37755997693 all passed. Python full suite 475 passed, 87.44% line coverage. Local parity compared 22 initial states and 1401 steps. No publication/release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:25:26Z",
+        "number": 35,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/35"
       }
     },
     {
@@ -3085,12 +3144,19 @@
       "number": 39,
       "head": "d6922eb17191691ff2449fef7128ff7ee720b11d",
       "title": "chore(core-contracts): mark unpublished package private",
-      "status": "implemented: verification pending",
+      "status": "closed: incorporated",
       "review_route": "Retain, conditional",
       "criterion": "Combine or order with final TypeScript metadata changes, typecheck consumers and verify no release job expects npm publication; merge and close.",
       "evidence": {
         "implementation": "Unpublished TypeScript packages explicitly private; Core-lite package/dependency/response versions align with current Core 0.6.1. In-tree source consumption and supported parity scope documented. Proposed founder-only publish approval wording is not introduced; no package was published.",
-        "local_verification": "Both PRs fully reviewed; metadata incorporated into consolidation alongside actual contract parity repair. TypeScript compilation and cross-runtime fixtures pass; native CI pending."
+        "local_verification": "Both PRs fully reviewed; metadata incorporated into consolidation alongside actual contract parity repair. TypeScript compilation and cross-runtime fixtures pass; native CI pending.",
+        "integration": "Verified 4eadc1f: Core CI 37755997666 (including compiled Python/Core-lite parity), distribution consumers 37755997652, dependency audit 37755997708 and workflow lint 37755997693 all passed. Python full suite 475 passed, 87.44% line coverage. Local parity compared 22 initial states and 1401 steps. No publication/release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:25:29Z",
+        "number": 39,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/39"
       }
     },
     {

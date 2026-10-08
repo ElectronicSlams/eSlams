@@ -24,7 +24,7 @@ WIN_LINES = (
 
 class UltimateTicTacToeArena(Arena):
     id = "ultimate-tic-tac-toe"
-    version = "1.0.0"
+    version = "1.1.0"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "integer",
@@ -75,7 +75,7 @@ class UltimateTicTacToeArena(Arena):
         if winner_mark:
             outcome = {"winner": _player(winner_mark), "reason": "global_three_in_a_row"}
         elif all(status is not None for status in local_status):
-            outcome = _points_outcome(local_status)
+            outcome = _draw_outcome(local_status)
         return self._state(
             boards=boards,
             local_status=local_status,
@@ -102,7 +102,7 @@ class UltimateTicTacToeArena(Arena):
     ) -> ArenaState:
         terminal = outcome is not None or turn >= self.max_turns
         if outcome is None and terminal:
-            outcome = _points_outcome(local_status)
+            outcome = _draw_outcome(local_status)
         legal = [] if terminal else _legal_actions(boards, local_status, next_board)
         return ArenaState(
             state_id=f"state_{turn:06d}",
@@ -165,17 +165,12 @@ def _winner(cells: list[str | None]) -> str | None:
     return None
 
 
-def _points_outcome(local_status: list[str | None]) -> dict[str, Any]:
+def _draw_outcome(local_status: list[str | None]) -> dict[str, Any]:
     x_boards = sum(status == "X" for status in local_status)
     o_boards = sum(status == "O" for status in local_status)
-    winner = None
-    if x_boards > o_boards:
-        winner = "player_1"
-    elif o_boards > x_boards:
-        winner = "player_2"
     return {
-        "winner": winner,
-        "reason": "local_board_points",
+        "winner": None,
+        "reason": "draw",
         "local_boards": {"player_1": x_boards, "player_2": o_boards},
     }
 

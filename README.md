@@ -539,7 +539,7 @@ compact/lite arenas do not overclaim full game coverage.
 | `gomoku` | `standard` | faithful |
 | `hex` | `standard` | faithful |
 | `mancala` | `standard` | faithful |
-| `nine-mens-morris` | `standard` | faithful |
+| `nine-mens-morris` | `standard` | compact |
 | `pentago` | `standard` | faithful |
 | `ultimate-tic-tac-toe` | `standard` | faithful |
 | `battleship` | `standard` | compact |
@@ -578,6 +578,13 @@ compact/lite arenas do not overclaim full game coverage.
 | `boxing-style-arena` | `standard` | inspired-by |
 | `ice-hockey-style-arena` | `standard` | inspired-by |
 | `backgammon` | `standard` | compact |
+
+Paddle-ball 1.1.0 allows 400 actions so its ten-bounce target is reachable.
+Ultimate Tic-Tac-Toe 1.1.0 draws when all local boards are decided without a
+global line. Nine Men's Morris retains a compact 120-action episode draw rule;
+its results can differ from standard games that continue from that position.
+Catalogue help examples name the initial seed-1 position and contain real legal
+tokens; query each current state's legal actions before playing them.
 
 List arenas from your installed copy:
 

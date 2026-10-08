@@ -255,14 +255,14 @@ class MountainCarArena(Arena):
 
 class PaddleBallArena(Arena):
     id = "paddle-ball"
-    version = "1.0.1"
+    version = "1.1.0"
     players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["left", "stay", "right"],
         "description": "Move the paddle before the ball advances.",
     }
-    max_turns = 160
+    max_turns = 400
 
     def initial_state(self, seed: int) -> ArenaState:
         validate_seed(seed)
