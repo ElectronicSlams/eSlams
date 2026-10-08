@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -38,11 +39,14 @@ def clean_environment() -> dict[str, str]:
     return environment
 
 
-def run(command: list[str], cwd: Path, *, expected: int = 0) -> str:
+def run(command: list[str], cwd: Path, *, expected: int = 0, source: Path | None = None) -> str:
+    environment = clean_environment()
+    if source is not None:
+        environment["PYTHONPATH"] = str(source / "src")
     result = subprocess.run(
         command,
         cwd=cwd,
-        env=clean_environment(),
+        env=environment,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -104,7 +108,7 @@ def smoke(distribution: Path, root: Path, expected_commit: str) -> None:
     run([str(console), "validate", artifact], root)
     replay = root / "replay.html"
     run([str(console), "replay", artifact, "--output", str(replay)], root)
-    assert "eSlamsReplay" in replay.read_text(encoding="utf-8")
+    assert "Content validated. Signature: unsigned." in replay.read_text(encoding="utf-8")
     public = root / "public"
     run([str(console), "artifact", "public-export", artifact, "--out", str(public)], root)
     run([str(console), "validate", str(public), "--profile", "public-replay-package"], root)
@@ -135,9 +139,18 @@ def main() -> None:
                     member.isfile() or member.isdir()
                 ):
                     raise RuntimeError("unexpected source distribution member")
-            archive.extractall(unpacked)
+            for member in archive.getmembers():
+                path = unpacked / member.name
+                if member.isdir():
+                    path.mkdir(parents=True, exist_ok=True)
+                else:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    stream = archive.extractfile(member)
+                    assert stream is not None
+                    with stream, path.open("wb") as output:
+                        shutil.copyfileobj(stream, output, length=1024 * 1024)
         (source,) = unpacked.iterdir()
-        # The host has dev dependencies; conftest imports the extracted source.
+        # The host supplies dev tools, but imports must come from this sdist.
         run(
             [
                 sys.executable,
@@ -148,6 +161,7 @@ def main() -> None:
                 str(root / "pytest"),
             ],
             root,
+            source=source,
         )
         print(json.dumps({"sdist_suite_without_git": "passed"}))
 

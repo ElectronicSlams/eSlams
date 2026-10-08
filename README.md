@@ -103,6 +103,17 @@ their historical packaging limitation: use the published PyPI sdist/wheel or a
 Git checkout. A copied tree with neither Git nor embedded/exported provenance
 still fails closed. Python distributions include PEP 561 `py.typed` markers.
 
+### Third-party chess license
+
+Core's own source is MIT-licensed. The required `python-chess` dependency
+installs the `chess` library; both declare GPL-3.0-or-later in their
+[PyPI metadata](https://pypi.org/project/chess/1.11.2/) and
+[upstream documentation](https://python-chess.readthedocs.io/en/latest/#license).
+Their licenses are separate from Core's MIT license. Downstream distributors
+should include and review those third-party notices for their distribution.
+The chess dependency remains required in this branch; it has not been silently
+made optional or replaced.
+
 ## Quick Start
 
 Create a workspace, run a match, validate the artifact, and render a replay:
@@ -442,7 +453,7 @@ material, or private reasoning.
 
 ## Sample Runs
 
-Curated sample runs live in [sample_runs/](https://github.com/ElectronicSlams/eSlams/blob/main/sample_runs/). They are intended as
+Curated sample runs live in [sample_runs/](https://github.com/ElectronicSlams/eSlams/tree/main/sample_runs/). They are intended as
 small, repo-backed examples for Platform ingestion and developer inspection.
 
 - `sample_runs/model_eval_sample/` contains a signed official fixture artifact,

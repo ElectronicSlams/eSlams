@@ -309,9 +309,20 @@
       "number": 85,
       "title": "Licensing disclosure question: GPL-3.0+ `chess` dependency (via `python-chess`) in MIT-licensed eslams-core is not mentioned in docs",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; documentation review complete",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Repository owner should review third-party license disclosure and distribution obligations. Record the chosen disclosure/dependency policy; this review makes no legal determination and does not automatically change the Core license.",
-      "evidence": null
+      "evidence": {
+        "files": [
+          "README.md",
+          "THIRD_PARTY_NOTICES.md"
+        ],
+        "primary_sources": [
+          "https://pypi.org/project/python-chess/1.999/",
+          "https://pypi.org/project/chess/1.11.2/",
+          "https://python-chess.readthedocs.io/en/latest/#license"
+        ],
+        "disposition": "Disclose required GPL-3.0-or-later dependencies separately from MIT Core. Required dependency unchanged; no legal conclusion or release action."
+      }
     },
     {
       "number": 86,
@@ -688,9 +699,13 @@
       "number": 119,
       "title": "README/CONTRIBUTING are POSIX-only (reading-only) and the Quick Start fails after the run when symlinks are unavailable (simulated Windows)",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Provide documented Windows equivalents and a safe latest-run fallback if symlink creation is unavailable; verify on native Windows before claiming support.",
-      "evidence": null
+      "evidence": {
+        "commit": "9aadbc0",
+        "checks": "tests/test_latest_links.py + original non-symlink preservation checks; relocation, 24 concurrent runs, simulated EPERM; native/full gates pending final head",
+        "docs": "README expanded-path and symlink fallback guidance"
+      }
     },
     {
       "number": 120,
@@ -728,9 +743,13 @@
       "number": 124,
       "title": "eslams run creates runs/latest.eslams symlinks with absolute targets: copied or moved project directories get dangling or wrong pointers",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Use a relocatable relative latest pointer or manifest pointer; copy/move a run directory and verify the pointer follows the intended artifact.",
-      "evidence": null
+      "evidence": {
+        "commit": "9aadbc0",
+        "checks": "tests/test_latest_links.py + original non-symlink preservation checks; relocation, 24 concurrent runs, simulated EPERM; native/full gates pending final head",
+        "docs": "README expanded-path and symlink fallback guidance"
+      }
     },
     {
       "number": 125,
@@ -916,9 +935,13 @@
       "number": 139,
       "title": "Concurrent eslams run into one --output-dir intermittently exits 1 with FileExistsError/FileNotFoundError in _replace_latest_link, losing the result JSON",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Make latest-pointer replacement atomic and concurrent-safe; each completed run must retain its summary and archive. Test two independent writers to one directory.",
-      "evidence": null
+      "evidence": {
+        "commit": "9aadbc0",
+        "checks": "tests/test_latest_links.py + original non-symlink preservation checks; relocation, 24 concurrent runs, simulated EPERM; native/full gates pending final head",
+        "docs": "README expanded-path and symlink fallback guidance"
+      }
     },
     {
       "number": 140,
@@ -1150,9 +1173,13 @@
       "number": 164,
       "title": "README Quick Start: after `eslams run --expanded` the `runs/latest.eslams` pointer is removed but the next documented step is `eslams validate runs/latest.eslams`",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "After --expanded, show the actual expanded artifact path or correct pointer behavior; execute the full documented run-to-validate walkthrough.",
-      "evidence": null
+      "evidence": {
+        "commit": "9aadbc0",
+        "checks": "tests/test_latest_links.py + original non-symlink preservation checks; relocation, 24 concurrent runs, simulated EPERM; native/full gates pending final head",
+        "docs": "README expanded-path and symlink fallback guidance"
+      }
     },
     {
       "number": 165,

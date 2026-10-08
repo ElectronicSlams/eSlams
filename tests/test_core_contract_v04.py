@@ -219,9 +219,11 @@ def test_benchmark_budgets_golden_schemas_and_generated_contracts(tmp_path: Path
     assert f"{CORE_STEP_REQUEST_SCHEMA_VERSION}.schema.json" in names
     assert f"{CORE_STEP_RESPONSE_SCHEMA_VERSION}.schema.json" in names
 
-    generated = Path("packages/core-contracts/src/generated/core-step.ts")
+    generated = (
+        Path(__file__).resolve().parents[1] / "packages/core-contracts/src/generated/core-step.ts"
+    )
     assert "CoreStepRequest" in generated.read_text(encoding="utf-8")
-    assert Path("packages/core-lite/src/index.ts").exists()
+    assert (Path(__file__).resolve().parents[1] / "packages/core-lite/src/index.ts").exists()
 
 
 def test_engine_capabilities_gate_core_lite_and_precompute():
