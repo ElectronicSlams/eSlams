@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from abc import ABC, abstractmethod
+from dataclasses import replace
 from typing import Any, Protocol
 
 from eslams.state import ArenaState
@@ -13,8 +14,7 @@ class AgentLike(Protocol):
     id: str
     version: str
 
-    def act(self, request: Any) -> Any:
-        ...
+    def act(self, request: Any) -> Any: ...
 
 
 class Arena(ABC):
@@ -94,6 +94,21 @@ class ArenaRegistry:
 registry = ArenaRegistry()
 
 
+def solo_state(state: ArenaState) -> ArenaState:
+    """Keep benchmark success separate from competitive winners and seats."""
+    outcome = state.outcome
+    if outcome is not None:
+        outcome = {**outcome, "winner": None, "success": outcome.get("winner") == "player_1"}
+    return replace(
+        state,
+        state_hash=None,
+        outcome=outcome,
+        scores={"player_1": state.scores["player_1"]},
+        private_state_by_player={"player_1": state.private_state_by_player["player_1"]},
+        legal_actions_by_player={"player_1": state.legal_actions_by_player["player_1"]},
+    )
+
+
 def _same_json_action(left: Any, right: Any) -> bool:
     """Compare JSON action values without Python's bool/int/float equivalence."""
     if type(left) is not type(right):
@@ -104,9 +119,7 @@ def _same_json_action(left: Any, right: Any) -> bool:
             for key, value in left.items()
         )
     if isinstance(left, list):
-        return len(left) == len(right) and all(
-            _same_json_action(a, b) for a, b in zip(left, right)
-        )
+        return len(left) == len(right) and all(_same_json_action(a, b) for a, b in zip(left, right))
     if isinstance(left, float):
         return math.isfinite(left) and left == right
     return type(left) in (str, int, bool, type(None)) and left == right

@@ -149,10 +149,13 @@ seed metadata and RNG commitment remain constant after actions.
 
 ## Corrected standard rule boundaries
 
-Cribbage 1.0.1 counts ace-low runs with physical-card multiplicity, nobs and
+Cribbage 1.1.0 counts ace-low runs with physical-card multiplicity, nobs and
 hand/crib flushes according to the [ACC show scoring chart](https://www.cribbage.org/NewSite/rules/rulebook_2025.pdf).
 It remains a single-hand compact discard/show variant without pegging or a
-121-point match. Dealer balance is tracked separately in issue #96.
+121-point match. Seeds `2n` and `2n+1` use the same deal with opposite dealers;
+run both for a balanced comparison. The nondealer acts first. Artifacts retain
+`scores_by_player`; `primary_score` reflects the explicitly named
+`metrics.evaluated_player` (player_1). A single hand is not a match average.
 
 Pentago 1.0.1 ends immediately on a placement win, ignoring the rotation part
 of that action. Otherwise it rotates and checks both players; simultaneous
@@ -182,3 +185,12 @@ horizon also cancels without comparing unequal hands. These rules follow the
 [Gettysburg Gin Rummy competition rules](https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf).
 This remains a seven-card, single-hand compact variant: no opening upcard passes,
 opponent layoff phase, point bonuses or multi-hand match to 100.
+
+Solo benchmark adapters expose only player_1. Their terminal outcome has
+`winner: null` and a boolean `success` field, while numeric reward remains in
+`scores.player_1`. Their ruleset versions are bumped to 1.0.1. Boxing and hockey
+are competitive two-seat games and now use head-to-head topology. The catalogue
+has 11 solo, 32 head-to-head, 6 multi-seat and 1 cooperative game. Goofspiel and
+Mahjong advertise permitted draws. Backgammon (five checkers), Battleship
+(5×5 with three one-cell ships) and Crazy Eights (five-card opening, restricted
+wild-card policy) are labelled compact variants.

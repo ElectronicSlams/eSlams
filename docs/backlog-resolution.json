@@ -604,9 +604,22 @@
       "number": 96,
       "title": "Cribbage: dealer and crib fixed to player_2 with no alternation (random play wins 67 vs 309), headline score is player_1 only",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Fixed dealer assignment and player_1 score are fairness/product-contract choices as well as possible rule defects. Declare alternation and result aggregation, then implement/version only the chosen rule set.",
-      "evidence": null
+      "evidence": {
+        "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
+        "tests": "tests/test_standard_rule_regressions.py: all 11 solo full Runner artifacts, competitor turn/metadata, draw/fidelity contracts, paired dealer determinism/hand equality and per-seat score artifacts. Original game boundary and privacy tests retained.",
+        "source": [
+          "src/eslams/arena.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/catalogue.py",
+          "src/eslams/arenas/gridworld.py",
+          "src/eslams/arenas/control_arcade.py",
+          "src/eslams/arenas/modern_control.py",
+          "src/eslams/arenas/strategic_games.py",
+          "src/eslams/arenas/advanced_cards.py"
+        ]
+      }
     },
     {
       "number": 97,
@@ -1135,9 +1148,22 @@
       "number": 135,
       "title": "Boxing-style-arena and ice-hockey-style-arena: catalogued as solo_score (no opponent, no winner) but are alternating two-player games with winner, draws and a hidden opponent policy",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Correct solo/head-to-head metadata to the actual seat/outcome contract, or implement the intended solo rules under a new version. Hidden opponent policy needs an explicit reproducibility/visibility contract.",
-      "evidence": null
+      "evidence": {
+        "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
+        "tests": "tests/test_standard_rule_regressions.py: all 11 solo full Runner artifacts, competitor turn/metadata, draw/fidelity contracts, paired dealer determinism/hand equality and per-seat score artifacts. Original game boundary and privacy tests retained.",
+        "source": [
+          "src/eslams/arena.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/catalogue.py",
+          "src/eslams/arenas/gridworld.py",
+          "src/eslams/arenas/control_arcade.py",
+          "src/eslams/arenas/modern_control.py",
+          "src/eslams/arenas/strategic_games.py",
+          "src/eslams/arenas/advanced_cards.py"
+        ]
+      }
     },
     {
       "number": 136,
@@ -1436,17 +1462,43 @@
       "number": 151,
       "title": "Goofspiel and mahjong: catalogue says drawAllowed=false and winnerRequired=true, but about 9% and 6% of random games end with winner None",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Make drawAllowed/winnerRequired reflect actual permitted terminal outcomes or change rules under a new version. Do not fabricate a winner to satisfy metadata.",
-      "evidence": null
+      "evidence": {
+        "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
+        "tests": "tests/test_standard_rule_regressions.py: all 11 solo full Runner artifacts, competitor turn/metadata, draw/fidelity contracts, paired dealer determinism/hand equality and per-seat score artifacts. Original game boundary and privacy tests retained.",
+        "source": [
+          "src/eslams/arena.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/catalogue.py",
+          "src/eslams/arenas/gridworld.py",
+          "src/eslams/arenas/control_arcade.py",
+          "src/eslams/arenas/modern_control.py",
+          "src/eslams/arenas/strategic_games.py",
+          "src/eslams/arenas/advanced_cards.py"
+        ]
+      }
     },
     {
       "number": 152,
       "title": "README and catalogue label backgammon, battleship and crazy-eights as `faithful` although they are compact variants (5 checkers per side, 5x5 board with three one-cell ships, 5-card deal)",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Label compact backgammon/battleship/crazy-eights variants honestly and document exact rules; marketing them as faithful requires implementing full rules under separate versions.",
-      "evidence": null
+      "evidence": {
+        "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
+        "tests": "tests/test_standard_rule_regressions.py: all 11 solo full Runner artifacts, competitor turn/metadata, draw/fidelity contracts, paired dealer determinism/hand equality and per-seat score artifacts. Original game boundary and privacy tests retained.",
+        "source": [
+          "src/eslams/arena.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/catalogue.py",
+          "src/eslams/arenas/gridworld.py",
+          "src/eslams/arenas/control_arcade.py",
+          "src/eslams/arenas/modern_control.py",
+          "src/eslams/arenas/strategic_games.py",
+          "src/eslams/arenas/advanced_cards.py"
+        ]
+      }
     },
     {
       "number": 153,
@@ -2426,9 +2478,22 @@
       "number": 208,
       "title": "Solo-score games record winner player_2 (a seat that does not exist) in score.json and the public summary; the result contract says solo winner must be null",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Solo results must keep winner null and use the documented score/outcome schema; test non-existent-seat winners are impossible across score/public/publication outputs.",
-      "evidence": null
+      "evidence": {
+        "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
+        "tests": "tests/test_standard_rule_regressions.py: all 11 solo full Runner artifacts, competitor turn/metadata, draw/fidelity contracts, paired dealer determinism/hand equality and per-seat score artifacts. Original game boundary and privacy tests retained.",
+        "source": [
+          "src/eslams/arena.py",
+          "src/eslams/game_metadata.py",
+          "src/eslams/catalogue.py",
+          "src/eslams/arenas/gridworld.py",
+          "src/eslams/arenas/control_arcade.py",
+          "src/eslams/arenas/modern_control.py",
+          "src/eslams/arenas/strategic_games.py",
+          "src/eslams/arenas/advanced_cards.py"
+        ]
+      }
     },
     {
       "number": 209,

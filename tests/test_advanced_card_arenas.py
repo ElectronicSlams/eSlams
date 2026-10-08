@@ -1,4 +1,3 @@
-
 from eslams.arenas.advanced_cards import (
     CribbageArena,
     EuchreArena,
@@ -32,6 +31,25 @@ def test_gin_rummy_hides_opponent_hand_and_detects_undercut():
     terminal = arena.apply_action(state, "player_1", "knock:9D")
 
     assert terminal.terminal is True
+    assert terminal.outcome["reason"] == "gin"
+    assert terminal.outcome["winner"] == "player_1"
+
+    # A non-gin knock remains subject to undercut; no card can serve twice.
+    state = arena._state(
+        hands={
+            "player_1": ["2C", "3C", "4C", "2D", "9D"],
+            "player_2": ["5H", "6H", "7H", "8H"],
+        },
+        deck=["KC"],
+        discard=["9S"],
+        phase="discard",
+        active="player_1",
+        turn=0,
+        seed=1,
+        history=[],
+        outcome=None,
+    )
+    terminal = arena.apply_action(state, "player_1", "knock:9D")
     assert terminal.outcome["reason"] == "undercut"
     assert terminal.outcome["winner"] == "player_2"
 

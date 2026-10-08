@@ -5,14 +5,14 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from eslams.arena import Arena, validate_seed
+from eslams.arena import Arena, solo_state, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
 
 class BlackjackArena(Arena):
     id = "blackjack"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1",)
     action_schema = {
         "type": "string",
@@ -93,25 +93,27 @@ class BlackjackArena(Arena):
             outcome = _blackjack_outcome(player_hand, dealer_hand, reason="max_turns")
         public_dealer = dealer_hand if terminal else [dealer_hand[0]]
         legal = [] if terminal else ["hit", "stand"]
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "player_hand": player_hand,
-                "dealer_upcard": dealer_hand[0],
-                "dealer_hand": public_dealer,
-            },
-            private_state_by_player={
-                "player_1": {"dealer_hand": dealer_hand, "deck": deck},
-            },
-            legal_actions_by_player={"player_1": legal},
-            scores=_blackjack_scores(outcome),
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"blackjack:{seed}"),
-            render_hints={"renderer": "card-table"},
-            metadata={"seed": seed},
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "player_hand": player_hand,
+                    "dealer_upcard": dealer_hand[0],
+                    "dealer_hand": public_dealer,
+                },
+                private_state_by_player={
+                    "player_1": {"dealer_hand": dealer_hand, "deck": deck},
+                },
+                legal_actions_by_player={"player_1": legal},
+                scores=_blackjack_scores(outcome),
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"blackjack:{seed}"),
+                render_hints={"renderer": "card-table"},
+                metadata={"seed": seed},
+            )
         )
 
 
@@ -207,10 +209,7 @@ class FirstPriceSealedBidAuctionArena(Arena):
     ) -> ArenaState:
         terminal = outcome is not None
         legal = [] if terminal else list(range(11))
-        private = {
-            player: {"valuation": valuations[player]}
-            for player in self.players
-        }
+        private = {player: {"valuation": valuations[player]} for player in self.players}
         if pending_bid is not None:
             private["player_1"]["pending_bid"] = pending_bid
         return ArenaState(
@@ -340,8 +339,7 @@ class GoofspielArena(Arena):
         terminal = outcome is not None
         current_prize = prizes[0] if prizes else None
         private: dict[str, dict[str, Any]] = {
-            player: {"hand": hands[player], "prizes": list(prizes)}
-            for player in self.players
+            player: {"hand": hands[player], "prizes": list(prizes)} for player in self.players
         }
         if pending_bid is not None:
             private["player_1"]["pending_bid"] = pending_bid
@@ -420,9 +418,7 @@ class LiarsDiceArena(Arena):
             if not isinstance(current_bid, dict):
                 raise ValueError("cannot challenge without a bid")
             count = sum(
-                die == int(current_bid["face"])
-                for values in dice.values()
-                for die in values
+                die == int(current_bid["face"]) for values in dice.values() for die in values
             )
             bidder = str(current_bid["player"])
             challenger = player_id
@@ -671,9 +667,7 @@ class NegotiationArena(BargainingArena):
     ) -> ArenaState:
         terminal = outcome is not None
         offers = [
-            f"offer:{price}:{delivery}"
-            for price in (20, 40, 60, 80, 100)
-            for delivery in (1, 2, 3)
+            f"offer:{price}:{delivery}" for price in (20, 40, 60, 80, 100) for delivery in (1, 2, 3)
         ]
         legal = [] if terminal else offers
         if not terminal and last_offer and last_offer.get("player") != active:
@@ -793,10 +787,7 @@ def _split_outcome(
         "player_2": float(100 - player_1_share),
     }
     if reserves is not None:
-        unmet = {
-            player: utilities[player] < float(reserve)
-            for player, reserve in reserves.items()
-        }
+        unmet = {player: utilities[player] < float(reserve) for player, reserve in reserves.items()}
         if any(unmet.values()):
             return {
                 "winner": None,

@@ -3,7 +3,9 @@ import random
 import chess
 import pytest
 
+from eslams.arena import registry
 from eslams.arenas.advanced_cards import (
+    CribbageArena,
     GinRummyArena,
     _cribbage_hand_score,
     _cribbage_outcome,
@@ -20,8 +22,59 @@ from eslams.arenas.poker import (
     _winner_scores,
 )
 from eslams.artifacts import ArtifactValidator
+from eslams.catalogue import game_catalogue_rows
+from eslams.game_metadata import SOLO_SCORE_GAMES
 from eslams.protocol import ActResponse
 from eslams.runner import RunConfig, Runner
+
+
+def test_solo_results_and_competitive_arcade_topology_use_only_actual_seats(tmp_path):
+    rows = {r["game_id"]: r for r in game_catalogue_rows()}
+    for game in sorted(SOLO_SCORE_GAMES):
+        arena = registry.create(game)
+        assert arena.players == ("player_1",)
+        result = Runner().run(
+            RunConfig(arena_id=game, agent_1="first-legal", output_dir=tmp_path / game)
+        )
+        assert result.score.winner is None
+        assert result.score.outcome["winner"] is None
+        assert isinstance(result.score.outcome["success"], bool)
+        assert set(result.score.scores_by_player) == {"player_1"}
+        assert all(set(e.scores) == {"player_1"} for e in result.replay_events)
+        assert ArtifactValidator().validate(result.artifact_path) == []
+    for game in ("boxing-style-arena", "ice-hockey-style-arena"):
+        topology = rows[game]["topology"]
+        assert topology["mode"] == "head_to_head"
+        assert topology["controlledPlayers"] == ["player_1", "player_2"]
+        arena = registry.create(game)
+        state = arena.initial_state(1)
+        state = arena.apply_action(state, "player_1", state.legal_actions_by_player["player_1"][0])
+        assert state.active_player == "player_2"
+        assert state.legal_actions_by_player["player_2"]
+    for game in ("goofspiel", "mahjong"):
+        assert rows[game]["topology"]["drawAllowed"] is True
+        assert rows[game]["resultContract"]["drawAllowed"] is True
+    for game in ("backgammon", "battleship", "crazy-eights"):
+        assert rows[game]["fidelity"] == "compact"
+
+
+def test_cribbage_paired_seeds_balance_the_same_deal_and_report_each_seat(tmp_path):
+    arena = CribbageArena()
+    for even in (-2, 0, 2, 100):
+        left = arena.initial_state(even)
+        right = arena.initial_state(even + 1)
+        assert left.public_state["dealer"] == "player_1"
+        assert right.public_state["dealer"] == "player_2"
+        assert left.active_player == "player_2" and right.active_player == "player_1"
+        assert left.private_state_by_player == right.private_state_by_player
+        assert left.public_state["starter"] == right.public_state["starter"]
+        assert left.state_hash == arena.initial_state(even).state_hash
+    for seed in (0, 1):
+        result = Runner().run(RunConfig(arena_id="cribbage", seed=seed, output_dir=tmp_path))
+        assert result.score.metrics["evaluated_player"] == "player_1"
+        assert result.score.primary_score == result.score.scores_by_player["player_1"]
+        assert set(result.score.scores_by_player) == {"player_1", "player_2"}
+        assert ArtifactValidator().validate(result.artifact_path) == []
 
 
 def test_gin_deadwood_uses_ace_low_and_optimal_disjoint_melds():

@@ -530,7 +530,7 @@ compact/lite arenas do not overclaim full game coverage.
 | `nine-mens-morris` | `standard` | faithful |
 | `pentago` | `standard` | faithful |
 | `ultimate-tic-tac-toe` | `standard` | faithful |
-| `battleship` | `standard` | faithful |
+| `battleship` | `standard` | compact |
 | `blackjack` | `core_hit_stand_s17` | compact |
 | `leduc-holdem` | `core_compact_leduc_fixed_menu` | compact |
 | `limit-texas-holdem` | `core_compact_holdem_fixed_menu_limit` | compact |
@@ -544,7 +544,7 @@ compact/lite arenas do not overclaim full game coverage.
 | `spades` | `core_trump_tricks` | compact |
 | `euchre` | `core_call_and_play` | compact |
 | `cribbage` | `core_discard_showdown` | compact |
-| `crazy-eights` | `core_wild_eight_shedding` | faithful |
+| `crazy-eights` | `core_wild_eight_shedding` | compact |
 | `hanabi` | `core_compact_hanabi` | compact |
 | `prisoners-dilemma` | `core_one_shot_matrix` | faithful |
 | `bargaining` | `core_bilateral_split` | compact |
@@ -565,7 +565,7 @@ compact/lite arenas do not overclaim full game coverage.
 | `alien-shooter` | `standard` | inspired-by |
 | `boxing-style-arena` | `standard` | inspired-by |
 | `ice-hockey-style-arena` | `standard` | inspired-by |
-| `backgammon` | `standard` | faithful |
+| `backgammon` | `standard` | compact |
 
 List arenas from your installed copy:
 

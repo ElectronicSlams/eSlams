@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Align solo arena seats and terminal results with the solo contract; benchmark
+  success is separate from competitive winners (adapter versions 1.0.1).
+  Classify boxing/hockey as head-to-head, allow Goofspiel/Mahjong draws, and
+  disclose compact Backgammon/Battleship/Crazy Eights rules.
+- Cribbage 1.1.0 pairs consecutive even/odd seeds with the same deal and opposite
+  dealers. Both seats retain explicit scores; use both seeds in comparisons.
+
 - Add table-seat CLI agents, explicit run IDs with safe overwrite, and optional
   `--require-scoring-valid` status for automation that needs a scoreable match.
 - Remove ignored catalogue include flags: full JSON already includes help,

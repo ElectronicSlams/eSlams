@@ -23,10 +23,7 @@ log = logging.getLogger(__name__)
 
 def game_catalogue_rows() -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    renderer_rows = {
-        row["game_id"]: row
-        for row in renderer_vocabulary_rows()
-    }
+    renderer_rows = {row["game_id"]: row for row in renderer_vocabulary_rows()}
     for game_id in arena_registry.list():
         renderer_row = renderer_rows.get(game_id)
         if renderer_row is None:
@@ -176,6 +173,9 @@ def _fidelity(public: Any) -> str:
         "negotiation",
         "liars-dice",
         "goofspiel",
+        "backgammon",
+        "battleship",
+        "crazy-eights",
     }:
         return "compact"
     return str(public.fidelity)

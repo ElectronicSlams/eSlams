@@ -295,14 +295,16 @@ class EuchreArena(Arena):
 
 class CribbageArena(Arena):
     id = "cribbage"
-    version = "1.0.1"
+    version = "1.1.0"
     players = PLAYERS
     action_schema = {"type": "string", "description": "Discard two cards as discard:<card>,<card>."}
     max_turns = 2
 
     def initial_state(self, seed: int) -> ArenaState:
         validate_seed(seed)
-        deck = _deck(seed + 211)
+        # Consecutive even/odd seeds replay the same deal with opposite dealers.
+        deck = _deck(seed // 2 + 211)
+        dealer = PLAYERS[seed % 2]
         hands = {
             "player_1": sorted(deck[:6], key=_card_sort_key),
             "player_2": sorted(deck[6:12], key=_card_sort_key),
@@ -311,8 +313,8 @@ class CribbageArena(Arena):
             hands=hands,
             discards={"player_1": [], "player_2": []},
             starter=deck[12],
-            dealer="player_2",
-            active="player_1",
+            dealer=dealer,
+            active=_other(dealer),
             turn=0,
             seed=seed,
             history=[],
@@ -690,7 +692,10 @@ def _gin_outcome(
 ) -> dict[str, Any]:
     deadwood = {player: _deadwood(cards) for player, cards in hands.items()}
     opponent = _other(knocker)
-    if reason == "knock" and deadwood[opponent] <= deadwood[knocker]:
+    if reason == "knock" and deadwood[knocker] == 0:
+        winner = knocker
+        reason = "gin"
+    elif reason == "knock" and deadwood[opponent] <= deadwood[knocker]:
         winner = opponent
         reason = "undercut"
     elif deadwood["player_1"] == deadwood["player_2"]:

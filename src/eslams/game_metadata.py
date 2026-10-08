@@ -31,8 +31,6 @@ SOLO_SCORE_GAMES = {
     "bipedal-walker",
     "paddle-ball",
     "alien-shooter",
-    "boxing-style-arena",
-    "ice-hockey-style-arena",
 }
 
 MAIN_ARENA_GAMES = {
@@ -52,6 +50,8 @@ MAIN_ARENA_GAMES = {
 }
 
 ADVANCED_HEAD_TO_HEAD_GAMES = {
+    "boxing-style-arena",
+    "ice-hockey-style-arena",
     "checkers",
     "shogi",
     "xiangqi",
@@ -194,6 +194,7 @@ def topology_for_game(public: PublicGameMetadata) -> GameTopology:
         return multi_seat_topology(
             default_players=public.players,
             score_type=_multi_seat_score_type(public.game_id),
+            draw_allowed=public.game_id == "mahjong",
         )
     return head_to_head_topology(
         draw_allowed=_draw_allowed(public.game_id),
@@ -422,7 +423,7 @@ def validate_core_0_5_metadata(
 
 
 def _draw_allowed(game_id: str) -> bool:
-    return game_id not in {"hex", "goofspiel", "first-price-sealed-bid-auction"}
+    return game_id not in {"hex", "first-price-sealed-bid-auction"}
 
 
 def _head_to_head_score_type(game_id: str) -> str:
