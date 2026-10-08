@@ -72,14 +72,7 @@ def test_catalogue_exports_games_models_and_availability_rows():
         assert row["default_players"] == len(arena.players)
         assert row["player_count"] == len(arena.players)
 
-
-def test_game_catalogue_skips_missing_renderer_rows(monkeypatch):
-    monkeypatch.setattr(catalogue_module, "renderer_vocabulary_rows", lambda: [])
-
-    assert catalogue_module.game_catalogue_rows() == []
-
-
-def test_renderer_vocabulary_classifies_all_arenas_as_safe_or_explicit_absence():
+    # Retain the full renderer vocabulary contract alongside catalogue exports.
     rows = renderer_vocabulary_rows()
     by_game = {row["game_id"]: row for row in rows}
 
@@ -97,6 +90,12 @@ def test_renderer_vocabulary_classifies_all_arenas_as_safe_or_explicit_absence()
         for row in rows
     )
     assert all(row["renderer_family"] for row in rows)
+
+
+def test_game_catalogue_skips_missing_renderer_rows(monkeypatch):
+    monkeypatch.setattr(catalogue_module, "renderer_vocabulary_rows", lambda: [])
+
+    assert catalogue_module.game_catalogue_rows() == []
 
 
 def test_official_plan_is_deterministic_and_conservative():
@@ -223,6 +222,14 @@ def test_cli_catalogue_and_plan_commands(tmp_path: Path, capsys):
     assert main(["plan", "public-match", "--request", str(request), "--json"]) == 0
     public_plan = json.loads(capsys.readouterr().out)
     assert public_plan["case_count_expected"] == 2
+
+    # Retained assertions from test_cli_models_list_can_emit_supported_registry_json.
+    status = main(["models", "list", "--provider", "openai", "--game-agent-supported", "--json"])
+
+    assert status == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert any(item["model"] == "gpt-5.4-mini" for item in payload)
+    assert all(item["game_agent_supported"] is True for item in payload)
 
 
 def test_cli_plan_progress_and_resume_check(tmp_path: Path, capsys):

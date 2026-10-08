@@ -178,6 +178,30 @@ def test_cribbage_show_counts_ace_low_multiplicity_flush_and_nobs():
         + _cribbage_hand_score(cards, crib=True)
     )
 
+    # Retained assertions from test_cribbage_scores_fifteens_and_pairs_after_discards.
+    arena = CribbageArena()
+    state = arena._state(
+        hands={
+            "player_1": ["5C", "5D", "10H", "KS", "2C", "3D"],
+            "player_2": ["AC", "2D", "3H", "4S", "9C", "QD"],
+        },
+        discards={"player_1": [], "player_2": []},
+        starter="5H",
+        dealer="player_2",
+        active="player_1",
+        turn=0,
+        seed=1,
+        history=[],
+        outcome=None,
+    )
+
+    state = arena.apply_action(state, "player_1", "discard:2C,3D")
+    terminal = arena.apply_action(state, "player_2", "discard:9C,QD")
+
+    assert terminal.terminal is True
+    assert terminal.outcome["hand_scores"]["player_1"] > terminal.outcome["hand_scores"]["player_2"]
+    assert terminal.scores["player_1"] == 1.0
+
 
 def test_pentago_placement_win_precedes_destructive_rotation():
     arena = PentagoArena()
@@ -198,6 +222,15 @@ def test_pentago_placement_win_precedes_destructive_rotation():
         assert terminal.outcome == {"winner": "player_1", "reason": "five_in_a_row"}
         assert terminal.public_state["board"][0][:5] == ["B"] * 5
 
+    # Retained assertions from test_pentago_rotates_quadrant.
+    arena = PentagoArena()
+    state = arena.initial_state(1)
+
+    next_state = arena.apply_action(state, "player_1", "0:0:cw")
+
+    assert next_state.public_state["board"][0][2] == "B"
+    assert next_state.active_player == "player_2"
+
 
 def test_othello_passes_never_finish_an_incomplete_board():
     arena = OthelloArena()
@@ -214,6 +247,18 @@ def test_othello_passes_never_finish_an_incomplete_board():
         assert state.turn <= arena.max_turns
         if seed == 134:
             assert state.turn > 64
+
+    # Retained assertions from test_othello_initial_move_flips_disc.
+    arena = OthelloArena()
+    state = arena.initial_state(7)
+
+    assert sorted(state.legal_actions_by_player["player_1"]) == [[2, 3], [3, 2], [4, 5], [5, 4]]
+
+    next_state = arena.apply_action(state, "player_1", [2, 3])
+
+    assert next_state.public_state["board"][2][3] == "B"
+    assert next_state.public_state["board"][3][3] == "B"
+    assert next_state.active_player == "player_2"
 
 
 def test_chess_claimable_draw_does_not_preempt_checkmate():

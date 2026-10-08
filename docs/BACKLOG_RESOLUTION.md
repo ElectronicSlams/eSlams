@@ -24,14 +24,14 @@ The extracted sdist runs its full suite outside a Git checkout.
 
 The frozen baseline at `7f6bb418974739986e76049d45dfb7de2109a780` has
 275 passing cases and 85.332886% line coverage over `src/eslams`.
-39 of the required 55 original cases have been removed, mainly by combining
+All 55 required original cases (20% of 275) have been removed, mainly by combining
 redundant wrappers and preserving their assertions in retained tests.
-16 removals remain. New behavioral, privacy and integrity regressions are
+No further removals are needed. New behavioral, privacy and integrity regressions are
 tracked separately from the baseline removals.
 
 The last measured consolidation checkpoint has 471 passing cases on current
-Python 3.12 and direct-floor Python 3.10, covering 11,145 / 12,781 lines
-(87.199750%). This is an intermediate checkpoint; new changes still require
+Python 3.12 and direct-floor Python 3.10, covering 11,182 / 12,802 lines
+(87.345727%). This is an intermediate checkpoint; new changes still require
 a final full-suite and same-scope coverage gate.
 
 ## Remaining work

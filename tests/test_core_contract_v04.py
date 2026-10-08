@@ -112,20 +112,6 @@ def test_core_step_debug_observation_requires_env_flag(monkeypatch):
     assert "state" not in response["observation"]
 
 
-def test_prompt_package_is_cache_friendly_and_schema_first():
-    arena = registry.create("connect-four")
-    state = arena.initial_state(seed=1)
-
-    package = prompt_package(arena=arena, state=state, actor_id=state.active_player)
-
-    assert package["promptVersion"] == "eslams.core.prompt.v2"
-    assert package["stablePrefix"][0]["cacheRecommended"] is True
-    assert package["dynamicTurn"]["currentObservation"]
-    assert package["outputSchema"]["properties"]["action"]["required"] == ["action_id"]
-    assert package["promptHash"].startswith("sha256:")
-    assert package["tokenEstimate"] > 0
-
-
 def test_shared_model_action_parser_accepts_action_id_and_streaming_status():
     parsed = parse_model_action(
         '{"action": {"action_id": "2"}, "public_explanation": "Blocks."}',
@@ -225,8 +211,20 @@ def test_benchmark_budgets_golden_schemas_and_generated_contracts(tmp_path: Path
     assert "CoreStepRequest" in generated.read_text(encoding="utf-8")
     assert (Path(__file__).resolve().parents[1] / "packages/core-lite/src/index.ts").exists()
 
+    # Retained assertions from test_prompt_package_is_cache_friendly_and_schema_first.
+    arena = registry.create("connect-four")
+    state = arena.initial_state(seed=1)
 
-def test_engine_capabilities_gate_core_lite_and_precompute():
+    package = prompt_package(arena=arena, state=state, actor_id=state.active_player)
+
+    assert package["promptVersion"] == "eslams.core.prompt.v2"
+    assert package["stablePrefix"][0]["cacheRecommended"] is True
+    assert package["dynamicTurn"]["currentObservation"]
+    assert package["outputSchema"]["properties"]["action"]["required"] == ["action_id"]
+    assert package["promptHash"].startswith("sha256:")
+    assert package["tokenEstimate"] > 0
+
+    # Retained assertions from test_engine_capabilities_gate_core_lite_and_precompute.
     tic_tac_toe = engine_capabilities("tic-tac-toe")
     poker = engine_capabilities("poker")
 

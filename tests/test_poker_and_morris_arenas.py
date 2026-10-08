@@ -1,4 +1,3 @@
-
 from eslams.arenas.nine_mens_morris import NineMensMorrisArena
 from eslams.arenas.poker import (
     LeducHoldemArena,
@@ -56,22 +55,6 @@ def test_limit_holdem_betting_advances_to_flop_without_terminal_showdown():
     assert flop.legal_actions_by_player["player_1"] == ["check", "bet"]
 
 
-def test_no_limit_holdem_exposes_profiled_bet_sizes_and_all_in():
-    arena = NoLimitTexasHoldemArena()
-    state = arena.initial_state(3)
-
-    assert state.legal_actions_by_player["player_1"] == [
-        "check",
-        "bet:2",
-        "bet:4",
-        "all-in",
-    ]
-
-    all_in = arena.apply_action(state, "player_1", "all-in")
-
-    assert all_in.legal_actions_by_player["player_2"] == ["call", "fold"]
-
-
 def test_table_poker_fold_eliminates_seat_without_ending_until_one_remains():
     arena = NoLimitTexasHoldemArena()
     state = arena.initial_state(9)
@@ -90,6 +73,21 @@ def test_table_poker_fold_eliminates_seat_without_ending_until_one_remains():
     assert state.terminal is True
     assert state.outcome["winner"] == "player_1"
     assert state.scores == {"player_1": 1.0, "player_2": 0.0, "player_3": 0.0, "player_4": 0.0}
+
+    # Retained assertions from test_no_limit_holdem_exposes_profiled_bet_sizes_and_all_in.
+    arena = NoLimitTexasHoldemArena()
+    state = arena.initial_state(3)
+
+    assert state.legal_actions_by_player["player_1"] == [
+        "check",
+        "bet:2",
+        "bet:4",
+        "all-in",
+    ]
+
+    all_in = arena.apply_action(state, "player_1", "all-in")
+
+    assert all_in.legal_actions_by_player["player_2"] == ["call", "fold"]
 
 
 def test_nine_mens_morris_forms_mill_and_captures_piece():

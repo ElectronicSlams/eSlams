@@ -1,4 +1,3 @@
-
 from eslams.arenas.classic_cards import (
     CrazyEightsArena,
     HeartsArena,
@@ -33,24 +32,6 @@ def test_shedding_card_game_hides_opponent_hand_and_allows_matching_play():
     assert terminal.outcome["reason"] == "empty_hand"
 
 
-def test_crazy_eights_allows_eight_as_wild_card():
-    arena = CrazyEightsArena()
-    state = arena._state(
-        hands={"player_1": ["8C"], "player_2": ["KC"]},
-        deck=[],
-        discard="9H",
-        active="player_1",
-        turn=0,
-        seed=1,
-        history=[],
-        outcome=None,
-    )
-
-    assert state.legal_actions_by_player["player_1"] == ["play:8C"]
-    terminal = arena.apply_action(state, "player_1", "play:8C")
-    assert terminal.scores["player_1"] == 1.0
-
-
 def test_crazy_eights_pass_does_not_block_when_opponent_has_wild_eight():
     arena = CrazyEightsArena()
     state = arena._state(
@@ -68,6 +49,23 @@ def test_crazy_eights_pass_does_not_block_when_opponent_has_wild_eight():
 
     assert next_state.terminal is False
     assert next_state.legal_actions_by_player["player_2"] == ["play:8C"]
+
+    # Retained assertions from test_crazy_eights_allows_eight_as_wild_card.
+    arena = CrazyEightsArena()
+    state = arena._state(
+        hands={"player_1": ["8C"], "player_2": ["KC"]},
+        deck=[],
+        discard="9H",
+        active="player_1",
+        turn=0,
+        seed=1,
+        history=[],
+        outcome=None,
+    )
+
+    assert state.legal_actions_by_player["player_1"] == ["play:8C"]
+    terminal = arena.apply_action(state, "player_1", "play:8C")
+    assert terminal.scores["player_1"] == 1.0
 
 
 def test_hearts_follow_suit_and_assign_penalty_to_trick_winner():
@@ -93,8 +91,7 @@ def test_hearts_follow_suit_and_assign_penalty_to_trick_winner():
     assert terminal.public_state["penalties"]["player_2"] == 2
     assert terminal.outcome["winner"] == "player_1"
 
-
-def test_hearts_treats_ace_as_high_card():
+    # Retained assertions from test_hearts_treats_ace_as_high_card.
     arena = HeartsArena()
     state = arena._state(
         hands={"player_1": ["AH"], "player_2": ["KH"]},
@@ -135,8 +132,7 @@ def test_spades_trump_wins_trick():
     assert terminal.public_state["tricks"]["player_2"] == 1
     assert terminal.scores["player_2"] == 1.0
 
-
-def test_spades_treats_ace_as_high_card():
+    # Retained assertions from test_spades_treats_ace_as_high_card.
     arena = SpadesArena()
     state = arena._state(
         hands={"player_1": ["KS"], "player_2": ["AS"]},

@@ -1,34 +1,7 @@
-
 from eslams.arenas.checkers import CheckersArena
 from eslams.arenas.mancala import MancalaArena
 from eslams.arenas.matrix_games import PrisonersDilemmaArena, RockPaperScissorsArena
-from eslams.arenas.pentago import PentagoArena
 from eslams.arenas.ultimate_tic_tac_toe import UltimateTicTacToeArena
-
-
-def test_checkers_initial_moves_and_capture():
-    arena = CheckersArena()
-    state = arena.initial_state(1)
-
-    assert "5,0-4,1" in state.legal_actions_by_player["player_1"]
-
-    board = [[None for _ in range(8)] for _ in range(8)]
-    board[5][0] = "r"
-    board[4][1] = "b"
-    custom = arena._state(
-        board=board,
-        turn=0,
-        active="player_1",
-        seed=1,
-        outcome=None,
-        forced_piece=None,
-    )
-
-    assert custom.legal_actions_by_player["player_1"] == ["5,0-3,2"]
-    captured = arena.apply_action(custom, "player_1", "5,0-3,2")
-    assert captured.public_state["board"][4][1] is None
-    assert captured.public_state["board"][3][2] == "r"
-    assert captured.terminal is True
 
 
 def test_checkers_multi_jump_capture_must_continue_with_same_piece():
@@ -55,6 +28,30 @@ def test_checkers_multi_jump_capture_must_continue_with_same_piece():
     assert jumped.legal_actions_by_player["player_1"] == ["3,2-1,4"]
     assert "5,4-3,6" not in jumped.legal_actions_by_player["player_1"]
 
+    # Retained assertions from test_checkers_initial_moves_and_capture.
+    arena = CheckersArena()
+    state = arena.initial_state(1)
+
+    assert "5,0-4,1" in state.legal_actions_by_player["player_1"]
+
+    board = [[None for _ in range(8)] for _ in range(8)]
+    board[5][0] = "r"
+    board[4][1] = "b"
+    custom = arena._state(
+        board=board,
+        turn=0,
+        active="player_1",
+        seed=1,
+        outcome=None,
+        forced_piece=None,
+    )
+
+    assert custom.legal_actions_by_player["player_1"] == ["5,0-3,2"]
+    captured = arena.apply_action(custom, "player_1", "5,0-3,2")
+    assert captured.public_state["board"][4][1] is None
+    assert captured.public_state["board"][3][2] == "r"
+    assert captured.terminal is True
+
 
 def test_mancala_extra_turn_and_store_update():
     arena = MancalaArena()
@@ -64,16 +61,6 @@ def test_mancala_extra_turn_and_store_update():
 
     assert next_state.public_state["stores"]["player_1"] == 1
     assert next_state.active_player == "player_1"
-
-
-def test_pentago_rotates_quadrant():
-    arena = PentagoArena()
-    state = arena.initial_state(1)
-
-    next_state = arena.apply_action(state, "player_1", "0:0:cw")
-
-    assert next_state.public_state["board"][0][2] == "B"
-    assert next_state.active_player == "player_2"
 
 
 def test_ultimate_tic_tac_toe_routes_next_board():

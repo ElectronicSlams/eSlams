@@ -38,18 +38,6 @@ REQUIRED_DESCRIPTOR_FIELDS = {
 }
 
 
-def test_stateless_arena_transport_round_trip_and_step():
-    state = initial_state("tic-tac-toe", seed=1)
-    actions = legal_actions("tic-tac-toe", state, state["active_player"])
-    next_state = step("tic-tac-toe", state, state["active_player"], actions[0])
-
-    assert state_hash(state) == state["state_hash"]
-    assert next_state["turn"] == 1
-    assert next_state["state_hash"] != state["state_hash"]
-
-
-
-
 def test_deserialize_state_strict_hash_fails_and_trusted_repair_diagnoses():
     state = initial_state("tic-tac-toe", seed=1)
     stale = {**state, "state_hash": "stale-hash"}
@@ -67,17 +55,17 @@ def test_deserialize_state_strict_hash_fails_and_trusted_repair_diagnoses():
         "canonical_state_hash": state["state_hash"],
     }
 
+    # Retained assertions from test_stateless_arena_transport_round_trip_and_step.
+    state = initial_state("tic-tac-toe", seed=1)
+    actions = legal_actions("tic-tac-toe", state, state["active_player"])
+    next_state = step("tic-tac-toe", state, state["active_player"], actions[0])
 
-def test_cli_arena_smoke_all(capsys):
-    assert main(["arena", "smoke", "--all", "--json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["ok"] is True
-    assert payload["game_count"] == 50
-    assert {row["arena_id"] for row in payload["rows"]} == set(PUBLIC_GAME_CATALOGUE_BY_ID)
-    assert all(row["legal_action_count"] >= 0 for row in payload["rows"])
+    assert state_hash(state) == state["state_hash"]
+    assert next_state["turn"] == 1
+    assert next_state["state_hash"] != state["state_hash"]
 
 
-def test_arena_session_start_and_one_step_all_games_are_public_safe():
+def test_arena_session_start_and_one_step_all_games_are_public_safe(capsys):
     for game_id in registry.list():
         arena = registry.create(game_id)
         players = _players_for(arena.players)
@@ -116,6 +104,14 @@ def test_arena_session_start_and_one_step_all_games_are_public_safe():
             assert "private_state_by_player" not in stepped["session_state"]
             assert _public_issues(stepped) == []
             assert "state.applied" in [event["type"] for event in stepped["events"]]
+
+    # Retained assertions from test_cli_arena_smoke_all.
+    assert main(["arena", "smoke", "--all", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["game_count"] == 50
+    assert {row["arena_id"] for row in payload["rows"]} == set(PUBLIC_GAME_CATALOGUE_BY_ID)
+    assert all(row["legal_action_count"] >= 0 for row in payload["rows"])
 
 
 def test_arena_session_failures_are_safe_and_do_not_transition():

@@ -19,10 +19,6 @@ from eslams.state import ArenaState
 TEST_ED25519_PRIVATE_KEY = "base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
 
 
-
-
-
-
 def test_runner_requires_explicit_agents_for_more_than_two_players():
     with pytest.raises(ValueError, match="player_3"):
         _agents_for_arena(ThreePlayerArena(), RunConfig(arena_id="three-player"))
@@ -109,8 +105,6 @@ def test_validator_rejects_unlisted_artifact_files(tmp_path: Path):
 
     assert "unlisted artifact file: logs/surprise.txt" in report.errors
     assert report.valid is False
-
-
 
 
 def test_chess_replay_html_has_coordinates_side_colored_pieces_and_split_moves(tmp_path: Path):
@@ -403,15 +397,6 @@ def test_multi_player_forfeit_preserves_remaining_scores():
         "forfeited_player": "player_1",
         "remaining_players": ["player_2", "player_3"],
     }
-
-
-def test_cli_models_list_can_emit_supported_registry_json(capsys):
-    status = main(["models", "list", "--provider", "openai", "--game-agent-supported", "--json"])
-
-    assert status == 0
-    payload = json.loads(capsys.readouterr().out)
-    assert any(item["model"] == "gpt-5.4-mini" for item in payload)
-    assert all(item["game_agent_supported"] is True for item in payload)
 
 
 def test_validator_detects_signed_manifest_tamper(tmp_path: Path, monkeypatch):

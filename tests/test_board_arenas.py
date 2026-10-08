@@ -1,20 +1,5 @@
-
 from eslams.arenas.gomoku import GomokuArena
 from eslams.arenas.hex import HexArena
-from eslams.arenas.othello import OthelloArena
-
-
-def test_othello_initial_move_flips_disc():
-    arena = OthelloArena()
-    state = arena.initial_state(7)
-
-    assert sorted(state.legal_actions_by_player["player_1"]) == [[2, 3], [3, 2], [4, 5], [5, 4]]
-
-    next_state = arena.apply_action(state, "player_1", [2, 3])
-
-    assert next_state.public_state["board"][2][3] == "B"
-    assert next_state.public_state["board"][3][3] == "B"
-    assert next_state.active_player == "player_2"
 
 
 def test_gomoku_detects_five_in_a_row():

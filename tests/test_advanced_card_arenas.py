@@ -1,5 +1,4 @@
 from eslams.arenas.advanced_cards import (
-    CribbageArena,
     EuchreArena,
     GinRummyArena,
     HanabiArena,
@@ -78,31 +77,6 @@ def test_euchre_left_bower_counts_as_trump():
     assert terminal.terminal is True
     assert terminal.public_state["tricks"]["player_1"] == 1
     assert terminal.outcome["winner"] == "player_1"
-
-
-def test_cribbage_scores_fifteens_and_pairs_after_discards():
-    arena = CribbageArena()
-    state = arena._state(
-        hands={
-            "player_1": ["5C", "5D", "10H", "KS", "2C", "3D"],
-            "player_2": ["AC", "2D", "3H", "4S", "9C", "QD"],
-        },
-        discards={"player_1": [], "player_2": []},
-        starter="5H",
-        dealer="player_2",
-        active="player_1",
-        turn=0,
-        seed=1,
-        history=[],
-        outcome=None,
-    )
-
-    state = arena.apply_action(state, "player_1", "discard:2C,3D")
-    terminal = arena.apply_action(state, "player_2", "discard:9C,QD")
-
-    assert terminal.terminal is True
-    assert terminal.outcome["hand_scores"]["player_1"] > terminal.outcome["hand_scores"]["player_2"]
-    assert terminal.scores["player_1"] == 1.0
 
 
 def test_hanabi_observation_shows_partner_hand_but_hides_own_cards():

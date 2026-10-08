@@ -188,8 +188,7 @@ def test_attempt_event_id_is_deterministic_and_case_retry_scoped():
     assert first.startswith("sha256:")
     assert first != case_retry
 
-
-def test_case_retry_attempt_kind_is_explicit_in_python_and_schema():
+    # Retained assertions from test_case_retry_attempt_kind_is_explicit_in_python_and_schema.
     with pytest.raises(ValueError, match="retried cases must begin"):
         replace(_event(), case_attempt_index=2)
 
