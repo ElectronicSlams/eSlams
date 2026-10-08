@@ -57,6 +57,24 @@ virtual environment. Before a release, run the
 suite in each interpreter, build the wheel and sdist, run `twine check`, export
 the schema bundle twice, and compare the bytes.
 
+## Contributor shortcuts and checks
+
+On systems with Make, `make help` lists shortcuts for the commands above.
+Use `make check PYTHON=.venv/bin/python` after installing the dev extra and
+Node.js/npm. Schema and benchmark outputs go to ignored `.checks/`; override
+`CHECK_OUTPUT_DIR` to choose a different scratch directory. Windows contributors
+can use the direct Python and npm commands without installing Make.
+
+Core CI and isolated distribution consumers already run keyless game, validate,
+replay and export checks. `tests/test_contract_artifact_profiles.py` covers Local
+Artifact gameplay validity and publication boundaries, so the standalone smoke
+proposed in #38 is consolidated into those existing checks.
+
+Dependabot proposes weekly grouped Python and GitHub Actions updates. Updates
+require review and the existing native, distribution and audit gates; there is no
+automatic merge. SHA-pinned CodeQL scans Python and TypeScript on PRs, main and
+a weekly schedule. Its report is one additional source of review evidence.
+
 ## Design Rules
 
 - Keep public contracts versioned.

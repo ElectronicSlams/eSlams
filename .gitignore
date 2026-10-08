@@ -14,3 +14,4 @@ runs/
 .env
 .env.*
 !.env.example
+.checks/

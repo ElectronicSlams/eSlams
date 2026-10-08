@@ -2851,7 +2851,7 @@
       "number": 202,
       "title": "Live 'providers preflight' fails for README example models gpt-5-mini and gpt-5-nano (128-token cap consumed by reasoning, reported as schema mismatch)",
       "work_package": "W6",
-      "status": "implemented: awaiting integration verification",
+      "status": "closed: completed",
       "criterion": "Use model-appropriate response/reasoning budgets in preflight and runtime; classify incomplete/refusal distinctly from schema errors. Any retries must have genuine separate attempt receipts and no fabricated completion.",
       "evidence": {
         "source": [
@@ -2864,7 +2864,18 @@
           "docs/PROVIDERS.md"
         ],
         "implementation": "GPT-5 mini/nano live probes explicitly send minimal reasoning effort with >=4096 output allowance. Model-specific nano override follows official GPT-5 capability docs. Incomplete responses produce explicit finish reason and reject actions, rather than a misleading missing-text error.",
-        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases.",
+        "integration": "494 tests passed on local Python 3.12 and direct-minimum 3.10, both 11540/13032 lines (88.551%). Native Core CI 37760860363, distribution consumers 37760860375, audit 37760860378, workflow lint 37760860450 all passed at 6edad7b. No billed provider calls or release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T10:10:03Z",
+        "number": 202,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/202",
+        "kind": "issue",
+        "resolution_commit": "6edad7b1b5a3ae61cb6c892f363233c3abd32a5c",
+        "replacement_pr": 218
       }
     },
     {
@@ -3334,9 +3345,17 @@
       "number": 36,
       "head": "4b19d984c02cc7712a81ede93941012b6389f880",
       "title": "chore: add Dependabot for Actions and Python deps",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "review_route": "Retain, conditional",
-      "criterion": "Verify scoped update groups, supported-Python checks and actionable notification policy; merge after dependency baseline is established. No auto-merge without the same contract gates."
+      "criterion": "Verify scoped update groups, supported-Python checks and actionable notification policy; merge after dependency baseline is established. No auto-merge without the same contract gates.",
+      "evidence": {
+        "source": [
+          ".github/dependabot.yml",
+          "CONTRIBUTING.md"
+        ],
+        "disposition": "Incorporate weekly grouped Python/Actions update proposals with capped open PRs and no automatic merges. Runtime/dev floors and pinned-action audits remain enforced.",
+        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending."
+      }
     },
     {
       "number": 37,
@@ -3364,9 +3383,21 @@
       "number": 38,
       "head": "f72351d79664a05ff12c36b2a564211b96025138",
       "title": "test: keyless local tic-tac-toe smoke",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "review_route": "Supersede / consolidate",
-      "criterion": "Consolidate with revised #18 and existing runner tests after local execution/scoring/billing semantics are explicit; close original with replacement coverage link."
+      "criterion": "Consolidate with revised #18 and existing runner tests after local execution/scoring/billing semantics are explicit; close original with replacement coverage link.",
+      "evidence": {
+        "source": [
+          ".github/workflows/ci.yml",
+          ".github/workflows/wheel-smoke.yml",
+          "scripts/verify_distributions.py",
+          "tests/test_contract_artifact_profiles.py",
+          "tests/test_case_eligibility_regressions.py",
+          "CONTRIBUTING.md"
+        ],
+        "disposition": "Supersede duplicate one-game test with existing native/full-no-Git-sdist and isolated wheel/sdist keyless CLI run/validate/replay/export checks and retained Local Artifact/official boundary assertions. Do not add redundant wrappers after completing 20% original-test consolidation.",
+        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending."
+      }
     },
     {
       "number": 39,
@@ -3413,9 +3444,17 @@
       "number": 41,
       "head": "6d89cdd62c81d7d06f60b79dd6d1d76ce7e98157",
       "title": "ci: add SHA-pinned CodeQL workflow",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "review_route": "Retain, conditional",
-      "criterion": "Verify security settings, least permissions and fork behavior, baseline actionable findings and check pinned action; merge one supported analysis configuration."
+      "criterion": "Verify security settings, least permissions and fork behavior, baseline actionable findings and check pinned action; merge one supported analysis configuration.",
+      "evidence": {
+        "source": [
+          ".github/workflows/codeql.yml",
+          "CONTRIBUTING.md"
+        ],
+        "disposition": "Incorporate Python and TypeScript CodeQL scans; repository default setup is not configured, so there is no duplicate setup. Verified v4.38.1 annotated tag peels to proposed SHA 1c5b675653bb5c22dbe9b12b556ec555138e09fd via official GitHub API. Restrict security-events write to analyze job and disable checkout credential persistence.",
+        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending."
+      }
     },
     {
       "number": 42,
@@ -3501,9 +3540,18 @@
       "number": 46,
       "head": "6789e80cea560bd0e4b0c1c78789a31af56b4e70",
       "title": "Add a root Makefile for documented contributor commands",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "review_route": "Supersede / consolidate",
-      "criterion": "Retain corrected commands in CONTRIBUTING or a small consolidated Makefile using the selected interpreter; close original after one authoritative developer setup exists."
+      "criterion": "Retain corrected commands in CONTRIBUTING or a small consolidated Makefile using the selected interpreter; close original after one authoritative developer setup exists.",
+      "evidence": {
+        "source": [
+          "Makefile",
+          ".gitignore",
+          "CONTRIBUTING.md"
+        ],
+        "disposition": "Incorporate contributor Makefile using interpreter-selected python -m commands and active-version mypy. Retain exact pinned TS checks; replace global /tmp/eslams output paths with configurable ignored .checks. Windows direct commands remain documented. No destructive or release targets.",
+        "verification": "Entire original diff reviewed against unchanged live PR heads. Local Make commands, actionlint, native workflows and full suites pending."
+      }
     },
     {
       "number": 47,
