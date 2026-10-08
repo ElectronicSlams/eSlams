@@ -593,6 +593,11 @@ Equal utilities draw. Negotiation 1.1.0 enforces both private reserve utilities;
 below-reserve acceptance cannot produce a deal. Its price grid uses steps of ten,
 which admits a mutually feasible deal for every generated reserve combination.
 
+Alien-shooter 1.1.0 resolves hits after projectile motion and after alien descent.
+Aliens descend once per twelve actions. A public-observation tracking policy can
+clear all 1,225 possible initial formations within 28 actions, making the full
+score attainable across the seeded layout support.
+
 List arenas from your installed copy:
 
 ```bash

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Alien-shooter 1.1.0 resolves collisions after both motion phases and slows
+  descent to once per twelve actions. An exhaustive formation check verifies a
+  public-observation policy reaches the full score in every initial layout.
+
 - Auction 1.1.0 retains negative utility, uses a fixed affine score scale,
   alternates tied allocations by seed parity, and reports the match winner by
   utility separately from the item recipient. Negotiation 1.1.0 enforces reserve

@@ -375,7 +375,7 @@ class PaddleBallArena(Arena):
 
 class AlienShooterArena(Arena):
     id = "alien-shooter"
-    version = "1.0.1"
+    version = "1.1.0"
     players = ("player_1",)
     action_schema = {
         "type": "string",
@@ -383,6 +383,7 @@ class AlienShooterArena(Arena):
         "description": "Move the ship or fire one projectile.",
     }
     max_turns = 96
+    descent_interval = 12
 
     def initial_state(self, seed: int) -> ArenaState:
         validate_seed(seed)
@@ -407,6 +408,7 @@ class AlienShooterArena(Arena):
             "aliens": state.public_state["aliens"],
             "bullets": state.public_state["bullets"],
             "destroyed": state.public_state["destroyed"],
+            "descent_interval": self.descent_interval,
             "legal_actions": state.legal_actions_by_player[player_id],
             "scores": state.scores,
         }
@@ -429,8 +431,10 @@ class AlienShooterArena(Arena):
         aliens, bullets, hits = _resolve_alien_hits(aliens, bullets)
         destroyed = int(state.public_state["destroyed"]) + hits
         turn = state.turn + 1
-        if turn % 3 == 0:
+        if turn % self.descent_interval == 0:
             aliens = [(x, y - 1) for x, y in aliens]
+            aliens, bullets, descent_hits = _resolve_alien_hits(aliens, bullets)
+            destroyed += descent_hits
         outcome = _alien_outcome(aliens, destroyed, turn, self.max_turns)
         history = [
             *state.public_state["history"],
@@ -476,6 +480,7 @@ class AlienShooterArena(Arena):
                     "aliens": [list(item) for item in aliens],
                     "bullets": [list(item) for item in bullets],
                     "destroyed": destroyed,
+                    "descent_interval": self.descent_interval,
                     "history": history,
                 },
                 private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
