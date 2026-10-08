@@ -10,7 +10,7 @@ Registry snapshot: `2026-07-31T14:48:48Z`
 
 Sources: models.dev, litellm
 
-Catalogued rows: **1926** (3 with `available_from_api=true`)
+Catalogued rows: **1925** (3 with `available_from_api=true`)
 
 Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to the same canonical provider keys used by the public `/models/...` routes.
 
@@ -53,7 +53,6 @@ Rows marked `available_from_api=false` are excluded. Legacy aliases normalize to
 | Anthropic | `claude-opus-4-7-20260416` |
 | Anthropic | `claude-opus-4-8` |
 | Anthropic | `claude-opus-5` |
-| Anthropic | `claude-sonnet-4-20250514` |
 | Anthropic | `claude-sonnet-4-5` |
 | Anthropic | `claude-sonnet-4-5-20250929` |
 | Anthropic | `claude-sonnet-4-6` |

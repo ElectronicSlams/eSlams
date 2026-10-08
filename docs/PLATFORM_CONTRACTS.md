@@ -438,7 +438,7 @@ Plan commands are no-secret and deterministic:
 
 ```bash
 eslams plan official --suite public-smoke --providers openai,anthropic --arenas chess,tic-tac-toe --json
-eslams plan battlefield --pairs openai:gpt-5-mini,anthropic:claude-sonnet-4-20250514 --arenas tic-tac-toe --json
+eslams plan battlefield --pairs openai:gpt-5-mini,anthropic:claude-sonnet-4-6 --arenas tic-tac-toe --json
 eslams plan public-match --request request.json --json
 ```
 

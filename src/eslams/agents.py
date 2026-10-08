@@ -440,6 +440,10 @@ class ModelProviderAgent:
             runtime_config=self.runtime_config,
         )
         try:
+            _check_provider_completion(
+                data, provider="openai", model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _openai_text(data)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -503,6 +507,10 @@ class ModelProviderAgent:
             runtime_config=self.runtime_config,
         )
         try:
+            _check_provider_completion(
+                data, provider="anthropic", model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _anthropic_text(data)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -557,6 +565,10 @@ class ModelProviderAgent:
             runtime_config=self.runtime_config,
         )
         try:
+            _check_provider_completion(
+                data, provider=self.provider, model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _gemini_text(data, provider=self.provider)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -611,6 +623,10 @@ class ModelProviderAgent:
             native_cost=native_cost,
         )
         try:
+            _check_provider_completion(
+                data, provider="openrouter", model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _openrouter_text(data)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -661,6 +677,10 @@ class ModelProviderAgent:
             runtime_config=runtime,
         )
         try:
+            _check_provider_completion(
+                data, provider="bedrock", model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _bedrock_text(data)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -1979,6 +1999,143 @@ def _openai_text(data: dict[str, Any]) -> str:
             provider="openai",
         )
     return "".join(chunks)
+
+
+def _check_provider_completion(
+    data: dict[str, Any], *, provider: str, model: str,
+    response: httpx.Response, receipt: dict[str, Any],
+) -> None:
+    """Classify semantic failures before text parsing, retaining billable usage.
+
+    Refusal and incomplete results use the existing request-rejected outcome;
+    finish_status distinguishes them without changing the v2 outcome vocabulary.
+    Never copy refusal prose or arbitrary provider error strings into receipts.
+    """
+    reason: Any = None
+    status: Any = None
+    error = data.get("error")
+    refused = False
+    if provider == "openai":
+        status = data.get("status")
+        details = data.get("incomplete_details")
+        reason = details.get("reason") if isinstance(details, dict) else None
+        output = data.get("output")
+        refused = reason == "content_filter"
+        if isinstance(output, list):
+            for item in output:
+                content = item.get("content") if isinstance(item, dict) else None
+                if isinstance(content, list):
+                    refused = refused or any(
+                        isinstance(part, dict) and part.get("type") == "refusal"
+                        for part in content
+                    )
+    elif provider == "anthropic":
+        reason = data.get("stop_reason")
+        details = data.get("stop_details")
+        refused = reason == "refusal" or (
+            isinstance(details, dict) and details.get("type") == "refusal"
+        )
+    elif provider in {"google", "gemini"}:
+        feedback = data.get("promptFeedback")
+        blocked = feedback.get("blockReason") if isinstance(feedback, dict) else None
+        candidates = data.get("candidates")
+        first = candidates[0] if isinstance(candidates, list) and candidates else None
+        reason = first.get("finishReason") if isinstance(first, dict) else None
+        if blocked is not None and blocked != "BLOCK_REASON_UNSPECIFIED":
+            refused = True
+            reason = blocked
+        refused = refused or (isinstance(reason, str) and reason in {
+            "SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII",
+            "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
+            "PUP_LIMITED_DISABLED",
+        })
+    elif provider == "openrouter":
+        choices = data.get("choices")
+        first = choices[0] if isinstance(choices, list) and choices else None
+        if isinstance(first, dict):
+            error = error or first.get("error")
+            reason = first.get("finish_reason")
+            message = first.get("message")
+            refused = reason == "content_filter" or (
+                isinstance(message, dict) and bool(message.get("refusal"))
+            )
+    elif provider == "bedrock":
+        reason = data.get("stopReason")
+        refused = isinstance(reason, str) and reason in {"guardrail_intervened", "content_filtered"}
+
+    if (reason is not None and not isinstance(reason, str)) or (
+        status is not None and not isinstance(status, str)
+    ):
+        receipt.update(finish_reason="unknown", finish_status="unknown")
+        raise ProviderCallError(
+            "provider returned malformed completion fields",
+            error_kind="provider_response_schema_mismatch", provider=provider, model=model,
+        )
+
+    known_reasons = {
+        "max_output_tokens", "content_filter", "steered", "refusal", "max_tokens",
+        "end_turn", "stop_sequence", "tool_use", "pause_turn", "model_context_window_exceeded",
+        "STOP", "MAX_TOKENS", "SAFETY", "RECITATION", "LANGUAGE", "OTHER", "BLOCKLIST",
+        "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT",
+        "IMAGE_RECITATION", "ESCALATION", "PUP_LIMITED_DISABLED", "MALFORMED_FUNCTION_CALL",
+        "MALFORMED_RESPONSE", "FINISH_REASON_UNSPECIFIED", "BLOCK_REASON_UNSPECIFIED",
+        "stop", "length", "error", "tool_calls", "guardrail_intervened", "content_filtered",
+        "malformed_model_output", "malformed_tool_use",
+    }
+    receipt["finish_reason"] = reason if isinstance(reason, str) and reason in known_reasons else (
+        "unknown" if reason is not None else None
+    )
+    receipt["finish_status"] = status if isinstance(status, str) and status in {
+        "completed", "failed", "incomplete", "cancelled", "queued", "in_progress"
+    } else ("unknown" if status is not None else "completed" if reason is not None else None)
+
+    if error or status == "failed" or reason == "error" or data.get("type") == "error":
+        receipt["finish_status"] = "failed"
+        code = _body_error_status(error)
+        kind = _provider_error_kind(code) if code is not None else "provider_unavailable"
+        raise ProviderCallError(
+            "provider reported an error inside the response body",
+            status_code=code, error_kind=kind, provider=provider, model=model,
+            retry_after_seconds=_retry_after_seconds(response),
+        )
+    if refused:
+        receipt["finish_status"] = "refused"
+        raise ProviderCallError(
+            "provider refused or filtered the requested action",
+            error_kind="provider_request_rejected", provider=provider, model=model,
+        )
+    if status in {"incomplete", "cancelled", "queued", "in_progress"} or reason in {
+        "max_output_tokens", "max_tokens", "MAX_TOKENS", "length",
+        "model_context_window_exceeded", "steered", "tool_use", "tool_calls", "pause_turn",
+        "MALFORMED_FUNCTION_CALL", "MALFORMED_RESPONSE",
+        "malformed_model_output", "malformed_tool_use",
+    }:
+        receipt["finish_status"] = "incomplete"
+        detail = receipt["finish_reason"] or receipt["finish_status"]
+        raise ProviderCallError(
+            f"provider response is incomplete ({detail}); no action accepted",
+            error_kind="provider_request_rejected", provider=provider, model=model,
+        )
+
+
+def _body_error_status(error: Any) -> int | None:
+    if not isinstance(error, dict):
+        return None
+    code = error.get("code")
+    if isinstance(code, int) and not isinstance(code, bool) and 400 <= code <= 599:
+        return code
+    metadata = error.get("metadata")
+    kind = error.get("type") or error.get("code") or (
+        metadata.get("error_type") if isinstance(metadata, dict) else None
+    )
+    codes = {
+        "authentication_error": 401, "invalid_api_key": 401, "permission_error": 403,
+        "rate_limit_error": 429, "rate_limit_exceeded": 429,
+        "overloaded_error": 529, "api_error": 500, "server_error": 500, "server": 500,
+        "internal_error": 500, "timeout_error": 504, "timeout": 504,
+        "not_found_error": 404, "invalid_request_error": 400,
+    }
+    return codes.get(kind) if isinstance(kind, str) else None
 
 
 def _openrouter_text(data: dict[str, Any]) -> str:

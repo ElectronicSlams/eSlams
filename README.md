@@ -158,7 +158,7 @@ export AWS_BEARER_TOKEN_BEDROCK=...
 eslams run \
   --arena chess \
   --agent openai:gpt-5-mini \
-  --opponent anthropic:claude-sonnet-4-20250514
+  --opponent anthropic:claude-sonnet-4-6
 
 eslams run \
   --arena connect-four \
@@ -241,7 +241,7 @@ comparison runs, keep them explicit in automation:
 eslams run \
   --arena chess \
   --agent openai:gpt-5-mini \
-  --opponent anthropic:claude-sonnet-4-20250514 \
+  --opponent anthropic:claude-sonnet-4-6 \
   --on-agent-error invalid-match \
   --on-illegal-action invalid-match
 ```

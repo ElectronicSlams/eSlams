@@ -44,7 +44,7 @@ from eslams.official import merge_official_results
 from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
-from eslams.provider_preflight import provider_models_live, provider_preflight
+from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
@@ -858,13 +858,7 @@ def _providers_command(args: argparse.Namespace) -> int:
         return 0 if payload["ok"] is True else 1
     if args.providers_command == "models":
         if args.live:
-            models = provider_models_live(args.provider)
-            payload = {
-                "provider": args.provider,
-                "mode": "live",
-                "ok": models is not None,
-                "models": models or [],
-            }
+            payload = provider_models_result(args.provider)
         else:
             records = load_provider_registry().list_models(provider=args.provider)
             payload = {
@@ -963,7 +957,7 @@ def _provider_agent(
 ) -> ModelProviderAgent | None:
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
-        "anthropic": ("claude-sonnet-4-20250514", "ANTHROPIC_API_KEY"),
+        "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),

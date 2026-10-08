@@ -62,6 +62,24 @@ eslams providers models --provider openai --live
 
 Review every live check. A missing Models API is reported separately and does
 not fabricate account visibility.
+Discovery follows Anthropic and Gemini pagination before testing visibility. A missing
+key, transport failure, HTTP error, malformed page or pagination limit produces a
+structured error; partial results never prove a model absent. Registry-only preflight
+rejects retired/unavailable entries. The Anthropic default is `claude-sonnet-4-6`;
+[Anthropic retired Sonnet 4 on June 15, 2026](https://platform.claude.com/docs/en/about-claude/model-deprecations).
+
+GPT-5 mini/nano probes send `reasoning.effort=minimal` and allow 4096 output tokens,
+including reasoning. [Omitting effort defaults to medium](https://developers.openai.com/cookbook/examples/gpt-5/gpt-5_new_params_and_tools).
+A successful fixture verifies adapter behavior; live account availability still requires
+your explicitly requested `--live` check and may incur provider charges.
+
+Adapters inspect provider error/refusal/finish fields before parsing an action. HTTP-200
+error bodies follow the same retry policy as their HTTP-status equivalents. Refused
+and incomplete output uses the existing `provider_request_rejected` outcome with
+`finish_status=refused` or `incomplete`; `finish_reason` retains the native stop code.
+Even parseable truncated output is rejected. These cases preserve usage/cost receipts,
+never trigger action repair, and never apply an action to the game. Refusal prose and
+raw error-body text are excluded from receipts.
 
 ## Running Each Adapter
 
@@ -70,7 +88,7 @@ eslams run --arena tic-tac-toe \
   --agent openai:gpt-5-mini --opponent first-legal
 
 eslams run --arena tic-tac-toe \
-  --agent anthropic:claude-sonnet-4-20250514 --opponent first-legal
+  --agent anthropic:claude-sonnet-4-6 --opponent first-legal
 
 eslams run --arena tic-tac-toe \
   --agent gemini:gemini-2.5-flash --opponent first-legal

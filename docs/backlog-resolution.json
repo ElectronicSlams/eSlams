@@ -1517,17 +1517,41 @@
       "number": 142,
       "title": "Provider adapters ignore error, refusal and finish_reason fields: errors in a 200 body are not retried or classified, refusals look like schema errors, receipt finish_reason/finish_status always null",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Classify 200-body provider errors, refusals and finish statuses explicitly, preserving physical attempt/usage receipts and retry policy. Test fixture responses for all supported adapters, not fabricated live success.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/provider_preflight.py",
+          "src/eslams/agents.py",
+          "src/eslams/cli.py",
+          "src/eslams/providers/data/overrides.json",
+          "tests/test_provider_discovery_regressions.py",
+          "tests/test_provider_completion_regressions.py",
+          "docs/PROVIDERS.md"
+        ],
+        "implementation": "Classify HTTP-200 body/choice errors before text parsing using existing HTTP retry policy; preserve billable usage and actual HTTP status. Reject refusal and incomplete actions (including parseable truncation) with provider_request_rejected, differentiated by finish_status refused/incomplete and safe native finish_reason; no retry/action repair for those. Retain v2 taxonomy rather than introduce incompatible enum values. Failed-run artifact validates and never applies rejected action.",
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+      }
     },
     {
       "number": 143,
       "title": "eslams providers models --provider openai --live prints ok:false with an empty model list and no reason (missing key, DNS failure and HTTP error look identical)",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Return structured discovery failures with safe provider/status/retry metadata; distinguish missing key, DNS, authorization, empty success and transport failure without echoing keys/URLs.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/provider_preflight.py",
+          "src/eslams/agents.py",
+          "src/eslams/cli.py",
+          "src/eslams/providers/data/overrides.json",
+          "tests/test_provider_discovery_regressions.py",
+          "tests/test_provider_completion_regressions.py",
+          "docs/PROVIDERS.md"
+        ],
+        "implementation": "Structured live model-discovery diagnostics distinguish missing/invalid key, timeout, transport, HTTP status, malformed page and real empty catalogue. Never echo credential, response body or request URL. Failed discovery blocks live inference without asserting invisibility.",
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+      }
     },
     {
       "number": 144,
@@ -1554,22 +1578,44 @@
       "number": 145,
       "title": "Backgammon: game stays non-terminal with no legal action for either player (3 of 3000 random playouts); Runner records it as agent_crash with no outcome",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "A blocked backgammon turn can require a pass and fresh roll; both players having no moves under the current roll does not prove game over. Test pass/re-roll, true terminal and malformed-state distinctions.",
       "evidence": {
         "implementation": "Backgammon 1.1.0 uses maximum-length dice continuations to select legal first moves and retains their consumed die. Overshoot bear-off is permitted only from the farthest checker, and the larger die is required when only one distinct number can be used. A fully blocked remainder exposes only pass; it advances/records the action counter and next roll even when both seats are blocked. Forged passes while a die is playable are rejected. The compact five-checker/160-action episode is explicitly documented.",
-        "local_verification": "Both-direction farthest/exact bear-off, both-dice preservation, larger-die choice and ambiguous-token die accounting pass. Explicit consecutive blocked-seat passes, 103 seeded playouts (including reported 411/472/1053), per-state checker conservation, and complete scoring-valid random Runner artifacts pass. Existing Backgammon and help regressions, Ruff and mypy pass. Native full CI pending."
+        "local_verification": "Both-direction farthest/exact bear-off, both-dice preservation, larger-die choice and ambiguous-token die accounting pass. Explicit consecutive blocked-seat passes, 103 seeded playouts (including reported 411/472/1053), per-state checker conservation, and complete scoring-valid random Runner artifacts pass. Existing Backgammon and help regressions, Ruff and mypy pass. Native full CI pending.",
+        "integration": "485 tests passed on local Python 3.12 and direct-minimum Python 3.10; both 11348/12902 lines (87.955%). Native Core CI 37758889296, distribution consumers 37758889184, audit 37758889337, workflow lint 37758889425 all passed at 1789566. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:53:08Z",
+        "number": 145,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/145",
+        "kind": "issue",
+        "resolution_commit": "1789566a2e07a892a0709e18c46a74546b8b7a53",
+        "replacement_pr": 218
       }
     },
     {
       "number": 146,
       "title": "Backgammon: bear-off legal moves allow bearing off a nearer checker with a larger die while a farther checker remains, and the use-both-dice / larger-die rules are not enforced (4.0% of sampled states)",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Enforce the declared backgammon bear-off, both-dice and larger-die rules with tiny legal-state fixtures, preserving the compact board variant/version separately.",
       "evidence": {
         "implementation": "Backgammon 1.1.0 uses maximum-length dice continuations to select legal first moves and retains their consumed die. Overshoot bear-off is permitted only from the farthest checker, and the larger die is required when only one distinct number can be used. A fully blocked remainder exposes only pass; it advances/records the action counter and next roll even when both seats are blocked. Forged passes while a die is playable are rejected. The compact five-checker/160-action episode is explicitly documented.",
-        "local_verification": "Both-direction farthest/exact bear-off, both-dice preservation, larger-die choice and ambiguous-token die accounting pass. Explicit consecutive blocked-seat passes, 103 seeded playouts (including reported 411/472/1053), per-state checker conservation, and complete scoring-valid random Runner artifacts pass. Existing Backgammon and help regressions, Ruff and mypy pass. Native full CI pending."
+        "local_verification": "Both-direction farthest/exact bear-off, both-dice preservation, larger-die choice and ambiguous-token die accounting pass. Explicit consecutive blocked-seat passes, 103 seeded playouts (including reported 411/472/1053), per-state checker conservation, and complete scoring-valid random Runner artifacts pass. Existing Backgammon and help regressions, Ruff and mypy pass. Native full CI pending.",
+        "integration": "485 tests passed on local Python 3.12 and direct-minimum Python 3.10; both 11348/12902 lines (87.955%). Native Core CI 37758889296, distribution consumers 37758889184, audit 37758889337, workflow lint 37758889425 all passed at 1789566. No release published."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:53:10Z",
+        "number": 146,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/146",
+        "kind": "issue",
+        "resolution_commit": "1789566a2e07a892a0709e18c46a74546b8b7a53",
+        "replacement_pr": 218
       }
     },
     {
@@ -2633,17 +2679,41 @@
       "number": 196,
       "title": "Default and README Anthropic model claude-sonnet-4-20250514 is retired by Anthropic (2026-06-15); preflight still reports ok:true",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Choose a currently supported Anthropic default after verifying the provider's current model lifecycle; update registry/docs and classify retired/not-found outcomes honestly. Live checks need separately authorized test credentials.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/provider_preflight.py",
+          "src/eslams/agents.py",
+          "src/eslams/cli.py",
+          "src/eslams/providers/data/overrides.json",
+          "tests/test_provider_discovery_regressions.py",
+          "tests/test_provider_completion_regressions.py",
+          "docs/PROVIDERS.md"
+        ],
+        "implementation": "Replace retired Anthropic default/examples with claude-sonnet-4-6; official lifecycle override marks old id retired/unavailable and new id active. Retired model fails offline/live preflight before network; active metadata is not proof of account availability.",
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+      }
     },
     {
       "number": 197,
       "title": "providers preflight --live and providers models --live read only page 1 of the Models API: Anthropic (20) and Gemini (50) models beyond it are reported not visible",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Follow documented pagination with termination/error limits for each relevant provider; use multi-page fixtures and return full discovery or a clear partial/error state.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/provider_preflight.py",
+          "src/eslams/agents.py",
+          "src/eslams/cli.py",
+          "src/eslams/providers/data/overrides.json",
+          "tests/test_provider_discovery_regressions.py",
+          "tests/test_provider_completion_regressions.py",
+          "docs/PROVIDERS.md"
+        ],
+        "implementation": "Follow all Anthropic after_id/has_more/last_id and Gemini nextPageToken/pageToken pages, request 1000-row pages, deduplicate IDs, normalize aliases and fail on malformed/repeated cursors or >20 pages. Partial discovery never declares an unseen model unavailable. Gemini authentication uses header.",
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+      }
     },
     {
       "number": 198,
@@ -2727,9 +2797,21 @@
       "number": 202,
       "title": "Live 'providers preflight' fails for README example models gpt-5-mini and gpt-5-nano (128-token cap consumed by reasoning, reported as schema mismatch)",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented: awaiting integration verification",
       "criterion": "Use model-appropriate response/reasoning budgets in preflight and runtime; classify incomplete/refusal distinctly from schema errors. Any retries must have genuine separate attempt receipts and no fabricated completion.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/provider_preflight.py",
+          "src/eslams/agents.py",
+          "src/eslams/cli.py",
+          "src/eslams/providers/data/overrides.json",
+          "tests/test_provider_discovery_regressions.py",
+          "tests/test_provider_completion_regressions.py",
+          "docs/PROVIDERS.md"
+        ],
+        "implementation": "GPT-5 mini/nano live probes explicitly send minimal reasoning effort with >=4096 output allowance. Model-specific nano override follows official GPT-5 capability docs. Incomplete responses produce explicit finish reason and reject actions, rather than a misleading missing-text error.",
+        "verification": "Local fake-key fixtures only: 18 focused tests passed; full lint passed; strict mypy passed. Full local/native suite and isolated consumers pending. No billed provider calls or releases."
+      }
     },
     {
       "number": 203,
