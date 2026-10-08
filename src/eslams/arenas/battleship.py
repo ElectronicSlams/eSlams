@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -25,6 +25,7 @@ class BattleshipArena(Arena):
     max_turns = GRID_SIZE * GRID_SIZE * 2
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         ships = _ship_layout(seed)
         return self._state(
             ships=ships,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -26,6 +26,7 @@ class GomokuArena(Arena):
     max_turns = SIZE * SIZE
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board: list[list[str | None]] = [[None for _ in range(SIZE)] for _ in range(SIZE)]
         return self._state(board=board, turn=0, active="player_1", seed=seed, outcome=None)
 

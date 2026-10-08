@@ -141,3 +141,8 @@ moves and drops, consistent with the [Japan Shogi Association's check rules](htt
 safety after every move. These remain compact adapters: Shogi pawn-drop mate,
 repetition/impasse and Xiangqi perpetual check/chase adjudication are not modeled.
 Historical ruleset versions and artifact bytes are unchanged.
+
+All public arena `initial_state(seed)` calls require a Python integer excluding
+booleans. Zero, negative integers and large integers are supported. JSON/session
+callers must send an integer, rather than a string or floating-point seed. The
+seed metadata and RNG commitment remain constant after actions.

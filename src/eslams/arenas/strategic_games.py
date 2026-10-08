@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -22,6 +22,7 @@ class BlackjackArena(Arena):
     max_turns = 12
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _deck(seed)
         player = [deck.pop(), deck.pop()]
         dealer = [deck.pop(), deck.pop()]
@@ -128,6 +129,7 @@ class FirstPriceSealedBidAuctionArena(Arena):
     max_turns = 2
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         valuations = {"player_1": 6 + seed % 5, "player_2": 6 + (seed * 3) % 5}
         return self._state(
             turn=0,
@@ -243,6 +245,7 @@ class GoofspielArena(Arena):
     max_turns = 10
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         prizes = [1, 2, 3, 4, 5]
         random.Random(seed).shuffle(prizes)
         return self._state(
@@ -377,6 +380,7 @@ class LiarsDiceArena(Arena):
     max_turns = 20
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         dice = {
             "player_1": [rng.randint(1, 6) for _ in range(5)],
@@ -497,6 +501,7 @@ class BargainingArena(Arena):
     max_turns = 8
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         reserves = {"player_1": 20 + (seed % 3) * 10, "player_2": 20 + (seed % 4) * 10}
         return self._state(
             turn=0,
@@ -604,6 +609,7 @@ class NegotiationArena(BargainingArena):
     max_turns = 8
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         reserves = {"player_1": 40, "player_2": 40 + (seed % 3) * 10}
         return self._state(
             turn=0,

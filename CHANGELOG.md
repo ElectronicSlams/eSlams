@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- Every arena rejects boolean, float, string and null seeds. Signed integers
+  (including zero, negative seeds and large seeds) retain their commitment
+  across steps; runner HTTP integer fields no longer silently coerce values.
+
 - Shogi 1.0.1 uses the standard rook/bishop opening squares and filters moves
   and drops that expose its own king. Xiangqi 1.0.1 filters moves exposing the
   general, including cannon checks.

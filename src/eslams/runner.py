@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from eslams.agents import ProviderCallError, create_builtin_agent
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.arenas import registry
 from eslams.artifacts import (
     ArtifactBuildInput,
@@ -149,6 +149,7 @@ class Runner:
         validate_artifact_signing_configuration()
         _validate_failure_policy("on_agent_error", config.on_agent_error)
         _validate_failure_policy("on_illegal_action", config.on_illegal_action)
+        validate_seed(config.seed)
         arena = registry.create(config.arena_id)
         agents = _agents_for_arena(arena, config)
         if config.execution_profile == "official_eval":

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -25,6 +25,7 @@ class MancalaArena(Arena):
     max_turns = 200
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             pits={
                 "player_1": [STARTING_STONES] * PITS,

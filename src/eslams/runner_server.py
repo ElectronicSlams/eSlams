@@ -254,16 +254,11 @@ def _optional_dict(value: Any) -> dict[str, Any] | None:
 
 
 def _optional_int(value: Any, *, default: int) -> int:
-    if isinstance(value, bool):
+    if value is None:
         return default
-    if isinstance(value, int):
-        return value
-    if isinstance(value, str):
-        try:
-            return int(value)
-        except ValueError:
-            return default
-    return default
+    if type(value) is not int:
+        raise ValueError("runner integer fields must be integers, not booleans or strings")
+    return value
 
 
 def _optional_positive_int(value: Any) -> int | None:

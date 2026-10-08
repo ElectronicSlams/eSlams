@@ -6,7 +6,7 @@ import random
 from collections import Counter
 from typing import Any, cast
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -27,6 +27,7 @@ class LeducHoldemArena(Arena):
     max_turns = 24
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _leduc_deck(seed)
         hole = {player: [deck.pop(0)] for player in PLAYERS}
         return self._state(
@@ -71,6 +72,7 @@ class LimitTexasHoldemArena(Arena):
     max_turns = 32
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _standard_deck(seed)
         hole = {player: [deck.pop(0), deck.pop(0)] for player in PLAYERS}
         return self._state(

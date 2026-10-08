@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -30,6 +30,7 @@ class FrozenLakeArena(Arena):
     max_turns = 32
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(position=(0, 0), turn=0, seed=seed, outcome=None, history=[])
 
     def observation_for(self, state: ArenaState, player_id: str) -> dict[str, Any]:
@@ -112,6 +113,7 @@ class CliffWalkingArena(Arena):
     max_turns = 64
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             position=(3, 0),
             turn=0,
@@ -216,6 +218,7 @@ class TaxiArena(Arena):
     max_turns = 80
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         landmarks = _taxi_landmarks()
         passenger = landmarks[seed % len(landmarks)]
         destination = landmarks[(seed + 2) % len(landmarks)]

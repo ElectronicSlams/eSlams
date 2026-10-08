@@ -1133,9 +1133,21 @@
       "number": 195,
       "title": "Arena `initial_state(seed)` does not validate the seed type: float seed 1.5 is truncated to 1 in metadata and `rng_commitment` changes after the first move",
       "work_package": "W3",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Require the contract seed type/range without bool/float/string coercion surprises; test state hash/rng commitment stability across public creation and step paths.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/arena.py",
+          "src/eslams/arenas/",
+          "src/eslams/runner.py",
+          "src/eslams/runner_server.py"
+        ],
+        "tests": [
+          "tests/test_seed_boundaries.py",
+          "tests/test_runner_http_auth.py"
+        ],
+        "verification": "All 50 registered arenas reject six coerced seed types. Zero, negative and 2^40 seeds preserve metadata and commitment through a legal action. Library sessions and authenticated HTTP reject invalid seed types; runner creates no output. 18 targeted tests pass on Python 3.12; Ruff and strict mypy pass."
+      }
     },
     {
       "number": 196,

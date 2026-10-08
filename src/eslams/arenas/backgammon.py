@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any, Optional
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -27,6 +27,7 @@ class BackgammonArena(Arena):
     max_turns = 160
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board: Board = [None] * POINTS
         board[0] = {"player": "player_1", "count": 2}
         board[5] = {"player": "player_1", "count": 3}

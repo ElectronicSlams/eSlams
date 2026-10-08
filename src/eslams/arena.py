@@ -110,3 +110,9 @@ def _same_json_action(left: Any, right: Any) -> bool:
     if isinstance(left, float):
         return math.isfinite(left) and left == right
     return type(left) in (str, int, bool, type(None)) and left == right
+
+
+def validate_seed(seed: int) -> None:
+    """Seeds are arbitrary signed integers; booleans and numeric coercions are invalid."""
+    if type(seed) is not int:
+        raise ValueError("seed must be an integer (not a boolean, float or string)")

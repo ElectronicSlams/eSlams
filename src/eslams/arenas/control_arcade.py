@@ -6,7 +6,7 @@ import math
 import random
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -25,6 +25,7 @@ class CartPoleArena(Arena):
     max_turns = 200
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         return self._state(
             x=rng.uniform(-0.035, 0.035),
@@ -151,6 +152,7 @@ class MountainCarArena(Arena):
     max_turns = 200
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         return self._state(
             position=-0.55 + rng.uniform(-0.04, 0.04),
@@ -259,6 +261,7 @@ class PaddleBallArena(Arena):
     max_turns = 160
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         return self._state(
             paddle_x=0.5,
@@ -376,6 +379,7 @@ class AlienShooterArena(Arena):
     max_turns = 96
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         aliens = [(x, 5) for x in sorted(rng.sample(range(7), 4))]
         aliens.extend((x, 4) for x in sorted(rng.sample(range(7), 3)))
@@ -495,6 +499,7 @@ class BoxingStyleArena(Arena):
     max_turns = 80
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             health={"player_1": 100.0, "player_2": 100.0},
             stamina={"player_1": 100.0, "player_2": 100.0},
@@ -620,6 +625,7 @@ class IceHockeyStyleArena(Arena):
     max_turns = 90
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             positions={"player_1": {"x": 1, "lane": 1}, "player_2": {"x": 3, "lane": 1}},
             puck_owner="player_1",

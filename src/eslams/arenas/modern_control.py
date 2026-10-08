@@ -6,7 +6,7 @@ import math
 import random
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -25,6 +25,7 @@ class LunarLanderArena(Arena):
     max_turns = 220
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         return self._state(
             x=rng.uniform(-0.18, 0.18),
@@ -170,6 +171,7 @@ class CarRacingArena(Arena):
     max_turns = 180
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         track = _track_profile(seed)
         return self._state(
             progress=0.0,
@@ -312,6 +314,7 @@ class BipedalWalkerArena(Arena):
     max_turns = 220
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             distance=0.0,
             velocity=0.08,

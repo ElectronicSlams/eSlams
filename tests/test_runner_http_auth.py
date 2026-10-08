@@ -221,3 +221,17 @@ def test_runner_signature_timestamp_uses_a_short_window(runner_env: None) -> Non
     old = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat().replace("+00:00", "Z")
     response = client.get(path, headers=_headers("GET", path, {}, nonce="oldish", timestamp=old))
     assert response.status_code == 401
+
+
+def test_runner_http_does_not_coerce_seed_types(runner_env: None) -> None:
+    client = TestClient(create_runner_app(RunnerSessionStore()))
+    path = "/runner/session/create"
+    for index, invalid in enumerate((True, 1.5, "1")):
+        body = {"gameId": "tic-tac-toe", "initialSeed": invalid}
+        response = client.post(
+            path, json=body, headers=_headers("POST", path, body, nonce=f"seed-{index}")
+        )
+        assert response.status_code == 422
+    body = {"gameId": "tic-tac-toe", "initialSeed": 0}
+    response = client.post(path, json=body, headers=_headers("POST", path, body, nonce="seed-zero"))
+    assert response.status_code == 200

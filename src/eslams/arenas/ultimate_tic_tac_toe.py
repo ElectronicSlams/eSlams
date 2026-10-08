@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -35,6 +35,7 @@ class UltimateTicTacToeArena(Arena):
     max_turns = TOTAL_CELLS
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         boards: list[list[str | None]] = [[None for _ in range(LOCAL_CELLS)] for _ in range(9)]
         local_status: list[str | None] = [None] * 9
         return self._state(

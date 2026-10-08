@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, Optional
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_json, sha256_text
 from eslams.state import ArenaState
 
@@ -34,6 +34,7 @@ class GoArena(Arena):
     max_turns = 180
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board = _empty_board(9, 9)
         return self._state(
             board=board,
@@ -155,6 +156,7 @@ class ShogiArena(Arena):
     max_turns = 320
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board = _shogi_initial_board()
         hands: dict[str, dict[str, int]] = {"player_1": {}, "player_2": {}}
         return self._state(
@@ -281,6 +283,7 @@ class XiangqiArena(Arena):
     max_turns = 240
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board = _xiangqi_initial_board()
         return self._state(board=board, turn=0, active="player_1", seed=seed, outcome=None)
 

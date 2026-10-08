@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -26,6 +26,7 @@ class ChessArena(Arena):
     max_turns = 240
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         self._require_chess()
         board = chess.Board()
         return self._state(board=board, turn=0, seed=seed, outcome=None)

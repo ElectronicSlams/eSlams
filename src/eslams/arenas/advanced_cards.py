@@ -7,7 +7,7 @@ import random
 from collections import Counter
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.arenas.card_utils import (
     RANKS,
     SUITS,
@@ -37,6 +37,7 @@ class GinRummyArena(Arena):
     max_turns = 80
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _deck(seed)
         hands = {
             "player_1": sorted(deck[:7], key=_card_sort_key),
@@ -159,6 +160,7 @@ class EuchreArena(Arena):
     max_turns = 16
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _euchre_deck(seed)
         hands = {
             "player_1": sorted(deck[:5], key=_card_sort_key),
@@ -294,6 +296,7 @@ class CribbageArena(Arena):
     max_turns = 2
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _deck(seed + 211)
         hands = {
             "player_1": sorted(deck[:6], key=_card_sort_key),
@@ -406,6 +409,7 @@ class HanabiArena(Arena):
     max_turns = 60
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _hanabi_deck(seed)
         hands = {"player_1": deck[:4], "player_2": deck[4:8]}
         return self._state(

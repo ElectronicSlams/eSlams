@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.arenas.card_utils import (
     card_rank,
     card_sort_key,
@@ -29,6 +29,7 @@ class SheddingCardGameArena(Arena):
     max_turns = 80
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _deck(seed)
         hands = {"player_1": sorted(deck[:5]), "player_2": sorted(deck[5:10])}
         discard = deck[10]
@@ -128,6 +129,7 @@ class CrazyEightsArena(SheddingCardGameArena):
     }
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _deck(seed + 97)
         hands = {"player_1": sorted(deck[:5]), "player_2": sorted(deck[5:10])}
         discard = next(card for card in deck[10:] if _rank(card) != "8")
@@ -194,6 +196,7 @@ class HeartsArena(Arena):
     max_turns = 26
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _deck(seed)
         hands = {"player_1": sorted(deck[:13]), "player_2": sorted(deck[13:26])}
         return self._state(
@@ -279,6 +282,7 @@ class SpadesArena(Arena):
     max_turns = 26
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _deck(seed + 31)
         hands = {"player_1": sorted(deck[:13]), "player_2": sorted(deck[13:26])}
         return self._state(
