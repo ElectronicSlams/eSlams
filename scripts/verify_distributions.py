@@ -39,7 +39,13 @@ def clean_environment() -> dict[str, str]:
     return environment
 
 
-def run(command: list[str], cwd: Path, *, expected: int = 0, source: Path | None = None) -> str:
+def run(
+    command: list[str],
+    cwd: Path,
+    *,
+    expected: int = 0,
+    source: Path | None = None,
+) -> str:
     environment = clean_environment()
     if source is not None:
         environment["PYTHONPATH"] = str(source / "src")
@@ -70,9 +76,67 @@ def smoke(distribution: Path, root: Path, expected_commit: str) -> None:
     run([str(python), "-m", "pip", "install", str(distribution)], root)
     version = run([str(console), "--version"], root)
     assert version == run([str(python), "-m", "eslams.cli", "--version"], root)
+    assert version == run([str(console), "-V"], root)
     error = run([str(console), "run", "--arena", "no-such-arena"], root, expected=2)
     assert "Traceback" not in error
     run([str(console), "run", "--agent", "no-such-agent"], root, expected=1)
+    for entry in ([str(console)], [str(python), "-m", "eslams.cli"]):
+        for debug in (False, True):
+            diagnostic_environment = clean_environment()
+            diagnostic_environment["ESLAMS_DEBUG"] = "1" if debug else "0"
+            diagnostic = subprocess.run(
+                [*entry, "validate", str(root / "missing.eslams")],
+                cwd=root,
+                env=diagnostic_environment,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=30,
+            )
+            assert diagnostic.returncode == 1
+            assert ("Traceback (most recent call last)" in diagnostic.stderr) is debug
+            assert "missing.eslams" in diagnostic.stderr
+        with subprocess.Popen(
+            [*entry, "catalogue", "games", "--json"],
+            cwd=root,
+            env=clean_environment(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        ) as process:
+            assert process.stdout is not None and process.stderr is not None
+            assert process.stdout.readline()
+            process.stdout.close()
+            assert process.wait(timeout=30) == 0
+            assert process.stderr.read() == ""
+    typing_example = root / "consumer.py"
+    typing_example.write_text(
+        "from eslams.runner import RunConfig\n"
+        'config = RunConfig(arena_id="tic-tac-toe")\n'
+        "arena: str = config.arena_id\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    typing_command = [
+        sys.executable,
+        "-m",
+        "mypy",
+        "--strict",
+        "--no-incremental",
+        "--python-executable",
+        str(python),
+        str(typing_example),
+    ]
+    run(typing_command, root)
+    typing_example.write_text(
+        "from eslams.runner import RunConfig\nconfig = RunConfig(arena_id=123)\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    typing_error = run(typing_command, root, expected=1)
+    assert 'incompatible type "int"; expected "str"' in typing_error
+    assert "import-untyped" not in typing_error
     source = run(
         [
             str(python),
