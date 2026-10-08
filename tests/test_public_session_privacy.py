@@ -8,6 +8,8 @@ from eslams.arena_transport import (
     step_session,
 )
 
+pytestmark = pytest.mark.usefixtures("arena_session_env")
+
 
 @pytest.mark.parametrize("game", ["mahjong", "hearts", "bridge", "spades", "dou-dizhu"])
 def test_model_hands_are_absent_from_public_and_paginated_session_actions(game):

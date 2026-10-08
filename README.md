@@ -379,9 +379,10 @@ stepped = step_session(started["session_state"], "player_1", "4")
 page = legal_actions_page(started["session_state"], "player_1", query="center")
 ```
 
-CLI API:
+CLI API (set the same secret before Python calls too):
 
 ```bash
+export ESLAMS_ARENA_SESSION_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 eslams arena start \
   --game tic-tac-toe \
   --variant standard \
@@ -392,9 +393,9 @@ eslams arena start \
 Start and step responses include `public_state`, a canonical live
 `display_frame`, active/next actor metadata, legal action tokens, polished
 `legal_action_descriptors`, public-safe Arena events, strict state hash status,
-paging metadata, and Core timing fields. `session_state` is a signed opaque
-server envelope, verified with `ESLAMS_ARENA_SESSION_SECRET`, and must still be
-kept on the server. Browser-streamable fields are `public_state`,
+paging metadata, and Core timing fields. `session_state` is a signed server-only
+envelope, verified with `ESLAMS_ARENA_SESSION_SECRET`, and must still be
+kept on the server. For the active human recipient, browser-streamable fields are `public_state`,
 `display_frame`, `legal_action_descriptors`, `events`, actor metadata,
 terminal/outcome fields, and timing.
 
@@ -425,13 +426,22 @@ The sample README documents the selection criteria for tracked sample artifacts.
 
 ## Upload to eslams.com
 
-Use the packaged `.eslams` archive for uploads.
+A runner bundle is a private intake archive, not a public page. `runs/latest.eslams`
+can include auditor traces and `logs/agent_io.jsonl` with plaintext hidden state.
+Upload that archive only to a private intake path.
+
+For a public replay page, export the public replay package and upload that
+package instead:
+
+```bash
+eslams artifact public-export runs/latest.eslams --out public_replay_package
+```
 
 1. Run locally with Core.
 2. Validate the artifact.
 3. Open [eslams.com](https://eslams.com).
 4. Use the Artifact Intake panel.
-5. Upload `runs/latest.eslams` or a specific `run_<id>.eslams` archive.
+5. Upload `runs/latest.eslams` or a specific `run_<id>.eslams` archive for private intake, or upload `public_replay_package` when the page is public.
 6. Open the generated replay, score, and artifact proof pages.
 
 ```bash
@@ -918,3 +928,11 @@ In plain terms:
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
 - Support: `hello@eslams.com`
+
+Session privacy: the HMAC envelope is base64 JSON containing full private state,
+not encryption. Keep `session_state` on trusted servers; never stream it to a
+browser. Legal action lists/descriptors are emitted only for the active human
+recipient and must be privately routed to that person. Model-seat lists stay
+inside the trusted runner, obtainable from the server-side state. Public views
+omit legal action lists. Pending sealed actions and their explanations remain
+hidden until the arena reveal phase.

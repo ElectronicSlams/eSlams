@@ -4,6 +4,14 @@
 
 ### Fixed
 
+- Arena sessions require a configured secret of at least 32 characters. The
+  explicit local development opt-in is refused in production/staging. Envelopes
+  authenticate private state and must stay on trusted servers. Existing unsigned
+  session states and runner snapshots without game/ruleset binding cannot resume.
+- Runner HTTP routes require fresh HMAC request signatures and reject repeated
+  nonces. The separate-process `runner session-*` CLI workflow is removed; use
+  the library in one process or the authenticated HTTP service.
+
 - Sealed commitments stay hidden from opponent history, public traces and live
   session events until the reveal phase. Auditor evidence retains raw actions.
 - Model-seat legal actions remain private, and public state views no longer

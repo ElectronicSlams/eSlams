@@ -42,6 +42,23 @@ userinfo, fragments, or credential-bearing query parameters. Receipt validation
 recursively rejects sensitive field names and unredacted bearer or URL secrets,
 including receipts produced outside Core.
 
+The runner HTTP app (`eslams.runner_server:app`) is the network boundary for
+persistent sessions. `eslams runner session-*` is local and in-process. The
+HTTP app authenticates callers with HMAC request signatures
+(`ESLAMS_RUNNER_REQUEST_SECRET` and `ESLAMS_RUNNER_REQUEST_KEY_ID`). Core does
+not embed a runner secret. Rotate by moving the current secret and key id to
+the `ESLAMS_RUNNER_REQUEST_SECRET_PREVIOUS` and
+`ESLAMS_RUNNER_REQUEST_KEY_ID_PREVIOUS` variables, installing the new pair,
+restarting callers, then removing the previous pair. Do not log the secret.
+`ESLAMS_RUNNER_REQUEST_ALLOW_UNSIGNED=1` is local-only and is ignored when
+`ESLAMS_ENV` is `production`, `prod`, or `staging`.
+
+Arena `session_state` HMACs require `ESLAMS_ARENA_SESSION_SECRET`. A missing or
+misconfigured secret fails closed. The development opt-in
+`ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET=1` is refused for those same
+`ESLAMS_ENV` values. Do not log the secret or any development constant.
+Stale session signatures are rejected.
+
 Explicit run IDs are portable path-safe identifiers and cannot select paths
 outside the configured output directory. Artifact output symlinks are never
 followed for overwrite. The `latest.eslams` and `latest.eslams.d` aliases may
@@ -63,3 +80,11 @@ official infrastructure.
 Security fixes are made on the latest release line. Core 0.6 can read selected
 0.5 artifact/receipt history, but historical signatures and contracts do not
 gain current official trust merely because they remain readable.
+
+Session envelopes authenticate base64-encoded private JSON; they do not encrypt
+it. Never send them to browsers. Human action descriptors are recipient-specific
+and need private routing; model action descriptors are omitted from public
+session responses. Runner snapshots cryptographically bind the game and ruleset.
+The HTTP signature nonce cache is bounded and process-local; multi-worker or
+restart-resistant deployments need affinity plus an external replay cache or
+request-key rotation.

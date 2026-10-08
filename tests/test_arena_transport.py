@@ -21,6 +21,9 @@ from eslams.cli import main
 from eslams.contracts.safety import scan_public_payload
 from eslams.public_catalogue import PUBLIC_GAME_CATALOGUE_BY_ID
 
+pytestmark = pytest.mark.usefixtures("arena_session_env")
+
+
 REQUIRED_DESCRIPTOR_FIELDS = {
     "token",
     "label",

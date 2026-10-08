@@ -56,7 +56,6 @@ from eslams.replay import render_replay_html
 from eslams.runner import FAILURE_POLICIES, RunConfig, Runner
 from eslams.runner_health import current_runner_health
 from eslams.runner_result import runner_job_result_from_artifact
-from eslams.runner_session import default_runner_session_store
 
 
 def _agent_port(value: str) -> int:
@@ -276,28 +275,6 @@ def _main(argv: list[str] | None = None) -> int:
     runner_result.add_argument("--artifact", type=Path, required=True)
     runner_result.add_argument("--artifact-uri", required=True)
     runner_result.add_argument("--job-id", required=True)
-    runner_session_create = runner_sub.add_parser(
-        "session-create",
-        help="Create a hot runner session.",
-    )
-    runner_session_create.add_argument("--game", required=True, choices=registry.list())
-    runner_session_create.add_argument("--session-id")
-    runner_session_create.add_argument("--seed", type=int, default=1)
-    runner_session_step = runner_sub.add_parser("session-step", help="Step a hot runner session.")
-    runner_session_step.add_argument("--session-id", required=True)
-    runner_session_step.add_argument("--action", required=True)
-    runner_session_step.add_argument("--actor-id")
-    runner_session_step.add_argument("--deadline-ms", type=int)
-    runner_session_snapshot = runner_sub.add_parser(
-        "session-snapshot",
-        help="Snapshot a hot runner session.",
-    )
-    runner_session_snapshot.add_argument("--session-id", required=True)
-    runner_session_close = runner_sub.add_parser(
-        "session-close",
-        help="Close a hot runner session.",
-    )
-    runner_session_close.add_argument("--session-id", required=True)
 
     models = sub.add_parser("models", help="Inspect or refresh provider model capabilities.")
     models_sub = models.add_subparsers(dest="models_command", required=True)
@@ -854,31 +831,6 @@ def _runner_command(args: argparse.Namespace) -> int:
         )
         print(json.dumps(result.to_dict(), indent=2))
         return 0 if result.validation_status == "valid" else 1
-    if args.runner_command == "session-create":
-        payload = default_runner_session_store.create(
-            game_id=args.game,
-            session_id=args.session_id,
-            initial_seed=args.seed,
-        )
-        print(json.dumps(payload, indent=2))
-        return 0
-    if args.runner_command == "session-step":
-        payload = default_runner_session_store.step(
-            session_id=args.session_id,
-            action=_action_arg(args.action),
-            actor_id=args.actor_id,
-            deadline_ms=args.deadline_ms,
-        )
-        print(json.dumps(payload, indent=2))
-        return 0 if payload.get("ok") is True else 1
-    if args.runner_command == "session-snapshot":
-        payload = default_runner_session_store.snapshot(args.session_id)
-        print(json.dumps(payload, indent=2))
-        return 0
-    if args.runner_command == "session-close":
-        payload = default_runner_session_store.close(args.session_id)
-        print(json.dumps(payload, indent=2))
-        return 0
     raise AssertionError(args.runner_command)
 
 

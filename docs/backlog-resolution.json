@@ -124,17 +124,17 @@
       "number": 67,
       "title": "Arena start example in README fails after draft PR #21 (fail-closed session secret); README and CHANGELOG not updated",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Treat README, environment names and changelog as #21 acceptance criteria.",
-      "evidence": null
+      "evidence": "README and Platform CLI examples generate and retain an explicit local secret. Unreleased changelog covers fail-closed secrets, unsigned-state migration, authenticated HTTP and removed process-local shell workflow. Python/CLI session and authentication regression checks pass."
     },
     {
       "number": 68,
       "title": "Draft PRs #19 and #21 give contradictory README upload guidance (private runner bundle vs public replay package)",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Revised canonical guidance must distinguish private runner/auditor bundles from public replay packages; withdrawal of conflicting drafts also resolves this PR-only report.",
-      "evidence": null
+      "evidence": "README now distinguishes private runner intake from public replay export. Full runner archives contain private auditor/judge/agent I/O data; only the validated public export is appropriate for public sharing."
     },
     {
       "number": 69,
@@ -884,9 +884,9 @@
       "number": 177,
       "title": "`eslams runner session-create/step/snapshot/close` cannot work from the CLI: each command is a new process, so `session-step` fails with `KeyError: unknown runner session`",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; targeted verification",
       "criterion": "Choose persistent authenticated service CLI commands, explicit snapshot import/export, or remove unsupported process-local session commands. Do not imply an in-memory store survives separate CLI processes.",
-      "evidence": null
+      "evidence": "Removed shell session-create/step/snapshot/close commands that could not persist across invocations. Library store and authenticated HTTP remain supported; docs explain process affinity/restart limits. CLI invalid-choice regression prevents returning a misleading created session."
     },
     {
       "number": 178,
@@ -1198,6 +1198,14 @@
       "work_package": "W5",
       "status": "pending",
       "criterion": "Validate malformed state shapes and return structured contract errors rather than raw exceptions; test board shape, absent fields and invalid game identity in both runtimes.",
+      "evidence": null
+    },
+    {
+      "number": 219,
+      "title": "\"Shuffle\" button only switches the selected opponent model instead of shuffling the model list",
+      "work_package": "Platform routing",
+      "status": "pending; outside Core implementation",
+      "criterion": "Verify the live Platform control and resolve its label/behavior in the owning Platform repository. Do not pretend a Core code change fixes the hosted UI.",
       "evidence": null
     }
   ],
@@ -1547,6 +1555,14 @@
       "review_route": "Revise / split",
       "criterion": "Put handling in the actual installed entry path, retain debug tracebacks consistently, handle expected user errors specifically, test console executable and module entry, then merge and close #57.",
       "evidence": "Shared main wrapper replaces entry-specific behavior; module and console target subprocesses cover normal/debug errors and an early-closing pipe. Installed command gate remains outstanding. Actual installed wheel console and module commands verified outside checkout at b651238."
+    },
+    {
+      "number": 220,
+      "head": "7731e2f3d712e5f4714d640df670fc0224feede1",
+      "title": "Fix preview-discovered Shogi, Xiangqi and Hanabi rules",
+      "status": "pending",
+      "review_route": "critical review then incorporate",
+      "criterion": "Verify self-check filtering, canonical Shogi opening, exact Hanabi final turns, deterministic state evidence and version changes; incorporate useful implementation into #218."
     }
   ],
   "consolidation_pr": "https://github.com/ElectronicSlams/eSlams/pull/218",
@@ -1692,15 +1708,24 @@
       "original_cases_removed": 11,
       "removals_remaining": 44,
       "note": "Intermediate checkpoint; final OS/consumer/backlog gates still outstanding."
+    },
+    {
+      "date": "2026-10-08",
+      "tests": "412 passing on Python 3.9 with full coverage scope, before final core replay projection addition",
+      "coverage": 86.41847087960375,
+      "notes": "Restored fresh isolated dependencies after temporary environments lost metadata. Lint and strict mypy pass. Authentication/snapshot tests incorporate and strengthen PR21. Final matrix and all remaining items incomplete."
     }
   ],
   "inventory_recheck": {
-    "open_issues": 148,
-    "open_original_prs": 43,
-    "consolidation_pr": 218,
-    "new_issues": [],
-    "new_original_prs": [],
-    "changed_original_heads": [],
-    "note": "Read-only checkpoint; original issues and PRs remain open."
+    "date": "2026-10-08",
+    "issues_open": 149,
+    "prs_open_including_consolidation": 45,
+    "new_issues": [
+      219
+    ],
+    "new_original_prs": [
+      220
+    ],
+    "original_head_changes": []
   }
 }

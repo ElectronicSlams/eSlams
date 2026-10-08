@@ -194,7 +194,7 @@ def core_step(request: dict[str, Any]) -> dict[str, Any]:
                 game_id=arena.id,
                 turn=state.turn,
                 actor_id=actor_id,
-                action=raw_action,
+                action=arena.public_action(next_state, raw_action),
                 previous_state_hash=previous_state_hash,
                 next_state_hash=str(next_state.state_hash),
                 timings_ms=timer.to_dict(),

@@ -8,6 +8,9 @@ from eslams.artifacts import ArtifactValidator
 from eslams.protocol import ActResponse
 from eslams.runner import RunConfig, Runner
 
+pytestmark = pytest.mark.usefixtures("arena_session_env")
+
+
 SEALED_ARENAS = ["rock-paper-scissors", "prisoners-dilemma",
                  "first-price-sealed-bid-auction", "goofspiel"]
 
@@ -53,3 +56,17 @@ def test_session_events_and_display_frames_hide_commitments_until_reveal(game):
     revealed = step_session(committed["session_state"], "player_2", committed["legal_actions"][0])
     assert revealed["accepted"] is True
     assert revealed["events"][0]["action"] == committed["legal_actions"][0]
+
+
+@pytest.mark.parametrize("game", SEALED_ARENAS)
+def test_core_step_replay_event_uses_the_same_commitment_projection(game):
+    from eslams.arena_transport import initial_state
+    from eslams.contracts.versions import CORE_CONTRACT_VERSION
+    from eslams.core_contract import core_step
+
+    state = initial_state(game)
+    action = state["legal_actions_by_player"]["player_1"][0]
+    response = core_step({"coreContractVersion": CORE_CONTRACT_VERSION, "gameId": game,
+                          "state": state, "action": action})
+    assert response["ok"] is True
+    assert response["replayEvent"]["payload"]["action"] is None

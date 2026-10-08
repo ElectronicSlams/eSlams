@@ -92,9 +92,11 @@ artifacts, export replay packages, persist sessions, store secrets, or know
 about Cloudflare. They own legality, state transition, hash verification,
 public display frames, public-safe events, and legal action descriptors.
 
-`session_state` is a signed opaque Platform/server envelope. Set
-`ESLAMS_ARENA_SESSION_SECRET` in production so tampering fails by HMAC, and do
-not forward the envelope to browsers. Browser-safe fields are `public_state`,
+`session_state` is a signed server-only Platform/server envelope. Set
+`ESLAMS_ARENA_SESSION_SECRET` to a secret of at least 32 characters on every
+process that creates or steps a live session. A missing, empty, or short secret
+fails closed. Do not forward the envelope to browsers. The envelope is an HMAC,
+not encryption. For the active human recipient, browser-safe fields are `public_state`,
 `display_frame`, `legal_action_descriptors`, `events`, actor metadata,
 terminal/outcome fields, and timing. Live `display_frame` uses the same
 projection shape as
@@ -116,3 +118,11 @@ without engine evaluation:
 Chess replay rendering uses board coordinates, side-colored pieces, highlighted
 last-move squares, FEN, terminal reason, winner, side to move, legal count,
 check/checkmate status, and score.
+
+Session privacy: the HMAC envelope is base64 JSON containing full private state,
+not encryption. Keep `session_state` on trusted servers; never stream it to a
+browser. Legal action lists/descriptors are emitted only for the active human
+recipient and must be privately routed to that person. Model-seat lists stay
+inside the trusted runner, obtainable from the server-side state. Public views
+omit legal action lists. Pending sealed actions and their explanations remain
+hidden until the arena reveal phase.
