@@ -57,7 +57,7 @@ def _write_replay(
     source: Path | None = None,
     status: str = "Embedded preview — validate the complete artifact before trusting it.",
 ) -> Path:
-    payload = json.dumps(events, ensure_ascii=False).replace("</", "<\\/")
+    payload = json.dumps(events, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     return write_text_file(
         output_path, _html(payload, status), overwrite=overwrite, sources=[] if source is None else [source]
     )
@@ -595,10 +595,10 @@ function chessCell(row, col, piece, lastSquares) {
   const tone = (row + col) % 2 === 0 ? 'light' : 'dark';
   const side = piece ? (piece === piece.toUpperCase() ? 'white' : 'black') : '';
   const last = lastSquares.has(square) ? ' last' : '';
-  const content = piece ? `<span class="piece piece-${side}" aria-label="${side} ${piece}">${glyphs[piece] || piece}</span>` : '';
+  const content = piece ? `<span class="piece piece-${side}" aria-label="${escapeHtml(side)} ${escapeHtml(piece)}">${glyphs[piece] || escapeHtml(piece)}</span>` : '';
   const names = {p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king'};
   const label = piece ? `${side} ${names[piece.toLowerCase()] || piece}` : 'empty';
-  return `<div class="square ${tone}${last}" role="cell" aria-label="${square}: ${label}" data-square="${square}">${content}</div>`;
+  return `<div class="square ${tone}${last}" role="cell" aria-label="${square}: ${escapeHtml(label)}" data-square="${square}">${content}</div>`;
 }
 
 function cellDescription(cell) {

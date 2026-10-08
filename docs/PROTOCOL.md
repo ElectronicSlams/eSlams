@@ -38,8 +38,9 @@ eslams run --on-agent-error forfeit --on-illegal-action forfeit
 eslams run --on-agent-error fallback --on-illegal-action fallback
 ```
 
-`fallback` is the smoke/demo default and chooses the arena's deterministic
-failure action. `invalid-match` records the run as not valid for scoring.
+`invalid-match` is the CLI default for both agent and illegal-action failures.
+`fallback` is an explicit smoke/demo opt-in that chooses the arena's
+deterministic failure action and still records the run as invalid for scoring.
 `forfeit` ends the match with the other player as winner and also records the
 run as not valid for scoring.
 

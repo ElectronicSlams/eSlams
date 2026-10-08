@@ -65,6 +65,11 @@
 
 ### Compatibility
 
+- `AgentServer.run()` and `eslams agent serve` now bind `127.0.0.1` by default.
+  Containers/remote callers requiring exposure must explicitly opt in with
+  `--host 0.0.0.0` or `run(host="0.0.0.0")`; the sample `/act` and `/health`
+  endpoints remain unauthenticated.
+
 - Core 0.5.1 terminal/replay validation tightened the historical boundary:
   some 0.2.0–0.5.0 artifacts require producer-version historical inspection.
   Current strict scoring checks remain enforced; see `docs/ARTIFACTS.md`.

@@ -63,8 +63,22 @@ const {chromium} = require('playwright');
           assert.equal(await page.evaluate(() => labelForAction(currentMove())), '0', `${name} zero action identity`);
         }
       }
+      const unsafe = await page.evaluate(() => {
+        const board = document.getElementById('board');
+        board.innerHTML = renderChess({public_state: {fen: '<img src=x onerror=alert(1)>/8/8/8/8/8/8/8'}});
+        const chessImages = board.querySelectorAll('img').length;
+        board.innerHTML = renderSummary({'<img src=x>': {value: '<img src=x onerror=alert(1)>'}});
+        return chessImages + board.querySelectorAll('img').length;
+      });
+      assert.equal(unsafe, 0, 'untrusted public state must stay escaped');
       await page.close();
     }
+    const securityPage = await browser.newPage();
+    await securityPage.goto(pathToFileURL(path.join(root, "security/escaped.html")).href);
+    assert.equal(await securityPage.evaluate(() => Boolean(window.eslamsInjected)), false, "mixed-case script close must be inert");
+    assert.equal(await securityPage.locator("img").count(), 0, "untrusted state text must not create elements");
+    assert((await securityPage.locator("#board").innerText()).includes("</SCRIPT>"));
+    await securityPage.close();
     console.log(`${files.length} arenas passed ${checks} initial/final viewport checks plus keyboard/focus/zero-label regressions`);
   } finally {
     await browser.close();

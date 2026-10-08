@@ -45,7 +45,7 @@ def _server(mode):
                     self.wfile.flush()
                 if self.rfile.read(1) == b"":
                     disconnected.set()
-            except (BrokenPipeError, ConnectionResetError):
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                 disconnected.set()
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)

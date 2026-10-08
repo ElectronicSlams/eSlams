@@ -2280,9 +2280,12 @@
       "number": 163,
       "title": "Most CLI options have no `--help` text (135 of 143), including `run --max-turns`, `--on-agent-error`, `--on-illegal-action`, `--execution-profile` and `--shard-*`",
       "work_package": "W8",
-      "status": "pending",
+      "status": "implemented: awaiting native verification",
       "criterion": "Document actual CLI semantics and safe defaults in help for meaningful options; test high-risk parameters and copyable examples rather than locking every help string.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Added meaningful help for every CLI option: 40 leaf commands and 139 leaf arguments have no missing help. Defaults, provider listing versus inference, failure policies, action deadlines, sharding, and validation profiles match the implemented behavior. Full command audit recorded in cli-help-review.json.",
+        "verification": "Full native Core, browser, distribution, audit, lint and CodeQL gate pending on the next commit."
+      }
     },
     {
       "number": 164,
@@ -2958,9 +2961,12 @@
       "number": 190,
       "title": "Draft PR #26 changes the default bind of `eslams agent serve` and `AgentServer.run()` from 0.0.0.0 to 127.0.0.1 but adds no CHANGELOG entry",
       "work_package": "W2",
-      "status": "implemented; targeted verification",
+      "status": "implemented: awaiting native verification",
       "criterion": "Document loopback default and explicit remote/container --host opt-in; verify expected container workflows. Close when revised #26 lands or is withdrawn, rather than reporting an unmerged default as released.",
-      "evidence": "Default AgentServer and sample CLI binding is loopback; explicit --host 0.0.0.0 preserves container/remote use. Help and Unreleased changelog explain the changed default."
+      "evidence": {
+        "implementation": "Unreleased compatibility entry documents the new loopback default of AgentServer.run() and agent serve, explicit --host/run(host=...) opt-in for containers and remote callers, and the unauthenticated sample endpoints.",
+        "verification": "Full native Core, browser, distribution, audit, lint and CodeQL gate pending on the next commit."
+      }
     },
     {
       "number": 191,
@@ -3758,9 +3764,14 @@
       "number": 26,
       "head": "eda26887caf269abcdb062f97cc98ee1612f32d9",
       "title": "fix(low): Core review F7\u2013F10 \u2014 replay trust, agent bind, CI hygiene, protocol drift",
-      "status": "partially incorporated; remaining renderer, bind, CI and protocol changes pending",
+      "status": "reviewed: incorporated with strengthened safety; awaiting native verification",
       "review_route": "Revise / split",
-      "criterion": "Split and retain focused fixes; enforce bounded extraction and cleanup on all failures, test renderer trust handling, document remote bind opt-in (#190), and preserve protocol compatibility. Do not close #181/#183 on traversal/XSS tests alone."
+      "criterion": "Split and retain focused fixes; enforce bounded extraction and cleanup on all failures, test renderer trust handling, document remote bind opt-in (#190), and preserve protocol compatibility. Do not close #181/#183 on traversal/XSS tests alone.",
+      "evidence": {
+        "implementation": "Retained loopback binding, confined ZIP extraction, least-privilege pinned CI, private Core-lite parity, receipt-v2 protocol, .env exclusion, structured provider discovery and replay trust validation. Added HTML/JSON escaping against mixed-case script terminators and unknown FEN glyphs, with browser regressions. Declined failure-swallowing provider scans and replay loaders that bypass validation. Documented invalid-match CLI defaults and loopback migration.",
+        "reviewed_head": "eda26887caf269abcdb062f97cc98ee1612f32d9",
+        "diff": "pr-review/26.diff (536 lines, fully reviewed)"
+      }
     },
     {
       "number": 27,
@@ -4899,5 +4910,12 @@
       220
     ],
     "original_head_changes": []
-  }
+  },
+  "verification_followups": [
+    {
+      "check": "Windows HTTP cancellation fixture",
+      "implementation": "Catch ConnectionAbortedError alongside BrokenPipeError/ConnectionResetError in the local HTTP server test; retain elapsed deadline and observed socket-disconnection assertions. Windows WinError 10053 is a legitimate cancellation acknowledgement.",
+      "previous_run": 37766572362
+    }
+  ]
 }

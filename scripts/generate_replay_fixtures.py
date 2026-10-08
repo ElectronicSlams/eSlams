@@ -5,7 +5,7 @@ from pathlib import Path
 
 import eslams.arenas  # noqa: F401
 from eslams.arena import registry
-from eslams.replay import render_replay_html
+from eslams.replay import _write_replay, render_replay_html
 from eslams.runner import RunConfig, Runner
 
 
@@ -26,7 +26,21 @@ def main() -> None:
             )
         )
         render_replay_html(result.artifact_path, args.output / f"{name}.html")
-    print("Generated 50 validated public replay pages")
+    _write_replay(
+        args.output / "security" / "escaped.html",
+        [
+            {
+                "run_id": "escape-fixture",
+                "public_state": {
+                    "note": (
+                        "</SCRIPT><script>window.eslamsInjected = true</script>"
+                        '<img src=x onerror="window.eslamsInjected=true">'
+                    )
+                },
+            }
+        ],
+    )
+    print("Generated 50 validated public replay pages and an adversarial embedding fixture")
 
 
 if __name__ == "__main__":
