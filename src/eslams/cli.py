@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -27,7 +28,7 @@ from eslams.catalogue import availability_rows, game_catalogue_rows, model_catal
 from eslams.contracts.json_schema import export_schemas
 from eslams.contracts.pricing import PriceCardReference
 from eslams.contracts.provider import ProviderRuntimeConfig
-from eslams.contracts.versions import RUNNER_VERSION
+from eslams.contracts.versions import CORE_PACKAGE_VERSION, RUNNER_VERSION
 from eslams.core_contract import core_step, engine_capabilities, prompt_package
 from eslams.eval_runtime import (
     ResumeInvariant,
@@ -40,9 +41,10 @@ from eslams.fixtures import ARTIFACT_FIXTURE_KINDS, create_artifact_fixture
 from eslams.golden import golden_fixture_bundle
 from eslams.observation_budgets import all_observation_budget_reports
 from eslams.official import merge_official_results
+from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
-from eslams.provider_preflight import provider_models_live, provider_preflight
+from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
@@ -55,13 +57,48 @@ from eslams.replay import render_replay_html
 from eslams.runner import FAILURE_POLICIES, RunConfig, Runner
 from eslams.runner_health import current_runner_health
 from eslams.runner_result import runner_job_result_from_artifact
-from eslams.runner_session import default_runner_session_store
+
+
+def _agent_port(value: str) -> int:
+    port = int(value)
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError("--port must be between 1 and 65535")
+    return port
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Installed console and module entry point, with actionable user errors."""
+    try:
+        status = _main(argv)
+        sys.stdout.flush()
+        return status
+    except BrokenPipeError:
+        # Avoid a second buffered-write exception during interpreter shutdown.
+        try:
+            descriptor = sys.stdout.fileno()
+        except (AttributeError, OSError, ValueError):
+            return 0
+        with open(os.devnull, "w", encoding="utf-8", newline="\n") as sink:
+            os.dup2(sink.fileno(), descriptor)
+        return 0
+    except (KeyError, ValueError, OSError) as exc:
+        if os.getenv("ESLAMS_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
+            raise
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+
+def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="eslams",
         description="Run, validate, and replay eSlams artifacts.",
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=f"eslams-core {CORE_PACKAGE_VERSION}",
+        help="Print the installed Core package version.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -72,58 +109,142 @@ def main(argv: list[str] | None = None) -> int:
     arena = sub.add_parser("arena", help="Arena transport helper commands.")
     arena_sub = arena.add_subparsers(dest="arena_command", required=True)
     arena_smoke = arena_sub.add_parser("smoke", help="Smoke-test stateless arena transport.")
-    arena_smoke.add_argument("--all", action="store_true", dest="all_arenas")
-    arena_smoke.add_argument("--json", action="store_true")
+    arena_smoke.add_argument(
+        "--all", action="store_true", dest="all_arenas", help="Smoke every registered arena."
+    )
+    arena_smoke.add_argument("--json", action="store_true", help="Emit structured JSON output.")
     arena_start = arena_sub.add_parser("start", help="Start an interactive Arena session.")
-    arena_start.add_argument("--game", required=True, choices=registry.list())
-    arena_start.add_argument("--variant")
-    arena_start.add_argument("--seed", type=int, default=1)
-    arena_start.add_argument("--players-json", required=True)
-    arena_start.add_argument("--options-json", default="{}")
+    arena_start.add_argument(
+        "--game",
+        required=True,
+        choices=registry.list(),
+        help="Registered game ID for this command.",
+    )
+    arena_start.add_argument("--variant", help="Game ruleset variant (default: standard).")
+    arena_start.add_argument(
+        "--seed", type=int, default=1, help="Signed integer deterministic seed (default: 1)."
+    )
+    arena_start.add_argument(
+        "--players-json",
+        required=True,
+        help="JSON object mapping each required seat to a human or model player declaration.",
+    )
+    arena_start.add_argument(
+        "--options-json", default="{}", help="JSON object of Arena session options (default: {})."
+    )
     arena_step = arena_sub.add_parser("step", help="Apply one action token to a session.")
-    arena_step.add_argument("--state", type=Path, required=True)
-    arena_step.add_argument("--player-id", required=True)
-    arena_step.add_argument("--action-token", required=True)
+    arena_step.add_argument(
+        "--state",
+        type=Path,
+        required=True,
+        help="Path to state JSON; Arena commands also accept saved start/step responses.",
+    )
+    arena_step.add_argument(
+        "--player-id",
+        required=True,
+        help="Seat making the action or requesting its legal-action page.",
+    )
+    arena_step.add_argument(
+        "--action-token",
+        required=True,
+        help="Exact legal action token from the session action descriptors.",
+    )
     arena_page = arena_sub.add_parser(
         "legal-actions-page",
         help="Page/search legal action descriptors for a session.",
     )
-    arena_page.add_argument("--state", type=Path, required=True)
-    arena_page.add_argument("--player-id", required=True)
-    arena_page.add_argument("--query")
-    arena_page.add_argument("--limit", type=int, default=50)
-    arena_page.add_argument("--cursor")
+    arena_page.add_argument(
+        "--state",
+        type=Path,
+        required=True,
+        help="Path to state JSON; Arena commands also accept saved start/step responses.",
+    )
+    arena_page.add_argument(
+        "--player-id",
+        required=True,
+        help="Seat making the action or requesting its legal-action page.",
+    )
+    arena_page.add_argument("--query", help="Case-insensitive legal-action search text.")
+    arena_page.add_argument(
+        "--limit",
+        type=int,
+        default=50,
+        help="Maximum legal-action rows per page (default: 50; values clamp to 1-200).",
+    )
+    arena_page.add_argument(
+        "--cursor", help="Opaque cursor returned by a previous legal-action page."
+    )
 
     core = sub.add_parser("core", help="Core v2 contract helper commands.")
     core_sub = core.add_subparsers(dest="core_command", required=True)
     core_step_cmd = core_sub.add_parser("step", help="Apply one CoreStepRequest v2.")
-    core_step_cmd.add_argument("--request", type=Path, required=True)
+    core_step_cmd.add_argument(
+        "--request",
+        type=Path,
+        required=True,
+        help="Path to the request JSON object described by this command's contract.",
+    )
     core_prompt = core_sub.add_parser("prompt", help="Generate a prompt package for a state.")
-    core_prompt.add_argument("--game", required=True, choices=registry.list())
-    core_prompt.add_argument("--state", type=Path, required=True)
-    core_prompt.add_argument("--actor-id")
+    core_prompt.add_argument(
+        "--game",
+        required=True,
+        choices=registry.list(),
+        help="Registered game ID for this command.",
+    )
+    core_prompt.add_argument(
+        "--state",
+        type=Path,
+        required=True,
+        help="Path to state JSON; Arena commands also accept saved start/step responses.",
+    )
+    core_prompt.add_argument(
+        "--actor-id", help="Seat whose observation and legal actions should populate the prompt."
+    )
     core_capabilities = core_sub.add_parser(
         "capabilities",
         help="Emit engine and speculative-precompute capabilities.",
     )
-    core_capabilities.add_argument("--game", choices=registry.list())
+    core_capabilities.add_argument(
+        "--game", choices=registry.list(), help="Registered game ID for this command."
+    )
     core_budgets = core_sub.add_parser("budgets", help="Report compact observation budgets.")
-    core_budgets.add_argument("--json", action="store_true")
+    core_budgets.add_argument("--json", action="store_true", help="Emit structured JSON output.")
     core_golden = core_sub.add_parser("golden", help="Emit Core golden fixtures.")
-    core_golden.add_argument("--games", default="tic-tac-toe,connect-four")
-    core_golden.add_argument("--out", type=Path)
+    core_golden.add_argument(
+        "--games",
+        default="tic-tac-toe,connect-four",
+        help="Comma-separated game IDs to include in this fixture or benchmark.",
+    )
+    core_golden.add_argument(
+        "--out", type=Path, help="Destination path for this command's generated file or directory."
+    )
+    core_golden.add_argument("--overwrite", action="store_true", help="Replace an existing file.")
 
     bench = sub.add_parser("bench", help="Core benchmark helper commands.")
     bench_sub = bench.add_subparsers(dest="bench_command", required=True)
     bench_arena_step = bench_sub.add_parser("arena-step", help="Benchmark Core arena steps.")
-    bench_arena_step.add_argument("--games", default="tic-tac-toe,connect-four")
-    bench_arena_step.add_argument("--iterations", type=int, default=100)
-    bench_arena_step.add_argument("--json", type=Path)
+    bench_arena_step.add_argument(
+        "--games",
+        default="tic-tac-toe,connect-four",
+        help="Comma-separated game IDs to include in this fixture or benchmark.",
+    )
+    bench_arena_step.add_argument(
+        "--iterations",
+        type=int,
+        default=100,
+        help="Positive number of benchmark iterations per game (default: 100).",
+    )
+    bench_arena_step.add_argument("--json", type=Path, help="Emit structured JSON output.")
 
     schemas = sub.add_parser("schemas", help="Export versioned contract schemas.")
     schemas_sub = schemas.add_subparsers(dest="schemas_command", required=True)
     schemas_export = schemas_sub.add_parser("export", help="Write JSON schema files.")
-    schemas_export.add_argument("--out", type=Path, required=True)
+    schemas_export.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination path for this command's generated file or directory.",
+    )
 
     artifact = sub.add_parser("artifact", help="Artifact helper commands.")
     artifact_sub = artifact.add_subparsers(dest="artifact_command", required=True)
@@ -131,62 +252,205 @@ def main(argv: list[str] | None = None) -> int:
         "public-export",
         help="Export a no-secret public replay package.",
     )
-    artifact_public.add_argument("artifact", type=Path)
-    artifact_public.add_argument("--out", type=Path, required=True)
+    artifact_public.add_argument(
+        "artifact",
+        type=Path,
+        help="Existing artifact directory or .eslams ZIP to validate or export.",
+    )
+    artifact_public.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination path for this command's generated file or directory.",
+    )
 
     fixtures = sub.add_parser("fixtures", help="Generate deterministic fixtures.")
     fixtures_sub = fixtures.add_subparsers(dest="fixtures_command", required=True)
     fixtures_replay = fixtures_sub.add_parser("replay", help="Generate replay fixtures.")
-    fixtures_replay.add_argument("--kind", choices=["uploaded-smoke"], required=True)
-    fixtures_replay.add_argument("--out", type=Path, required=True)
+    fixtures_replay.add_argument(
+        "--kind",
+        choices=["uploaded-smoke"],
+        required=True,
+        help="Choose the fixture or publication kind shown in the allowed values.",
+    )
+    fixtures_replay.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination path for this command's generated file or directory.",
+    )
     fixtures_artifact = fixtures_sub.add_parser("artifact", help="Generate artifact fixtures.")
-    fixtures_artifact.add_argument("--kind", choices=list(ARTIFACT_FIXTURE_KINDS), required=True)
-    fixtures_artifact.add_argument("--out", type=Path, required=True)
+    fixtures_artifact.add_argument(
+        "--kind",
+        choices=list(ARTIFACT_FIXTURE_KINDS),
+        required=True,
+        help="Choose the fixture or publication kind shown in the allowed values.",
+    )
+    fixtures_artifact.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination path for this command's generated file or directory.",
+    )
+    fixtures_artifact.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Explicitly replace existing output at this destination.",
+    )
 
     catalogue = sub.add_parser("catalogue", help="Export public catalogue rows.")
     catalogue_sub = catalogue.add_subparsers(dest="catalogue_command", required=True)
     for name in ("games", "models", "availability", "renderers"):
         command = catalogue_sub.add_parser(name, help=f"Export {name} catalogue rows.")
-        command.add_argument("--json", action="store_true")
-        if name == "games":
-            command.add_argument("--include-help", action="store_true")
-            command.add_argument("--include-render", action="store_true")
-            command.add_argument("--include-animation", action="store_true")
+        command.add_argument(
+            "--json", action="store_true", help="Emit complete catalogue rows as JSON."
+        )
 
     plan = sub.add_parser("plan", help="Create deterministic no-secret eval plans.")
     plan_sub = plan.add_subparsers(dest="plan_command", required=True)
     plan_official = plan_sub.add_parser("official", help="Plan an official eval suite.")
-    plan_official.add_argument("--suite", required=True)
-    plan_official.add_argument("--providers", default="")
-    plan_official.add_argument("--arenas", default="")
-    plan_official.add_argument("--shard-count", type=int, default=1)
-    plan_official.add_argument("--json", action="store_true")
+    plan_official.add_argument(
+        "--suite",
+        required=True,
+        help="Official planning suite; supported: public-smoke. Empty eligibility fails clearly.",
+    )
+    plan_official.add_argument(
+        "--providers",
+        default="",
+        help="Comma-separated provider namespaces; registry updates produce a filtered snapshot.",
+    )
+    plan_official.add_argument(
+        "--arenas",
+        default="",
+        help="Comma-separated registered arena IDs; unknown or empty selections fail.",
+    )
+    plan_official.add_argument(
+        "--shard-count",
+        type=int,
+        default=1,
+        help="Positive shard count (default: 1); plan shards cannot exceed case count or 1024.",
+    )
+    plan_official.add_argument("--json", action="store_true", help="Emit structured JSON output.")
     plan_battlefield = plan_sub.add_parser("battlefield", help="Plan Battlefield cases.")
-    plan_battlefield.add_argument("--pairs", default="")
-    plan_battlefield.add_argument("--arenas", default="")
-    plan_battlefield.add_argument("--shard-count", type=int, default=1)
-    plan_battlefield.add_argument("--json", action="store_true")
+    plan_battlefield.add_argument(
+        "--pairs",
+        default="",
+        help=(
+            "Comma-separated provider:model showcase references; planning makes no inference calls."
+        ),
+    )
+    plan_battlefield.add_argument(
+        "--arenas",
+        default="",
+        help="Comma-separated registered arena IDs; unknown or empty selections fail.",
+    )
+    plan_battlefield.add_argument(
+        "--shard-count",
+        type=int,
+        default=1,
+        help="Positive shard count (default: 1); plan shards cannot exceed case count or 1024.",
+    )
+    plan_battlefield.add_argument(
+        "--json", action="store_true", help="Emit structured JSON output."
+    )
     plan_public = plan_sub.add_parser("public-match", help="Plan a public match request.")
-    plan_public.add_argument("--request", type=Path, required=True)
-    plan_public.add_argument("--shard-count", type=int, default=1)
-    plan_public.add_argument("--json", action="store_true")
+    plan_public.add_argument(
+        "--request",
+        type=Path,
+        required=True,
+        help="Path to the request JSON object described by this command's contract.",
+    )
+    plan_public.add_argument(
+        "--shard-count",
+        type=int,
+        default=1,
+        help="Positive shard count (default: 1); plan shards cannot exceed case count or 1024.",
+    )
+    plan_public.add_argument("--json", action="store_true", help="Emit structured JSON output.")
     plan_progress = plan_sub.add_parser("progress", help="Append a progress JSONL event.")
-    plan_progress.add_argument("--plan", type=Path, required=True)
-    plan_progress.add_argument("--out", type=Path, required=True)
-    plan_progress.add_argument("--current-case")
-    plan_progress.add_argument("--completed-cases", type=int, default=0)
-    plan_progress.add_argument("--failed-cases", type=int, default=0)
-    plan_progress.add_argument("--skipped-cases", type=int, default=0)
-    plan_progress.add_argument("--elapsed-seconds", type=float, default=0.0)
-    plan_progress.add_argument("--provider-latencies-ms", default="")
+    plan_progress.add_argument(
+        "--plan",
+        type=Path,
+        required=True,
+        help=(
+            "Path to an existing evaluation plan JSON envelope; contents and plan_hash are checked."
+        ),
+    )
+    plan_progress.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination path for this command's generated file or directory.",
+    )
+    plan_progress.add_argument(
+        "--current-case", help="Case ID currently executing, for progress diagnostics."
+    )
+    plan_progress.add_argument(
+        "--completed-cases",
+        type=int,
+        default=0,
+        help="Non-negative count of completed cases (default: 0).",
+    )
+    plan_progress.add_argument(
+        "--failed-cases",
+        type=int,
+        default=0,
+        help="Non-negative count of failed cases (default: 0).",
+    )
+    plan_progress.add_argument(
+        "--skipped-cases",
+        type=int,
+        default=0,
+        help="Non-negative count of skipped cases (default: 0).",
+    )
+    plan_progress.add_argument(
+        "--elapsed-seconds",
+        type=float,
+        default=0.0,
+        help="Finite non-negative elapsed time used to estimate case rate and remaining time.",
+    )
+    plan_progress.add_argument(
+        "--provider-latencies-ms",
+        default="",
+        help="Comma-separated non-negative latency samples in milliseconds.",
+    )
     plan_resume = plan_sub.add_parser("resume-check", help="Check if a case can be skipped.")
-    plan_resume.add_argument("--checkpoint", type=Path, required=True)
-    plan_resume.add_argument("--case-id", required=True)
-    plan_resume.add_argument("--artifact-digest", required=True)
-    plan_resume.add_argument("--model-id", required=True)
-    plan_resume.add_argument("--suite-fingerprint", required=True)
-    plan_resume.add_argument("--runner-version", required=True)
-    plan_resume.add_argument("--plan-hash", required=True)
+    plan_resume.add_argument(
+        "--checkpoint",
+        type=Path,
+        required=True,
+        help="Path to an existing resume checkpoint JSON file.",
+    )
+    plan_resume.add_argument(
+        "--case-id",
+        required=True,
+        help="Stable non-empty case identity; required for Official case publication eligibility.",
+    )
+    plan_resume.add_argument(
+        "--artifact-digest",
+        required=True,
+        help="Exact artifact digest used to match a completed resume record.",
+    )
+    plan_resume.add_argument(
+        "--model-id",
+        required=True,
+        help="Exact provider:model identity required for resume matching.",
+    )
+    plan_resume.add_argument(
+        "--suite-fingerprint",
+        required=True,
+        help="Exact suite fingerprint recorded in case context or resume identity.",
+    )
+    plan_resume.add_argument(
+        "--runner-version",
+        required=True,
+        help="Recorded Runner implementation version used in artifact or resume context.",
+    )
+    plan_resume.add_argument(
+        "--plan-hash",
+        required=True,
+        help="Exact deterministic plan hash recorded in case context or resume identity.",
+    )
 
     publish = sub.add_parser("publish", help="Publication bundle helpers.")
     publish_sub = publish.add_subparsers(dest="publish_command", required=True)
@@ -198,87 +462,157 @@ def main(argv: list[str] | None = None) -> int:
         "--kind",
         choices=["official-proof", "battlefield-sample", "uploaded-replay"],
         required=True,
+        help="Choose the fixture or publication kind shown in the allowed values.",
     )
-    publish_export.add_argument("--plan", type=Path)
-    publish_export.add_argument("--artifacts", type=Path)
-    publish_export.add_argument("--artifact", type=Path)
-    publish_export.add_argument("--out", type=Path, required=True)
+    publish_export.add_argument(
+        "--plan",
+        type=Path,
+        help=(
+            "Path to an existing evaluation plan JSON envelope; contents and plan_hash are checked."
+        ),
+    )
+    publish_export.add_argument(
+        "--artifacts",
+        type=Path,
+        help="Directory of source artifacts; latest pointers and duplicate identities are skipped.",
+    )
+    publish_export.add_argument(
+        "--artifact", type=Path, help="Path to one existing artifact directory or .eslams archive."
+    )
+    publish_export.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination path for this command's generated file or directory.",
+    )
     publish_validate = publish_sub.add_parser(
         "validate",
         help="Validate a deterministic publication bundle.",
     )
-    publish_validate.add_argument("bundle", type=Path)
-    publish_validate.add_argument("--json", action="store_true")
+    publish_validate.add_argument(
+        "bundle", type=Path, help="Existing publication bundle directory to validate."
+    )
+    publish_validate.add_argument(
+        "--json", action="store_true", help="Emit structured JSON output."
+    )
 
     official = sub.add_parser("official", help="Official result helpers.")
     official_sub = official.add_subparsers(dest="official_command", required=True)
     official_merge = official_sub.add_parser("merge", help="Merge official result artifacts.")
-    official_merge.add_argument("run_dir", type=Path)
-    official_merge.add_argument("--out", type=Path, required=True)
+    official_merge.add_argument(
+        "run_dir",
+        type=Path,
+        help="Existing directory of valid artifacts to merge; empty input fails.",
+    )
+    official_merge.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Destination path for this command's generated file or directory.",
+    )
 
     providers = sub.add_parser("providers", help="Provider runtime helper commands.")
     providers_sub = providers.add_subparsers(dest="providers_command", required=True)
     providers_preflight = providers_sub.add_parser("preflight", help="Preflight a provider model.")
-    providers_preflight.add_argument("--provider", required=True)
-    providers_preflight.add_argument("--model", required=True)
-    providers_preflight.add_argument("--arena", default="tic-tac-toe", choices=registry.list())
-    providers_preflight.add_argument("--live", action="store_true")
+    providers_preflight.add_argument(
+        "--provider", required=True, help="Provider namespace to inspect or call."
+    )
+    providers_preflight.add_argument(
+        "--model", required=True, help="Provider-native requested model ID for preflight."
+    )
+    providers_preflight.add_argument(
+        "--arena",
+        default="tic-tac-toe",
+        choices=registry.list(),
+        help="Registered arena ID (default: connect-four for run; tic-tac-toe for preflight/test).",
+    )
+    providers_preflight.add_argument(
+        "--live",
+        action="store_true",
+        help=(
+            "Query account-visible model APIs; preflight also makes a small "
+            "inference request using your key."
+        ),
+    )
     providers_models = providers_sub.add_parser(
         "models",
         help="List registry or account-visible provider models.",
     )
-    providers_models.add_argument("--provider", required=True)
-    providers_models.add_argument("--live", action="store_true")
+    providers_models.add_argument(
+        "--provider", required=True, help="Provider namespace to inspect or call."
+    )
+    providers_models.add_argument(
+        "--live",
+        action="store_true",
+        help="List models through the configured account model API; no inference call.",
+    )
 
     runner_cmd = sub.add_parser("runner", help="Runner/container helper commands.")
     runner_sub = runner_cmd.add_subparsers(dest="runner_command", required=True)
     runner_health = runner_sub.add_parser("health", help="Print runner health metadata.")
-    runner_health.add_argument("--json", action="store_true")
+    runner_health.add_argument("--json", action="store_true", help="Emit structured JSON output.")
     runner_result = runner_sub.add_parser(
         "result",
         help="Emit a canonical RunnerJobResult from an artifact.",
     )
-    runner_result.add_argument("--artifact", type=Path, required=True)
-    runner_result.add_argument("--artifact-uri", required=True)
-    runner_result.add_argument("--job-id", required=True)
-    runner_session_create = runner_sub.add_parser(
-        "session-create",
-        help="Create a hot runner session.",
+    runner_result.add_argument(
+        "--artifact",
+        type=Path,
+        required=True,
+        help="Path to one existing artifact directory or .eslams archive.",
     )
-    runner_session_create.add_argument("--game", required=True, choices=registry.list())
-    runner_session_create.add_argument("--session-id")
-    runner_session_create.add_argument("--seed", type=int, default=1)
-    runner_session_step = runner_sub.add_parser("session-step", help="Step a hot runner session.")
-    runner_session_step.add_argument("--session-id", required=True)
-    runner_session_step.add_argument("--action", required=True)
-    runner_session_step.add_argument("--actor-id")
-    runner_session_step.add_argument("--deadline-ms", type=int)
-    runner_session_snapshot = runner_sub.add_parser(
-        "session-snapshot",
-        help="Snapshot a hot runner session.",
+    runner_result.add_argument(
+        "--artifact-uri",
+        required=True,
+        help="Caller-owned storage URI to include in Runner result metadata; Core does not upload.",
     )
-    runner_session_snapshot.add_argument("--session-id", required=True)
-    runner_session_close = runner_sub.add_parser(
-        "session-close",
-        help="Close a hot runner session.",
+    runner_result.add_argument(
+        "--job-id",
+        required=True,
+        help="Caller-provided job identity for the Runner result envelope.",
     )
-    runner_session_close.add_argument("--session-id", required=True)
 
     models = sub.add_parser("models", help="Inspect or refresh provider model capabilities.")
     models_sub = models.add_subparsers(dest="models_command", required=True)
     models_list = models_sub.add_parser("list", help="List registry models.")
-    models_list.add_argument("--provider")
-    models_list.add_argument("--game-agent-supported", action="store_true")
-    models_list.add_argument("--json", action="store_true")
+    models_list.add_argument("--provider", help="Provider namespace to inspect or call.")
+    models_list.add_argument(
+        "--game-agent-supported",
+        action="store_true",
+        help="List only models whose capabilities support a text game agent.",
+    )
+    models_list.add_argument("--json", action="store_true", help="Emit structured JSON output.")
     models_update = models_sub.add_parser(
         "update",
         help="Refresh generated provider registry data.",
     )
-    models_update.add_argument("--providers", default="")
-    models_update.add_argument("--skip-public", action="store_true")
+    models_update.add_argument(
+        "--providers",
+        default="",
+        help="Comma-separated provider namespaces; registry updates produce a filtered snapshot.",
+    )
+    models_update.add_argument(
+        "--skip-public",
+        action="store_true",
+        help=(
+            "Skip public metadata fetches; configured model-list APIs and "
+            "local overrides still apply."
+        ),
+    )
+    models_update.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="Write a new snapshot to this path; never update the packaged registry implicitly.",
+    )
 
     run = sub.add_parser("run", help="Run a local match and create a .eslams artifact.")
-    run.add_argument("--arena", default="connect-four", choices=registry.list())
+    run.add_argument(
+        "--arena",
+        default="connect-four",
+        choices=registry.list(),
+        help="Registered arena ID (default: connect-four for run; tic-tac-toe for preflight/test).",
+    )
     run.add_argument(
         "--agent",
         default="random",
@@ -289,15 +623,47 @@ def main(argv: list[str] | None = None) -> int:
         default="first-legal",
         help="Agent for player_2: random, first-legal, URL, or provider:model.",
     )
-    run.add_argument("--seed", type=int, default=1)
-    run.add_argument("--max-turns", type=int)
+    run.add_argument(
+        "--seat-agent",
+        action="append",
+        default=[],
+        metavar="PLAYER=AGENT",
+        help=(
+            "Assign an agent to a named seat; repeat for table arenas. "
+            "Overrides --agent/--opponent."
+        ),
+    )
+    run.add_argument(
+        "--run-id", help="Explicit path-safe run ID; existing output requires --overwrite."
+    )
+    run.add_argument(
+        "--require-scoring-valid",
+        action="store_true",
+        help="Exit 1 after writing diagnostics if the match is invalid for scoring.",
+    )
+    run.add_argument(
+        "--seed", type=int, default=1, help="Signed integer deterministic seed (default: 1)."
+    )
+    run.add_argument(
+        "--max-turns",
+        type=int,
+        help=(
+            "Positive episode action limit; defaults to the arena limit. "
+            "Early truncation is not scoreable."
+        ),
+    )
     run.add_argument(
         "--time-budget-ms",
         type=int,
         default=30_000,
         help="Per-action agent time budget in milliseconds.",
     )
-    run.add_argument("--output-dir", type=Path, default=Path("runs"))
+    run.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("runs"),
+        help="Artifact output directory (default: runs).",
+    )
     run.add_argument(
         "--archive",
         dest="archive",
@@ -315,28 +681,48 @@ def main(argv: list[str] | None = None) -> int:
         "--on-agent-error",
         choices=sorted(FAILURE_POLICIES),
         default="invalid-match",
+        help=(
+            "Failure policy (default: invalid-match); fallback applies a "
+            "legal action but keeps the run invalid."
+        ),
     )
     run.add_argument(
         "--on-illegal-action",
         choices=sorted(FAILURE_POLICIES),
         default="invalid-match",
+        help=(
+            "Illegal-action policy (default: invalid-match); forfeit ends the "
+            "match; fallback stays invalid."
+        ),
     )
     run.add_argument(
         "--execution-profile",
         choices=["interactive", "smoke", "official_eval"],
         default="interactive",
+        help=(
+            "Execution intent: interactive (default), smoke, or "
+            "official_eval; no automatic Official seal."
+        ),
     )
     run.add_argument(
         "--reasoning",
         choices=["disabled", "enabled", "auto"],
         default="auto",
+        help=(
+            "Provider reasoning mode (default: auto); disabled/enabled follow "
+            "supported model controls."
+        ),
     )
     run.add_argument(
         "--openrouter-provider-order",
         default="",
         help=("Comma-separated OpenRouter provider order; provider fallback remains disabled."),
     )
-    run.add_argument("--bedrock-region", default="us-east-1")
+    run.add_argument(
+        "--bedrock-region",
+        default="us-east-1",
+        help="AWS Bedrock endpoint region (default: us-east-1).",
+    )
     run.add_argument(
         "--rate-card-id",
         help="Diagnostic label only; official cost completeness requires --rate-card-reference.",
@@ -346,22 +732,69 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Path to a complete eslams.price-card-reference.v1 JSON object.",
     )
-    run.add_argument("--overwrite", action="store_true")
-    run.add_argument("--verification-level", default="Local Artifact")
-    run.add_argument("--eval-suite-version", default="public-smoke:1.0.0")
-    run.add_argument("--runner-version", default=RUNNER_VERSION)
-    run.add_argument("--suite-id")
-    run.add_argument("--case-id")
-    run.add_argument("--case-attempt-index", type=int, default=1)
-    run.add_argument("--suite-fingerprint")
-    run.add_argument("--plan-hash")
-    run.add_argument("--shard-index", type=int)
-    run.add_argument("--shard-count", type=int)
-    run.add_argument("--runner-result-json", action="store_true")
-    run.add_argument("--artifact-uri")
+    run.add_argument(
+        "--overwrite", action="store_true", help="Replace existing output for an explicit --run-id."
+    )
+    run.add_argument(
+        "--verification-level",
+        default="Local Artifact",
+        help="Requested diagnostic verification label; this does not grant a trusted signature.",
+    )
+    run.add_argument(
+        "--eval-suite-version",
+        default="public-smoke:1.0.0",
+        help="Recorded evaluation-suite version (default: public-smoke:1.0.0).",
+    )
+    run.add_argument(
+        "--runner-version",
+        default=RUNNER_VERSION,
+        help="Recorded Runner implementation version used in artifact or resume context.",
+    )
+    run.add_argument("--suite-id", help="Recorded suite identity for this run.")
+    run.add_argument(
+        "--case-id",
+        help="Stable non-empty case identity; required for Official case publication eligibility.",
+    )
+    run.add_argument(
+        "--case-attempt-index",
+        type=int,
+        default=1,
+        help="Positive logical case attempt index (default: 1).",
+    )
+    run.add_argument(
+        "--suite-fingerprint",
+        help="Exact suite fingerprint recorded in case context or resume identity.",
+    )
+    run.add_argument(
+        "--plan-hash",
+        help="Exact deterministic plan hash recorded in case context or resume identity.",
+    )
+    run.add_argument(
+        "--shard-index",
+        type=int,
+        help="Zero-based shard index, strictly below shard-count (default: 0).",
+    )
+    run.add_argument(
+        "--shard-count",
+        type=int,
+        help="Positive shard count (default: 1); plan shards cannot exceed case count or 1024.",
+    )
+    run.add_argument(
+        "--runner-result-json",
+        action="store_true",
+        help="Also emit the canonical RunnerJobResult JSON after the run.",
+    )
+    run.add_argument(
+        "--artifact-uri",
+        help="Caller-owned storage URI to include in Runner result metadata; Core does not upload.",
+    )
 
     validate = sub.add_parser("validate", help="Validate an artifact directory or .eslams zip.")
-    validate.add_argument("artifact", type=Path)
+    validate.add_argument(
+        "artifact",
+        type=Path,
+        help="Existing artifact directory or .eslams ZIP to validate or export.",
+    )
     validate.add_argument(
         "--profile",
         choices=[
@@ -373,26 +806,66 @@ def main(argv: list[str] | None = None) -> int:
             "auto",
         ],
         default="runner-bundle",
+        help="Validation profile (default: runner-bundle); use auto for public replay packages.",
     )
-    validate.add_argument("--summary-json", action="store_true")
+    validate.add_argument(
+        "--summary-json",
+        action="store_true",
+        help="Emit the structured validation report; invalid reports exit 1.",
+    )
 
     replay = sub.add_parser("replay", help="Render a local HTML replay from an artifact.")
-    replay.add_argument("artifact")
-    replay.add_argument("extra", nargs="?")
-    replay.add_argument("--output", type=Path)
+    replay.add_argument(
+        "artifact",
+        help="Existing artifact directory or .eslams ZIP, or validate-public for a public package.",
+    )
+    replay.add_argument(
+        "extra", nargs="?", help="Public package path when using replay validate-public."
+    )
+    replay.add_argument(
+        "--output", type=Path, help="Destination HTML path; defaults beside the source artifact."
+    )
+    replay.add_argument(
+        "--diagnostic",
+        action="store_true",
+        help="Inspect an invalid artifact with a visible untrusted warning.",
+    )
+    replay.add_argument("--overwrite", action="store_true", help="Replace an existing HTML file.")
 
     agent = sub.add_parser("agent", help="Agent helper commands.")
     agent_sub = agent.add_subparsers(dest="agent_command", required=True)
     agent_test = agent_sub.add_parser("test", help="Protocol-test a remote /act endpoint.")
-    agent_test.add_argument("--url", required=True)
-    agent_test.add_argument("--arena", default="tic-tac-toe", choices=registry.list())
-    agent_test.add_argument("--seed", type=int, default=1)
+    agent_test.add_argument(
+        "--url", required=True, help="HTTP agent base URL exposing /act and /health."
+    )
+    agent_test.add_argument(
+        "--arena",
+        default="tic-tac-toe",
+        choices=registry.list(),
+        help="Registered arena ID (default: connect-four for run; tic-tac-toe for preflight/test).",
+    )
+    agent_test.add_argument(
+        "--seed", type=int, default=1, help="Signed integer deterministic seed (default: 1)."
+    )
     agent_publish = agent_sub.add_parser("publish", help="Print a platform registration payload.")
-    agent_publish.add_argument("--name", required=True)
-    agent_publish.add_argument("--url", required=True)
+    agent_publish.add_argument(
+        "--name", required=True, help="Display name in the printed agent registration payload."
+    )
+    agent_publish.add_argument(
+        "--url", required=True, help="HTTP agent base URL exposing /act and /health."
+    )
     agent_serve = agent_sub.add_parser("serve", help="Serve a sample first-legal /act endpoint.")
-    agent_serve.add_argument("--host", default="0.0.0.0")
-    agent_serve.add_argument("--port", type=int, default=8000)
+    agent_serve.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Bind address (default: local loopback; use 0.0.0.0 for containers/remote access).",
+    )
+    agent_serve.add_argument(
+        "--port",
+        type=_agent_port,
+        default=8000,
+        help="Agent server TCP port between 1 and 65535 (default: 8000).",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "init":
@@ -441,12 +914,26 @@ def main(argv: list[str] | None = None) -> int:
         )
         agent_1 = _agent_arg(args.agent, runtime_config=provider_runtime)
         agent_2 = _agent_arg(args.opponent, runtime_config=provider_runtime)
+        seat_agents: dict[str, Any] = {}
+        for assignment in args.seat_agent:
+            player, separator, agent = assignment.partition("=")
+            if not separator or player not in registry.create(args.arena).players or not agent:
+                raise ValueError(
+                    "--seat-agent must be PLAYER=AGENT for a seat in the selected arena"
+                )
+            if player in seat_agents:
+                raise ValueError(f"duplicate --seat-agent assignment for {player}")
+            seat_agents[player] = _agent_arg(agent, runtime_config=provider_runtime)
+        agent_1 = seat_agents.get("player_1", agent_1)
+        agent_2 = seat_agents.get("player_2", agent_2)
         _print_run_preflight(args, agent_1, agent_2)
         result = Runner().run(
             RunConfig(
                 arena_id=args.arena,
                 agent_1=agent_1,
                 agent_2=agent_2,
+                agents=seat_agents,
+                run_id=args.run_id,
                 seed=args.seed,
                 max_turns=args.max_turns,
                 time_budget_ms=args.time_budget_ms,
@@ -475,7 +962,12 @@ def main(argv: list[str] | None = None) -> int:
                 job_id=result.run_id,
             )
             print(json.dumps(job_result.to_dict(), indent=2))
-            return 0 if job_result.validation_status == "valid" else 1
+            return (
+                0
+                if job_result.validation_status == "valid"
+                and (not args.require_scoring_valid or result.score.match_valid_for_scoring)
+                else 1
+            )
         payload = {
             "run_id": result.run_id,
             "artifact": str(result.artifact_path),
@@ -501,7 +993,7 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         print(json.dumps(payload, indent=2))
-        return 0
+        return 0 if not args.require_scoring_valid or result.score.match_valid_for_scoring else 1
     if args.command == "validate":
         report = ArtifactValidator().validate_report(args.artifact, profile=args.profile)
         payload = report.to_dict()
@@ -521,7 +1013,11 @@ def main(argv: list[str] | None = None) -> int:
             payload = validate_public_replay(Path(args.extra))
             print(json.dumps(payload, indent=2))
             return 0 if bool(payload.get("valid")) else 1
-        output = render_replay_html(Path(args.artifact), args.output)
+        if args.extra is not None:
+            parser.error("replay accepts only one artifact argument")
+        output = render_replay_html(
+            Path(args.artifact), args.output, overwrite=args.overwrite, diagnostic=args.diagnostic
+        )
         print(json.dumps({"replay": str(output)}, indent=2))
         return 0
     if args.command == "agent":
@@ -576,10 +1072,10 @@ def _core_command(args: argparse.Namespace) -> int:
         games = _comma_list(args.games)
         golden_payload = golden_fixture_bundle(game_ids=games)
         if args.out is not None:
-            args.out.parent.mkdir(parents=True, exist_ok=True)
-            args.out.write_text(
+            write_text_file(
+                args.out,
                 json.dumps(golden_payload, sort_keys=True, indent=2) + "\n",
-                encoding="utf-8",
+                overwrite=args.overwrite,
             )
             print(json.dumps({"fixture": str(args.out)}, indent=2))
         else:
@@ -600,8 +1096,7 @@ def _bench_command(args: argparse.Namespace) -> int:
         if args.json is not None:
             args.json.parent.mkdir(parents=True, exist_ok=True)
             args.json.write_text(
-                json.dumps(payload, sort_keys=True, indent=2) + "\n",
-                encoding="utf-8",
+                json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8", newline="\n"
             )
             print(json.dumps({"benchmark": str(args.json)}, indent=2))
         else:
@@ -633,7 +1128,7 @@ def _arena_command(args: argparse.Namespace) -> int:
         return 0
     if args.arena_command == "step":
         payload = step_session(
-            session_state=_read_json_file(args.state),
+            session_state=_read_session_file(args.state),
             player_id=args.player_id,
             action_token=args.action_token,
         )
@@ -641,7 +1136,7 @@ def _arena_command(args: argparse.Namespace) -> int:
         return 0 if payload.get("accepted") is True else 1
     if args.arena_command == "legal-actions-page":
         payload = legal_actions_page(
-            session_state=_read_json_file(args.state),
+            session_state=_read_session_file(args.state),
             player_id=args.player_id,
             query=args.query,
             limit=args.limit,
@@ -666,7 +1161,7 @@ def _fixtures_command(args: argparse.Namespace) -> int:
         print(json.dumps({"fixture": str(output)}, indent=2))
         return 0
     if args.fixtures_command == "artifact":
-        output = create_artifact_fixture(args.kind, args.out)
+        output = create_artifact_fixture(args.kind, args.out, overwrite=args.overwrite)
         print(json.dumps({"fixture": str(output)}, indent=2))
         return 0
     raise AssertionError(args.fixtures_command)
@@ -683,9 +1178,27 @@ def _catalogue_command(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(rows, indent=2))
         return 0
+    if args.catalogue_command == "availability":
+        counts = Counter(
+            (str(row["game_id"]), str(row["status"]), str(row.get("reason") or "none"))
+            for row in rows
+        )
+        print(
+            f"Availability summary: {len(rows)} model/game rows. Use --json for individual models."
+        )
+        for (game, status, reason), count in sorted(counts.items()):
+            print(f"{game} status={status} reason={reason} models={count}")
+        return 0
     for row in rows:
+        if args.catalogue_command == "renderers":
+            print(
+                f"{row['game_id']} replay_availability={row['replay_availability']} "
+                f"timeline_completeness={row['timeline_completeness']}"
+            )
+            continue
         label = row.get("game_id") or f"{row.get('provider')}:{row.get('model')}"
-        print(f"{label} status={row.get('launch_status') or row.get('status') or 'ready'}")
+        status = row.get("launch_status") or row.get("official_eval_availability") or "unknown"
+        print(f"{label} status={status}")
     return 0
 
 
@@ -697,6 +1210,11 @@ def _plan_command(args: argparse.Namespace) -> int:
             arenas=_comma_list(args.arenas),
             shard_count=args.shard_count,
         )
+        if payload["case_count_expected"] == 0:
+            raise ValueError(
+                "no official-eval-enabled models selected; the public registry grants no Official "
+                "evaluation eligibility. Use plan battlefield for a BYO-key showcase plan"
+            )
     elif args.plan_command == "battlefield":
         payload = battlefield_plan(
             pairs=_comma_list(args.pairs),
@@ -707,6 +1225,9 @@ def _plan_command(args: argparse.Namespace) -> int:
         payload = public_match_plan(request_path=args.request, shard_count=args.shard_count)
     elif args.plan_command == "progress":
         plan_payload = _read_json_file(args.plan)
+        from eslams.planning import validate_plan
+
+        validate_plan(plan_payload)
         payload = progress_event(
             plan=plan_payload,
             current_case=args.current_case,
@@ -777,13 +1298,7 @@ def _providers_command(args: argparse.Namespace) -> int:
         return 0 if payload["ok"] is True else 1
     if args.providers_command == "models":
         if args.live:
-            models = provider_models_live(args.provider)
-            payload = {
-                "provider": args.provider,
-                "mode": "live",
-                "ok": models is not None,
-                "models": models or [],
-            }
+            payload = provider_models_result(args.provider)
         else:
             records = load_provider_registry().list_models(provider=args.provider)
             payload = {
@@ -813,31 +1328,6 @@ def _runner_command(args: argparse.Namespace) -> int:
         )
         print(json.dumps(result.to_dict(), indent=2))
         return 0 if result.validation_status == "valid" else 1
-    if args.runner_command == "session-create":
-        payload = default_runner_session_store.create(
-            game_id=args.game,
-            session_id=args.session_id,
-            initial_seed=args.seed,
-        )
-        print(json.dumps(payload, indent=2))
-        return 0
-    if args.runner_command == "session-step":
-        payload = default_runner_session_store.step(
-            session_id=args.session_id,
-            action=_action_arg(args.action),
-            actor_id=args.actor_id,
-            deadline_ms=args.deadline_ms,
-        )
-        print(json.dumps(payload, indent=2))
-        return 0 if payload.get("ok") is True else 1
-    if args.runner_command == "session-snapshot":
-        payload = default_runner_session_store.snapshot(args.session_id)
-        print(json.dumps(payload, indent=2))
-        return 0
-    if args.runner_command == "session-close":
-        payload = default_runner_session_store.close(args.session_id)
-        print(json.dumps(payload, indent=2))
-        return 0
     raise AssertionError(args.runner_command)
 
 
@@ -892,7 +1382,7 @@ def _run_registry_update(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    command = [sys.executable, str(script)]
+    command = [sys.executable, str(script), "--output", str(args.output)]
     if args.providers:
         command.extend(["--providers", args.providers])
     if args.skip_public:
@@ -907,7 +1397,7 @@ def _provider_agent(
 ) -> ModelProviderAgent | None:
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
-        "anthropic": ("claude-sonnet-4-20250514", "ANTHROPIC_API_KEY"),
+        "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
@@ -943,6 +1433,16 @@ def _read_json_file(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return value
+
+
+def _read_session_file(path: Path) -> dict[str, Any]:
+    payload = _read_json_file(path)
+    if "session_state" in payload:
+        state = payload["session_state"]
+        if not isinstance(state, dict):
+            raise ValueError("session_state must be an object")
+        return state
+    return payload
 
 
 def _read_price_card_reference(path: Path | None) -> PriceCardReference | None:
@@ -1064,13 +1564,31 @@ def _agent_command(args: argparse.Namespace) -> int:
                 output_dir=Path("runs/protocol-tests"),
             )
         )
+        actor = "player_1"
+        checks = {
+            "tested_actions": result.score.logical_action_count_by_player.get(actor, 0),
+            "agent_errors": result.score.agent_error_count_by_player.get(actor, 0),
+            "illegal_actions": result.score.illegal_action_count_by_player.get(actor, 0),
+            "fallback_actions": result.score.fallback_action_count_by_player.get(actor, 0),
+        }
+        ok = checks["tested_actions"] > 0 and all(
+            checks[name] == 0 for name in ("agent_errors", "illegal_actions", "fallback_actions")
+        )
         print(
             json.dumps(
-                {"ok": True, "run_id": result.run_id, "artifact": str(result.artifact_path)},
+                {
+                    "ok": ok,
+                    "run_id": result.run_id,
+                    "artifact": str(result.artifact_path),
+                    "checks": checks,
+                    "failure_reason": None
+                    if ok
+                    else result.score.invalid_reason or "agent_not_exercised",
+                },
                 indent=2,
             )
         )
-        return 0
+        return 0 if ok else 1
     if args.agent_command == "publish":
         print(
             json.dumps(

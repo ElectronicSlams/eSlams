@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
 from eslams.agents import HttpAgent, MockProviderAgent, ModelProviderAgent
 from eslams.artifacts import (
     ArtifactValidator,
@@ -13,7 +15,7 @@ from eslams.contracts import schema_versions
 from eslams.contracts.artifact import no_secret_examples as artifact_examples
 from eslams.contracts.catalogue import no_secret_examples as catalogue_examples
 from eslams.contracts.eval_plan import no_secret_examples as eval_plan_examples
-from eslams.contracts.json_schema import export_schemas
+from eslams.contracts.json_schema import export_schemas, schema_for_version
 from eslams.contracts.json_schema import no_secret_examples as schema_examples
 from eslams.contracts.provider import no_secret_examples as provider_examples
 from eslams.contracts.publication import no_secret_examples as publication_examples
@@ -25,6 +27,8 @@ from eslams.runner import RunConfig, Runner
 
 
 def test_schema_versions_have_no_secret_examples_and_export_deterministically(tmp_path: Path):
+    for version in schema_versions():
+        Draft202012Validator.check_schema(schema_for_version(version))
     examples = {}
     for provider in (
         artifact_examples,
@@ -266,7 +270,7 @@ def test_runner_persists_each_provider_retry_receipt(tmp_path: Path, monkeypatch
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     result = Runner().run(
         RunConfig(
@@ -320,7 +324,7 @@ def test_runner_persists_http_agent_provider_receipts(tmp_path: Path, monkeypatc
             request=httpx.Request("POST", url),
         )
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     result = Runner().run(
         RunConfig(
@@ -370,7 +374,7 @@ def test_runner_provider_status_cases(tmp_path: Path, monkeypatch):
         payload = responses.pop(0)
         return httpx.Response(200, json=payload, request=httpx.Request("POST", url))
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     missing_receipt = Runner().run(
         RunConfig(
@@ -435,7 +439,7 @@ def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, c
     )
     assert manifest["schema_version"] == "eslams.schema.bundle_manifest.v1"
     assert manifest["core_package_version"] == "0.6.1"
-    assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v4"
+    assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v5"
     assert any(
         row["schema_version"] == "eslams.catalogue.renderer.v1" for row in manifest["schemas"]
     )

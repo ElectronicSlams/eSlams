@@ -83,7 +83,6 @@ class ArenaState:
             "turn": self.turn,
             "active_player": self.active_player,
             "public_state": self.public_state,
-            "legal_actions_by_player": self.legal_actions_by_player,
             "scores": self.scores,
             "terminal": self.terminal,
             "outcome": self.outcome,

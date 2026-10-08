@@ -25,12 +25,8 @@ def test_official_merge_writes_leaderboard_ready_summary(tmp_path: Path):
     assert payload["rows"][0]["valid_for_scoring"] is True
     assert payload["rows"][0]["proof_row_publication_eligible"] is False
 
-
-def test_cli_official_merge(tmp_path: Path):
+    # Retained assertions from test_cli_official_merge.
     Runner().run(RunConfig(arena_id="tic-tac-toe", seed=3, output_dir=tmp_path, archive=True))
 
-    assert (
-        main(["official", "merge", str(tmp_path), "--out", str(tmp_path / "official.json")])
-        == 0
-    )
+    assert main(["official", "merge", str(tmp_path), "--out", str(tmp_path / "official.json")]) == 0
     assert (tmp_path / "official.json").exists()

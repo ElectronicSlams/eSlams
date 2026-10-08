@@ -22,7 +22,8 @@ Optional response fields:
 
 Deterministic failures:
 
-- invalid JSON: retry once in platform mode, then `invalid_action`
+- invalid JSON/response: HTTP agents are not retried by Core; the runner records
+  `agent_error` / `action_response_unparseable`
 - timeout: `timeout`
 - illegal action: `illegal_action`
 - crash: `agent_crash`
@@ -37,8 +38,9 @@ eslams run --on-agent-error forfeit --on-illegal-action forfeit
 eslams run --on-agent-error fallback --on-illegal-action fallback
 ```
 
-`fallback` is the smoke/demo default and chooses the arena's deterministic
-failure action. `invalid-match` records the run as not valid for scoring.
+`invalid-match` is the CLI default for both agent and illegal-action failures.
+`fallback` is an explicit smoke/demo opt-in that chooses the arena's
+deterministic failure action and still records the run as invalid for scoring.
 `forfeit` ends the match with the other player as winner and also records the
 run as not valid for scoring.
 
@@ -57,7 +59,8 @@ redacted provider receipts:
 - normalized usage and explicit unavailable reasons
 - pricing provenance and `cost_unavailable` when pricing is not configured
 
-Provider receipts use `eslams.provider.receipt.v1`. Public replay exports never
+Provider receipts use `eslams.provider.receipt.v2`; physical attempt events use
+`eslams.provider-attempt.v2`. Public replay exports never
 include raw prompts, raw responses, request headers, tokens, API keys, or debug
 provider payloads.
 
@@ -66,3 +69,23 @@ Run a no-spend provider preflight:
 ```bash
 eslams providers preflight --provider openai --model gpt-5-mini --arena tic-tac-toe
 ```
+
+## Response limits and validation
+
+Agent and provider HTTP response bodies must use identity encoding and fit within
+1 MiB. Core requests `Accept-Encoding: identity` and rejects compressed replies
+before reading or decompressing them. HTTP transport/status failures remain
+distinct from malformed action responses.
+
+`confidence`, when supplied, must be a finite numeric value in [0, 1], excluding
+booleans. It is never clamped to hide a malformed model response. Response fields,
+including nested metadata, must be valid JSON with UTF-8-encodable text; NaN,
+Infinity and unpaired UTF-16 surrogates are rejected. `public_explanation` is
+limited to 16 KiB of UTF-8. In-process agent responses obey the same validation
+before they enter traces; a caller's own allocation inside a Python agent is
+outside the HTTP transport limit. Rejected responses follow the selected runner
+failure policy and produce a diagnostic artifact with scoring disabled.
+
+Model-provider transport retries and action-repair attempts are separately
+configured in `ProviderRuntimeConfig` and recorded in the attempt ledger. That
+provider behavior does not promise a retry for arbitrary HTTP `/act` agents.

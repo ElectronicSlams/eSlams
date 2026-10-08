@@ -35,7 +35,7 @@ def _request() -> ActRequest:
         legal_actions=[0, 1, 2],
         action_schema={"type": "integer"},
         history=[],
-        time_budget_ms=1000,
+        time_budget_ms=30_000,
         memory_policy="current_observation_plus_public_history",
     )
 
@@ -93,7 +93,7 @@ def test_openai_model_agent_parses_legal_json_action(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     response = ModelProviderAgent(
         provider="openai",
@@ -142,7 +142,7 @@ def test_http_agent_preserves_provider_receipt_metadata(monkeypatch):
             request=httpx.Request("POST", url),
         )
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     agent = HttpAgent(url="https://agent.example/act")
     response = agent.act(_request())
@@ -184,7 +184,7 @@ def test_http_agent_recursively_redacts_sensitive_endpoint_metadata(monkeypatch)
             request=httpx.Request("POST", url),
         )
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     agent = HttpAgent(
         url="https://agent.example/act",
         endpoint_metadata={
@@ -248,7 +248,7 @@ def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     response = ModelProviderAgent(
         provider="openai",
@@ -278,7 +278,7 @@ def test_openai_registry_can_select_none_reasoning_effort(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     response = ModelProviderAgent(
         provider="openai",
@@ -324,7 +324,7 @@ def test_gemini_model_agent_receipt_does_not_include_key(monkeypatch):
         )
 
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     agent = ModelProviderAgent(
         provider="gemini",
@@ -367,7 +367,7 @@ def test_google_provider_uses_gemini_endpoint_and_configurable_thinking(monkeypa
         )
 
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     agent = ModelProviderAgent(
         provider="google",
@@ -414,7 +414,7 @@ def test_gemma_model_agent_omits_thinking_config(monkeypatch):
         )
 
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     response = ModelProviderAgent(
         provider="gemini",
@@ -452,7 +452,7 @@ def test_anthropic_model_agent_sends_thinking_budget(monkeypatch):
         )
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     agent = ModelProviderAgent(
         provider="anthropic",
@@ -487,7 +487,9 @@ def test_provider_agent_uses_generic_gateway_base_url(monkeypatch):
     ) -> httpx.Response:
         assert url == "https://gateway.example/v1/responses"
         assert isinstance(timeout, httpx.Timeout)
-        assert timeout.as_dict() == {"connect": 2.0, "read": 12.0, "write": 12.0, "pool": 2.0}
+        assert timeout.connect == timeout.pool == 2.0
+        assert 11.9 < timeout.read <= 12.0
+        assert timeout.write == timeout.read
         return httpx.Response(
             200,
             json=_openai_wire('{"action": 1}'),
@@ -495,7 +497,7 @@ def test_provider_agent_uses_generic_gateway_base_url(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     agent = ModelProviderAgent(
         provider="openai",
@@ -541,7 +543,7 @@ def test_provider_agent_retries_and_records_every_attempt(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     agent = ModelProviderAgent(
         provider="openai",
@@ -574,7 +576,7 @@ def test_provider_agent_does_not_retry_non_rate_limited_4xx(monkeypatch):
         return httpx.Response(400, text="bad request")
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     agent = ModelProviderAgent(
         provider="openai",
@@ -611,7 +613,7 @@ def test_provider_agent_retries_429_and_honors_retry_after(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     monkeypatch.setattr("eslams.agents.time.sleep", lambda seconds: sleeps.append(seconds))
 
     agent = ModelProviderAgent(
@@ -655,7 +657,7 @@ def test_provider_receipt_extracts_nested_usage_and_prices_cost(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     agent = ModelProviderAgent(
         provider="openai",
@@ -705,7 +707,7 @@ def test_provider_agent_applies_rate_limit(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     monkeypatch.setattr("eslams.agents.time.monotonic", lambda: now["value"])
     monkeypatch.setattr("eslams.agents.time.sleep", lambda seconds: sleeps.append(seconds))
 
@@ -752,7 +754,7 @@ def test_provider_agent_honors_concurrency_limit(monkeypatch):
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     runtime_config = ProviderRuntimeConfig(
         concurrency_limit=1,
         gateway_base_url="https://gateway-concurrency.example",

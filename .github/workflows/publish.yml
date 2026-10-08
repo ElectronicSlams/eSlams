@@ -25,22 +25,28 @@ jobs:
       - name: Resolve publish ref
         id: publish-ref
         shell: bash
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          if [ -n "${{ github.event.inputs.ref }}" ]; then
-            echo "ref=${{ github.event.inputs.ref }}" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "ref=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
+          python - <<'PYTHON'
+          import os
+
+          ref = os.environ.get("INPUT_REF") or os.environ.get("RELEASE_TAG") or os.environ["GITHUB_REF_NAME"]
+          if not ref or any(char in ref for char in "\r\n"):
+              raise SystemExit("publish ref must be a single line")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8", newline="\n") as handle:
+              handle.write(f"ref={ref}\n")
+          PYTHON
 
       - name: Check out release source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ steps.publish-ref.outputs.ref }}
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
@@ -79,6 +85,6 @@ jobs:
         run: python -m twine check dist/*
 
       - name: Publish distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           packages-dir: dist/

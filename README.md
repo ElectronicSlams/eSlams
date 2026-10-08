@@ -22,6 +22,9 @@ catalogue listed below.
 
 ## Contents
 
+- [Local lab quickstart](docs/LABS.md)
+- [Docs index](docs/DOCS_INDEX.md)
+
 - [Install](#install)
 - [Quick Start](#quick-start)
 - [Run Model Agents](#run-model-agents)
@@ -65,8 +68,20 @@ human, validated by a machine, and uploaded as a portable proof package.
 
 ## Install
 
+On Linux/macOS (including systems with an externally managed Python):
+
 ```bash
-pip install eslams-core
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install eslams-core
+```
+
+On Windows PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install eslams-core
+.venv\Scripts\eslams.exe --version
 ```
 
 For local development:
@@ -74,12 +89,33 @@ For local development:
 ```bash
 git clone https://github.com/ElectronicSlams/eSlams.git
 cd eSlams
-python -m venv .venv
+python3 -m venv .venv
 . .venv/bin/activate
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 ```
 
-Core supports Python 3.9 through 3.12.
+This development branch requires Python 3.10+ and tests Python 3.10 through 3.12.
+Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
+configuration names; Core does not load `.env` automatically. Export selected
+settings explicitly and keep secrets in ignored local files or service
+configuration. Cross-platform development commands are in [CONTRIBUTING](https://github.com/ElectronicSlams/eSlams/blob/main/CONTRIBUTING.md).
+
+Source archives exported from commits containing this change preserve their
+commit identity using Git archive substitution. Earlier tag archives retain
+their historical packaging limitation: use the published PyPI sdist/wheel or a
+Git checkout. A copied tree with neither Git nor embedded/exported provenance
+still fails closed. Python distributions include PEP 561 `py.typed` markers.
+
+### Third-party chess license
+
+Core's own source is MIT-licensed. The required `python-chess` dependency
+installs the `chess` library; both declare GPL-3.0-or-later in their
+[PyPI metadata](https://pypi.org/project/chess/1.11.2/) and
+[upstream documentation](https://python-chess.readthedocs.io/en/latest/#license).
+Their licenses are separate from Core's MIT license. Downstream distributors
+should include and review those third-party notices for their distribution.
+The chess dependency remains required in this branch; it has not been silently
+made optional or replaced.
 
 ## Quick Start
 
@@ -105,6 +141,12 @@ Use `--expanded` when you only want the expanded directory:
 eslams run --arena chess --agent first-legal --opponent first-legal --expanded
 ```
 
+After `--expanded`, validate or replay `runs/latest.eslams.d`. The archive
+pointer is removed. Latest links use relative targets so they survive moving
+or copying the runs directory. If symlink privileges are unavailable, Core
+reports the completed artifact path and warns that latest links were not
+updated. Use the returned `artifact` path in automation and concurrent runs.
+
 ## Run Model Agents
 
 Pass `provider:model` to use a provider-backed model agent.
@@ -119,7 +161,7 @@ export AWS_BEARER_TOKEN_BEDROCK=...
 eslams run \
   --arena chess \
   --agent openai:gpt-5-mini \
-  --opponent anthropic:claude-sonnet-4-20250514
+  --opponent anthropic:claude-sonnet-4-6
 
 eslams run \
   --arena connect-four \
@@ -143,7 +185,7 @@ eslams run \
 Provider receipts are written into the artifact without API keys. Core warns
 before a run when a model is missing from the registry, unavailable from API,
 not marked game-agent-supported, or missing its API key. See
-[the provider guide](docs/PROVIDERS.md) for the exact wire adapters, model
+[the provider guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDERS.md) for the exact wire adapters, model
 identity rules, reasoning behavior, usage semantics, and rate-card contract.
 
 Use the verified provider workflow before spending on a run:
@@ -167,9 +209,33 @@ eslams validate runs/latest.eslams --profile runner-bundle
 eslams replay runs/latest.eslams
 ```
 
+Provider keys may include pasted leading/trailing whitespace; Core trims it.
+Internal whitespace and non-ASCII credentials fail before a network call, with
+a redacted `provider_auth_failed` diagnostic. A provider namespace in the
+catalogue does not imply a Core inference adapter; preflight checks both.
+Inline retry waits are limited to five seconds: larger provider hints or
+configured backoffs abort with the failed receipt retained. Core does not retry
+earlier than a provider's requested wait. Retry hint receipts are bounded at
+24 hours for safe serialization. Official execution still disallows adapter
+retries and leaves whole-case retries to its orchestrator.
+
 `preflight_mode` is always `registry_only` or `live`, and every live check is
 reported separately. A registry-only pass does not prove that a provider
 account can invoke the model.
+
+A completed diagnostic run exits 0 even if `summary.match_valid_for_scoring`
+is false. For scoring automation, add `--require-scoring-valid`: it preserves
+the diagnostic artifact and exits 1 on an invalid match. Input/execution errors
+also exit nonzero. `--runner-result-json` continues to report validation status.
+
+Table arenas require explicit agents for seats beyond player_2. For example:
+
+```bash
+eslams run --arena bridge --seat-agent player_3=first-legal --seat-agent player_4=random
+```
+
+Repeat `--seat-agent PLAYER=AGENT` for each seat; assignments override the
+corresponding `--agent` / `--opponent` option. Unknown or duplicate seats fail.
 
 The default failure policies are fail-closed (`invalid-match`). For model
 comparison runs, keep them explicit in automation:
@@ -178,7 +244,7 @@ comparison runs, keep them explicit in automation:
 eslams run \
   --arena chess \
   --agent openai:gpt-5-mini \
-  --opponent anthropic:claude-sonnet-4-20250514 \
+  --opponent anthropic:claude-sonnet-4-6 \
   --on-agent-error invalid-match \
   --on-illegal-action invalid-match
 ```
@@ -206,8 +272,8 @@ Failure policies:
 Execution profiles are `interactive`, `smoke`, and `official_eval`.
 `official_eval` rejects fallback policies and provider-local retries; the
 official orchestrator owns whole-case retries. Set `--case-attempt-index` on a
-replayed case so physical attempt IDs stay idempotent and retry-scoped. Existing
-artifact paths are refused unless `--overwrite` is explicit.
+replayed case so physical attempt IDs stay idempotent and retry-scoped. Each run normally has a unique ID. Use `--run-id NAME` to select a fixed
+artifact path; existing output is refused unless `--overwrite` is explicit.
 
 Reasoning is controlled with `--reasoning disabled|enabled|auto`. Core sends
 only model-supported controls. Anthropic manual thinking requires a budget of
@@ -324,10 +390,10 @@ winner, terminal reason, legal count, check/checkmate status, and score.
 ## Platform Contracts
 
 Core exposes stable, no-secret contracts for Platform and runner/container
-integrations. See [docs/PLATFORM_CONTRACTS.md](docs/PLATFORM_CONTRACTS.md) for
+integrations. See [docs/PLATFORM_CONTRACTS.md](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PLATFORM_CONTRACTS.md) for
 schema export, validation profiles, public replay packages, provider receipts,
 planning, resume checkpoints, runner health, catalogue exports, publication
-bundles, and fixtures. See [CHANGELOG.md](CHANGELOG.md) for the release summary
+bundles, and fixtures. See [CHANGELOG.md](https://github.com/ElectronicSlams/eSlams/blob/main/CHANGELOG.md) for the release summary
 of contract and CLI changes.
 
 Common integration commands:
@@ -339,7 +405,7 @@ eslams artifact public-export runs/latest.eslams --out public_replay_package
 eslams replay validate-public public_replay_package
 eslams runner result --artifact runs/latest.eslams --artifact-uri URI --job-id JOB
 eslams providers preflight --provider openai --model gpt-5-mini --arena tic-tac-toe
-eslams plan official --suite public-smoke --providers openai --arenas tic-tac-toe --json
+eslams plan battlefield --pairs openai:gpt-5-mini --arenas tic-tac-toe --json
 eslams publish export --kind uploaded-replay --artifact runs/latest.eslams --out bundle
 eslams publish validate bundle --json
 eslams arena smoke --all --json
@@ -349,13 +415,20 @@ eslams core golden --games tic-tac-toe,connect-four --out fixtures/core_golden.j
 eslams bench arena-step --games tic-tac-toe,connect-four --iterations 100
 ```
 
+The shipped public registry enables no models for Official evaluation.
+`plan official --suite public-smoke` rejects an empty selection with an actionable
+error. The Battlefield example above is a showcase plan and grants no Official authority.
+
 Core v0.4.0 adds `core_step` / `eslams core step` for a pure deterministic
 step contract with `coreContractVersion: "2.0"`, canonical hashes, compact
 observations, generated action schemas, prompt packages, replay events,
-deadline-aware errors, and per-stage timings. The package also ships
-Platform-facing TypeScript contracts in `packages/core-contracts` and a gated
-`packages/core-lite` TypeScript runtime for tic-tac-toe and connect-four
-parity work.
+deadline-aware errors, and per-stage timings. The repository contains
+Platform-facing TypeScript source in `packages/core-contracts` and the gated
+`packages/core-lite` runtime. These are excluded from the Python wheel and
+are not published npm packages; integrate them from a pinned source checkout.
+Core-lite's supported tic-tac-toe/connect-four deterministic state and step
+fields are checked against Python fixtures in CI; see its
+[supported scope](packages/core-lite/README.md).
 
 ## Arena Session Transport
 
@@ -379,9 +452,10 @@ stepped = step_session(started["session_state"], "player_1", "4")
 page = legal_actions_page(started["session_state"], "player_1", query="center")
 ```
 
-CLI API:
+CLI API (set the same secret before Python calls too):
 
 ```bash
+export ESLAMS_ARENA_SESSION_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 eslams arena start \
   --game tic-tac-toe \
   --variant standard \
@@ -392,9 +466,9 @@ eslams arena start \
 Start and step responses include `public_state`, a canonical live
 `display_frame`, active/next actor metadata, legal action tokens, polished
 `legal_action_descriptors`, public-safe Arena events, strict state hash status,
-paging metadata, and Core timing fields. `session_state` is a signed opaque
-server envelope, verified with `ESLAMS_ARENA_SESSION_SECRET`, and must still be
-kept on the server. Browser-streamable fields are `public_state`,
+paging metadata, and Core timing fields. `session_state` is a signed server-only
+envelope, verified with `ESLAMS_ARENA_SESSION_SECRET`, and must still be
+kept on the server. For the active human recipient, browser-streamable fields are `public_state`,
 `display_frame`, `legal_action_descriptors`, `events`, actor metadata,
 terminal/outcome fields, and timing.
 
@@ -405,33 +479,47 @@ action sets can be paged or searched with `legal_actions_page`.
 
 Arena event types include `session.started`, `human.action.accepted`,
 `state.applied`, `model.action.requested`, `model.action.accepted`,
-`arena.auto_advanced`, `turn.ready_for_human`, `match.completed`, and
-`turn.failed`. Events and display frames are public-safe and never include
+`turn.ready_for_human`, `match.completed`, and
+`turn.failed`. `arena.auto_advanced` is reserved and is not emitted.
+Human legal-action lists are recipient-specific and must be routed privately;
+signed full-state envelopes stay on the trusted server. Public projections omit
 prompts, raw responses, private observations, provider receipts, hidden eval
 material, or private reasoning.
 
 ## Sample Runs
 
-Curated sample runs live in [sample_runs/](sample_runs/). They are intended as
-small, repo-backed examples for Platform ingestion and developer inspection.
+The [sample tree](sample_runs/README.md) contains keyless Local fixtures and
+validated publication shapes, with [checksums and expected status](docs/SAMPLE_CLASSIFICATION.md).
 
-- `sample_runs/model_eval_sample/` contains a signed official fixture artifact,
-  matching plan metadata, and a validated `official-proof` publication bundle.
-- `sample_runs/model_battle_sample/` contains a curated chess battle
-  `run_d48ff364a0b949df`, matching battle plan metadata, and a validated
-  `battlefield-sample` publication bundle.
+- `model_battle_sample/sample_builtin_chess.eslams` is a completed built-in
+  first-legal versus first-legal chess run; it is not a provider model battle.
+- `model_eval_sample/local_eval_fixture.eslams` is an unsigned tic-tac-toe
+  fixture exported with the `official-proof` bundle kind. Its rows establish
+  no Official or Grand Slam trust.
 
-The sample README documents the selection criteria for tracked sample artifacts.
+The former `run_d48ff364a0b949df` model-battle claim did not match the tracked
+file. Historical invalid/HMAC samples are replaced, rather than described as
+current validated proofs. Producer commits and unchanged historical limitations
+are explicit in [sample classification](docs/SAMPLE_CLASSIFICATION.md).
 
 ## Upload to eslams.com
 
-Use the packaged `.eslams` archive for uploads.
+A runner bundle is a private intake archive, not a public page. `runs/latest.eslams`
+can include auditor traces and `logs/agent_io.jsonl` with plaintext hidden state.
+Upload that archive only to a private intake path.
+
+For a public replay page, export the public replay package and upload that
+package instead:
+
+```bash
+eslams artifact public-export runs/latest.eslams --out public_replay_package
+```
 
 1. Run locally with Core.
 2. Validate the artifact.
 3. Open [eslams.com](https://eslams.com).
 4. Use the Artifact Intake panel.
-5. Upload `runs/latest.eslams` or a specific `run_<id>.eslams` archive.
+5. Upload `runs/latest.eslams` or a specific `run_<id>.eslams` archive for private intake, or upload `public_replay_package` when the page is public.
 6. Open the generated replay, score, and artifact proof pages.
 
 ```bash
@@ -461,10 +549,10 @@ compact/lite arenas do not overclaim full game coverage.
 | `gomoku` | `standard` | faithful |
 | `hex` | `standard` | faithful |
 | `mancala` | `standard` | faithful |
-| `nine-mens-morris` | `standard` | faithful |
+| `nine-mens-morris` | `standard` | compact |
 | `pentago` | `standard` | faithful |
 | `ultimate-tic-tac-toe` | `standard` | faithful |
-| `battleship` | `standard` | faithful |
+| `battleship` | `standard` | compact |
 | `blackjack` | `core_hit_stand_s17` | compact |
 | `leduc-holdem` | `core_compact_leduc_fixed_menu` | compact |
 | `limit-texas-holdem` | `core_compact_holdem_fixed_menu_limit` | compact |
@@ -478,7 +566,7 @@ compact/lite arenas do not overclaim full game coverage.
 | `spades` | `core_trump_tricks` | compact |
 | `euchre` | `core_call_and_play` | compact |
 | `cribbage` | `core_discard_showdown` | compact |
-| `crazy-eights` | `core_wild_eight_shedding` | faithful |
+| `crazy-eights` | `core_wild_eight_shedding` | compact |
 | `hanabi` | `core_compact_hanabi` | compact |
 | `prisoners-dilemma` | `core_one_shot_matrix` | faithful |
 | `bargaining` | `core_bilateral_split` | compact |
@@ -499,7 +587,34 @@ compact/lite arenas do not overclaim full game coverage.
 | `alien-shooter` | `standard` | inspired-by |
 | `boxing-style-arena` | `standard` | inspired-by |
 | `ice-hockey-style-arena` | `standard` | inspired-by |
-| `backgammon` | `standard` | faithful |
+| `backgammon` | `standard` | compact |
+
+Paddle-ball 1.1.0 allows 400 actions so its ten-bounce target is reachable.
+Ultimate Tic-Tac-Toe 1.1.0 draws when all local boards are decided without a
+global line. Nine Men's Morris retains a compact 120-action episode draw rule;
+its results can differ from standard games that continue from that position.
+Catalogue help examples name the initial seed-1 position and contain real legal
+tokens; query each current state's legal actions before playing them.
+
+Auction 1.1.0 separates the item recipient (`allocation_winner`) from the match
+winner by utility. The highest bid receives the item; tied bids alternate by seed
+parity. Utility includes overbid losses, and score is `(utility + 10) / 20`.
+Equal utilities draw. Negotiation 1.1.0 enforces both private reserve utilities;
+below-reserve acceptance cannot produce a deal. Its price grid uses steps of ten,
+which admits a mutually feasible deal for every generated reserve combination.
+
+Alien-shooter 1.1.0 resolves hits after projectile motion and after alien descent.
+Aliens descend once per twelve actions. A public-observation tracking policy can
+clear all 1,225 possible initial formations within 28 actions, making the full
+score attainable across the seeded layout support.
+
+Backgammon 1.1.0 retains the compact five-checker game and 160-action episode
+limit. Legal moves enforce maximum dice use, the larger-die rule when only one
+number can be played, and bearing off an overshoot only from the farthest checker.
+When the remaining roll is blocked, `pass` records a turn transition and the next
+seat's fresh roll; each pass counts toward the episode limit. Both seats can pass
+without producing an empty-action live state.
+The move constraints follow the [USBGF playing rules](https://usbgf.org/backgammon-basics-how-to-play/).
 
 List arenas from your installed copy:
 
@@ -560,21 +675,27 @@ eslams models list --provider openai --game-agent-supported
 eslams models list --provider gemini --game-agent-supported --json
 ```
 
-From a source checkout, refresh the generated registry:
+From a source checkout, generate a separate registry snapshot for review:
 
 ```bash
-eslams models update --providers openai,anthropic,google,openrouter,bedrock
+eslams models update --providers openai,anthropic,google,openrouter,bedrock --output model-registry.snapshot.json
 ```
+
+The updater requires a new `--output` file. A provider filter defines the snapshot
+scope; it can produce a smaller inventory. Inspect it before deliberately replacing
+checked-in data. It never changes the packaged registry implicitly, and a failed
+source fetch does not produce a successful partial snapshot.
 
 Provider organizations tracked by the registry:
 
-Core tracks the same **90 canonical provider/author namespaces** as the public
-eSlams model catalog. The count is source-backed: 69 organizations were in the
+The full CLI registry currently contains **8,762 model rows across 259 provider
+namespaces**. The table below and generated inventory describe a **90-namespace
+curated subset**, rather than the full CLI registry. The curated count is source-backed: 69 organizations were in the
 original curated Core list, Cursor was added from the platform's API-discovered
 Composer model row, and 20 additional author namespaces come from the
 release-pinned OpenRouter text-model snapshot. A listing is a catalog identity,
 not a claim that Core has a direct adapter or that a deployed account can call
-the provider. See [the generated registry inventory](docs/REGISTRY_AVAILABLE_MODELS.md)
+the provider. See [the generated registry inventory](https://github.com/ElectronicSlams/eSlams/blob/main/docs/REGISTRY_AVAILABLE_MODELS.md)
 for the per-model snapshot and verification boundary.
 
 | Provider Key | Organization |
@@ -675,31 +796,8 @@ through an HTTP `/act` agent.
 
 ## Artifact Anatomy
 
-Expanded artifacts use this shape:
-
-```text
-run_<id>.eslams.d/
-  manifest.json
-  traces/public_trace.jsonl
-  traces/agent_visible_trace.jsonl
-  traces/private_judge_trace.jsonl
-  traces/auditor_trace.jsonl
-  replay/replay_events.jsonl
-  replay/display_frames.jsonl
-  replay/replay_manifest.json
-  replay/index.html
-  scores/score.json
-  scores/metrics.json
-  logs/runner.log
-  logs/agent_io.jsonl
-  logs/errors.jsonl
-  receipts/provider_receipts.jsonl
-  environment/lockfile.json
-  environment/container_digest.txt
-  environment/package_versions.json
-  broadcast/broadcast_manifest.json
-  broadcast/vod_metadata.json
-```
+See the canonical [expanded package layout](https://github.com/ElectronicSlams/eSlams/blob/main/docs/ARTIFACTS.md#package-layout),
+including optional signatures and volatile timing sidecars.
 
 `manifest.json` contains:
 
@@ -720,12 +818,15 @@ When `RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY` is set, Core writes an Ed25519 runner
 signature:
 
 ```bash
-export RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY=base64:...
+export RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY="$(python -c 'import base64; from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption; key = Ed25519PrivateKey.generate(); print("base64:" + base64.b64encode(key.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())).decode())')"
 export RUNNER_ARTIFACT_SIGNING_KEY_ID=local-ci-key
 eslams run --arena connect-four --agent random
 eslams validate runs/latest.eslams
 ```
 
+The private key is exactly 32 raw Ed25519 bytes encoded as `base64:` or `hex:`.
+Malformed keys fail before agent calls or output. For a separate verifier, use
+[the matching public-key recipe](https://github.com/ElectronicSlams/eSlams/blob/main/docs/ARTIFACTS.md#replay-trust-and-local-verification-keys).
 The private signing key is never written to the artifact. Legacy HMAC
 signatures remain readable for old artifacts, but only Ed25519 v2 signatures can
 satisfy official bundle trust.
@@ -918,3 +1019,11 @@ In plain terms:
 - Repository: [https://github.com/ElectronicSlams/eSlams](https://github.com/ElectronicSlams/eSlams)
 - Issues: [https://github.com/ElectronicSlams/eSlams/issues](https://github.com/ElectronicSlams/eSlams/issues)
 - Support: `hello@eslams.com`
+
+Session privacy: the HMAC envelope is base64 JSON containing full private state,
+not encryption. Keep `session_state` on trusted servers; never stream it to a
+browser. Legal action lists/descriptors are emitted only for the active human
+recipient and must be privately routed to that person. Model-seat lists stay
+inside the trusted runner, obtainable from the server-side state. Public views
+omit legal action lists. Pending sealed actions and their explanations remain
+hidden until the arena reveal phase.

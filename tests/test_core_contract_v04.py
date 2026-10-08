@@ -29,7 +29,7 @@ from eslams.model_actions import (
     parse_model_action,
     streaming_action_status,
 )
-from eslams.observation_budgets import observation_budget_report
+from eslams.observation_budgets import all_observation_budget_reports, observation_budget_report
 from eslams.runner_session import RunnerSessionStore
 
 
@@ -110,20 +110,6 @@ def test_core_step_debug_observation_requires_env_flag(monkeypatch):
     assert response["ok"] is True
     assert response["observation"]["view"] == "public_compact"
     assert "state" not in response["observation"]
-
-
-def test_prompt_package_is_cache_friendly_and_schema_first():
-    arena = registry.create("connect-four")
-    state = arena.initial_state(seed=1)
-
-    package = prompt_package(arena=arena, state=state, actor_id=state.active_player)
-
-    assert package["promptVersion"] == "eslams.core.prompt.v2"
-    assert package["stablePrefix"][0]["cacheRecommended"] is True
-    assert package["dynamicTurn"]["currentObservation"]
-    assert package["outputSchema"]["properties"]["action"]["required"] == ["action_id"]
-    assert package["promptHash"].startswith("sha256:")
-    assert package["tokenEstimate"] > 0
 
 
 def test_shared_model_action_parser_accepts_action_id_and_streaming_status():
@@ -208,6 +194,11 @@ def test_benchmark_budgets_golden_schemas_and_generated_contracts(tmp_path: Path
 
     budget = observation_budget_report(game_id="tic-tac-toe")
     assert budget["ok"] is True
+    reports = all_observation_budget_reports()
+    assert len(reports) == 50 and all(row["ok"] for row in reports)
+    for row in reports:
+        if row["gameId"] in {"gomoku", "pentago"}:
+            assert row["budget"]["documentedOverride"]
 
     golden = golden_fixture_bundle(game_ids=["tic-tac-toe", "connect-four"])
     assert golden["coreVersion"] == CORE_PACKAGE_VERSION
@@ -219,12 +210,26 @@ def test_benchmark_budgets_golden_schemas_and_generated_contracts(tmp_path: Path
     assert f"{CORE_STEP_REQUEST_SCHEMA_VERSION}.schema.json" in names
     assert f"{CORE_STEP_RESPONSE_SCHEMA_VERSION}.schema.json" in names
 
-    generated = Path("packages/core-contracts/src/generated/core-step.ts")
+    generated = (
+        Path(__file__).resolve().parents[1] / "packages/core-contracts/src/generated/core-step.ts"
+    )
     assert "CoreStepRequest" in generated.read_text(encoding="utf-8")
-    assert Path("packages/core-lite/src/index.ts").exists()
+    assert (Path(__file__).resolve().parents[1] / "packages/core-lite/src/index.ts").exists()
 
+    # Retained assertions from test_prompt_package_is_cache_friendly_and_schema_first.
+    arena = registry.create("connect-four")
+    state = arena.initial_state(seed=1)
 
-def test_engine_capabilities_gate_core_lite_and_precompute():
+    package = prompt_package(arena=arena, state=state, actor_id=state.active_player)
+
+    assert package["promptVersion"] == "eslams.core.prompt.v2"
+    assert package["stablePrefix"][0]["cacheRecommended"] is True
+    assert package["dynamicTurn"]["currentObservation"]
+    assert package["outputSchema"]["properties"]["action"]["required"] == ["action_id"]
+    assert package["promptHash"].startswith("sha256:")
+    assert package["tokenEstimate"] > 0
+
+    # Retained assertions from test_engine_capabilities_gate_core_lite_and_precompute.
     tic_tac_toe = engine_capabilities("tic-tac-toe")
     poker = engine_capabilities("poker")
 

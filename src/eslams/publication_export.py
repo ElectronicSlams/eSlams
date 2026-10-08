@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
-import shutil
+import math
 from pathlib import Path
 from typing import Any
 
+from eslams.artifact_inputs import artifact_inputs
 from eslams.artifacts import (
     ArtifactValidator,
     extract_provider_usage,
@@ -18,6 +19,7 @@ from eslams.contracts.versions import (
     PUBLICATION_VALIDATION_SCHEMA_VERSION,
 )
 from eslams.hashing import canonical_json, sha256_file, sha256_json
+from eslams.output import staged_directory
 from eslams.policy import policy_key, publication_kind_label
 from eslams.public_replay import export_public_replay, validate_public_replay
 
@@ -43,15 +45,31 @@ def export_publication_bundle(
     artifact: Path | None = None,
     plan_path: Path | None = None,
 ) -> Path:
+    sources = [path for path in (artifacts_dir, artifact, plan_path) if path is not None]
+    with staged_directory(output_dir, sources=sources) as staged:
+        _export_publication_bundle(
+            kind=kind,
+            output_dir=staged,
+            artifacts_dir=artifacts_dir,
+            artifact=artifact,
+            plan_path=plan_path,
+        )
+    return output_dir.resolve()
+
+
+def _export_publication_bundle(
+    *,
+    kind: str,
+    output_dir: Path,
+    artifacts_dir: Path | None,
+    artifact: Path | None,
+    plan_path: Path | None,
+) -> None:
     if kind not in PUBLICATION_KINDS:
         valid = ", ".join(PUBLICATION_KINDS)
         raise ValueError(f"publication kind must be one of: {valid}")
-    output_dir = output_dir.resolve()
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True)
 
-    artifacts = _artifact_inputs(artifacts_dir=artifacts_dir, artifact=artifact)
+    artifacts = artifact_inputs(directory=artifacts_dir, artifact=artifact)
     plan_payload = _read_plan(plan_path)
     plan_hash = _plan_hash(plan_payload)
     suite_fingerprint = (
@@ -63,6 +81,7 @@ def export_publication_bundle(
     leaderboard_rows: list[dict[str, Any]] = []
     public_manifest_rows: list[dict[str, Any]] = []
     provider_model_rows: list[dict[str, Any]] = []
+    all_receipts: list[dict[str, Any]] = []
     aggregate_usage = {
         "input_tokens": 0,
         "output_tokens": 0,
@@ -72,9 +91,10 @@ def export_publication_bundle(
     }
 
     for index, artifact_path in enumerate(artifacts):
-        public_dir = output_dir / "public_replays" / f"{index:05d}_{artifact_path.stem}"
-        export_public_replay(artifact_path, public_dir)
         validation = ArtifactValidator().validate_report(artifact_path, profile="auto")
+        identity = str(validation.artifact_id).removeprefix("sha256:")
+        public_dir = output_dir / "public_replays" / f"{index:05d}_{identity}"
+        export_public_replay(artifact_path, public_dir)
         public_manifest = extract_public_manifest(artifact_path)
         if public_manifest:
             public_manifest_rows.append(public_manifest)
@@ -95,13 +115,14 @@ def export_publication_bundle(
                 }
             )
         usage = extract_provider_usage(artifact_path)["usage"]
+        all_receipts.extend(_provider_receipts(artifact_path))
         for key in aggregate_usage:
             value = usage.get(key)
             if isinstance(value, int):
                 aggregate_usage[key] += value
         proof_rows.append(
             {
-                "artifact": str(artifact_path),
+                "artifact": validation.artifact_id,
                 "artifact_id": validation.artifact_id,
                 "run_id": validation.run_id,
                 "validation_status": "valid" if validation.valid else "invalid",
@@ -116,6 +137,7 @@ def export_publication_bundle(
             }
         )
 
+    provider_model_rows = _provider_model_rows(all_receipts)
     _write_jsonl(output_dir / "public_manifest.jsonl", public_manifest_rows)
     _write_jsonl(output_dir / "proof_index.jsonl", proof_rows)
     _write_jsonl(output_dir / "leaderboard_rows.jsonl", leaderboard_rows)
@@ -132,7 +154,7 @@ def export_publication_bundle(
         output_dir / "aggregate_usage.json",
         {
             "usage": aggregate_usage,
-            "pricing": _cost_unavailable(),
+            "pricing": _receipt_pricing(all_receipts),
             "aggregate_leaderboard_eligible": False,
             "aggregate_ineligibility_reason": "publication_bundle_evidence_only",
         },
@@ -163,7 +185,6 @@ def export_publication_bundle(
         "aggregate_ineligibility_reason": "publication_bundle_evidence_only",
     }
     _write_json(output_dir / "bundle_manifest.json", bundle_manifest)
-    return output_dir
 
 
 def validate_publication_bundle(bundle_dir: Path) -> dict[str, Any]:
@@ -271,7 +292,18 @@ def validate_publication_bundle(bundle_dir: Path) -> dict[str, Any]:
         "bundle_manifest.json",
         errors,
     )
-    _validate_proof_rows(bundle_dir, projection_rows["proof_rows"], errors)
+    proof_rows = projection_rows["proof_rows"]
+    if not proof_rows:
+        errors.append("publication bundle requires at least one proof row")
+    identities = [row.get("artifact_id") for row in proof_rows]
+    if any(not isinstance(value, str) or not value for value in identities):
+        errors.append("proof rows require artifact identities")
+    if len({value for value in identities if isinstance(value, str)}) != len(identities):
+        errors.append("duplicate proof artifact identity")
+    _compare_field(
+        bundle_manifest, "artifact_count", len(proof_rows), "bundle_manifest.json", errors
+    )
+    _validate_proof_rows(bundle_dir, proof_rows, errors)
     _validate_aggregate_usage(aggregate_usage, errors)
     if signature_readback and "status" not in signature_readback:
         errors.append("signature_readback_manifest.json missing status")
@@ -290,28 +322,17 @@ def validate_publication_bundle(bundle_dir: Path) -> dict[str, Any]:
     }
 
 
-def _artifact_inputs(*, artifacts_dir: Path | None, artifact: Path | None) -> list[Path]:
-    if artifact is not None:
-        return [artifact.resolve()]
-    if artifacts_dir is None:
-        raise ValueError("either artifact or artifacts_dir is required")
-    candidates = []
-    for path in sorted(artifacts_dir.iterdir()):
-        if path.name.endswith(".eslams") or path.name.endswith(".eslams.d"):
-            if path.name.endswith(".eslams.d") and path.with_suffix("").exists():
-                continue
-            candidates.append(path.resolve())
-    return candidates
-
-
 def _read_plan(plan_path: Path | None) -> dict[str, Any] | None:
-    if plan_path is None or not plan_path.exists():
+    if plan_path is None:
         return None
-    try:
-        value = json.loads(plan_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
-    return value if isinstance(value, dict) else None
+    from eslams.planning import validate_plan
+
+    value = json.loads(plan_path.read_text(encoding="utf-8"))
+    validate_plan(value)
+    assert isinstance(value, dict)
+    if value["case_count_expected"] == 0:
+        raise ValueError("publication plan contains no cases")
+    return value
 
 
 def _plan_hash(plan_payload: dict[str, Any] | None) -> str | None:
@@ -346,12 +367,14 @@ def _object_manifest(output_dir: Path) -> list[dict[str, Any]]:
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
+    path.write_text(canonical_json(payload) + "\n", encoding="utf-8", newline="\n")
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
+    path.write_text(
+        "".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8", newline="\n"
+    )
 
 
 def _read_bundle_json(path: Path, errors: list[str]) -> dict[str, Any]:
@@ -421,9 +444,10 @@ def _validate_proof_rows(
             errors.append(f"proof row {index} must declare publication eligibility")
         if row.get("aggregate_leaderboard_eligible") is True:
             errors.append(f"proof row {index} cannot be aggregate leaderboard eligible")
-        if row.get("leaderboard_predicate") is True and row.get(
-            "leaderboard_predicate_configured"
-        ) is not True:
+        if (
+            row.get("leaderboard_predicate") is True
+            and row.get("leaderboard_predicate_configured") is not True
+        ):
             errors.append(f"proof row {index} cannot be a leaderboard predicate by default")
         if row.get("leaderboard_predicate") is True and publication_eligible is not True:
             errors.append(f"proof row {index} is ineligible for leaderboard publication")
@@ -462,12 +486,102 @@ def _validate_aggregate_usage(payload: dict[str, Any], errors: list[str]) -> Non
         errors.append("aggregate_usage.json pricing.source is required when pricing is available")
 
 
-def _cost_unavailable() -> dict[str, Any]:
+def _provider_receipts(artifact: Path) -> list[dict[str, Any]]:
+    try:
+        text = read_member(artifact, "receipts/provider_receipts.jsonl").decode("utf-8")
+    except (OSError, KeyError):
+        return []
+    rows = [json.loads(line) for line in text.splitlines() if line.strip()]
+    if any(not isinstance(row, dict) for row in rows):
+        raise ValueError("provider receipt must be an object")
+    return rows
+
+
+def _receipt_pricing(receipts: list[dict[str, Any]]) -> dict[str, Any]:
+    costs: list[float] = []
+    sources: set[str] = set()
+    for receipt in receipts:
+        estimate = receipt.get("estimated_cost")
+        if not isinstance(estimate, dict):
+            continue
+        cost = estimate.get("cost_usd")
+        source = estimate.get("source")
+        if (
+            estimate.get("status") == "ok"
+            and estimate.get("currency", "USD") == "USD"
+            and isinstance(cost, (int, float))
+            and not isinstance(cost, bool)
+            and math.isfinite(cost)
+            and cost >= 0
+            and isinstance(source, str)
+            and source
+        ):
+            costs.append(float(cost))
+            sources.add(source)
+    complete = bool(receipts) and len(costs) == len(receipts)
     return {
-        "status": "cost_unavailable",
-        "pricing_table_version": None,
+        "status": "ok" if complete else "cost_unavailable",
         "currency": "USD",
-        "billable_token_categories": [],
-        "source": "not_configured",
-        "unavailable_reason": "pricing_not_configured",
+        "cost_usd": math.fsum(costs) if complete else None,
+        "known_cost_usd": math.fsum(costs),
+        "cost_complete": complete,
+        "receipt_count": len(receipts),
+        "priced_receipt_count": len(costs),
+        "source": "receipt_aggregate",
+        "cost_sources": sorted(sources),
+        "unavailable_reason": None
+        if complete
+        else "receipt_cost_incomplete"
+        if receipts
+        else "no_provider_calls",
     }
+
+
+def _provider_model_rows(receipts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    groups: dict[tuple[str, str, str | None], list[dict[str, Any]]] = {}
+    for receipt in receipts:
+        provider, model = receipt.get("provider"), receipt.get("model")
+        resolved = receipt.get("locked_model_id") or receipt.get("resolved_model")
+        if not isinstance(provider, str) or not isinstance(model, str):
+            raise ValueError("provider receipt requires provider and model identity")
+        key = (provider, model, resolved if isinstance(resolved, str) else None)
+        groups.setdefault(key, []).append(receipt)
+    rows = []
+    for (provider, model, resolved), group in sorted(
+        groups.items(), key=lambda item: (item[0][0], item[0][1], item[0][2] or "")
+    ):
+        totals = dict.fromkeys(
+            (
+                "input_tokens",
+                "output_tokens",
+                "cached_input_tokens",
+                "reasoning_tokens",
+                "total_tokens",
+            ),
+            0,
+        )
+        complete = True
+        for receipt in group:
+            usage = receipt.get("usage")
+            if not isinstance(usage, dict):
+                complete = False
+                continue
+            for name in totals:
+                value = usage.get(name)
+                if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+                    totals[name] += value
+                elif name in {"input_tokens", "output_tokens", "total_tokens"}:
+                    complete = False
+        rows.append(
+            {
+                "provider": provider,
+                "model": model,
+                "resolved_model": resolved,
+                "receipt_count": len(group),
+                "usage": totals,
+                "usage_complete": complete,
+                "pricing": _receipt_pricing(group),
+                "aggregate_leaderboard_eligible": False,
+            }
+        )
+    return rows

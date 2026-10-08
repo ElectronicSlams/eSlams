@@ -12,7 +12,9 @@ from typing import Any
 def canonical_json(value: Any) -> str:
     """Return deterministic JSON for hashing and signing."""
 
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    )
 
 
 def sha256_text(text: str) -> str:

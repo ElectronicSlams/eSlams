@@ -6,7 +6,7 @@ import math
 import random
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, solo_state, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -15,8 +15,8 @@ PLAYERS = ("player_1", "player_2")
 
 class CartPoleArena(Arena):
     id = "cartpole"
-    version = "1.0.0"
-    players = PLAYERS
+    version = "1.0.1"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["left", "right"],
@@ -25,6 +25,7 @@ class CartPoleArena(Arena):
     max_turns = 200
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         return self._state(
             x=rng.uniform(-0.035, 0.035),
@@ -111,38 +112,40 @@ class CartPoleArena(Arena):
         if outcome is None and terminal:
             outcome = {"winner": "player_1", "reason": "balanced_horizon"}
         legal = [] if terminal else ["left", "right"]
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "cart": {"x": _round(x), "velocity": _round(x_dot)},
-                "pole": {"angle": _round(theta), "angular_velocity": _round(theta_dot)},
-                "thresholds": {"x": 2.4, "angle_radians": _round(12.0 * math.pi / 180.0)},
-                "reward": reward,
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores={"player_1": min(1.0, reward / self.max_turns), "player_2": 0.0},
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"cartpole:{seed}"),
-            render_hints={"renderer": "cartpole"},
-            metadata={
-                "seed": seed,
-                "x": x,
-                "x_dot": x_dot,
-                "theta": theta,
-                "theta_dot": theta_dot,
-            },
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "cart": {"x": _round(x), "velocity": _round(x_dot)},
+                    "pole": {"angle": _round(theta), "angular_velocity": _round(theta_dot)},
+                    "thresholds": {"x": 2.4, "angle_radians": _round(12.0 * math.pi / 180.0)},
+                    "reward": reward,
+                    "history": history,
+                },
+                private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores={"player_1": min(1.0, reward / self.max_turns), "player_2": 0.0},
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"cartpole:{seed}"),
+                render_hints={"renderer": "cartpole"},
+                metadata={
+                    "seed": seed,
+                    "x": x,
+                    "x_dot": x_dot,
+                    "theta": theta,
+                    "theta_dot": theta_dot,
+                },
+            )
         )
 
 
 class MountainCarArena(Arena):
     id = "mountain-car"
-    version = "1.0.0"
-    players = PLAYERS
+    version = "1.0.1"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["left", "coast", "right"],
@@ -151,6 +154,7 @@ class MountainCarArena(Arena):
     max_turns = 200
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         return self._state(
             position=-0.55 + rng.uniform(-0.04, 0.04),
@@ -225,40 +229,43 @@ class MountainCarArena(Arena):
         legal = [] if terminal else ["left", "coast", "right"]
         progress = _clip((position + 1.2) / 1.8, 0.0, 1.0)
         score = 1.0 if outcome and outcome.get("winner") == "player_1" else progress * 0.5
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "position": _round(position),
-                "velocity": _round(velocity),
-                "goal_position": 0.5,
-                "reward": reward,
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores={"player_1": score, "player_2": 0.0},
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"mountain-car:{seed}"),
-            render_hints={"renderer": "mountain-car"},
-            metadata={"seed": seed, "position": position, "velocity": velocity},
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "position": _round(position),
+                    "velocity": _round(velocity),
+                    "goal_position": 0.5,
+                    "reward": reward,
+                    "history": history,
+                },
+                private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores={"player_1": score, "player_2": 0.0},
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"mountain-car:{seed}"),
+                render_hints={"renderer": "mountain-car"},
+                metadata={"seed": seed, "position": position, "velocity": velocity},
+            )
         )
 
 
 class PaddleBallArena(Arena):
     id = "paddle-ball"
-    version = "1.0.0"
-    players = PLAYERS
+    version = "1.1.0"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["left", "stay", "right"],
         "description": "Move the paddle before the ball advances.",
     }
-    max_turns = 160
+    max_turns = 400
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         return self._state(
             paddle_x=0.5,
@@ -342,40 +349,44 @@ class PaddleBallArena(Arena):
         if outcome is None and terminal:
             outcome = {"winner": None, "reason": "rally_timeout", "bounces": bounces}
         legal = [] if terminal else ["left", "stay", "right"]
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "paddle_x": _round(paddle_x),
-                "ball": _public_ball(ball),
-                "bounces": bounces,
-                "target_bounces": 10,
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores={"player_1": min(1.0, bounces / 10.0), "player_2": 0.0},
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"paddle-ball:{seed}"),
-            render_hints={"renderer": "paddle-ball"},
-            metadata={"seed": seed, "paddle_x": paddle_x, "ball": ball},
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "paddle_x": _round(paddle_x),
+                    "ball": _public_ball(ball),
+                    "bounces": bounces,
+                    "target_bounces": 10,
+                    "history": history,
+                },
+                private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores={"player_1": min(1.0, bounces / 10.0), "player_2": 0.0},
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"paddle-ball:{seed}"),
+                render_hints={"renderer": "paddle-ball"},
+                metadata={"seed": seed, "paddle_x": paddle_x, "ball": ball},
+            )
         )
 
 
 class AlienShooterArena(Arena):
     id = "alien-shooter"
-    version = "1.0.0"
-    players = PLAYERS
+    version = "1.1.0"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["left", "stay", "right", "fire"],
         "description": "Move the ship or fire one projectile.",
     }
     max_turns = 96
+    descent_interval = 12
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         aliens = [(x, 5) for x in sorted(rng.sample(range(7), 4))]
         aliens.extend((x, 4) for x in sorted(rng.sample(range(7), 3)))
@@ -397,6 +408,7 @@ class AlienShooterArena(Arena):
             "aliens": state.public_state["aliens"],
             "bullets": state.public_state["bullets"],
             "destroyed": state.public_state["destroyed"],
+            "descent_interval": self.descent_interval,
             "legal_actions": state.legal_actions_by_player[player_id],
             "scores": state.scores,
         }
@@ -419,8 +431,10 @@ class AlienShooterArena(Arena):
         aliens, bullets, hits = _resolve_alien_hits(aliens, bullets)
         destroyed = int(state.public_state["destroyed"]) + hits
         turn = state.turn + 1
-        if turn % 3 == 0:
+        if turn % self.descent_interval == 0:
             aliens = [(x, y - 1) for x, y in aliens]
+            aliens, bullets, descent_hits = _resolve_alien_hits(aliens, bullets)
+            destroyed += descent_hits
         outcome = _alien_outcome(aliens, destroyed, turn, self.max_turns)
         history = [
             *state.public_state["history"],
@@ -456,30 +470,33 @@ class AlienShooterArena(Arena):
         if outcome is None and terminal:
             outcome = {"winner": None, "reason": "time_limit", "destroyed": destroyed}
         legal = [] if terminal else ["left", "stay", "right", "fire"]
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "player_x": player_x,
-                "aliens": [list(item) for item in aliens],
-                "bullets": [list(item) for item in bullets],
-                "destroyed": destroyed,
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores={"player_1": min(1.0, destroyed / 7.0), "player_2": 0.0},
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"alien-shooter:{seed}"),
-            render_hints={"renderer": "alien-shooter", "width": 7, "height": 6},
-            metadata={
-                "seed": seed,
-                "player_x": player_x,
-                "aliens": aliens,
-                "bullets": bullets,
-            },
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "player_x": player_x,
+                    "aliens": [list(item) for item in aliens],
+                    "bullets": [list(item) for item in bullets],
+                    "destroyed": destroyed,
+                    "descent_interval": self.descent_interval,
+                    "history": history,
+                },
+                private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores={"player_1": min(1.0, destroyed / 7.0), "player_2": 0.0},
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"alien-shooter:{seed}"),
+                render_hints={"renderer": "alien-shooter", "width": 7, "height": 6},
+                metadata={
+                    "seed": seed,
+                    "player_x": player_x,
+                    "aliens": aliens,
+                    "bullets": bullets,
+                },
+            )
         )
 
 
@@ -495,6 +512,7 @@ class BoxingStyleArena(Arena):
     max_turns = 80
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             health={"player_1": 100.0, "player_2": 100.0},
             stamina={"player_1": 100.0, "player_2": 100.0},
@@ -620,6 +638,7 @@ class IceHockeyStyleArena(Arena):
     max_turns = 90
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             positions={"player_1": {"x": 1, "lane": 1}, "player_2": {"x": 3, "lane": 1}},
             puck_owner="player_1",

@@ -1,10 +1,57 @@
 # eSlams Artifacts
 
+## Safe export destinations and archive limits
+
+Public replay/publication exports and uploaded replay fixture generation require
+a new output directory. They refuse existing destinations, the working directory
+and its ancestors, Git checkouts, symlinks and input/output containment. They
+stage the export and install it after success. Choose a separate destination
+outside the input tree; an input or validation failure preserves existing data.
+
+Replay and golden file exports refuse existing files unless `--overwrite` is
+explicit. Replay never replaces the source artifact or its members, including
+hardlink aliases. Expanded-artifact viewing writes a sibling `.replay.html`
+instead of modifying the hashed `replay/index.html` inside the artifact.
+
+ZIP readers share limits of 64 MiB compressed, 4,096 members, 64 MiB per member
+and 256 MiB total decompressed. They check metadata before extracting and bound
+actual streamed bytes. Links, special/encrypted members, traversal, duplicate
+or filesystem-aliased names and extraction overwrites are refused. Temporary
+materialization is cleaned on corrupt data, I/O failure or interruption. Trusted
+API integrations needing a different bound can explicitly supply `ArchiveLimits`
+to `eslams.zip_extract.extract_archive`; ordinary CLI reads use the safe defaults.
+
+Artifact writing stages the directory and ZIP before installing either. On a
+write or installation error, the writer removes its temporary outputs and
+restores replaced artifacts. Directory and ZIP installation are separate
+filesystem operations; this is not a transaction across both paths. Existing
+archives remain readable until replacement. A forced process kill or power loss
+can leave hidden staging/backup files, which are never named as completed runs.
+Archive members use the fixed ZIP timestamp 1980-01-01; actual run time remains
+in the manifest. Filesystem enumeration errors never produce a successful empty
+archive. Expanded artifacts reject symlink and special-file members.
+
+Artifact fixture generation writes its Runner outputs in a private temporary
+directory and installs only the requested file. Use `fixtures artifact
+--overwrite` to explicitly regenerate an existing fixture; output filenames
+may contain spaces, Unicode and ordinary punctuation.
+
+A runner turn cap must be a positive integer. If it ends a game before the
+arena reaches a terminal state, the artifact remains a valid diagnostic proof
+but `match_valid_for_scoring` and publication eligibility are false, with
+`run_truncated` as the reason. A horizon defined by arena rules that produces a
+terminal outcome remains a completed game. Validation checks the terminal
+replay before accepting scoring claims. Older truncated artifacts that claim
+scoring eligibility now fail this check; regenerate complete fixtures or
+retain them explicitly as invalid examples.
+
+## Package layout
+
 Every serious run produces a `.eslams` proof package. `.eslams` is the
 portable zip-compatible archive. The expanded inspection directory uses the
 `.eslams.d` suffix.
 
-Required structure:
+Current Runner output (signatures are optional; timing is a volatile sidecar):
 
 ```text
 run.eslams.d/
@@ -16,8 +63,10 @@ run.eslams.d/
   replay/replay_events.jsonl
   replay/display_frames.jsonl
   replay/replay_manifest.json
+  replay/index.html
   scores/score.json
   scores/metrics.json
+  timings/timings.json
   logs/runner.log
   logs/agent_io.jsonl
   logs/errors.jsonl
@@ -33,6 +82,10 @@ run.eslams.d/
   broadcast/broadcast_manifest.json
   broadcast/vod_metadata.json
 ```
+
+`timings/timings.json` is excluded from the manifest hash table; the manifest
+is the authority for hashed members. A configured signing key adds
+`signatures/runner_signature.json`.
 
 `manifest.json` contains file hashes and an artifact id derived from the
 manifest file table. It also records the deterministic replay contract for new
@@ -51,20 +104,31 @@ Core artifacts and the scoring-validity posture:
   "illegal_action_count_by_player": { "player_1": 0, "player_2": 0 },
   "fallback_action_count_by_player": { "player_1": 0, "player_2": 0 },
   "per_case_run_valid": true,
-  "per_case_scoring_eligible": true,
-  "proof_row_publication_eligible": true,
+  "per_case_scoring_eligible": false,
+  "proof_row_publication_eligible": false,
   "aggregate_leaderboard_eligible": false,
   "aggregate_ineligibility_reason": "single_case_not_full_suite",
   "provider_status_by_player": { "player_1": "local_agent", "player_2": "local_agent" }
 }
 ```
 
+This example is a completed game with local agents. `scoring_eligible` and
+`per_case_run_valid` describe gameplay validity. `per_case_scoring_eligible` and
+`proof_row_publication_eligible` require a named provider-evaluation case with
+complete model identity, usage, cost and physical-attempt evidence. A local game
+with no provider calls therefore remains a valid Local Artifact while those
+publication flags are false. Its provider-evidence `integrity_status` is
+`incomplete`; the usage summary explains `no_provider_calls`, rather than
+misdiagnosing an incomplete physical-attempt ledger. This does not invalidate
+local gameplay or upgrade it to Official evidence.
+
 Core 0.6 also records `integrity_status`, stable `invalid_reason_codes`,
 provider/logical action counts, `usage_complete`, `cost_complete`,
 `attempt_ledger_complete`, `model_identity_verified`, aggregate usage/cost, and
 the deterministic `match_fingerprint`. The execution `run_id` is unique; it is
-not the configuration fingerprint. Existing artifact paths are refused unless
-overwrite is explicit.
+not the configuration fingerprint. Use CLI `--run-id NAME` or library `RunConfig(run_id=...)` to choose a fixed
+identity; existing artifact paths are refused unless `--overwrite` /
+`overwrite=True` is explicit. The usual generated ID creates a new artifact.
 
 `runs/latest.eslams` points at the latest archive when a run produced one.
 `runs/latest.eslams.d` points at the latest expanded copy.
@@ -94,6 +158,14 @@ Use `--summary-json` to produce the stable
 eslams validate runs/latest.eslams --profile runner-bundle --summary-json
 eslams validate runs/latest.eslams --profile official-case --summary-json
 ```
+
+For `official-case` validation, pass a nonempty `--case-id` to `eslams run`
+(or `RunConfig(case_id=...)`). `--execution-profile official_eval` sets execution
+rules and can also produce diagnostic runs; it does not supply a case identity.
+A diagnostic run without a case ID is excluded from case/publication eligibility
+and fails official-case validation with `case_id_missing`. The case identity must
+match the manifest, score and physical receipts; a mismatch produces
+`case_id_mismatch`.
 
 `official-case` rejects fallback or agent-error counts, non-`provider_ok`
 status for the evaluated seat, mismatched provider/logical action counts,
@@ -215,3 +287,116 @@ checkpoint manifest, and signature/readback manifest. Core validates object
 hashes, projection hashes, public replay packages, aggregate usage shape, and
 proof-row policy without requiring secrets or storage credentials. Proof rows
 are evidence-only by default and do not imply aggregate leaderboard eligibility.
+
+## Replay trust and local verification keys
+
+`eslams replay ARTIFACT` validates content, deterministic replay and signature
+requirements before creating external HTML. Failed validation exits 1 and
+creates no output. To inspect damaged evidence explicitly, use
+`eslams replay ARTIFACT --diagnostic --output diagnostic.html`; the HTML has a
+visible untrusted warning. Embedded `replay/index.html` is generated before the
+manifest exists and tells viewers to validate the complete artifact first.
+Unsigned local content can validate structurally; that does not authenticate a
+runner or establish an Official result.
+
+A signed artifact requires the corresponding trusted
+`RUNNER_ARTIFACT_VERIFY_PUBLIC_KEY` to validate. Without it, the status is
+`unverified_missing_key`, validation fails with `runner_signature_unverified`,
+and all scoring/publication eligibility is false. In a signing process Core
+can derive the verify key from `RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY`; auditors
+should use the public key explicitly and never obtain the private key. A
+signature proves custody relative to that key, not Official authority. Obtain
+Official verification keys from the authorized runner operator. The published
+fixture key is test-only, is reproducible by anyone, and establishes no
+Official authority.
+
+Private/public Ed25519 values contain exactly 32 raw bytes each, encoded with
+a `base64:` or `hex:` prefix. Invalid signing material fails before a match.
+
+For a throwaway local key, generate the private and public values together:
+
+```bash
+python - <<'PYKEY'
+import base64
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
+key = Ed25519PrivateKey.generate()
+print("private=base64:" + base64.b64encode(key.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())).decode())
+print("public=base64:" + base64.b64encode(key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)).decode())
+PYKEY
+```
+
+Set the private value only on the local signer, a nonempty
+`RUNNER_ARTIFACT_SIGNING_KEY_ID`, and the public value on the verifier. Keep keys
+out of committed files and shared logs. Missing key IDs use
+`runner-artifact-env-key`; explicitly empty/whitespace IDs fail before agents
+run. This recipe is local signing, not an Official evaluation.
+
+## Aggregate selection and receipt projections
+
+Publication export and Official merge require at least one valid artifact.
+Directory selection ignores latest pointers, prefers an archive over its expanded
+sibling, and deduplicates identical artifact identities, including renamed copies.
+An explicit plan must be a valid `eslams.eval.plan.v1` envelope with a matching
+plan hash and at least one case. Invalid inputs leave the destination untouched.
+
+Publication proof rows identify the artifact by its content identity; replay
+directories also derive from that identity. Local file locations and names do not
+change exported bundle bytes. `provider_model_rows.jsonl` groups receipt attempts
+by provider, requested model and resolved model, retaining token totals and
+receipt counts. This evidence includes retry attempts. Receipt costs are summed
+only when each estimate has a valid finite non-negative USD value and source.
+Incomplete aggregates expose `known_cost_usd`, incomplete status and no complete
+`cost_usd`; they never imply an unpriced call was free. Receipt aggregation grants
+no aggregate leaderboard eligibility.
+
+## Historical validation boundary
+
+Core 0.5.1 tightened terminal outcome and deterministic transition validation.
+Some artifacts produced by Core 0.2.0–0.5.0 omit the terminal replay outcome or
+record earlier rules, and fail these modern checks. The current validator does
+not reconstruct missing historical outcomes or accept them for scoring. Preserve
+the original bytes and producing Core version. To examine archived results, use
+an isolated environment pinned to that producing version and treat its verdict
+as historical, without current Official authority. For current comparisons, rerun
+the recorded seed and policies under current rules into a new artifact; retain
+both artifacts and versions. Changing old manifests or hashes is not migration.
+
+Native CI compares real artifact file-table bytes and schema/publication export
+hashes across Linux Python 3.10–3.12, Windows and macOS Python 3.12. The comparison
+fixes the fixture wall clock and run ID. Measured timing sidecars are deliberately
+outside deterministic identity, so complete production ZIPs need not be byte
+identical when their actual timing diagnostics differ.
+
+## Local replay presentation
+
+Replay controls precede move lists in keyboard order. Left/Right step frames;
+Home/End select the first/last frame. Selecting a move preserves its button focus.
+Each player's list has one Tab stop and frame status is announced politely.
+Move buttons keep a 40-pixel minimum height without flex shrinking.
+
+Chess and generic public boards have labeled table/row/cell structure. Other
+public state shapes use readable labeled values and lists rather than a JSON
+dump; nested histories show their most recent 40 entries with an explicit count.
+These are public-state summaries, not bespoke interactive simulators. Only
+provided chess FEN/validation data appears in the Details panel; winner comes
+from recorded outcomes rather than inferred nonterminal scores. The browser
+regression job checks all 50 arenas at 390, 768 and 1440 pixels, initial/final
+frames, control order, arrows, focus retention, targets, labels and numeric zero.
+
+## Worker action deadlines
+
+Runner bounds elapsed agent calls in worker threads and on hosts without
+SIGALRM. Timed-out actions are rejected and the run follows its configured
+failure policy. The callback receives a separate request copy, and receipt
+evidence is frozen at the deadline. A late response cannot become a game action
+or alter the already written artifact.
+
+Python cannot safely terminate an arbitrary in-process callback. Such callbacks
+may continue until they return; Core quarantines the agent object during that
+time, rejects reuse in any calling context and permits at most 32 outstanding
+worker callbacks per process. Provider/HTTP adapters cooperate by cancelling
+network requests at the deadline. Run untrusted callbacks requiring hard
+termination or external-side-effect isolation in a separately managed process.
+Do not share one mutable agent instance across concurrent runs. POSIX main-thread
+calls retain signal interruption; the timeout contract also applies without it.

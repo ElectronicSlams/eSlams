@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -17,7 +17,7 @@ LINES = ((1, 0), (0, 1), (1, 1), (1, -1))
 
 class PentagoArena(Arena):
     id = "pentago"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
@@ -27,6 +27,7 @@ class PentagoArena(Arena):
     max_turns = SIZE * SIZE
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board: list[list[str | None]] = [[None for _ in range(SIZE)] for _ in range(SIZE)]
         return self._state(board=board, turn=0, active="player_1", seed=seed, outcome=None)
 
@@ -46,7 +47,9 @@ class PentagoArena(Arena):
         row, col = divmod(cell, SIZE)
         board = [list(existing_row) for existing_row in state.public_state["board"]]
         board[row][col] = _marble(player_id)
-        _rotate(board, quadrant, direction)
+        # A placement win ends the game before the encoded rotation.
+        if not _has_line(board, _marble(player_id)):
+            _rotate(board, quadrant, direction)
         winners = [player for player in self.players if _has_line(board, _marble(player))]
         outcome: dict[str, Any] | None = None
         if len(winners) == 1:

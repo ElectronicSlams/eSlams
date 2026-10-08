@@ -9,6 +9,7 @@ from eslams._build_provenance import core_source_commit
 from eslams.contracts.integrity import ATTEMPT_KINDS, FAILURE_CLASSES
 from eslams.contracts.pricing import no_secret_example as price_card_no_secret_example
 from eslams.contracts.provider import GATEWAY_MODES, PROVIDER_OUTCOMES
+from eslams.contracts.topology import cooperative_topology
 from eslams.contracts.versions import (
     ACTION_PROVENANCE_SCHEMA_VERSION,
     ARENA_ACTION_DESCRIPTOR_SCHEMA_VERSION,
@@ -22,6 +23,8 @@ from eslams.contracts.versions import (
     CATALOGUE_GAME_SCHEMA_VERSION,
     CATALOGUE_MODEL_SCHEMA_VERSION,
     CATALOGUE_RENDERER_SCHEMA_VERSION,
+    COOPERATIVE_RESULT_SCHEMA_VERSION,
+    COOPERATIVE_TOPOLOGY_SCHEMA_VERSION,
     CORE_OBSERVABILITY_SCHEMA_VERSION,
     CORE_PACKAGE_VERSION,
     CORE_PROMPT_PACKAGE_SCHEMA_VERSION,
@@ -68,12 +71,13 @@ def export_schemas(output_dir: Path) -> list[Path]:
     written: list[Path] = []
     for version in schema_versions():
         path = output_dir / schema_filename(version)
-        path.write_text(canonical_json(schema_for_version(version)) + "\n", encoding="utf-8")
+        path.write_text(
+            canonical_json(schema_for_version(version)) + "\n", encoding="utf-8", newline="\n"
+        )
         written.append(path)
     manifest_path = output_dir / SCHEMA_BUNDLE_MANIFEST_FILENAME
     manifest_path.write_text(
-        canonical_json(schema_bundle_manifest(written)) + "\n",
-        encoding="utf-8",
+        canonical_json(schema_bundle_manifest(written)) + "\n", encoding="utf-8", newline="\n"
     )
     written.append(manifest_path)
     return written
@@ -123,6 +127,16 @@ def schema_bundle_manifest(schema_paths: list[Path]) -> dict[str, Any]:
 
 def no_secret_examples() -> dict[str, dict[str, Any]]:
     return {
+        COOPERATIVE_TOPOLOGY_SCHEMA_VERSION: cooperative_topology().to_dict(),
+        COOPERATIVE_RESULT_SCHEMA_VERSION: {
+            "schemaVersion": COOPERATIVE_RESULT_SCHEMA_VERSION,
+            "mode": "cooperative",
+            "terminal": True,
+            "winner": None,
+            "draw": False,
+            "scores": {"player_1": 0.5, "player_2": 0.5},
+            "resultType": "score",
+        },
         PRICE_CARD_REFERENCE_SCHEMA_VERSION: price_card_no_secret_example(),
         RUN_INTEGRITY_SCHEMA_VERSION: {
             "schemaVersion": RUN_INTEGRITY_SCHEMA_VERSION,
@@ -366,6 +380,54 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
 
 def _schemas() -> dict[str, dict[str, Any]]:
     return {
+        COOPERATIVE_TOPOLOGY_SCHEMA_VERSION: _object_schema(
+            COOPERATIVE_TOPOLOGY_SCHEMA_VERSION,
+            required=[
+                "schemaVersion",
+                "mode",
+                "controlledPlayers",
+                "environmentPlayers",
+                "minPlayers",
+                "maxPlayers",
+                "defaultPlayers",
+                "winnerRequired",
+                "drawAllowed",
+                "placementsAllowed",
+                "scoreType",
+            ],
+            properties={
+                "schemaVersion": {"const": COOPERATIVE_TOPOLOGY_SCHEMA_VERSION},
+                "mode": {"const": "cooperative"},
+                "controlledPlayers": {"const": ["player_1", "player_2"]},
+                "environmentPlayers": {"const": []},
+                "minPlayers": {"const": 2},
+                "maxPlayers": {"const": 2},
+                "defaultPlayers": {"const": 2},
+                "winnerRequired": {"const": False},
+                "drawAllowed": {"const": False},
+                "placementsAllowed": {"const": False},
+                "scoreType": {"const": "cooperative_score"},
+            },
+        ),
+        COOPERATIVE_RESULT_SCHEMA_VERSION: _object_schema(
+            COOPERATIVE_RESULT_SCHEMA_VERSION,
+            required=["schemaVersion", "mode"],
+            properties={
+                "schemaVersion": {"const": COOPERATIVE_RESULT_SCHEMA_VERSION},
+                "mode": {"const": "cooperative"},
+                "terminal": {"type": "boolean"},
+                "scores": {"type": "object", "additionalProperties": {"type": "number"}},
+                "winner": {"const": None},
+                "draw": {"const": False},
+                "resultType": {"const": "score"},
+                "resultTypes": {"const": ["score"]},
+                "scoreType": {"const": "cooperative_score"},
+                "winnerRequired": {"const": False},
+                "drawAllowed": {"const": False},
+                "placementsAllowed": {"const": False},
+                "reason": {"type": ["string", "null"]},
+            },
+        ),
         ARTIFACT_MANIFEST_SCHEMA_VERSION: _object_schema(
             ARTIFACT_MANIFEST_SCHEMA_VERSION,
             required=["manifest_schema_version", "artifact_profile", "artifact_kind", "run_id"],
@@ -593,12 +655,8 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "usage_complete": {"type": "boolean"},
                 "cost_source": {"type": ["string", "null"]},
                 "cost_complete": {"type": "boolean"},
-                "wire_parse_status": {
-                    "enum": ["ok", "failed", "not_attempted"]
-                },
-                "action_parse_status": {
-                    "enum": ["ok", "failed", "not_attempted"]
-                },
+                "wire_parse_status": {"enum": ["ok", "failed", "not_attempted"]},
+                "action_parse_status": {"enum": ["ok", "failed", "not_attempted"]},
                 "action_applied": {"type": "boolean"},
                 "case_valid_for_scoring": {"type": "boolean"},
                 "model_capability_known": {"type": "boolean"},
@@ -1426,9 +1484,7 @@ def _provider_attempt_schema() -> dict[str, Any]:
             "provider": {"type": "string", "minLength": 1},
             "requestedModel": {"type": "string", "minLength": 1},
             "resolvedModel": nullable_string,
-            "modelIdentitySource": {
-                "enum": [None, "provider_response", "pinned_endpoint"]
-            },
+            "modelIdentitySource": {"enum": [None, "provider_response", "pinned_endpoint"]},
             "providerEndpoint": {"type": "string", "format": "uri", "minLength": 1},
             "endpointKind": nullable_string,
             "parserVersion": nullable_string,
@@ -1488,11 +1544,7 @@ def _provider_attempt_schema() -> dict[str, Any]:
                     },
                     "anyOf": [
                         {"properties": {"resolvedModel": {"type": "null"}}},
-                        {
-                            "properties": {
-                                "modelIdentitySource": {"const": "pinned_endpoint"}
-                            }
-                        },
+                        {"properties": {"modelIdentitySource": {"const": "pinned_endpoint"}}},
                     ],
                 },
             },
@@ -1503,11 +1555,7 @@ def _provider_attempt_schema() -> dict[str, Any]:
                         "attemptIndex": {"const": 1},
                     }
                 },
-                "then": {
-                    "properties": {
-                        "attemptKind": {"enum": ["case_retry", "action_repair"]}
-                    }
-                },
+                "then": {"properties": {"attemptKind": {"enum": ["case_retry", "action_repair"]}}},
             },
             {
                 "if": {"properties": {"caseAttemptIndex": {"const": 1}}},
@@ -1563,9 +1611,7 @@ def _provider_attempt_schema() -> dict[str, Any]:
                         "status": {"const": "completed"},
                         "caseId": {"type": "string", "minLength": 1},
                         "resolvedModel": {"type": "string", "minLength": 1},
-                        "modelIdentitySource": {
-                            "enum": ["provider_response", "pinned_endpoint"]
-                        },
+                        "modelIdentitySource": {"enum": ["provider_response", "pinned_endpoint"]},
                         "wireParseStatus": {"const": "ok"},
                         "actionParseStatus": {"const": "ok"},
                         "actionApplied": {"const": True},

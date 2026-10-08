@@ -3,14 +3,14 @@
 
 The updater is deliberately dependency-light so it can run in a clean checkout.
 It merges public model metadata, optional configured provider model lists, and
-local overrides into `src/eslams/providers/data/models.generated.json`.
+local overrides into an explicitly requested new snapshot. Review the result
+before replacing any packaged registry data.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import urllib.error
 import urllib.request
@@ -20,7 +20,6 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "src" / "eslams" / "providers" / "data"
-DEFAULT_OUTPUT = DATA_DIR / "models.generated.json"
 DEFAULT_OVERRIDES = DATA_DIR / "overrides.json"
 sys.path.insert(0, str(ROOT / "src"))
 MODELS_DEV_URL = "https://models.dev/api.json"
@@ -81,7 +80,7 @@ PROVIDER_ALIASES = {
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Update eSlams provider model registry.")
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--output", type=Path, required=True, help="Write a new snapshot here.")
     parser.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES)
     parser.add_argument(
         "--providers",
@@ -90,6 +89,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--skip-public", action="store_true")
     args = parser.parse_args(argv)
+
+    if args.output.exists() or args.output.is_symlink():
+        parser.error(
+            "--output must be a new file; inspect the snapshot before replacing registry data"
+        )
 
     provider_filter = {item.strip().lower() for item in args.providers.split(",") if item.strip()}
     records: dict[tuple[str, str], dict[str, Any]] = {}
@@ -131,7 +135,9 @@ def main(argv: list[str] | None = None) -> int:
         "models": [records[key] for key in sorted(records)],
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    rendered = json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    with args.output.open("x", encoding="utf-8", newline="\n") as destination:
+        destination.write(rendered)
     print(json.dumps({"output": str(args.output), "models": len(payload["models"])}, indent=2))
     return 0
 
@@ -227,26 +233,13 @@ def _records_from_litellm(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _records_from_provider_apis() -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if openai_key:
-        data = _fetch_json(
-            "https://api.openai.com/v1/models",
-            headers={"Authorization": f"Bearer {openai_key}"},
-        )
-        if isinstance(data, dict):
-            for item in data.get("data", []):
-                if isinstance(item, dict) and item.get("id"):
-                    records.append(_api_availability_record("openai", str(item["id"])))
-    google_key = os.getenv("GEMINI_API_KEY")
-    if google_key:
-        data = _fetch_json(
-            f"https://generativelanguage.googleapis.com/v1beta/models?key={google_key}"
-        )
-        if isinstance(data, dict):
-            for item in data.get("models", []):
-                if isinstance(item, dict) and item.get("name"):
-                    model = str(item["name"]).split("/", 1)[-1]
-                    records.append(_api_availability_record("google", model))
+    from eslams.provider_credentials import provider_key
+    from eslams.provider_preflight import provider_models_live
+
+    for provider, environment in (("openai", "OPENAI_API_KEY"), ("google", "GEMINI_API_KEY")):
+        if provider_key(environment):
+            for model in provider_models_live(provider) or []:
+                records.append(_api_availability_record(provider, model))
     return records
 
 
@@ -255,16 +248,6 @@ def _api_availability_record(provider: str, model: str) -> dict[str, Any]:
         "provider": provider,
         "model": model,
         "available_from_api": True,
-        "game_agent_supported": True,
-        "endpoints": [],
-        "modalities": {"input": ["text"], "output": ["text"]},
-        "supports_temperature": False,
-        "supports_reasoning": False,
-        "reasoning_efforts": [],
-        "default_reasoning_effort": None,
-        "supports_google_thinking_config": False,
-        "max_output_tokens": None,
-        "context_window": None,
         "last_verified_at": datetime.now(timezone.utc)
         .replace(microsecond=0)
         .isoformat()
@@ -312,7 +295,7 @@ def _fetch_json(url: str, headers: dict[str, str] | None = None) -> Any:
         with urllib.request.urlopen(req, timeout=30) as response:
             return json.load(response)
     except (OSError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
-        print(f"warning: could not fetch {url}: {exc}", file=sys.stderr)
+        raise ValueError("public registry source fetch failed; no snapshot written") from exc
         return None
 
 

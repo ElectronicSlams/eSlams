@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
 
 class RockPaperScissorsArena(Arena):
+    pending_action_key = "pending_action"
     id = "rock-paper-scissors"
     version = "1.0.0"
     players = ("player_1", "player_2")
@@ -21,6 +22,7 @@ class RockPaperScissorsArena(Arena):
     max_turns = 2
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(turn=0, active="player_1", seed=seed, pending=None, outcome=None)
 
     def observation_for(self, state: ArenaState, player_id: str) -> dict[str, Any]:
@@ -90,8 +92,9 @@ class RockPaperScissorsArena(Arena):
 
 
 class PrisonersDilemmaArena(Arena):
+    pending_action_key = "pending_action"
     id = "prisoners-dilemma"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
@@ -101,6 +104,7 @@ class PrisonersDilemmaArena(Arena):
     max_turns = 2
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(turn=0, active="player_1", seed=seed, pending=None, outcome=None)
 
     def observation_for(self, state: ArenaState, player_id: str) -> dict[str, Any]:

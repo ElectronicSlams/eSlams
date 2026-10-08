@@ -2,7 +2,7 @@
   "name": "@eslams/core-contracts",
   "version": "0.6.1",
   "type": "module",
-  "private": false,
+  "private": true,
   "files": [
     "src/generated"
   ],

@@ -202,7 +202,9 @@ def aggregate_provider_receipts(
         if (value := _string(receipt.get("logical_action_id"))) is not None
     }
     attempt_indexes_valid = _attempt_indexes_are_valid(receipts)
-    if not attempt_indexes_valid:
+    if not receipts:
+        usage_reasons.add("no_provider_calls")
+    elif not attempt_indexes_valid:
         usage_reasons.add("attempt_ledger_incomplete")
 
     canonical_tokens = {

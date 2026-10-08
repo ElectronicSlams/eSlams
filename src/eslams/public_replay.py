@@ -14,6 +14,7 @@ from eslams.artifacts import (
 )
 from eslams.contracts.versions import ARTIFACT_MANIFEST_SCHEMA_VERSION
 from eslams.hashing import canonical_json, sha256_file, sha256_json
+from eslams.output import staged_directory
 from eslams.replay_projection import display_frame_rows_from_dicts
 
 PUBLIC_EXPORT_MEMBERS: tuple[str, ...] = (
@@ -29,10 +30,12 @@ PUBLIC_EXPORT_MEMBERS: tuple[str, ...] = (
 def export_public_replay(artifact_path: Path, output_dir: Path) -> Path:
     """Export a no-secret public replay package directory."""
 
-    output_dir = output_dir.resolve()
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True)
+    with staged_directory(output_dir, sources=[artifact_path]) as staged:
+        _export_public_replay(artifact_path, staged)
+    return output_dir.resolve()
+
+
+def _export_public_replay(artifact_path: Path, output_dir: Path) -> None:
     with open_artifact(artifact_path) as artifact_dir:
         manifest = _read_json(artifact_dir / "manifest.json")
         for member in PUBLIC_EXPORT_MEMBERS:
@@ -70,7 +73,6 @@ def export_public_replay(artifact_path: Path, output_dir: Path) -> Path:
     report = ArtifactValidator().validate_report(output_dir, profile="public_replay_package")
     if report.errors:
         raise ValueError("; ".join(report.errors))
-    return output_dir
 
 
 def validate_public_replay(path: Path) -> dict[str, Any]:
@@ -80,9 +82,12 @@ def validate_public_replay(path: Path) -> dict[str, Any]:
 def create_uploaded_smoke_fixture(output_dir: Path) -> Path:
     """Create a minimal uploaded replay package fixture."""
 
-    output_dir = output_dir.resolve()
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
+    with staged_directory(output_dir) as staged:
+        _write_uploaded_smoke_fixture(staged)
+    return output_dir.resolve()
+
+
+def _write_uploaded_smoke_fixture(output_dir: Path) -> None:
     (output_dir / "replay").mkdir(parents=True)
     replay_event = {
         "schema_version": "eslams.replay.public.v1",
@@ -155,7 +160,6 @@ def create_uploaded_smoke_fixture(output_dir: Path) -> Path:
             "hash_algorithm": "sha256",
         },
     )
-    return output_dir
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -165,12 +169,14 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
+    path.write_text(canonical_json(payload) + "\n", encoding="utf-8", newline="\n")
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
+    path.write_text(
+        "".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8", newline="\n"
+    )
 
 
 def _file_entries(root: Path) -> list[dict[str, Any]]:

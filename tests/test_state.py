@@ -4,14 +4,9 @@ from eslams.arenas.connect_four import ConnectFourArena
 from eslams.state import ArenaState
 
 
-def test_state_hash_is_deterministic():
-    state_a = ConnectFourArena().initial_state(1)
-    state_b = ConnectFourArena().initial_state(1)
-    assert state_a.state_hash == state_b.state_hash
-
-
 def test_state_hash_rejects_tampering():
     state = ConnectFourArena().initial_state(1)
+    assert state.state_hash == ConnectFourArena().initial_state(1).state_hash
     with pytest.raises(ValueError):
         ArenaState(
             state_id=state.state_id,
@@ -28,10 +23,6 @@ def test_state_hash_rejects_tampering():
             render_hints=state.render_hints,
             metadata=state.metadata,
         )
-
-
-def test_public_view_does_not_expose_private_metadata_seed():
-    state = ConnectFourArena().initial_state(1)
 
     public = state.public_view()
 

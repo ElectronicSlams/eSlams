@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -71,6 +71,7 @@ class NineMensMorrisArena(Arena):
     max_turns = 120
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             board=[None] * POINTS,
             reserves={"player_1": PIECES_PER_PLAYER, "player_2": PIECES_PER_PLAYER},

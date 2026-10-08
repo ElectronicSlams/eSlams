@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import copy
+import errno
+import os
 import re
 import signal
+import stat
+import sys
 import threading
 import time
 import uuid
@@ -15,9 +20,14 @@ from pathlib import Path
 from typing import Any, Literal
 
 from eslams.agents import ProviderCallError, create_builtin_agent
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.arenas import registry
-from eslams.artifacts import ArtifactBuildInput, expanded_artifact_path, write_artifact
+from eslams.artifacts import (
+    ArtifactBuildInput,
+    expanded_artifact_path,
+    validate_artifact_signing_configuration,
+    write_artifact,
+)
 from eslams.contracts.integrity import ActionProvenance, FailureClass
 from eslams.contracts.provider import (
     provider_attempt_event_id,
@@ -25,6 +35,14 @@ from eslams.contracts.provider import (
 )
 from eslams.contracts.usage import aggregate_provider_receipts
 from eslams.contracts.versions import RUNNER_VERSION
+from eslams.deadlines import (
+    action_deadline,
+    call_in_thread,
+    current_deadline,
+    ensure_agent_available,
+    receipt_snapshot,
+    remaining_seconds,
+)
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import sha256_json
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, make_act_request
@@ -78,10 +96,34 @@ class RunConfig:
     overwrite: bool = False
 
     def __post_init__(self) -> None:
-        if isinstance(self.case_attempt_index, bool) or self.case_attempt_index < 1:
-            raise ValueError("case_attempt_index must be a positive integer")
+        if self.max_turns is not None and (
+            isinstance(self.max_turns, bool)
+            or not isinstance(self.max_turns, int)
+            or self.max_turns < 1
+        ):
+            raise ValueError("max_turns must be a positive integer")
+        for name, number in (
+            ("time_budget_ms", self.time_budget_ms),
+            ("case_attempt_index", self.case_attempt_index),
+            ("shard_count", self.shard_count),
+        ):
+            if name == "shard_count" and number is None:
+                continue
+            if isinstance(number, bool) or not isinstance(number, int) or number < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        if self.shard_index is not None and (
+            isinstance(self.shard_index, bool)
+            or not isinstance(self.shard_index, int)
+            or self.shard_index < 0
+            or (self.shard_count is not None and self.shard_index >= self.shard_count)
+        ):
+            raise ValueError("shard_index must be a nonnegative integer less than shard_count")
         if self.run_id is not None:
             _validate_run_id(self.run_id)
+        if self.case_id is not None and (
+            not isinstance(self.case_id, str) or not self.case_id.strip()
+        ):
+            raise ValueError("case_id must be a nonempty string when provided")
         for name, value in (
             ("official_run_id", self.official_run_id),
             ("model_lane_id", self.model_lane_id),
@@ -121,14 +163,16 @@ class Runner:
         self.memory_policy = memory_policy
 
     def run(self, config: RunConfig) -> RunResult:
+        validate_artifact_signing_configuration()
         _validate_failure_policy("on_agent_error", config.on_agent_error)
         _validate_failure_policy("on_illegal_action", config.on_illegal_action)
+        validate_seed(config.seed)
         arena = registry.create(config.arena_id)
         agents = _agents_for_arena(arena, config)
         if config.execution_profile == "official_eval":
             _reject_official_inline_retries(list(agents.values()))
         max_turns = config.max_turns if config.max_turns is not None else arena.max_turns
-        effective_time_budget_ms = max(1, config.time_budget_ms)
+        effective_time_budget_ms = config.time_budget_ms
         suite_context = _suite_context(config)
         match_fingerprint = _match_fingerprint(arena, config, agents, max_turns)
         run_id = config.run_id or _default_run_id(arena)
@@ -148,6 +192,7 @@ class Runner:
                 state,
                 None,
                 [],
+                arena=arena,
                 actor_player=None,
                 state_hash_before=None,
             )
@@ -200,8 +245,12 @@ class Runner:
                 request,
                 time_budget_ms=effective_time_budget_ms,
             )
-            receipt = _last_provider_receipt(agent)
-            attempt_receipts = _provider_attempt_receipts(agent, fallback=receipt)
+            receipt = None
+            if response is not None and "_deadline_receipts" in response.metadata:
+                attempt_receipts = response.metadata.pop("_deadline_receipts")
+            else:
+                receipt = _last_provider_receipt(agent)
+                attempt_receipts = _provider_attempt_receipts(agent, fallback=receipt)
             if attempt_receipts:
                 provider_status[player_id] = _provider_receipt_status(attempt_receipts[-1])
                 enriched_receipts = _enrich_attempt_receipts(
@@ -259,6 +308,7 @@ class Runner:
                         )
                         trace_events.append(
                             _trace_event(
+                                arena=arena,
                                 run_id=run_id,
                                 episode_id=episode_id,
                                 state=state,
@@ -281,6 +331,7 @@ class Runner:
                                 next_state,
                                 response.action if response else None,
                                 markers,
+                                arena=arena,
                                 actor_player=player_id,
                                 state_hash_before=state.state_hash,
                             )
@@ -333,6 +384,7 @@ class Runner:
                         )
                         trace_events.append(
                             _trace_event(
+                                arena=arena,
                                 run_id=run_id,
                                 episode_id=episode_id,
                                 state=state,
@@ -355,6 +407,7 @@ class Runner:
                                 next_state,
                                 action,
                                 markers,
+                                arena=arena,
                                 actor_player=player_id,
                                 state_hash_before=state.state_hash,
                             )
@@ -402,7 +455,7 @@ class Runner:
                     markers,
                 )
                 invalid_reason_codes.append(FailureClass.ARENA_APPLY_ERROR.value)
-                errors.append({"turn_id": state.turn, "error": str(exc)[:500]})
+                errors.append({"turn_id": state.turn, "error": _safe_error_text(exc)})
                 break
 
             if action_provenance is ActionProvenance.PROVIDER_ACTION:
@@ -421,6 +474,7 @@ class Runner:
                 provider_action_count[player_id] += 1
 
             trace = _trace_event(
+                arena=arena,
                 run_id=run_id,
                 episode_id=episode_id,
                 state=state,
@@ -445,6 +499,7 @@ class Runner:
                     next_state,
                     action,
                     markers,
+                    arena=arena,
                     actor_player=player_id,
                     state_hash_before=state.state_hash,
                     action_provenance=action_provenance.value,
@@ -470,6 +525,7 @@ class Runner:
                     "turn_id": state.turn,
                     "player": player_id,
                     "action": action,
+                    "reveal_turn": arena.action_reveal_turn(next_state),
                     "state_hash": next_state.state_hash,
                     "markers": markers,
                     "action_provenance": action_provenance.value,
@@ -477,6 +533,11 @@ class Runner:
                 }
             )
             state = next_state
+
+        if not state.terminal and state.turn >= max_turns:
+            match_valid_for_scoring = False
+            invalid_reason = invalid_reason or "run_truncated"
+            invalid_reason_codes.append("run_truncated")
 
         elapsed_ms = int((time.perf_counter() - start) * 1000)
         for provider_receipt in provider_receipts:
@@ -490,9 +551,7 @@ class Runner:
             expected_by_player=config.model_id_by_player or {},
         )
         complete_case_evidence = (
-            match_valid_for_scoring
-            and bool(config.case_id)
-            and model_identity_verified
+            match_valid_for_scoring and bool(config.case_id) and model_identity_verified
         )
         for provider_receipt in provider_receipts:
             provider_receipt["case_valid_for_scoring"] = bool(
@@ -560,12 +619,23 @@ class Runner:
             overwrite=config.overwrite,
         )
         expanded = expanded_artifact_path(artifact_path).resolve()
-        _publish_latest_links(
-            output_dir=config.output_dir,
-            artifact_path=output,
-            expanded_path=expanded,
-            archive=config.archive,
-        )
+        try:
+            _publish_latest_links(
+                output_dir=config.output_dir,
+                artifact_path=output,
+                expanded_path=expanded,
+                archive=config.archive,
+            )
+        except OSError as exc:
+            if (
+                exc.errno not in {errno.EPERM, errno.EACCES, errno.ENOTSUP}
+                and getattr(exc, "winerror", None) != 1314
+            ):
+                raise
+            print(
+                f"Warning: latest links were not updated; use artifact path {output}",
+                file=sys.stderr,
+            )
         return RunResult(
             run_id=run_id,
             artifact_path=output,
@@ -595,6 +665,8 @@ def _reject_official_inline_retries(agents: list[Any]) -> None:
 
 def _agents_for_arena(arena: Arena, config: RunConfig) -> dict[str, Any]:
     provided = dict(config.agents or {})
+    if unknown := set(provided) - set(arena.players):
+        raise ValueError(f"Unknown agent seats for {arena.id}: {', '.join(sorted(unknown))}")
     agents: dict[str, Any] = {}
     for index, player_id in enumerate(arena.players):
         if player_id in provided:
@@ -606,7 +678,7 @@ def _agents_for_arena(arena: Arena, config: RunConfig) -> dict[str, Any]:
         else:
             raise ValueError(
                 f"Arena {arena.id} requires an explicit agent for {player_id}; "
-                "pass RunConfig.agents for arenas with more than two players."
+                "use --seat-agent PLAYER=AGENT or RunConfig.agents for table arenas."
             )
         agents[player_id] = _agent(value, seed=config.seed + index)
     return agents
@@ -856,27 +928,38 @@ def _publish_latest_links(
 
 
 def _assert_latest_paths_replaceable(paths: list[Path]) -> None:
-    collisions = [
-        path
-        for path in paths
-        if (path.exists() or path.is_symlink()) and not path.is_symlink()
-    ]
+    collisions = []
+    for path in paths:
+        try:
+            mode = path.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISLNK(mode):
+            collisions.append(path)
     if collisions:
         joined = ", ".join(str(path) for path in collisions)
         raise FileExistsError(f"refusing to replace non-symlink latest path: {joined}")
 
 
 def _replace_latest_link(path: Path, target: Path, *, is_dir: bool) -> None:
-    _remove_latest_path(path)
-    path.symlink_to(target.resolve(), target_is_directory=is_dir)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.link")
+    relative_target = os.path.relpath(target.resolve(), path.parent.resolve())
+    try:
+        temporary.symlink_to(relative_target, target_is_directory=is_dir)
+        _assert_latest_paths_replaceable([path])
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _remove_latest_path(path: Path) -> None:
-    if not path.exists() and not path.is_symlink():
+    try:
+        mode = path.lstat().st_mode
+    except FileNotFoundError:
         return
-    if not path.is_symlink():
+    if not stat.S_ISLNK(mode):
         raise FileExistsError(f"refusing to replace non-symlink latest path: {path}")
-    path.unlink()
+    path.unlink(missing_ok=True)
 
 
 def _agent_versions(agents: dict[str, Any]) -> str:
@@ -985,7 +1068,11 @@ def _request(
         observation=arena.observation_for(state, player_id),
         legal_actions=arena.legal_actions_for(state, player_id),
         action_schema=arena.action_schema,
-        history=list(history),
+        history=[
+            {key: value for key, value in entry.items() if key != "reveal_turn"}
+            for entry in history
+            if entry["reveal_turn"] <= state.turn
+        ],
         time_budget_ms=time_budget_ms,
         memory_policy=memory_policy,
         metadata={
@@ -1020,20 +1107,32 @@ def _call_agent(
     start = time.perf_counter()
     markers: list[str] = []
     try:
-        with _agent_time_limit(time_budget_ms):
-            response = agent.act(request)
+        with action_deadline(time_budget_ms):
+            ensure_agent_available(agent)
+            if _alarm_supported():
+                with _agent_time_limit(time_budget_ms):
+                    response = agent.act(request)
+            else:
+                deadline = current_deadline()
+                assert deadline is not None
+                isolated = copy.deepcopy(request)
+                response = call_in_thread(
+                    agent, lambda: agent.act(isolated), remaining_seconds(deadline),
+                )
         if not isinstance(response, ActResponse):
             if isinstance(response, dict):
                 response = ActResponse.from_mapping(response)
             else:
                 response = ActResponse(action=response)
+        response = ActResponse.from_mapping(response.to_dict())
     except TimeoutError as exc:
         markers.extend(["timeout", FailureClass.PROVIDER_TIMEOUT.value])
         response = ActResponse(
             action=None,
             metadata={
-                "error": str(exc)[:500],
+                "error": _safe_error_text(exc),
                 "error_kind": FailureClass.PROVIDER_TIMEOUT.value,
+                "_deadline_receipts": receipt_snapshot(agent),
             },
         )
     except ProviderCallError as exc:
@@ -1041,7 +1140,7 @@ def _call_agent(
         response = ActResponse(
             action=None,
             metadata={
-                "error": str(exc),
+                "error": _safe_error_text(exc),
                 "error_kind": exc.error_kind,
                 "provider": exc.provider or getattr(agent, "provider", None),
                 "model": exc.model or getattr(agent, "model", None),
@@ -1053,7 +1152,7 @@ def _call_agent(
         response = ActResponse(
             action=None,
             metadata={
-                "error": str(exc)[:500],
+                "error": _safe_error_text(exc),
                 "error_kind": FailureClass.ACTION_RESPONSE_UNPARSEABLE.value,
             },
         )
@@ -1061,7 +1160,7 @@ def _call_agent(
         markers.append("agent_crash")
         response = ActResponse(
             action=None,
-            metadata={"error": str(exc), "error_kind": "agent_crash"},
+            metadata={"error": _safe_error_text(exc), "error_kind": "agent_crash"},
         )
     latency_ms = int((time.perf_counter() - start) * 1000)
     if latency_ms > time_budget_ms and "timeout" not in markers:
@@ -1078,34 +1177,51 @@ def _call_agent(
     return response, markers, latency_ms
 
 
+def _alarm_supported() -> bool:
+    return (
+        threading.current_thread() is threading.main_thread()
+        and all(getattr(signal, name, None) is not None for name in (
+            "SIGALRM", "ITIMER_REAL", "getitimer", "setitimer",
+        ))
+    )
+
+
 @contextmanager
 def _agent_time_limit(time_budget_ms: int) -> Iterator[None]:
-    if threading.current_thread() is not threading.main_thread() or not hasattr(
-        signal,
-        "setitimer",
+    alarm_signal = getattr(signal, "SIGALRM", None)
+    real_timer = getattr(signal, "ITIMER_REAL", None)
+    get_timer = getattr(signal, "getitimer", None)
+    set_timer = getattr(signal, "setitimer", None)
+    if (
+        threading.current_thread() is not threading.main_thread()
+        or alarm_signal is None
+        or real_timer is None
+        or get_timer is None
+        or set_timer is None
     ):
         yield
         return
 
-    previous_handler = signal.getsignal(signal.SIGALRM)
-    previous_timer = signal.getitimer(signal.ITIMER_REAL)
+    previous_handler = signal.getsignal(alarm_signal)
+    previous_timer = get_timer(real_timer)
 
     def _raise_timeout(_signum: int, _frame: Any) -> None:
         raise TimeoutError(f"agent exceeded time budget of {time_budget_ms}ms")
 
-    signal.signal(signal.SIGALRM, _raise_timeout)
-    signal.setitimer(signal.ITIMER_REAL, max(time_budget_ms / 1000, 0.001))
+    signal.signal(alarm_signal, _raise_timeout)
+    set_timer(real_timer, max(time_budget_ms / 1000, 0.001))
     try:
         yield
     finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous_handler)
+        set_timer(real_timer, 0)
+        signal.signal(alarm_signal, previous_handler)
         if previous_timer[0] > 0:
-            signal.setitimer(signal.ITIMER_REAL, previous_timer[0], previous_timer[1])
+            set_timer(real_timer, previous_timer[0], previous_timer[1])
 
 
 def _trace_event(
     *,
+    arena: Arena,
     run_id: str,
     episode_id: str,
     state: ArenaState,
@@ -1124,20 +1240,23 @@ def _trace_event(
     successful_attempt_event_id: str | None = None,
 ) -> TraceEvent:
     event_id = f"{run_id}:{state.turn:06d}"
+    visible_action = arena.public_action(next_state, action)
     public = {
         "state_hash_before": state.state_hash,
         "state_hash_after": next_state.state_hash,
         "active_player": state.active_player,
         "actor_player": state.active_player,
         "seat": state.active_player,
-        "action": action,
+        "action": visible_action,
         "scores": next_state.scores,
         "markers": markers,
         "latency_ms": latency_ms,
         "requested_time_budget_ms": requested_time_budget_ms,
         "effective_time_budget_ms": effective_time_budget_ms,
         "suite_context": suite_context,
-        "public_explanation": response.public_explanation if response else None,
+        "public_explanation": (
+            response.public_explanation if response and visible_action is not None else None
+        ),
         "action_provenance": action_provenance,
         "logical_action_id": logical_action_id,
         "successful_attempt_event_id": successful_attempt_event_id,
@@ -1156,11 +1275,13 @@ def _trace_event(
         },
         judge={
             **public,
+            "action": action,
             "request": request.to_dict(),
             "response": response.to_dict() if response else None,
         },
         auditor={
             **public,
+            "action": action,
             "protocol_version": request.protocol_version,
             "state_before": state.to_dict(),
             "state_after": next_state.to_dict(),
@@ -1175,12 +1296,14 @@ def _replay_event(
     action: Any | None,
     markers: list[str],
     *,
+    arena: Arena,
     actor_player: str | None,
     state_hash_before: str | None,
     action_provenance: str | None = None,
     logical_action_id: str | None = None,
     successful_attempt_event_id: str | None = None,
 ) -> ReplayEvent:
+    action = arena.public_action(state, action)
     public_reasoning_ref = None
     if action is not None:
         public_reasoning_ref = f"public_reasoning/reasoning.jsonl#{state.turn}"
@@ -1264,6 +1387,9 @@ def _score_summary(
         outcome=state.outcome,
         metrics={
             "turns": len(trace_events),
+            "run_status": "completed"
+            if state.terminal
+            else ("truncated" if "run_truncated" in invalid_reason_codes else "failed"),
             "elapsed_ms": elapsed_ms,
             "illegal_action_rate": illegal / total_turns,
             "timeout_rate": timeouts / total_turns,
@@ -1433,3 +1559,7 @@ def _unique_high_score_winner(scores: dict[str, float], players: list[str]) -> s
     best = scores.get(ranked[0], 0.0)
     second = scores.get(ranked[1], 0.0)
     return ranked[0] if best > second else None
+
+
+def _safe_error_text(exc: Exception) -> str:
+    return str(exc)[:500].encode("utf-8", errors="backslashreplace").decode("utf-8")

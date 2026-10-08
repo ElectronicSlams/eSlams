@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -25,6 +25,7 @@ class CheckersArena(Arena):
     max_turns = 200
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board: list[list[str | None]] = [[None for _ in range(SIZE)] for _ in range(SIZE)]
         for row in range(3):
             for col in range(SIZE):

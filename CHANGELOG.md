@@ -1,5 +1,231 @@
 # Changelog
 
+## Unreleased
+
+- Add one tested lab quickstart, sample classification/checksum inventory,
+  private/public custody guidance, Platform Labs handoff and canonical docs
+  index. Replace mislabeled/truncated or legacy-HMAC newcomer samples with
+  current complete keyless Local fixtures and evidence-only publication shapes.
+  Add an explicit source-distribution include list and community templates.
+- Bump the remaining historically changed card/Bargaining/Dilemma arenas to
+  1.0.1; preserve already advanced arena versions. Add all-50-arena versioned
+  trajectory fingerprints to native CI. Historical 0.5.1 version collisions
+  remain producer-specific and are documented in docs/ARENA_VERSIONING.md.
+- Document bounded Gomoku/Pentago initial-prompt overrides for enumerated
+  legal actions, count compact observation UTF-8 bytes correctly and gate all
+  initial-state budgets in native CI. CLI options now include meaningful help.
+- Escape untrusted replay JSON and unknown chess piece text; browser checks
+  cover mixed-case script terminators and injected element attempts.
+
+- Enforce elapsed provider deadlines through queue admission and streamed
+  response bodies, bounded by the complete action budget across retries. Cancel
+  expired HTTP streams. Worker/no-SIGALRM Runner calls return at their deadline,
+  discard late actions and quarantine unfinished callbacks within bounded capacity.
+  Arbitrary in-process callbacks cannot be forcibly terminated; see artifacts docs.
+
+- Replay HTML keeps controls reachable first, supports frame-navigation keys
+  and preserves move focus. Responsive labeled boards and readable public state
+  summaries replace overflowing cells and JSON fallbacks; zero actions retain
+  their identity, and chess details appear only when supplied. Browser CI covers
+  all 50 arenas at mobile/tablet/desktop widths.
+
+- Backgammon 1.1.0 fixes bearing-off and maximum/larger-die legality, preserves
+  the die associated with ambiguous bear-off tokens, and records blocked rolls
+  as explicit passes. Passes advance the compact 160-action episode limit.
+
+- Alien-shooter 1.1.0 resolves collisions after both motion phases and slows
+  descent to once per twelve actions. An exhaustive formation check verifies a
+  public-observation policy reaches the full score in every initial layout.
+
+- Auction 1.1.0 retains negative utility, uses a fixed affine score scale,
+  alternates tied allocations by seed parity, and reports the match winner by
+  utility separately from the item recipient. Negotiation 1.1.0 enforces reserve
+  utilities and uses a ten-unit price grid to retain feasible deals for all seeds.
+
+- Core-lite aligns canonical state/action hashes, action wrappers, seeds and
+  structured terminal/malformed failures with its documented Python parity scope.
+  A compiled cross-runtime CI check covers both supported games and all
+  deterministic response fields. Both TypeScript source packages are private.
+- Paddle-ball 1.1.0 raises the episode limit to 400 actions for the reachable
+  ten-bounce target. Ultimate Tic-Tac-Toe 1.1.0 draws on decided local boards
+  without a global line. Morris is explicitly compact with a 120-action limit;
+  catalogue examples now use legal tokens from the initial seed-1 position.
+
+- Trim pasted provider-key whitespace, reject invalid header credentials
+  before calls, and redact credential echoes in provider errors.
+- Preflight now checks that a catalogue provider has a Core inference adapter
+  and a compatible text game agent. Abort inline retry waits exceeding five
+  seconds while retaining the original failed attempt receipt.
+
+- Align solo arena seats and terminal results with the solo contract; benchmark
+  success is separate from competitive winners (adapter versions 1.0.1).
+  Classify boxing/hockey as head-to-head, allow Goofspiel/Mahjong draws, and
+  disclose compact Backgammon/Battleship/Crazy Eights rules.
+- Cribbage 1.1.0 pairs consecutive even/odd seeds with the same deal and opposite
+  dealers. Both seats retain explicit scores; use both seeds in comparisons.
+
+- Add table-seat CLI agents, explicit run IDs with safe overwrite, and optional
+  `--require-scoring-valid` status for automation that needs a scoreable match.
+- Remove ignored catalogue include flags: full JSON already includes help,
+  rendering and animation. Text availability now summarizes counts; renderer
+  text uses actual replay/timeline fields.
+- Correct artifact layout, signing-key format, reserved Arena events and the
+  random-agent example. Historical topology counts describe their release;
+  the 0.5.1 catalogue changed to 13 solo / 31 head-to-head / 6 multi-seat games.
+  Unreleased Hanabi uses a cooperative topology.
+
+- Gin Rummy 1.0.1 fixes ace-low/disjoint meld evaluation and final stock discard
+  cancellation; cancelled hands award no points. The compact hand and omitted
+  full-match rules are documented.
+
+### Compatibility
+
+- `AgentServer.run()` and `eslams agent serve` now bind `127.0.0.1` by default.
+  Containers/remote callers requiring exposure must explicitly opt in with
+  `--host 0.0.0.0` or `run(host="0.0.0.0")`; the sample `/act` and `/health`
+  endpoints remain unauthenticated.
+
+- Core 0.5.1 terminal/replay validation tightened the historical boundary:
+  some 0.2.0–0.5.0 artifacts require producer-version historical inspection.
+  Current strict scoring checks remain enforced; see `docs/ARTIFACTS.md`.
+- Public Official planning fails clearly when no eligible models are selected.
+  Use Battlefield planning for BYO-key showcase cases. Supplied plans, empty
+  merges and malformed inputs fail before aggregate output is written.
+- Publication exports deduplicate artifact identities and omit local input
+  paths. Provider projections preserve per-model usage and distinguish known
+  partial costs from complete totals. Arena CLI accepts saved start/step outputs.
+
+- The proposed supported minimum is Python 3.10. Patched FastAPI/Starlette,
+  pytest and build/publishing tools require it; cryptography and runtime
+  dependency floors now select current patched versions. Published historical
+  Core versions and artifacts are unchanged. No release is published here.
+
+### Fixed
+
+- Latest pointers use relative symlinks installed atomically. Concurrent runs
+  retain their result paths, relocation preserves links, and unavailable
+  symlink privileges produce a warning after successful artifact writing.
+
+- Commit-based source archives embed Git provenance; packaged provenance tests
+  also work in an extracted sdist without Git. Both Python packages include
+  `py.typed`, and fixture tests resolve their paths independently of the cwd.
+- Distribution CI checks metadata and isolated wheel/sdist consumers outside
+  the checkout on Linux, Windows and macOS, then runs the extracted sdist suite.
+- README links use absolute repository URLs on PyPI and accurately describe
+  TypeScript sources as repository integrations rather than wheel contents.
+
+- Cribbage 1.0.1 corrects show scoring; Pentago 1.0.1 preserves placement wins
+  before rotation; Othello 1.0.1 allows passes without truncating legal play.
+- Chess 1.2.0 makes draw claims explicit actions and keeps automatic fivefold/
+  75-move adjudication and checkmate precedence. FEN fullmove numbers no longer
+  count toward the runner action horizon in injected/resumed positions.
+- Leduc and both Texas Hold'em arenas 1.0.1 split tied showdown scores only
+  among best hands and advance a matched betting round after a final fold.
+
+- Canonical schema and text writers use explicit LF newlines across platforms.
+  Git checkout attributes preserve `.eslams` archives as binary data.
+- Contributor commands cover POSIX and Windows virtual environments and both
+  TypeScript packages. The value-free environment reference includes the final
+  authentication/session/debug/signing settings and documents explicit loading.
+- CI adds native Windows/macOS checks and audits current/direct-floor dependency
+  sets without advisory ignore lists. Workflow actions are pinned and workflow
+  lint downloads are checked against a fixed SHA-256 digest. Publish ref inputs
+  remain literal data and reject CR/LF; no publishing job is run by this work.
+
+- Agent/provider HTTP responses are streamed within a 1 MiB limit and must use
+  identity encoding. Invalid Unicode and nonfinite numeric values are rejected
+  before artifact logging; explanations are limited to 16 KiB. Model confidence
+  is validated rather than silently clamped. Canonical JSON refuses NaN/Infinity.
+
+- Every arena rejects boolean, float, string and null seeds. Signed integers
+  (including zero, negative seeds and large seeds) retain their commitment
+  across steps; runner HTTP integer fields no longer silently coerce values.
+
+- Shogi 1.0.1 uses the standard rook/bishop opening squares and filters moves
+  and drops that expose its own king. Xiangqi 1.0.1 filters moves exposing the
+  general, including cannon checks.
+- Compact Hanabi 1.1.0 ends after one final turn per seat following the last
+  draw and disallows discarding with eight clues. Both seats share a team score;
+  even a perfect game has no individual winner. Cooperative catalogue topology
+  and result contracts use new v2 schemas in schema bundle v5; existing
+  competitive/solo v1 schemas retain their meaning. Hanabi is excluded from
+  head-to-head battlefield and Official evaluation surfaces.
+
+- Manifest and signature paths are confined to the artifact root. Expanded
+  artifact links/special members are rejected before reading payloads; archive
+  member reads use the same bounded extractor. Invalid reports make every
+  scoring/publication eligibility flag false.
+- External replay HTML validates content first. `--diagnostic` explicitly
+  permits inspection with a visible untrusted warning; embedded previews
+  instruct viewers to validate the complete artifact.
+- Invalid signing key IDs fail before agents run or outputs are created.
+
+- Arena sessions require a configured secret of at least 32 characters. The
+  explicit local development opt-in is refused in production/staging. Envelopes
+  authenticate private state and must stay on trusted servers. Existing unsigned
+  session states and runner snapshots without game/ruleset binding cannot resume.
+- Runner HTTP routes require fresh HMAC request signatures and reject repeated
+  nonces. The separate-process `runner session-*` CLI workflow is removed; use
+  the library in one process or the authenticated HTTP service.
+
+- Sealed commitments stay hidden from opponent history, public traces and live
+  session events until the reveal phase. Auditor evidence retains raw actions.
+- Model-seat legal actions remain private, and public state views no longer
+  carry legal action lists. Human action lists are for the active human
+  recipient and must be routed privately by the Platform.
+- Battleship fleets now draw independently from each full grid (arena 1.1.0).
+- Agent servers bind to `127.0.0.1` by default. Container and remote callers
+  must pass `--host 0.0.0.0` (or `host="0.0.0.0"` in Python) explicitly.
+  Ports must be integers from 1 to 65535; ephemeral port zero is unsupported.
+
+- Public replay export, publication export, and uploaded replay fixture
+  generation no longer delete an existing output directory. They refuse
+  existing destinations and input/output aliases, stage writes separately,
+  and install the completed directory after success. Concurrent Core exporters
+  cannot claim the same destination. Use a new output directory for each export;
+  no release or historical artifact bytes are changed by this repair.
+- Replay and golden exports refuse implicit file overwrite. `--overwrite`
+  explicitly permits replacing output files, but replay always refuses its
+  source or an alias. Expanded-artifact replays are rendered beside the
+  artifact, preserving hashed members. Replay rejects ignored extra arguments;
+  the documented `replay validate-public <package>` compatibility command stays
+  supported.
+- Archive readers prevalidate portable member names and refuse links,
+  duplicate/aliased paths, special members and extraction overwrites. Limits
+  are 64 MiB compressed, 4,096 members, 64 MiB per file and 256 MiB total
+  decompressed, enforced before and during extraction. Temporary extraction
+  directories are removed on CRC, I/O and interruption failures. Existing
+  nonarchive files now report unsupported input instead of "file not found".
+- The installed `eslams` command and `python -m eslams.cli` now report expected
+  user/file errors consistently with exit 1. Set `ESLAMS_DEBUG=1` for the full
+  traceback; unexpected programming errors remain visible. Early-closing output
+  pipes terminate without a BrokenPipeError traceback.
+
+- Artifact directories and archives are built under temporary names before
+  installation. Failed writes and interrupts leave prior artifacts intact;
+  overwrite refuses unrelated directories. Traversal/stat errors and symlink
+  members fail closed. ZIP members use a fixed portable timestamp.
+
+- Artifact fixtures preserve sibling directories and existing latest pointers,
+  accept ordinary filenames independent of run IDs, and expose `--overwrite`.
+
+- `agent test` reports endpoint failures and illegal/malformed responses in
+  its `ok` flag, exit status and diagnostic counts.
+
+- Nonpositive or noninteger turn caps are rejected before output creation.
+  Nonterminal games stopped by the Runner are marked `run_truncated` and cannot
+  score or publish evidence as complete cases. Diagnostic replay remains valid;
+  artifact validation rejects scoring claims unsupported by terminal replay.
+
+- Runner rejects invalid shard ranges and nonpositive/noninteger action time
+  budgets before creating outputs, instead of silently clamping budgets.
+
+- Plan shard counts must be positive integers, at most the number of cases
+  (one diagnostic shard for an empty plan), and no more than 1024.
+
+- Action legality uses strict JSON types: boolean and floating-point aliases
+  cannot impersonate integer moves or bypass illegal-action failure policies.
+
 ## v0.6.1 - 2026-07-31
 
 ### Fixed

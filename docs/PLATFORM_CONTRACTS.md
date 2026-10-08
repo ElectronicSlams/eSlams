@@ -133,6 +133,12 @@ store.ping()
 store.close("arena_123")
 ```
 
+The library store persists only within one process. The former
+`eslams runner session-*` shell commands have been removed because separate
+invocations cannot share that store. Use the library inside one long-lived
+process or the authenticated HTTP app below. Store affinity and persistence
+across process restarts are the host's responsibility.
+
 FastAPI routes are available from `eslams.runner_server:app`:
 
 - `POST /runner/session/create`
@@ -141,6 +147,32 @@ FastAPI routes are available from `eslams.runner_server:app`:
 - `POST /runner/session/{id}/ping`
 - `POST /runner/session/{id}/close`
 - `GET /runner/session/ping`
+
+That app is the network boundary. Every route requires
+`X-Eslams-Runner-Signature`, a JSON object from `sign_runner_request`. The
+signed `path` is the request path, and the signed body is the JSON object
+(`{}` when the route has no body). Core does not ship a runner shared secret.
+Set `ESLAMS_RUNNER_REQUEST_SECRET` (at least 32 characters) and
+`ESLAMS_RUNNER_REQUEST_KEY_ID` on the runner and on every caller. Requests
+expire after `ESLAMS_RUNNER_REQUEST_MAX_AGE_SECONDS` (default 300) and a nonce
+is accepted once per process.
+
+Rotate by copying the current secret and key id to
+`ESLAMS_RUNNER_REQUEST_SECRET_PREVIOUS` and
+`ESLAMS_RUNNER_REQUEST_KEY_ID_PREVIOUS`, installing the new pair, restarting
+the runner and callers, then deleting the previous pair and restarting again.
+Do not log either secret. There is no overlapping window after the previous
+pair is removed.
+
+`ESLAMS_RUNNER_REQUEST_ALLOW_UNSIGNED=1` skips signatures only for a local
+process. It is refused when `ESLAMS_ENV` is `production`, `prod`, or `staging`,
+and it does nothing once a secret is set. Do not set it on a reachable host.
+
+HTTP responses omit `private_state_by_player` and replace the raw state
+snapshot with a signed `sessionState` envelope. Create rejects an unsigned
+snapshot and rejects an existing session id. The envelope is for the
+authenticated platform process only. It is an HMAC, not encryption, and must
+not be forwarded to browsers.
 
 `eslams runner health --json` now includes `ok`, `loadedGames`, `warm`, and
 `uptimeMs` in addition to the existing registry/action/renderer hashes.
@@ -171,8 +203,15 @@ Platform-facing TypeScript artifacts are checked in under:
 - `packages/core-contracts/src/generated/integrity.ts`
 
 `packages/core-lite` contains a small TypeScript runtime for tic-tac-toe and
-connect-four. Python Core remains the official authority; Core-lite promotion
-is gated by Python parity fixtures and engine capability metadata from
+connect-four. Python Core remains the official authority. CI compiles Core-lite
+and compares every deterministic step-response field against Python-generated
+fixtures, including both winners and draws, action wrappers, seed zero, negative
+seeds, and large safe integer seeds. `verifiedAgainst` refers to this scope;
+wall-clock timestamps, timing values, and error prose are excluded. Core-lite
+supports the standard ruleset and JavaScript safe integer seeds. It returns
+legal-action IDs and the default public compact observation; it does not provide
+the complete Python request/service/artifact API. See the
+[Core-lite README](../packages/core-lite/README.md) and
 `eslams core capabilities --game GAME`.
 
 ## Seed and Request Security
@@ -185,20 +224,31 @@ Runner request signing helpers canonicalize method, path, body SHA-256,
 timestamp, nonce, and request id:
 
 ```python
+import json
+import os
+
 from eslams.contracts.security import sign_runner_request, verify_runner_request_signature
 
+secret = os.environ["ESLAMS_RUNNER_REQUEST_SECRET"]
+key_id = os.environ["ESLAMS_RUNNER_REQUEST_KEY_ID"]
+body = {"action": {"actionId": "4"}}
 signature = sign_runner_request(
-    secret="runner-secret",
+    secret=secret,
     method="POST",
     path="/runner/session/arena_123/step",
-    body={"action": {"actionId": "4"}},
+    body=body,
     timestamp="2026-06-11T00:00:00Z",
     nonce="nonce",
     request_id="req_123",
-    key_id="runner-key-1",
+    key_id=key_id,
 )
-assert verify_runner_request_signature(secret="runner-secret", signature_payload=signature)
+assert verify_runner_request_signature(secret=secret, signature_payload=signature)
+headers = {"X-Eslams-Runner-Signature": json.dumps(signature)}
 ```
+
+Send `headers` with the matching method, path, and JSON body. Rotate the
+secret with the previous-secret pair documented on the runner routes. Do not
+reuse a sample or short secret.
 
 ## Artifact Validation
 
@@ -387,10 +437,18 @@ unavailable reason.
 Plan commands are no-secret and deterministic:
 
 ```bash
-eslams plan official --suite public-smoke --providers openai,anthropic --arenas chess,tic-tac-toe --json
-eslams plan battlefield --pairs openai:gpt-5-mini,anthropic:claude-sonnet-4-20250514 --arenas tic-tac-toe --json
+eslams plan battlefield --pairs openai:gpt-5-mini,anthropic:claude-sonnet-4-6 --arenas tic-tac-toe --json
 eslams plan public-match --request request.json --json
 ```
+
+The public registry grants no `official_eval` eligibility. The CLI
+`plan official --suite public-smoke` fails if no eligible models are selected;
+capability flags require explicit trusted eligibility evidence and are not inferred
+from an API model list. The Python `official_plan` helper can return an empty
+diagnostic envelope, which cannot be used as a publication plan. `public-smoke`
+is the supported official planning suite. Unknown arenas, malformed model
+references, supplied plans with invalid hashes, and empty aggregate inputs fail
+without substituting defaults.
 
 Plans contain a stable `plan_hash`, suite fingerprint, registry hash, selected
 models and arenas, expected case count, shard rows, environment variable names,
@@ -441,6 +499,8 @@ page = legal_actions_page(started["session_state"], "player_1", query="center")
 CLI equivalents:
 
 ```bash
+# Generate a local secret once and keep it for every start/step/page call.
+export ESLAMS_ARENA_SESSION_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 eslams arena start --game tic-tac-toe --variant standard --seed 1 \
   --players-json '{"player_1":{"kind":"human"},"player_2":{"kind":"model"}}'
 eslams arena step --state session_state.json --player-id player_1 --action-token 4
@@ -449,7 +509,7 @@ eslams arena legal-actions-page --state session_state.json --player-id player_1 
 
 Start and step results emit:
 
-- signed opaque `session_state` envelope for Platform/server storage only
+- signed server-only `session_state` envelope for Platform/server storage only
 - `state_hash` and `state_hash_status`
 - browser-safe `public_state`
 - canonical live `display_frame` in the same shape as replay display frames
@@ -459,10 +519,15 @@ Start and step results emit:
 - public-safe Arena events
 - phase timing fields and `total_core_ms`
 
-`session_state` is verified with `ESLAMS_ARENA_SESSION_SECRET`; set that secret
-in every production runner/container that creates or steps live Arena sessions.
-Platform must not forward the envelope to browsers or public streams.
-Browser-streamable fields are the public state, display frame, action
+`session_state` is verified with `ESLAMS_ARENA_SESSION_SECRET`. A missing,
+empty, short, or development-constant secret fails closed, including when
+`ESLAMS_ENV` is unset. Set a secret of at least 32 characters in every
+runner or container that creates or steps live Arena sessions. Signatures
+older than `ESLAMS_ARENA_SESSION_MAX_AGE_SECONDS` (default 86400) are rejected.
+`ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET=1` is a local opt-in and is
+ignored when `ESLAMS_ENV` is `production`, `prod`, or `staging`. Do not log the
+secret. Platform must not forward the envelope to browsers or public streams.
+For the active human recipient, browser-streamable fields are the public state, display frame, action
 descriptors for the active actor, events, actor metadata, terminal/outcome
 fields, and timing.
 
@@ -591,3 +656,48 @@ eslams fixtures replay --kind uploaded-smoke --out fixtures/artifacts/uploaded_r
 Text fixtures also cover provider receipt scenarios, public replay JSONL, a
 sample official plan, and `fixtures/publication/battlefield_sample_bundle/`. CI
 requires no provider API keys, no Cloudflare account, and no MP4 generation.
+
+Session privacy: the HMAC envelope is base64 JSON containing full private state,
+not encryption. Keep `session_state` on trusted servers; never stream it to a
+browser. Legal action lists/descriptors are emitted only for the active human
+recipient and must be privately routed to that person. Model-seat lists stay
+inside the trusted runner, obtainable from the server-side state. Public views
+omit legal action lists. Pending sealed actions and their explanations remain
+hidden until the arena reveal phase.
+
+Runner snapshots bind the signed payload to `game_id` and `ruleset_version`.
+Raw or unbound snapshots cannot restore HTTP sessions. Requests are limited
+to 1 MiB, signature headers to 8 KiB, and the per-process replay cache to 10,000
+live nonces. Nonce state is process-local: deploy with session affinity and a
+shared nonce store or gateway if multiple workers share a key. On restart, use a
+new request key or an external replay cache when replay resistance must span
+restarts.
+
+## Cooperative catalogue consumers
+
+Schema bundle `eslams-schema-bundle-v5` adds `eslams.game.topology.v2` and
+`eslams.game.result.v2` for the two-seat cooperative mode. The existing v1
+topology/result contracts continue to describe solo and competitive games.
+Consumers must dispatch on the nested `schemaVersion` and recognize cooperative
+mode before accepting Hanabi catalogue rows. TypeScript cooperative interfaces
+are exported by `packages/core-contracts`.
+
+Hanabi has two controlled seats, no environment seat, no individual winner or
+draw, and identical team scores for both seats. A perfect game still has
+`winner: null`. Display the team score; do not enter the seats as opponents in
+a head-to-head leaderboard. Its `battlefield` and `benchmark` surfaces are
+disabled and its Official surface is not eligible.
+
+## Initial-state budget scope
+
+`eslams core budgets --json` checks all 50 initial states at the supplied seed.
+Compact observation sizes count UTF-8 bytes. Prompt tokens are an approximation,
+not measured provider usage. Gomoku has a documented 6,000-token bound for up to
+225 placement descriptors/output-schema values; Pentago has an 8,000-token bound
+for up to 288 placement/rotation actions. Other limits retain their existing
+bounds. Native CI runs this check; later-state/history growth needs its own
+measurement and does not follow from an initial-state pass.
+
+The Core inputs and acceptance criteria for hosted Labs onboarding are in
+[LABS_PAGE_CONTRACT.md](LABS_PAGE_CONTRACT.md). Local/public/Official custody
+boundaries are in [PUBLIC_CUSTODY.md](PUBLIC_CUSTODY.md).
