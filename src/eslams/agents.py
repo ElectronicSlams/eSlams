@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import random
 import re
 import threading
@@ -31,6 +30,7 @@ from eslams.model_actions import (
     parse_model_action,
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
+from eslams.provider_credentials import provider_key
 from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
@@ -220,7 +220,12 @@ class ModelProviderAgent:
             self.capabilities,
             request,
         )
-        api_key = os.getenv(self.api_key_env)
+        key_error = None
+        try:
+            api_key = provider_key(self.api_key_env)
+        except ValueError as exc:
+            api_key = None
+            key_error = str(exc)
         if not api_key:
             self._remember_receipt(
                 _failure_receipt(
@@ -230,12 +235,16 @@ class ModelProviderAgent:
                     agent_version=self.version,
                     turn_id=request.turn_id,
                     outcome="provider_auth_failed",
-                    usage_unavailable_reason="provider_not_called_missing_api_key",
+                    usage_unavailable_reason=(
+                        "provider_not_called_invalid_api_key"
+                        if key_error
+                        else "provider_not_called_missing_api_key"
+                    ),
                     runtime_config=self.runtime_config,
                 )
             )
             raise ProviderCallError(
-                f"missing API key environment variable {self.api_key_env}",
+                key_error or f"missing API key environment variable {self.api_key_env}",
                 error_kind="provider_auth_failed",
                 provider=self.provider,
                 model=self.model,
@@ -888,6 +897,11 @@ def _post_json(
             ) from exc
     if response.status_code >= 400:
         body = response.text[:500].replace("\n", " ")
+        for name, value in headers.items():
+            if name.lower() in {"authorization", "x-api-key", "x-goog-api-key"}:
+                secret = value.partition(" ")[2] if name.lower() == "authorization" else value
+                if secret:
+                    body = body.replace(secret, "[REDACTED]")
         raise ProviderCallError(
             f"provider returned {response.status_code}: {body}",
             status_code=response.status_code,
@@ -926,7 +940,8 @@ def _retry_after_seconds(response: httpx.Response) -> float | None:
     if not value:
         return None
     try:
-        return max(0.0, float(value))
+        seconds = float(value)
+        return max(0.0, seconds) if math.isfinite(seconds) else None
     except ValueError:
         pass
     try:
@@ -1004,11 +1019,16 @@ def _sleep_before_retry(
     retry_after_seconds: float | None = None,
 ) -> None:
     if retry_after_seconds is not None:
+        if not math.isfinite(retry_after_seconds) or retry_after_seconds > 5.0:
+            raise TimeoutError("provider retry delay exceeds the 5-second inline retry limit")
         time.sleep(retry_after_seconds)
         return
     if runtime_config is None or runtime_config.retry_backoff_ms <= 0:
         return
-    time.sleep(runtime_config.retry_backoff_ms / 1000)
+    delay = runtime_config.retry_backoff_ms / 1000
+    if delay > 5.0:
+        raise TimeoutError("configured retry delay exceeds the 5-second inline retry limit")
+    time.sleep(delay)
 
 
 def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]:
@@ -1177,7 +1197,9 @@ def _failure_receipt(
         "gateway_mode": runtime_config.gateway_mode if runtime_config else "disabled",
         "gateway_request_id": None,
         "retry_after_ms": (
-            round(retry_after_seconds * 1000) if retry_after_seconds is not None else None
+            round(min(retry_after_seconds, 86_400.0) * 1000)
+            if retry_after_seconds is not None
+            else None
         ),
         "usage": {},
         "usage_unavailable_reason": usage_unavailable_reason,

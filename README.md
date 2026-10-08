@@ -206,6 +206,16 @@ eslams validate runs/latest.eslams --profile runner-bundle
 eslams replay runs/latest.eslams
 ```
 
+Provider keys may include pasted leading/trailing whitespace; Core trims it.
+Internal whitespace and non-ASCII credentials fail before a network call, with
+a redacted `provider_auth_failed` diagnostic. A provider namespace in the
+catalogue does not imply a Core inference adapter; preflight checks both.
+Inline retry waits are limited to five seconds: larger provider hints or
+configured backoffs abort with the failed receipt retained. Core does not retry
+earlier than a provider's requested wait. Retry hint receipts are bounded at
+24 hours for safe serialization. Official execution still disallows adapter
+retries and leaves whole-case retries to its orchestrator.
+
 `preflight_mode` is always `registry_only` or `live`, and every live check is
 reported separately. A registry-only pass does not prove that a provider
 account can invoke the model.

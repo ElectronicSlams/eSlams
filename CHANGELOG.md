@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Trim pasted provider-key whitespace, reject invalid header credentials
+  before calls, and redact credential echoes in provider errors.
+- Preflight now checks that a catalogue provider has a Core inference adapter
+  and a compatible text game agent. Abort inline retry waits exceeding five
+  seconds while retaining the original failed attempt receipt.
+
 - Align solo arena seats and terminal results with the solo contract; benchmark
   success is separate from competitive winners (adapter versions 1.0.1).
   Classify boxing/hockey as head-to-head, allow Goofspiel/Mahjong draws, and

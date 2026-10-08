@@ -4,7 +4,7 @@ This work consolidates the original backlog into [PR #218](https://github.com/El
 
 ## Verified closures
 
-68 of the 149 inventoried issues and 16 of the 44 original PRs are closed.
+86 of the 149 inventoried issues and 16 of the 44 original PRs are closed.
 The consolidation PR remains draft. The remaining entries include implemented
 changes awaiting integration checks and unresolved work; neither is complete.
 

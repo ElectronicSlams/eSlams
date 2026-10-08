@@ -154,7 +154,7 @@
       "number": 58,
       "title": "`eslams run` exits 0 when the run is invalid for scoring (e.g. provider auth failure)",
       "work_package": "W3",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Define CLI execution exit status separately from scoring eligibility. Retaining exit 0 for a completed diagnostic run is defensible if clearly documented; add an explicit strict mode if needed without silently breaking existing automation.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -166,7 +166,18 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:21Z",
+        "number": 58,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/58",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -388,7 +399,7 @@
       "number": 77,
       "title": "6 of 50 advertised arenas cannot be run from the CLI (bridge, dou-dizhu, mahjong, leduc-holdem, limit-texas-holdem, no-limit-texas-holdem): raw traceback, no per-seat agent option",
       "work_package": "W3",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Add an explicit per-seat agent mapping, or give actionable unsupported-mode errors and accurate capability docs. Run an actual supported CLI match for each affected multi-seat game.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -400,7 +411,18 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:23Z",
+        "number": 77,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/77",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -604,7 +626,7 @@
       "number": 96,
       "title": "Cribbage: dealer and crib fixed to player_2 with no alternation (random play wins 67 vs 309), headline score is player_1 only",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Fixed dealer assignment and player_1 score are fairness/product-contract choices as well as possible rule defects. Declare alternation and result aggregation, then implement/version only the chosen rule set.",
       "evidence": {
         "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
@@ -618,7 +640,18 @@
           "src/eslams/arenas/modern_control.py",
           "src/eslams/arenas/strategic_games.py",
           "src/eslams/arenas/advanced_cards.py"
-        ]
+        ],
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:50Z",
+        "number": 96,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/96",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -854,7 +887,7 @@
       "number": 116,
       "title": "README/ARTIFACTS signing example uses placeholder `base64:...`; copied literally it crashes the run, and the 32-byte key format is documented nowhere",
       "work_package": "W9",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Provide a safe throwaway 32-byte key-generation recipe and explicit base64/hex format errors. Test copied examples without real signing keys or granting Official authority.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -866,7 +899,18 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:25Z",
+        "number": 116,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/116",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -927,7 +971,7 @@
       "number": 120,
       "title": "docs/ARTIFACTS.md \"Required structure\" omits replay/index.html and timings/timings.json that every run writes",
       "work_package": "W9",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Consolidate this narrow layout omission into #165. Close as duplicate only with an explicit parent link and complete coverage of replay/timing members; close parent after docs match generated artifacts.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -939,7 +983,18 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:27Z",
+        "number": 120,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/120",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -967,7 +1022,7 @@
       "number": 122,
       "title": "eslams catalogue games: --include-help, --include-render and --include-animation are accepted but ignored (output byte-identical)",
       "work_package": "W5",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Implement documented include flags or remove/reject unsupported flags; test semantic output differences without asserting every optional renderer is ready.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -979,14 +1034,25 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:29Z",
+        "number": 122,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/122",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
       "number": 123,
       "title": "eslams catalogue availability (text mode) prints 438,100 lines with only 100 distinct (model dropped); catalogue renderers shows an invented status=ready",
       "work_package": "W5",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Preserve model identity in text rows and report renderer readiness from actual capabilities; test bounded distinct rows and truthful unavailable/partial statuses.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -998,7 +1064,18 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:32Z",
+        "number": 123,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/123",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -1148,7 +1225,7 @@
       "number": 135,
       "title": "Boxing-style-arena and ice-hockey-style-arena: catalogued as solo_score (no opponent, no winner) but are alternating two-player games with winner, draws and a hidden opponent policy",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Correct solo/head-to-head metadata to the actual seat/outcome contract, or implement the intended solo rules under a new version. Hidden opponent policy needs an explicit reproducibility/visibility contract.",
       "evidence": {
         "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
@@ -1162,7 +1239,18 @@
           "src/eslams/arenas/modern_control.py",
           "src/eslams/arenas/strategic_games.py",
           "src/eslams/arenas/advanced_cards.py"
-        ]
+        ],
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:52Z",
+        "number": 135,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/135",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -1415,13 +1503,24 @@
       "number": 148,
       "title": "Gin Rummy: deadwood evaluator treats the ace as high (Q-K-A is a run, A-2-3 is not) and lets one card count in a set and a run, so knock legality and scoring are wrong",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Compute gin deadwood with disjoint meld selection and the declared ace rule; test overlapping set/run alternatives and knock thresholds.",
       "evidence": {
         "source": "src/eslams/arenas/advanced_cards.py; Gin Rummy 1.0.1",
         "changes": "Ace-low meld enumeration with optimal disjoint partition; stock cancellation only after discard at two cards with no points; knock still allowed on that final discard. Declared turn horizon cancels without comparing mismatched hands.",
         "tests": "tests/test_standard_rule_regressions.py: concrete overlapping/ace/quad cases, illegal knock boundary, final stock discard and deterministic artifact replay, last-turn knock.",
-        "rules": "https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf"
+        "rules": "https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:46Z",
+        "number": 148,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/148",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -1449,20 +1548,31 @@
       "number": 150,
       "title": "Gin Rummy: drawing the last stock card ends the hand at once with an 8-card hand and scores it on deadwood (pagat: hand is cancelled when the stock reaches two cards)",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Implement the declared stock-exhaustion/cancellation rule while preserving valid hand size; test last-draw, discard and scoring transitions.",
       "evidence": {
         "source": "src/eslams/arenas/advanced_cards.py; Gin Rummy 1.0.1",
         "changes": "Ace-low meld enumeration with optimal disjoint partition; stock cancellation only after discard at two cards with no points; knock still allowed on that final discard. Declared turn horizon cancels without comparing mismatched hands.",
         "tests": "tests/test_standard_rule_regressions.py: concrete overlapping/ace/quad cases, illegal knock boundary, final stock discard and deterministic artifact replay, last-turn knock.",
-        "rules": "https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf"
+        "rules": "https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:48Z",
+        "number": 150,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/150",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
       "number": 151,
       "title": "Goofspiel and mahjong: catalogue says drawAllowed=false and winnerRequired=true, but about 9% and 6% of random games end with winner None",
       "work_package": "W3",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Make drawAllowed/winnerRequired reflect actual permitted terminal outcomes or change rules under a new version. Do not fabricate a winner to satisfy metadata.",
       "evidence": {
         "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
@@ -1476,14 +1586,25 @@
           "src/eslams/arenas/modern_control.py",
           "src/eslams/arenas/strategic_games.py",
           "src/eslams/arenas/advanced_cards.py"
-        ]
+        ],
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:54Z",
+        "number": 151,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/151",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
       "number": 152,
       "title": "README and catalogue label backgammon, battleship and crazy-eights as `faithful` although they are compact variants (5 checkers per side, 5x5 board with three one-cell ships, 5-card deal)",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Label compact backgammon/battleship/crazy-eights variants honestly and document exact rules; marketing them as faithful requires implementing full rules under separate versions.",
       "evidence": {
         "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
@@ -1497,7 +1618,18 @@
           "src/eslams/arenas/modern_control.py",
           "src/eslams/arenas/strategic_games.py",
           "src/eslams/arenas/advanced_cards.py"
-        ]
+        ],
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:57Z",
+        "number": 152,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/152",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -1546,9 +1678,18 @@
       "number": 155,
       "title": "eslams providers preflight (offline and --live) accepts providers with no adapter and asks for \"environment variable unknown\"; eslams run then raises KeyError",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Preflight must use the actual adapter registry and return unsupported-provider reasons; no unknown env-var placeholder or passing unsupported adapter.",
-      "evidence": null
+      "evidence": {
+        "changes": "Shared provider-key trimming and printable-ASCII validation, no network for invalid credentials, redacted echoed keys; preflight adapter/text-agent gates with explicit unsupported adapter error; 5-second inline retry ceiling and finite/serialized hint handling. Overall transport/worker deadlines remain separate open work (#180/#199).",
+        "tests": "tests/test_provider_credentials_and_waits.py plus retained provider suite: trimmed success and auth failure, redaction, invalid key boundaries/no call, registry-only/live unsupported namespaces, worker-thread oversized HTTP-date/numeric retry hints, malformed/nonfinite hints; normal 2-second Retry-After remains honored.",
+        "source": [
+          "src/eslams/provider_credentials.py",
+          "src/eslams/agents.py",
+          "src/eslams/provider_preflight.py"
+        ],
+        "primary_reference": "https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after"
+      }
     },
     {
       "number": 156,
@@ -1578,7 +1719,7 @@
       "number": 159,
       "title": "eslams run --overwrite has no effect: run ids are always unique and there is no way to choose one, so the documented \"existing artifact paths are refused\" never applies",
       "work_package": "W8",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "A no-op overwrite option is an API/documentation mismatch, not evidence that current unique-ID runs overwrite prior artifacts. Remove/deprecate it or add a deliberately specified named-run behavior; default refusal remains safe.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -1590,7 +1731,18 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:34Z",
+        "number": 159,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/159",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -1670,7 +1822,7 @@
       "number": 165,
       "title": "README \"Artifact Anatomy\" lists 20 files; a default run writes 26 (omits public/*, public_reasoning, scores/official_result.json, timings, validation summary)",
       "work_package": "W9",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Generate or verify canonical artifact anatomy for relevant profiles, including public/reasoning/score/timing/validation outputs and optionality; absorb #120.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -1682,14 +1834,25 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:37Z",
+        "number": 165,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/165",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
       "number": 166,
       "title": "README lists `arena.auto_advanced` as an Arena event type; Core never emits it and docs/PLATFORM_CONTRACTS.md says it is reserved",
       "work_package": "W5",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Mark arena.auto_advanced as reserved unless implemented; align README, schema and consumer expectations without emitting a fake event.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -1701,14 +1864,25 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:39Z",
+        "number": 166,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/166",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
       "number": 167,
       "title": "CHANGELOG v0.5.0 states 12 solo / 29 head-to-head / 9 multi-seat games; since 0.5.1 the catalogue has 13 / 31 / 6 and the 0.5.1 entry does not mention the reclassification",
       "work_package": "W9",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Keep the historical v0.5.0 count accurate for v0.5.0; add the actual v0.5.1 reclassification and version migration note. Do not rewrite history to present-day counts.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -1720,7 +1894,18 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:42Z",
+        "number": 167,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/167",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -1761,7 +1946,7 @@
       "number": 169,
       "title": "examples/random_agent.py is not random: it always returns `legal_actions[0]`, identical to the built-in `first-legal` agent",
       "work_package": "W9",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Rename example to first-legal or implement seeded random choice consistent with its name and documented determinism; test behavior with multiple legal options.",
       "evidence": {
         "changes": "Named CLI table agents and fixed run IDs; explicit scoring-status switch; honest catalogue text and removal of ignored flags; canonical artifact/signing/event/topology docs; random.choice example.",
@@ -1773,7 +1958,18 @@
           "CHANGELOG.md",
           "examples/random_agent.py"
         ],
-        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained."
+        "tests": "tests/test_cli_run_and_catalogue.py: six table arenas, malformed/duplicate/unknown seats, normal/job strict diagnostic status, fixed-path refusal/overwrite, renderer and availability text; previous safety tests retained.",
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:44Z",
+        "number": 169,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/169",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -2358,9 +2554,18 @@
       "number": 198,
       "title": "A trailing newline, CRLF or space in the provider API key env var fails every request with 'Illegal header value' (exit 0); non-ASCII key crashes with UnicodeEncodeError",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Normalize only allowed surrounding whitespace or reject malformed credentials early; never print key values, and test CRLF/non-ASCII invalid input safely.",
-      "evidence": null
+      "evidence": {
+        "changes": "Shared provider-key trimming and printable-ASCII validation, no network for invalid credentials, redacted echoed keys; preflight adapter/text-agent gates with explicit unsupported adapter error; 5-second inline retry ceiling and finite/serialized hint handling. Overall transport/worker deadlines remain separate open work (#180/#199).",
+        "tests": "tests/test_provider_credentials_and_waits.py plus retained provider suite: trimmed success and auth failure, redaction, invalid key boundaries/no call, registry-only/live unsupported namespaces, worker-thread oversized HTTP-date/numeric retry hints, malformed/nonfinite hints; normal 2-second Retry-After remains honored.",
+        "source": [
+          "src/eslams/provider_credentials.py",
+          "src/eslams/agents.py",
+          "src/eslams/provider_preflight.py"
+        ],
+        "primary_reference": "https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after"
+      }
     },
     {
       "number": 199,
@@ -2374,9 +2579,18 @@
       "number": 200,
       "title": "Retry-After from a 429/5xx response is slept without any cap when max_retries > 0 (86400 s header sleeps a day from a worker thread)",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Bound Retry-After by retry/deadline budgets; cancellation must remain responsive and attempts indexed correctly. Test large/malformed/HTTP-date headers without real long sleeps.",
-      "evidence": null
+      "evidence": {
+        "changes": "Shared provider-key trimming and printable-ASCII validation, no network for invalid credentials, redacted echoed keys; preflight adapter/text-agent gates with explicit unsupported adapter error; 5-second inline retry ceiling and finite/serialized hint handling. Overall transport/worker deadlines remain separate open work (#180/#199).",
+        "tests": "tests/test_provider_credentials_and_waits.py plus retained provider suite: trimmed success and auth failure, redaction, invalid key boundaries/no call, registry-only/live unsupported namespaces, worker-thread oversized HTTP-date/numeric retry hints, malformed/nonfinite hints; normal 2-second Retry-After remains honored.",
+        "source": [
+          "src/eslams/provider_credentials.py",
+          "src/eslams/agents.py",
+          "src/eslams/provider_preflight.py"
+        ],
+        "primary_reference": "https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after"
+      }
     },
     {
       "number": 201,
@@ -2478,7 +2692,7 @@
       "number": 208,
       "title": "Solo-score games record winner player_2 (a seat that does not exist) in score.json and the public summary; the result contract says solo winner must be null",
       "work_package": "W3",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Solo results must keep winner null and use the documented score/outcome schema; test non-existent-seat winners are impossible across score/public/publication outputs.",
       "evidence": {
         "changes": "True solo adapters expose only player_1 and null competitive winner plus success; all affected arena versions bumped. Boxing/hockey head-to-head; Goofspiel/Mahjong draws permitted; compact fidelity labels. Cribbage 1.1 paired even/odd seeds use same deal/opposite dealers and nondealer starts; per-seat scores and primary metric seat documented.",
@@ -2492,7 +2706,18 @@
           "src/eslams/arenas/modern_control.py",
           "src/eslams/arenas/strategic_games.py",
           "src/eslams/arenas/advanced_cards.py"
-        ]
+        ],
+        "integration": "986372b native Core CI 37753912016, consumers 37753911945, dependency audit 37753912174 and actionlint37753912015 all passed; full suites 471 cases on current Py3.12 and direct-floor Py3.10; coverage87.345727%."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:07:59Z",
+        "number": 208,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/208",
+        "kind": "issue",
+        "resolution_commit": "986372b",
+        "replacement_pr": 218
       }
     },
     {
@@ -3738,6 +3963,16 @@
       "original_cases_removed": 55,
       "remaining_removals": 0,
       "note": "Retained references resolved transitively and verified against baseline AST. Further implementation must keep these regressions and pass final integration."
+    },
+    {
+      "commit": "986372b",
+      "native_ci": "https://github.com/ElectronicSlams/eSlams/actions/runs/37753912016",
+      "distribution_consumers": "https://github.com/ElectronicSlams/eSlams/actions/runs/37753911945",
+      "audit": "https://github.com/ElectronicSlams/eSlams/actions/runs/37753912174",
+      "actionlint": "https://github.com/ElectronicSlams/eSlams/actions/runs/37753912015",
+      "closed_issues": 86,
+      "closed_original_prs": 16,
+      "test_reduction": "55/275 original cases removed; full 471 cases pass; same-scope coverage87.345727%. Further backlog unresolved."
     }
   ],
   "inventory_recheck": {

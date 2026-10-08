@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 import httpx
@@ -12,6 +11,7 @@ from eslams.agents import ModelProviderAgent, ProviderCallError
 from eslams.arena import registry
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.protocol import make_act_request
+from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 
 DEFAULT_PROVIDER_ENV = {
@@ -45,10 +45,17 @@ def provider_preflight(
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
-    api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
-    api_key_configured = bool(api_key_env and os.getenv(api_key_env))
+    api_key_env = DEFAULT_PROVIDER_ENV.get(record.provider)
+    credential_error = None
+    try:
+        api_key_configured = bool(api_key_env and provider_key(api_key_env))
+    except ValueError as exc:
+        api_key_configured = False
+        credential_error = str(exc)
     checks: dict[str, bool | None] = {
         "registry_entry": record.known,
+        "adapter_available": api_key_env is not None,
+        "game_agent_supported": record.allows_text_game_agent(),
         "arena_available": True,
         "legal_action_available": bool(legal_actions),
         "api_key_configured": api_key_configured,
@@ -61,7 +68,14 @@ def provider_preflight(
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
 
-    if not live:
+    if api_key_env is None:
+        error = {
+            "error_class": "provider_adapter_unavailable",
+            "message": f"Core has no inference adapter for provider {provider!r}",
+        }
+    elif credential_error:
+        error = {"error_class": "provider_auth_failed", "message": credential_error}
+    elif not live:
         warnings.append("This registry-only preflight did not verify live provider availability.")
     elif not api_key_env or not api_key_configured:
         error = {
@@ -100,7 +114,7 @@ def provider_preflight(
                 metadata={"preflight": True},
             )
             agent = ModelProviderAgent(
-                provider=provider,
+                provider=record.provider,
                 model=model,
                 api_key_env=api_key_env,
                 max_output_tokens=128,
@@ -126,6 +140,9 @@ def provider_preflight(
 
     required = (
         checks["registry_entry"] is True
+        and checks["adapter_available"] is True
+        and checks["game_agent_supported"] is True
+        and error is None
         and checks["arena_available"] is True
         and checks["legal_action_available"] is True
         and (
@@ -164,7 +181,7 @@ def provider_models_live(provider: str) -> list[str] | None:
     provider = provider.lower()
     endpoint = _MODELS_ENDPOINTS.get(provider)
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
-    api_key = os.getenv(api_key_env) if api_key_env else None
+    api_key = provider_key(api_key_env) if api_key_env else None
     if endpoint is None or api_key is None:
         return None
     headers = {"Accept": "application/json"}
