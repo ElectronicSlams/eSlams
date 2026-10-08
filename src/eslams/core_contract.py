@@ -514,6 +514,11 @@ def engine_capabilities(game_id: str) -> dict[str, Any]:
                 "official": False,
                 "arenaInteractive": game_id in core_lite_games,
                 "verifiedAgainst": CORE_PACKAGE_VERSION if game_id in core_lite_games else None,
+                "parityScope": (
+                    "standard ruleset; safe-integer seeds; deterministic state/step fields; "
+                    "ids legal actions and public_compact observation"
+                    if game_id in core_lite_games else None
+                ),
             },
             "wasm": {"official": False, "arenaInteractive": False},
         },

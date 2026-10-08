@@ -419,7 +419,9 @@ deadline-aware errors, and per-stage timings. The repository contains
 Platform-facing TypeScript source in `packages/core-contracts` and the gated
 `packages/core-lite` runtime. These are excluded from the Python wheel and
 are not published npm packages; integrate them from a pinned source checkout.
-Core-lite parity repair is tracked in the consolidation backlog.
+Core-lite's supported tic-tac-toe/connect-four deterministic state and step
+fields are checked against Python fixtures in CI; see its
+[supported scope](packages/core-lite/README.md).
 
 ## Arena Session Transport
 

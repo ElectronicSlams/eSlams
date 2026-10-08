@@ -1678,17 +1678,18 @@
       "number": 155,
       "title": "eslams providers preflight (offline and --live) accepts providers with no adapter and asks for \"environment variable unknown\"; eslams run then raises KeyError",
       "work_package": "W6",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Preflight must use the actual adapter registry and return unsupported-provider reasons; no unknown env-var placeholder or passing unsupported adapter.",
       "evidence": {
-        "changes": "Shared provider-key trimming and printable-ASCII validation, no network for invalid credentials, redacted echoed keys; preflight adapter/text-agent gates with explicit unsupported adapter error; 5-second inline retry ceiling and finite/serialized hint handling. Overall transport/worker deadlines remain separate open work (#180/#199).",
-        "tests": "tests/test_provider_credentials_and_waits.py plus retained provider suite: trimmed success and auth failure, redaction, invalid key boundaries/no call, registry-only/live unsupported namespaces, worker-thread oversized HTTP-date/numeric retry hints, malformed/nonfinite hints; normal 2-second Retry-After remains honored.",
-        "source": [
-          "src/eslams/provider_credentials.py",
-          "src/eslams/agents.py",
-          "src/eslams/provider_preflight.py"
-        ],
-        "primary_reference": "https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after"
+        "implementation": "Offline/live preflight checks the canonical provider adapter and text-game eligibility before keys or provider calls. Unsupported namespaces return provider_adapter_unavailable, not a fictitious unknown key requirement. Mocked unavailable-adapter regressions passed.",
+        "integration": "b5f6e01 native Core CI 37754775040, distribution consumers 37754775019, dependency audit 37754775025 and workflow lint 37754775011 all passed. Full Python 3.12 and Python 3.10 dependency-floor suites: 475 passed each; 87.44157058273605% coverage."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:20:05Z",
+        "number": 155,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/155"
       }
     },
     {
@@ -2554,17 +2555,18 @@
       "number": 198,
       "title": "A trailing newline, CRLF or space in the provider API key env var fails every request with 'Illegal header value' (exit 0); non-ASCII key crashes with UnicodeEncodeError",
       "work_package": "W6",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Normalize only allowed surrounding whitespace or reject malformed credentials early; never print key values, and test CRLF/non-ASCII invalid input safely.",
       "evidence": {
-        "changes": "Shared provider-key trimming and printable-ASCII validation, no network for invalid credentials, redacted echoed keys; preflight adapter/text-agent gates with explicit unsupported adapter error; 5-second inline retry ceiling and finite/serialized hint handling. Overall transport/worker deadlines remain separate open work (#180/#199).",
-        "tests": "tests/test_provider_credentials_and_waits.py plus retained provider suite: trimmed success and auth failure, redaction, invalid key boundaries/no call, registry-only/live unsupported namespaces, worker-thread oversized HTTP-date/numeric retry hints, malformed/nonfinite hints; normal 2-second Retry-After remains honored.",
-        "source": [
-          "src/eslams/provider_credentials.py",
-          "src/eslams/agents.py",
-          "src/eslams/provider_preflight.py"
-        ],
-        "primary_reference": "https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after"
+        "implementation": "Provider keys strip pasted surrounding whitespace and reject remaining whitespace/non-ASCII characters before requests with env-var-specific provider_auth_failed receipts. Exact echoed credentials are scrubbed from HTTP errors. Local mocked transport/preflight tests passed; CLI strict scoring exits are covered by the earlier CLI batch.",
+        "integration": "b5f6e01 native Core CI 37754775040, distribution consumers 37754775019, dependency audit 37754775025 and workflow lint 37754775011 all passed. Full Python 3.12 and Python 3.10 dependency-floor suites: 475 passed each; 87.44157058273605% coverage."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:20:07Z",
+        "number": 198,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/198"
       }
     },
     {
@@ -2579,17 +2581,18 @@
       "number": 200,
       "title": "Retry-After from a 429/5xx response is slept without any cap when max_retries > 0 (86400 s header sleeps a day from a worker thread)",
       "work_package": "W6",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Bound Retry-After by retry/deadline budgets; cancellation must remain responsive and attempts indexed correctly. Test large/malformed/HTTP-date headers without real long sleeps.",
       "evidence": {
-        "changes": "Shared provider-key trimming and printable-ASCII validation, no network for invalid credentials, redacted echoed keys; preflight adapter/text-agent gates with explicit unsupported adapter error; 5-second inline retry ceiling and finite/serialized hint handling. Overall transport/worker deadlines remain separate open work (#180/#199).",
-        "tests": "tests/test_provider_credentials_and_waits.py plus retained provider suite: trimmed success and auth failure, redaction, invalid key boundaries/no call, registry-only/live unsupported namespaces, worker-thread oversized HTTP-date/numeric retry hints, malformed/nonfinite hints; normal 2-second Retry-After remains honored.",
-        "source": [
-          "src/eslams/provider_credentials.py",
-          "src/eslams/agents.py",
-          "src/eslams/provider_preflight.py"
-        ],
-        "primary_reference": "https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after"
+        "implementation": "Retry hints and configured retry waits above five seconds abort retries instead of sleeping indefinitely or retrying before the provider permits it. Nonfinite hints are rejected, recorded hints capped to a day. Worker-thread tests cover 86400 seconds, huge numeric headers and a distant HTTP date with exactly one request. Overall transport/worker deadlines remain separate issues #180/#199.",
+        "integration": "b5f6e01 native Core CI 37754775040, distribution consumers 37754775019, dependency audit 37754775025 and workflow lint 37754775011 all passed. Full Python 3.12 and Python 3.10 dependency-floor suites: 475 passed each; 87.44157058273605% coverage."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:20:09Z",
+        "number": 200,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/200"
       }
     },
     {
@@ -2668,25 +2671,34 @@
       "number": 205,
       "title": "Core-lite (TypeScript) state hashes never match Python for the same game and seed, although core capabilities reports core_lite_ts verifiedAgainst 0.6.1",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Add cross-language semantic and canonical-byte fixtures for each advertised supported game/seed/action/outcome; fix numeric serialization and action hashing. Remove unproven verifiedAgainst claims until fixtures pass.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+      }
     },
     {
       "number": 206,
       "title": "Core-lite applyAction rejects the contract action shapes \"0\" and {actionId:\"0\"} as illegal; Python core_step accepts them",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Normalize the same public string/object action shapes in Python and TypeScript; test contract-level parity with preserved action IDs and hashes.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+      }
     },
     {
       "number": 207,
       "title": "Core-lite createInitialState turns seed \"0\" and every non-numeric seed into seed 1 (Python seed 0 is a different game)",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Preserve seed zero and reject invalid seeds with the same contract errors as Python; do not coerce arbitrary strings into a valid seed.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+      }
     },
     {
       "number": 208,
@@ -2814,17 +2826,23 @@
       "number": 215,
       "title": "Core-lite applyAction on a terminal state returns illegal_action_for_state with recoverable true; Python core_step returns terminal_state with recoverable false",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Use the same terminal-state error/recoverability contract in Python and TypeScript; test terminal action calls without mutating state.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+      }
     },
     {
       "number": 216,
       "title": "Core-lite applyAction throws a raw TypeError for a malformed state (missing public_state, short or non-array board) where Python core_step returns an ok:false error response",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Validate malformed state shapes and return structured contract errors rather than raw exceptions; test board shape, absent fields and invalid game identity in both runtimes.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Core-lite uses exact ArenaState fields, float score serialization, UTF-8 SHA-256 and Python action-descriptor hashing. Zero/negative/large safe-integer seeds are preserved; invalid or unsafe seed strings rejected. Exact string/wrapper action forms resolve like Python; terminal states fail terminal_state/recoverable=false; malformed or stale-hash states return contained errors. Scope is standard rulesets and safe-integer seeds, now explicit in capabilities/docs.",
+        "local_verification": "Compiled TypeScript 5.5.4 runtime matches all deterministic Python response fields for 22 initial states and 1401 steps, including both winners/draws, seven action shapes, malformed inputs, transport diagnostics and Unicode metadata. Native CI parity gate added; awaiting its first run."
+      }
     },
     {
       "number": 219,
@@ -3017,9 +3035,13 @@
       "number": 35,
       "head": "728e40dcb8ebd3c775ddf38aa43c35888e8063e1",
       "title": "chore(core-lite): align unpublished package metadata to 0.6.1",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Combine private-package and version metadata with #39 and the parity work. Advertise verifiedAgainst only for tested game/version pairs; close original after consolidated replacement."
+      "criterion": "Combine private-package and version metadata with #39 and the parity work. Advertise verifiedAgainst only for tested game/version pairs; close original after consolidated replacement.",
+      "evidence": {
+        "implementation": "Unpublished TypeScript packages explicitly private; Core-lite package/dependency/response versions align with current Core 0.6.1. In-tree source consumption and supported parity scope documented. Proposed founder-only publish approval wording is not introduced; no package was published.",
+        "local_verification": "Both PRs fully reviewed; metadata incorporated into consolidation alongside actual contract parity repair. TypeScript compilation and cross-runtime fixtures pass; native CI pending."
+      }
     },
     {
       "number": 36,
@@ -3063,9 +3085,13 @@
       "number": 39,
       "head": "d6922eb17191691ff2449fef7128ff7ee720b11d",
       "title": "chore(core-contracts): mark unpublished package private",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "review_route": "Retain, conditional",
-      "criterion": "Combine or order with final TypeScript metadata changes, typecheck consumers and verify no release job expects npm publication; merge and close."
+      "criterion": "Combine or order with final TypeScript metadata changes, typecheck consumers and verify no release job expects npm publication; merge and close.",
+      "evidence": {
+        "implementation": "Unpublished TypeScript packages explicitly private; Core-lite package/dependency/response versions align with current Core 0.6.1. In-tree source consumption and supported parity scope documented. Proposed founder-only publish approval wording is not introduced; no package was published.",
+        "local_verification": "Both PRs fully reviewed; metadata incorporated into consolidation alongside actual contract parity repair. TypeScript compilation and cross-runtime fixtures pass; native CI pending."
+      }
     },
     {
       "number": 40,

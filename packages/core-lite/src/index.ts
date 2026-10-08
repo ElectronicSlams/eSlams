@@ -21,10 +21,13 @@ export type CoreLiteState = {
 
 export function createInitialState(
   gameId: string,
-  _rulesetVersion = "standard",
+  rulesetVersion = "standard",
   seed = "1",
 ): CoreLiteState {
-  const numericSeed = Number.parseInt(seed, 10) || 1;
+  if (rulesetVersion !== "standard") throw new Error("Core-lite supports the standard ruleset only");
+  if (!/^[+-]?\d+$/.test(seed)) throw new Error("seed must be a decimal integer");
+  const numericSeed = Number(seed);
+  if (!Number.isSafeInteger(numericSeed)) throw new Error("seed must be a safe integer");
   if (gameId === "tic-tac-toe") {
     return ticTacToeState(Array(9).fill(null), 0, "player_1", numericSeed, null);
   }
@@ -39,45 +42,131 @@ export function getLegalActions(state: CoreLiteState): unknown[] {
   return state.legal_actions_by_player[state.active_player] ?? [];
 }
 
-export function applyAction(state: CoreLiteState, action: unknown): CoreStepResponse {
-  const previousStateHash = stateHash(state);
-  const gameId = gameIdForState(state);
-  const legal = getLegalActions(state);
-  if (!legal.some((item) => canonicalJson(item) === canonicalJson(action))) {
-    return failureResponse(gameId, previousStateHash, action, "illegal_action_for_state");
+export function applyAction(input: unknown, action: unknown): CoreStepResponse {
+  let previousStateHash: string | null = null;
+  let gameId = "";
+  let legalHashBefore: string | null = null;
+  try {
+    const state = validatedState(input);
+    gameId = gameIdForState(state);
+    previousStateHash = stateHash(state);
+    if (state.state_hash && state.state_hash !== previousStateHash) {
+      throw new Error("state_hash does not match canonical state");
+    }
+    if (state.terminal) {
+      return failureResponse(gameId, previousStateHash, action, "terminal_state", false);
+    }
+    const legal = getLegalActions(state);
+    legalHashBefore = hashJson({ legal_actions: legal.map(String) });
+    const rawAction = resolveAction(action, legal);
+    if (!legal.some((item) => item === rawAction)) {
+      const code = typeof rawAction === "string" ? "unknown_action_id" : "illegal_action_for_state";
+      return failureResponse(gameId, previousStateHash, action, code, true, legalHashBefore);
+    }
+    const nextState = gameId === "tic-tac-toe"
+      ? applyTicTacToe(state, rawAction) : applyConnectFour(state, rawAction);
+    const nextStateHash = stateHash(nextState);
+    const nextLegal = getLegalActions(nextState).map(String);
+    const timingsMs = { receivedAt: new Date().toISOString(), totalMs: 0 };
+    return {
+      ...responseVersions(),
+      ok: true,
+      gameId,
+      requestId: "core-lite",
+      previousStateHash,
+      actionHash: hashJson({ action: actionPayload(gameId, rawAction as number) }),
+      nextStateHash,
+      legalActionHashBefore: legalHashBefore,
+      legalActionHashAfter: hashJson({ legal_actions: nextLegal }),
+      state: nextState,
+      observation: getObservation(nextState, nextState.active_player, "public_compact"),
+      legalActions: {
+        include: "ids", count: nextLegal.length,
+        hash: hashJson({ legal_actions: nextLegal }), ids: nextLegal,
+      },
+      replayEvent: {
+        schemaVersion: "eslams.core.replay_event.v2", seq: state.turn, turn: state.turn,
+        type: "action_applied", gameId, actorId: state.active_player,
+        actionHash: hashJson({ action: rawAction }), previousStateHash, nextStateHash,
+        timestamp: new Date().toISOString(), timingsMs, payload: { action: rawAction },
+      },
+      terminal: { terminal: nextState.terminal, outcome: nextState.outcome, scores: nextState.scores },
+      error: null,
+      timingsMs,
+    };
+  } catch {
+    // Malformed/untrusted snapshots must never leak a raw runtime exception.
+    return failureResponse(gameId, previousStateHash, action, "transition_error", false,
+      legalHashBefore, "unknown");
   }
-  const nextState =
-    gameId === "tic-tac-toe"
-      ? applyTicTacToe(state, action)
-      : applyConnectFour(state, action);
+}
+
+function responseVersions() {
   return {
-    coreVersion: "0.4.0",
-    coreContractVersion: "2.0",
-    rulesetVersion: "standard",
-    promptVersion: "eslams.core.prompt.v2",
-    actionSchemaVersion: "eslams.core.action_schema.v2",
+    coreVersion: "0.6.1", coreContractVersion: "2.0" as const, rulesetVersion: "standard",
+    promptVersion: "eslams.core.prompt.v2", actionSchemaVersion: "eslams.core.action_schema.v2",
     replaySchemaVersion: "eslams.core.replay_event.v2",
-    ok: true,
-    gameId,
-    requestId: "core-lite",
-    previousStateHash,
-    actionHash: hashJson({ action }),
-    nextStateHash: stateHash(nextState),
-    legalActionHashBefore: hashJson({ legal_actions: legal.map(String) }),
-    legalActionHashAfter: hashJson({ legal_actions: getLegalActions(nextState).map(String) }),
-    state: nextState,
-    observation: getObservation(nextState, nextState.active_player, "public_compact"),
-    legalActions: {
-      include: "ids",
-      count: getLegalActions(nextState).length,
-      hash: hashJson({ legal_actions: getLegalActions(nextState).map(String) }),
-      ids: getLegalActions(nextState).map(String),
-    },
-    replayEvent: null,
-    terminal: { terminal: nextState.terminal, outcome: nextState.outcome, scores: nextState.scores },
-    error: null,
-    timingsMs: { receivedAt: new Date().toISOString(), totalMs: 0 },
   };
+}
+
+function resolveAction(action: unknown, legal: unknown[]): unknown {
+  if (isRecord(action)) {
+    const id = action.actionId || action.action_id || action.token;
+    if (typeof id === "string") return resolveAction(id, legal);
+    if ("payload" in action) return resolveAction(action.payload, legal);
+    if ("compact" in action) return resolveAction(action.compact, legal);
+  }
+  if (typeof action === "string") return legal.find((item) => String(item) === action) ?? action;
+  return action;
+}
+
+function actionPayload(gameId: string, action: number) {
+  const positions = ["top-left", "top", "top-right", "left", "center", "right",
+    "bottom-left", "bottom", "bottom-right"];
+  return {
+    actionId: String(action), compact: String(action), payload: action,
+    kind: gameId === "tic-tac-toe" ? "mark_square" : "drop_disc",
+    label: gameId === "tic-tac-toe" ? `Play ${positions[action]}` : `Drop in column ${action + 1}`,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validatedState(input: unknown): CoreLiteState {
+  if (!isRecord(input) || !isRecord(input.public_state) || !isRecord(input.metadata)
+    || !isRecord(input.private_state_by_player) || !isRecord(input.legal_actions_by_player)
+    || !isRecord(input.scores) || !isRecord(input.render_hints)
+    || typeof input.state_id !== "string" || !input.state_id
+    || typeof input.rng_commitment !== "string"
+    || !Number.isSafeInteger(input.turn) || (input.turn as number) < 0
+    || !Number.isSafeInteger(input.metadata.seed)
+    || !["player_1", "player_2"].includes(input.active_player as string)
+    || typeof input.terminal !== "boolean"
+    || (input.outcome !== null && !isRecord(input.outcome))) {
+    throw new Error("invalid Core-lite snapshot");
+  }
+  const state = input as CoreLiteState;
+  const gameId = gameIdForState(state);
+  const board = state.public_state.board;
+  const validCells = gameId === "tic-tac-toe" ? [null, "X", "O"] : [null, "R", "Y"];
+  const validRow = (row: unknown, size: number) => Array.isArray(row)
+    && row.length === size && row.every((cell) => validCells.includes(cell));
+  if (gameId === "tic-tac-toe" ? !validRow(board, 9)
+    : !Array.isArray(board) || board.length !== 6 || !board.every((row) => validRow(row, 7))) {
+    throw new Error("invalid Core-lite board");
+  }
+  for (const player of ["player_1", "player_2"] as const) {
+    const legal = state.legal_actions_by_player[player];
+    if (!isRecord(state.private_state_by_player[player]) || !Array.isArray(legal)
+      || !legal.every((move) => Number.isInteger(move) && (move as number) >= 0
+        && (move as number) < (gameId === "tic-tac-toe" ? 9 : 7))
+      || typeof state.scores[player] !== "number" || !Number.isFinite(state.scores[player])) {
+      throw new Error("invalid Core-lite player data");
+    }
+  }
+  return state;
 }
 
 export function getObservation(
@@ -85,9 +174,24 @@ export function getObservation(
   actorId: PlayerId,
   view = "public_compact",
 ): Record<string, unknown> {
+  if (view === "ui_delta") return {
+    view, stateHash: stateHash(state), turn: state.turn, activePlayer: state.active_player,
+    terminal: state.terminal, outcome: state.outcome,
+  };
+  if (view === "debug") return { view, state, legalActionIds: state.legal_actions_by_player[actorId].map(String) };
+  const full = view === "public_full" || view === "private_actor";
+  const gameId = gameIdForState(state);
+  const actorLegal = state.legal_actions_by_player[actorId];
+  const observation = gameId === "tic-tac-toe"
+    ? { board: state.public_state.board, you_are: actorId,
+        mark: actorId === "player_1" ? "X" : "O", legal_squares: actorLegal }
+    : { board: state.public_state.board, you_are: actorId,
+        disc: actorId === "player_1" ? "R" : "Y", legal_columns: actorLegal, scores: state.scores };
   return {
     view,
     stateHash: stateHash(state),
+    observationHash: hashJson({ observation: state.public_state }),
+    ...(full ? { observation } : {}),
     turn: state.turn,
     activePlayer: state.active_player,
     actorId,
@@ -95,26 +199,52 @@ export function getObservation(
     scores: state.scores,
     terminal: state.terminal,
     outcome: state.outcome,
-    legalActionIds: getLegalActions(state).map(String),
+    legalActionIds: actorLegal.map(String),
   };
 }
 
+const STATE_KEYS = ["state_id", "turn", "active_player", "public_state",
+  "private_state_by_player", "legal_actions_by_player", "scores", "terminal", "outcome",
+  "rng_commitment", "render_hints", "metadata"];
+
 export function stateHash(state: CoreLiteState): string {
-  const snapshot: Record<string, unknown> = { ...state };
-  delete snapshot.state_hash;
-  return hashJson(snapshot);
+  // Python ArenaState hashes exactly these fields and serializes scores as floats.
+  const fields = STATE_KEYS.slice().sort().map((key) => {
+    const value = state[key as keyof CoreLiteState];
+    const encoded = key === "scores" ? `{${Object.keys(state.scores).sort().map((player) => {
+      const score = state.scores[player as PlayerId];
+      if (!Number.isFinite(score)) throw new Error("score must be finite");
+      return `${JSON.stringify(player)}:${Number.isInteger(score) ? `${score}.0` : String(score)}`;
+    }).join(",")}}` : canonicalJson(value);
+    return `${JSON.stringify(key)}:${encoded}`;
+  });
+  return hashText(`{${fields.join(",")}}`);
+}
+
+function compareJsonKeys(left: string, right: string): number {
+  // Python compares Unicode scalar values; JavaScript's default sort uses UTF-16.
+  const a = Array.from(left, (char) => char.codePointAt(0)!);
+  const b = Array.from(right, (char) => char.codePointAt(0)!);
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    if (a[index] !== b[index]) return a[index] - b[index];
+  }
+  return a.length - b.length;
 }
 
 export function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
+    const encoded = JSON.stringify(value);
+    if (encoded === undefined || (typeof value === "number" && !Number.isFinite(value))) {
+      throw new Error("value must be finite JSON");
+    }
+    return encoded;
   }
   if (Array.isArray(value)) {
     return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
   }
   const record = value as Record<string, unknown>;
   return `{${Object.keys(record)
-    .sort()
+    .sort(compareJsonKeys)
     .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
     .join(",")}}`;
 }
@@ -266,20 +396,16 @@ function gameIdForState(state: CoreLiteState): string {
   throw new Error("unknown Core-lite state shape");
 }
 
-function failureResponse(gameId: string, previousStateHash: string, action: unknown, code: string): CoreStepResponse {
+function failureResponse(gameId: string, previousStateHash: string | null, action: unknown,
+  code: string, recoverable: boolean, legalHashBefore: string | null = null,
+  stage = "validate"): CoreStepResponse {
+  let actionHash: string;
+  try { actionHash = hashJson({ action }); } catch { actionHash = hashJson({ action: null }); }
   return {
-    coreVersion: "0.4.0",
-    coreContractVersion: "2.0",
-    rulesetVersion: "standard",
-    promptVersion: "eslams.core.prompt.v2",
-    actionSchemaVersion: "eslams.core.action_schema.v2",
-    replaySchemaVersion: "eslams.core.replay_event.v2",
-    ok: false,
-    gameId,
-    requestId: "core-lite",
-    previousStateHash,
-    actionHash: hashJson({ action }),
-    error: { code, message: code, stage: "validate", recoverable: true },
+    ...responseVersions(), ok: false, gameId, requestId: "core-lite", previousStateHash, actionHash,
+    nextStateHash: null, legalActionHashBefore: legalHashBefore, legalActionHashAfter: null,
+    state: null, observation: null, legalActions: null, replayEvent: null, terminal: null,
+    error: { code, message: code, stage, recoverable },
     timingsMs: { receivedAt: new Date().toISOString(), totalMs: 0 },
   };
 }
@@ -292,7 +418,9 @@ function hashJson(value: unknown): string {
   return hashText(canonicalJson(value));
 }
 
-function sha256(ascii: string): string {
+function sha256(text: string): string {
+  // SHA-256 consumes UTF-8 bytes, not JavaScript UTF-16 code units.
+  let ascii = Array.from(new TextEncoder().encode(text), (byte) => String.fromCharCode(byte)).join("");
   const rightRotate = (value: number, amount: number) => (value >>> amount) | (value << (32 - amount));
   const mathPow = Math.pow;
   const maxWord = mathPow(2, 32);

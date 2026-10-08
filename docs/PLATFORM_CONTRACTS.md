@@ -203,8 +203,15 @@ Platform-facing TypeScript artifacts are checked in under:
 - `packages/core-contracts/src/generated/integrity.ts`
 
 `packages/core-lite` contains a small TypeScript runtime for tic-tac-toe and
-connect-four. Python Core remains the official authority; Core-lite promotion
-is gated by Python parity fixtures and engine capability metadata from
+connect-four. Python Core remains the official authority. CI compiles Core-lite
+and compares every deterministic step-response field against Python-generated
+fixtures, including both winners and draws, action wrappers, seed zero, negative
+seeds, and large safe integer seeds. `verifiedAgainst` refers to this scope;
+wall-clock timestamps, timing values, and error prose are excluded. Core-lite
+supports the standard ruleset and JavaScript safe integer seeds. It returns
+legal-action IDs and the default public compact observation; it does not provide
+the complete Python request/service/artifact API. See the
+[Core-lite README](../packages/core-lite/README.md) and
 `eslams core capabilities --game GAME`.
 
 ## Seed and Request Security
