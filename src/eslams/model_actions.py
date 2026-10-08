@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from eslams.action_descriptors import action_token
-from eslams.protocol import ProtocolError
+from eslams.protocol import ActResponse, ProtocolError
 
 INVALID_ACTION_CODES: tuple[str, ...] = (
     "invalid_json",
@@ -62,18 +62,15 @@ def parse_model_action(text: str, legal_actions: list[Any]) -> ParsedModelAction
         raise InvalidModelAction("schema_mismatch", "response.action is required")
 
     action = coerce_action(action_value, legal_actions, token_to_action)
-    confidence = payload.get("confidence")
-    confidence_value: float | None
-    if isinstance(confidence, (int, float)) and not isinstance(confidence, bool):
-        confidence_value = max(0.0, min(1.0, float(confidence)))
-    else:
-        confidence_value = None
-    explanation = payload.get("public_explanation")
+    try:
+        response = ActResponse.from_mapping({**payload, "action": action})
+    except ProtocolError as exc:
+        raise InvalidModelAction("schema_mismatch", str(exc)) from exc
     return ParsedModelAction(
         action=action,
         action_id=action_token(action),
-        confidence=confidence_value,
-        public_explanation=explanation if isinstance(explanation, str) else None,
+        confidence=response.confidence,
+        public_explanation=response.public_explanation,
     )
 
 

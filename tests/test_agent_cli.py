@@ -25,7 +25,7 @@ def test_agent_test_exit_and_ok_reflect_the_endpoint_behavior(
             payload = {"not_action": True}
         return httpx.Response(200, json=payload, request=request)
 
-    monkeypatch.setattr("eslams.agents.httpx.post", post)
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
     status = main(["agent", "test", "--url", "http://local-fixture.test/act"])
     payload = json.loads(capsys.readouterr().out)
     expected = scenario == "success"

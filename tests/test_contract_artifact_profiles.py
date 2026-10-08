@@ -266,7 +266,7 @@ def test_runner_persists_each_provider_retry_receipt(tmp_path: Path, monkeypatch
         )
 
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     result = Runner().run(
         RunConfig(
@@ -320,7 +320,7 @@ def test_runner_persists_http_agent_provider_receipts(tmp_path: Path, monkeypatc
             request=httpx.Request("POST", url),
         )
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     result = Runner().run(
         RunConfig(
@@ -370,7 +370,7 @@ def test_runner_provider_status_cases(tmp_path: Path, monkeypatch):
         payload = responses.pop(0)
         return httpx.Response(200, json=payload, request=httpx.Request("POST", url))
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     missing_receipt = Runner().run(
         RunConfig(

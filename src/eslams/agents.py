@@ -22,6 +22,7 @@ import httpx
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.contracts.versions import PROVIDER_RECEIPT_SCHEMA_VERSION
 from eslams.hashing import sha256_json
+from eslams.http_io import bounded_post
 from eslams.model_actions import (
     coerce_action,
     extract_json,
@@ -29,7 +30,7 @@ from eslams.model_actions import (
     invalid_action_retry_prompt,
     parse_model_action,
 )
-from eslams.protocol import ActRequest, ActResponse, ProtocolError
+from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
@@ -136,7 +137,7 @@ class HttpAgent:
         if self.bearer_token:
             headers["authorization"] = f"Bearer {self.bearer_token}"
         try:
-            response = httpx.post(
+            response = bounded_post(
                 self.url,
                 json=request.to_dict(),
                 headers=headers,
@@ -144,6 +145,10 @@ class HttpAgent:
             )
             response.raise_for_status()
             payload = response.json()
+        except ProtocolError:
+            raise
+        except (ValueError, UnicodeError) as exc:
+            raise ProtocolError("agent response must be valid JSON") from exc
         except httpx.TimeoutException as exc:
             raise TimeoutError("agent timed out") from exc
         except Exception as exc:
@@ -859,12 +864,19 @@ def _post_json(
     provider, _, model = control_key.partition(":")
     with _provider_runtime_guard(runtime_config, control_key):
         try:
-            response = httpx.post(
+            response = bounded_post(
                 url,
                 headers=headers,
                 json=payload,
                 timeout=_httpx_timeout(runtime_config),
             )
+        except ProtocolError as exc:
+            raise ProviderCallError(
+                str(exc),
+                error_kind="provider_response_schema_mismatch",
+                provider=provider,
+                model=model,
+            ) from exc
         except httpx.TimeoutException as exc:
             raise TimeoutError("provider timed out") from exc
         except httpx.HTTPError as exc:
@@ -2100,7 +2112,8 @@ def _response_json(
 ) -> dict[str, Any]:
     try:
         payload = response.json()
-    except (json.JSONDecodeError, ValueError) as exc:
+        validate_json_payload(payload)
+    except (json.JSONDecodeError, ValueError, UnicodeError) as exc:
         raise ProviderCallError(
             "provider response body is not valid JSON",
             status_code=response.status_code,

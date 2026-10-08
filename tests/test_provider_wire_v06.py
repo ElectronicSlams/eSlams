@@ -112,7 +112,7 @@ def test_all_five_adapters_parse_documented_raw_wire_fixtures(monkeypatch):
                 headers={"x-amzn-requestid": "bedrock-wire-request"},
             )
 
-        monkeypatch.setattr(httpx, "post", fake_post)
+        monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
         response = _agent(provider, model, env_name).act(_request())
         receipt = response.metadata["provider_receipt"]
 
@@ -144,7 +144,7 @@ def test_openai_raw_wire_requires_output_array_and_scans_message_parts(monkeypat
             headers={"x-request-id": "req-wrong-wire-shape"},
         )
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     agent = _agent("openai", "gpt-5-mini", "OPENAI_API_KEY")
 
     with pytest.raises(ProviderCallError) as caught:
@@ -176,7 +176,7 @@ def test_openrouter_provider_pin_is_explicit_and_fallback_stays_disabled(monkeyp
             json=_fixture("openrouter_chat_completions_success.json"),
         )
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     agent = _agent(
         "openrouter",
         "openai/gpt-5-mini",
@@ -212,7 +212,7 @@ def test_complete_openrouter_case_is_publication_eligible(tmp_path: Path, monkey
         payload["choices"][0]["message"]["content"] = f'{{"action": {next(actions)}}}'
         return httpx.Response(200, json=payload)
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     result = Runner().run(
         RunConfig(
             arena_id="tic-tac-toe",
@@ -267,7 +267,7 @@ def test_anthropic_reasoning_temperature_matrix(monkeypatch):
         sent_payloads.append(json)
         return httpx.Response(200, json=_fixture("anthropic_messages_success.json"))
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
 
     enabled = _agent(
         "anthropic",
@@ -330,7 +330,7 @@ def test_anthropic_adaptive_and_manual_budget_contracts(monkeypatch):
         sent_payloads.append(json)
         return httpx.Response(200, json=_fixture("anthropic_messages_success.json"))
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     adaptive = _agent(
         "anthropic",
         "claude-sonnet-5",
@@ -402,7 +402,7 @@ def test_action_repair_is_a_distinct_physical_attempt(monkeypatch):
             ]
         return httpx.Response(200, json=payload)
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     agent = _agent("openai", "gpt-5-mini", "OPENAI_API_KEY")
 
     response = agent.act(_request())
@@ -443,7 +443,7 @@ def test_fault_matrix_is_typed_and_unscoreable_for_every_adapter(tmp_path: Path,
             ) -> httpx.Response:
                 return httpx.Response(status_code_case, text="sanitized fixture failure")
 
-            monkeypatch.setattr(httpx, "post", fake_status)
+            monkeypatch.setattr("eslams.agents.bounded_post", fake_status)
             result = Runner().run(
                 RunConfig(
                     arena_id="tic-tac-toe",
@@ -468,7 +468,7 @@ def test_fault_matrix_is_typed_and_unscoreable_for_every_adapter(tmp_path: Path,
         ) -> httpx.Response:
             raise httpx.ReadTimeout("fixture timeout")
 
-        monkeypatch.setattr(httpx, "post", fake_timeout)
+        monkeypatch.setattr("eslams.agents.bounded_post", fake_timeout)
         timeout_result = Runner().run(
             RunConfig(
                 arena_id="tic-tac-toe",
@@ -490,7 +490,7 @@ def test_fault_matrix_is_typed_and_unscoreable_for_every_adapter(tmp_path: Path,
         ) -> httpx.Response:
             return httpx.Response(200, content=b"{not-json")
 
-        monkeypatch.setattr(httpx, "post", fake_malformed)
+        monkeypatch.setattr("eslams.agents.bounded_post", fake_malformed)
         malformed_result = Runner().run(
             RunConfig(
                 arena_id="tic-tac-toe",
@@ -517,7 +517,7 @@ def test_fault_matrix_is_typed_and_unscoreable_for_every_adapter(tmp_path: Path,
         ) -> httpx.Response:
             return httpx.Response(200, json=payload_case)
 
-        monkeypatch.setattr(httpx, "post", fake_missing_usage)
+        monkeypatch.setattr("eslams.agents.bounded_post", fake_missing_usage)
         missing_usage_result = Runner().run(
             RunConfig(
                 arena_id="tic-tac-toe",

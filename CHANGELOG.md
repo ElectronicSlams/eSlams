@@ -4,6 +4,11 @@
 
 ### Fixed
 
+- Agent/provider HTTP responses are streamed within a 1 MiB limit and must use
+  identity encoding. Invalid Unicode and nonfinite numeric values are rejected
+  before artifact logging; explanations are limited to 16 KiB. Model confidence
+  is validated rather than silently clamped. Canonical JSON refuses NaN/Infinity.
+
 - Every arena rejects boolean, float, string and null seeds. Signed integers
   (including zero, negative seeds and large seeds) retain their commitment
   across steps; runner HTTP integer fields no longer silently coerce values.

@@ -434,7 +434,7 @@ class Runner:
                     markers,
                 )
                 invalid_reason_codes.append(FailureClass.ARENA_APPLY_ERROR.value)
-                errors.append({"turn_id": state.turn, "error": str(exc)[:500]})
+                errors.append({"turn_id": state.turn, "error": _safe_error_text(exc)})
                 break
 
             if action_provenance is ActionProvenance.PROVIDER_ACTION:
@@ -1071,12 +1071,13 @@ def _call_agent(
                 response = ActResponse.from_mapping(response)
             else:
                 response = ActResponse(action=response)
+        response = ActResponse.from_mapping(response.to_dict())
     except TimeoutError as exc:
         markers.extend(["timeout", FailureClass.PROVIDER_TIMEOUT.value])
         response = ActResponse(
             action=None,
             metadata={
-                "error": str(exc)[:500],
+                "error": _safe_error_text(exc),
                 "error_kind": FailureClass.PROVIDER_TIMEOUT.value,
             },
         )
@@ -1085,7 +1086,7 @@ def _call_agent(
         response = ActResponse(
             action=None,
             metadata={
-                "error": str(exc),
+                "error": _safe_error_text(exc),
                 "error_kind": exc.error_kind,
                 "provider": exc.provider or getattr(agent, "provider", None),
                 "model": exc.model or getattr(agent, "model", None),
@@ -1097,7 +1098,7 @@ def _call_agent(
         response = ActResponse(
             action=None,
             metadata={
-                "error": str(exc)[:500],
+                "error": _safe_error_text(exc),
                 "error_kind": FailureClass.ACTION_RESPONSE_UNPARSEABLE.value,
             },
         )
@@ -1105,7 +1106,7 @@ def _call_agent(
         markers.append("agent_crash")
         response = ActResponse(
             action=None,
-            metadata={"error": str(exc), "error_kind": "agent_crash"},
+            metadata={"error": _safe_error_text(exc), "error_kind": "agent_crash"},
         )
     latency_ms = int((time.perf_counter() - start) * 1000)
     if latency_ms > time_budget_ms and "timeout" not in markers:
@@ -1488,3 +1489,7 @@ def _unique_high_score_winner(scores: dict[str, float], players: list[str]) -> s
     best = scores.get(ranked[0], 0.0)
     second = scores.get(ranked[1], 0.0)
     return ranked[0] if best > second else None
+
+
+def _safe_error_text(exc: Exception) -> str:
+    return str(exc)[:500].encode("utf-8", errors="backslashreplace").decode("utf-8")

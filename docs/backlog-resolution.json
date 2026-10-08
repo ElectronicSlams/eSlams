@@ -606,17 +606,49 @@
       "number": 136,
       "title": "eslams run crashes after the match with UnicodeEncodeError when an agent or model public_explanation contains a lone UTF-16 surrogate (valid JSON); partial artifact left, no result",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Reject or deterministically sanitize lone surrogates at agent input before serialization; test no partial committed artifact or fabricated explanation appears.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/protocol.py",
+          "src/eslams/http_io.py",
+          "src/eslams/agents.py",
+          "src/eslams/model_actions.py",
+          "src/eslams/runner.py",
+          "src/eslams/hashing.py",
+          "docs/PROTOCOL.md"
+        ],
+        "tests": [
+          "tests/test_response_boundaries.py",
+          "tests/test_model_agents.py",
+          "tests/test_provider_wire_v06.py"
+        ],
+        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass."
+      }
     },
     {
       "number": 137,
       "title": "NaN confidence from an HTTP agent is accepted and written as bare NaN into artifact JSON; validate says valid, strict JSON parsers fail",
       "work_package": "W1",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Reject nonfinite numeric values in agent/runtime/output contracts; use strict JSON serialization and schema fixtures across Python and TypeScript.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/protocol.py",
+          "src/eslams/http_io.py",
+          "src/eslams/agents.py",
+          "src/eslams/model_actions.py",
+          "src/eslams/runner.py",
+          "src/eslams/hashing.py",
+          "docs/PROTOCOL.md"
+        ],
+        "tests": [
+          "tests/test_response_boundaries.py",
+          "tests/test_model_agents.py",
+          "tests/test_provider_wire_v06.py"
+        ],
+        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass."
+      }
     },
     {
       "number": 138,
@@ -646,9 +678,25 @@
       "number": 141,
       "title": "No cap on agent response size or public_explanation: a 100 MB explanation is accepted and expands to a 701 MB artifact tree (650 MB RSS); gzip bomb reaches 960 MB RSS",
       "work_package": "W6",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Bound wire bytes, decoded body, explanation size and decompression before full buffering; enforce per-attempt and aggregate budgets without reproducing the huge-memory attack during tests.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/protocol.py",
+          "src/eslams/http_io.py",
+          "src/eslams/agents.py",
+          "src/eslams/model_actions.py",
+          "src/eslams/runner.py",
+          "src/eslams/hashing.py",
+          "docs/PROTOCOL.md"
+        ],
+        "tests": [
+          "tests/test_response_boundaries.py",
+          "tests/test_model_agents.py",
+          "tests/test_provider_wire_v06.py"
+        ],
+        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass."
+      }
     },
     {
       "number": 142,
@@ -1281,9 +1329,25 @@
       "number": 212,
       "title": "docs/PROTOCOL.md says invalid JSON from an /act agent is retried once and then marked invalid_action; Core does not retry and records agent_crash",
       "work_package": "W5",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Make malformed /act JSON classification and retry semantics truthful and explicit. Do not add a retry simply because stale prose promises one; any physical retry must preserve attempt provenance.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "src/eslams/protocol.py",
+          "src/eslams/http_io.py",
+          "src/eslams/agents.py",
+          "src/eslams/model_actions.py",
+          "src/eslams/runner.py",
+          "src/eslams/hashing.py",
+          "docs/PROTOCOL.md"
+        ],
+        "tests": [
+          "tests/test_response_boundaries.py",
+          "tests/test_model_agents.py",
+          "tests/test_provider_wire_v06.py"
+        ],
+        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass."
+      }
     },
     {
       "number": 213,

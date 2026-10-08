@@ -209,7 +209,7 @@ def test_official_provider_action_without_receipt_is_unpublishable(
             request=httpx.Request("POST", url),
         )
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
     result = Runner().run(
         RunConfig(
             arena_id="tic-tac-toe",

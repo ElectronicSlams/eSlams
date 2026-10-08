@@ -44,7 +44,7 @@ class AgentServer:
                 response = ActResponse.from_mapping(value)
             else:
                 response = ActResponse(action=value)
-            return response.to_dict()
+            return ActResponse.from_mapping(response.to_dict()).to_dict()
         except ProtocolError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
