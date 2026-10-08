@@ -52,7 +52,7 @@
       "number": 55,
       "title": "Documented `mypy src` / `mypy src/eslams` fails on Python >=3.10 (pyproject python_version=3.9 + anyio 4.15 `match` syntax)",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Use version-matched mypy configuration/tool compatibility and test the exact documented command on each supported Python, rather than ignoring dependency parse errors.",
       "evidence": {
         "source": [
@@ -68,7 +68,18 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:06Z",
+        "number": 55,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/55",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -138,9 +149,13 @@
       "number": 62,
       "title": "pip install from GitHub source archive (tag tarball / Download ZIP / git archive) fails: 'cannot build Core without immutable source provenance'",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; distribution verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: The immutable-provenance refusal is deliberate. Support source archives only with authenticated embedded provenance, or document Git/wheel installation; never fabricate a commit or weaken fail-closed provenance.",
-      "evidence": null
+      "evidence": {
+        "commit": "89e9e1a",
+        "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+      }
     },
     {
       "number": 63,
@@ -170,7 +185,7 @@
       "number": 69,
       "title": "Dependency caps cryptography<47 and pytest<9 on main block fixes for known advisories (see draft PR #51)",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Close after audited compatible dependency bounds and supported-Python CI permit the reviewed fixes; raising caps alone is not evidence of safe declared floors.",
       "evidence": {
         "source": [
@@ -186,7 +201,18 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:08Z",
+        "number": 69,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/69",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -201,7 +227,7 @@
       "number": 71,
       "title": "Draft PR #52 env-var coverage test fails once #21 lands alongside #40 (.env.example missing #21 variables)",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Update those PR acceptance criteria together; include #184 debug-observation documentation.",
       "evidence": {
         "source": [
@@ -217,7 +243,18 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:11Z",
+        "number": 71,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/71",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -321,7 +358,7 @@
       "number": 93,
       "title": "Hanabi: non-terminal state with no legal actions; 27 of 200 built-in random-vs-random matches end as agent_crash",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Test reachable Hanabi no-action states; model legal discard/play/hint or legitimate game termination without attributing engine deadlock to agent_crash. Pair with cooperative metadata and clue-token rules.",
       "evidence": {
         "source": [
@@ -343,14 +380,25 @@
           "xiangqi": "1.0.1",
           "hanabi": "1.1.0"
         },
-        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:25Z",
+        "number": 93,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/93",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 94,
       "title": "Shogi and Xiangqi: moves that leave the mover's own king in check are legal (catalogue says faithful; differs from Fairy-Stockfish)",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose faithful king-safety rules or an explicitly named compact variant. Catalogued faithful claims require correction either way; preserve prior arena versions rather than relabeling old results.",
       "evidence": {
         "source": [
@@ -372,18 +420,40 @@
           "xiangqi": "1.0.1",
           "hanabi": "1.1.0"
         },
-        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:27Z",
+        "number": 94,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/94",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 95,
       "title": "Cribbage: hand and crib scoring deviates from standard rules (ace-high runs, no double-run multiplicity, crib flush, nob never scored)",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Use small authoritative cribbage scoring examples for ace-low runs, run multiplicity, crib flush and nob; preserve arena-version boundaries for changed scores.",
       "evidence": {
         "implementation": "Cribbage 1.0.1 show scoring: ace-low physical-combination runs, nobs and distinct hand/crib flush rules; ACC examples including 29-point hand.",
-        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:47Z",
+        "number": 95,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/95",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -398,22 +468,44 @@
       "number": 97,
       "title": "Pentago: five-in-a-row made by the placement is not a win if the same move's rotation breaks it",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Verify Pentago win timing against the declared rules: placement-phase wins require correct treatment even if rotation would break the line. Add minimal winning/dual-win examples, not a wholesale arena rewrite. Rules reference: [Mindtwister publisher rulebook, mirrored by retailer](https://zacatrus.es/media/instrucciones/Pentago_Reglas_zacatrus.pdf).",
       "evidence": {
         "implementation": "Pentago 1.0.1 checks placement win before optional encoded rotation; publisher rules; destructive rotation reproduction.",
-        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:50Z",
+        "number": 97,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/97",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 98,
       "title": "Texas hold'em (limit, no-limit) and Leduc: multiway showdown tie gives equal shares to strictly worse hands",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Only best tied showdown hands share a pot; test multiway tied-best plus strictly worse hand and side-pot behavior with deterministic legal examples.",
       "evidence": {
         "implementation": "Table poker 1.0.1 shares normalized score among tied best hands only; exact four-seat reproduction and natural seed-4/12 showdowns.",
-        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:52Z",
+        "number": 98,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/98",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -428,11 +520,22 @@
       "number": 100,
       "title": "Othello: max_turns=64 counts passes, so games with passes end early while a legal move remains",
       "work_package": "W3",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Use actual Othello placement/pass semantics for a declared horizon. Test pass-heavy games retain legal play until true terminal or explicitly marked truncation.",
       "evidence": {
         "implementation": "Othello 1.0.1 terminal only with neither player able to place; 120-action bound includes passes; seed 134 completes beyond 64.",
-        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:54Z",
+        "number": 100,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/100",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -503,15 +606,19 @@
       "number": 113,
       "title": "PyPI long description uses relative links (docs/, CHANGELOG.md, sample_runs/) that resolve to the PyPI project page",
       "work_package": "W9",
-      "status": "pending",
+      "status": "implemented; distribution verification pending",
       "criterion": "Render PyPI README with absolute repository/tag-aware links and inspect generated metadata, keeping local README navigation usable.",
-      "evidence": null
+      "evidence": {
+        "commit": "89e9e1a",
+        "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+      }
     },
     {
       "number": 114,
       "title": "README install: `pip install eslams-core` fails with externally-managed-environment on Debian 13 and the only venv recipe uses `python`, which does not exist",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Use python3 -m venv and python -m pip plus activation instructions; verify the guide on externally managed Debian Python without recommending system-package override flags.",
       "evidence": {
         "source": [
@@ -527,7 +634,18 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:13Z",
+        "number": 114,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/114",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -550,9 +668,13 @@
       "number": 117,
       "title": "README says the package ships the TypeScript packages, but the PyPI wheel has none, the sdist only has sources, and npm has neither package",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; distribution verification pending",
       "criterion": "Document wheel versus TypeScript source/publication honestly. Private flags do not make npm packages available or establish parity; test actual release contents.",
-      "evidence": null
+      "evidence": {
+        "commit": "89e9e1a",
+        "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+      }
     },
     {
       "number": 118,
@@ -630,11 +752,22 @@
       "number": 127,
       "title": "Chess: arena ends games on claimable draws (board.outcome(claim_draw=True)), so a mate-in-1 at halfmove clock 99 or a twice-seen position is declared drawn before the mover plays",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Automatic acceptance of a claimable draw can be a declared benchmark variant. Implement explicit claim semantics if faithful chess is promised, or version/document the automatic-claim variant; preserve reproducibility.",
       "evidence": {
         "implementation": "Chess 1.2.0 explicit current/intended-move draw claims; fivefold and 75-move automatic; mate precedence and artifact replay; FEN clock excluded from action horizon.",
-        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:56Z",
+        "number": 127,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/127",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -705,7 +838,7 @@
       "number": 136,
       "title": "eslams run crashes after the match with UnicodeEncodeError when an agent or model public_explanation contains a lone UTF-16 surrogate (valid JSON); partial artifact left, no result",
       "work_package": "W1",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Reject or deterministically sanitize lone surrogates at agent input before serialization; test no partial committed artifact or fabricated explanation appears.",
       "evidence": {
         "source": [
@@ -722,14 +855,25 @@
           "tests/test_model_agents.py",
           "tests/test_provider_wire_v06.py"
         ],
-        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass."
+        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:38Z",
+        "number": 136,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/136",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 137,
       "title": "NaN confidence from an HTTP agent is accepted and written as bare NaN into artifact JSON; validate says valid, strict JSON parsers fail",
       "work_package": "W1",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Reject nonfinite numeric values in agent/runtime/output contracts; use strict JSON serialization and schema fixtures across Python and TypeScript.",
       "evidence": {
         "source": [
@@ -746,7 +890,18 @@
           "tests/test_model_agents.py",
           "tests/test_provider_wire_v06.py"
         ],
-        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass."
+        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:40Z",
+        "number": 137,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/137",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -792,7 +947,7 @@
       "number": 141,
       "title": "No cap on agent response size or public_explanation: a 100 MB explanation is accepted and expands to a 701 MB artifact tree (650 MB RSS); gzip bomb reaches 960 MB RSS",
       "work_package": "W6",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Bound wire bytes, decoded body, explanation size and decompression before full buffering; enforce per-attempt and aggregate budgets without reproducing the huge-memory attack during tests.",
       "evidence": {
         "source": [
@@ -809,7 +964,18 @@
           "tests/test_model_agents.py",
           "tests/test_provider_wire_v06.py"
         ],
-        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass."
+        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:43Z",
+        "number": 141,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/141",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1016,7 +1182,7 @@
       "number": 168,
       "title": "CONTRIBUTING.md lists a bare `tsc -p packages/core-contracts/tsconfig.json` that cannot run after the documented setup (no TypeScript installed; CI also checks core-lite)",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Document a reproducible TypeScript installation and checks for both packages, plus version-matched Python typing commands; verify from a clean developer environment.",
       "evidence": {
         "source": [
@@ -1032,7 +1198,18 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:15Z",
+        "number": 168,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/168",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1055,9 +1232,13 @@
       "number": 171,
       "title": "Wheel and sdist ship no `py.typed` marker although the project is checked with `mypy --strict`, so downstream mypy treats `eslams` as untyped",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; distribution verification pending",
       "criterion": "Ship py.typed in wheel/sdist and validate downstream mypy sees the installed package as typed from outside the checkout.",
-      "evidence": null
+      "evidence": {
+        "commit": "89e9e1a",
+        "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+      }
     },
     {
       "number": 172,
@@ -1111,7 +1292,7 @@
       "number": 178,
       "title": "Shogi start position has rook and bishop on swapped files (player_1 rook on 8h, bishop on 2h; standard is bishop 8h, rook 2h)",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Correct standard orientation and differential opening legal moves; pair #94 and bump rules version.",
       "evidence": {
         "source": [
@@ -1133,14 +1314,25 @@
           "xiangqi": "1.0.1",
           "hanabi": "1.1.0"
         },
-        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:29Z",
+        "number": 178,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/178",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 179,
       "title": "Hanabi is catalogued `head_to_head` with `winnerRequired: true`, but only 1 of 100 random-vs-random matches ends with a winner",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Hanabi is cooperative; a required head-to-head winner is a wrong product contract. Agree cooperative scoring/seat metadata, remove invented winner requirements, and version changes coherently with #93/#182. Rules reference: [Hanabi publisher rulebook](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Hanabi_Reglamento_ES.pdf).",
       "evidence": {
         "source": [
@@ -1162,7 +1354,18 @@
           "xiangqi": "1.0.1",
           "hanabi": "1.1.0"
         },
-        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:31Z",
+        "number": 179,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/179",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1185,7 +1388,7 @@
       "number": 182,
       "title": "Hanabi: discarding is legal while all 8 clue tokens are available (standard rules forbid it)",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Align discard legality with the declared Hanabi rules and clue-token count, coordinating deadlock/scoring metadata fixes; test full-clue and nonfull-clue cases. Rules reference: [Hanabi publisher rulebook](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Hanabi_Reglamento_ES.pdf).",
       "evidence": {
         "source": [
@@ -1207,7 +1410,18 @@
           "xiangqi": "1.0.1",
           "hanabi": "1.1.0"
         },
-        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck."
+        "limits": "Adapters explicitly compact; no claim of full Shogi/Xiangqi adjudication or full Hanabi deck.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:34Z",
+        "number": 182,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/182",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1222,7 +1436,7 @@
       "number": 184,
       "title": "`ESLAMS_ENABLE_DEBUG_OBSERVATION` is read by Core but documented nowhere (README, docs, SECURITY, CONTRIBUTING, CHANGELOG)",
       "work_package": "W2",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Document debug-observation exposure and disable it for untrusted/public clients; test projections so enabling server diagnostics cannot silently make public state private.",
       "evidence": {
         "source": [
@@ -1238,16 +1452,31 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:17Z",
+        "number": 184,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/184",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 185,
       "title": "The published 0.6.1 sdist cannot run its own test suite: `test_wheel_export_matches_source_without_git_checkout` runs `git rev-parse HEAD` and fails outside a git checkout",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; distribution verification pending",
       "criterion": "Run shipped sdist tests with authentic embedded provenance and no Git checkout; remove test-only Git assumptions while retaining runtime provenance validation.",
-      "evidence": null
+      "evidence": {
+        "commit": "89e9e1a",
+        "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+      }
     },
     {
       "number": 186,
@@ -1269,7 +1498,7 @@
       "number": 188,
       "title": "Declared minimum dependency versions are not security-tested: installing the floors (cryptography 42.0.0, fastapi 0.115.0) gives 29 known vulnerabilities",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Audit compatible declared floors and current resolution, distinguishing runtime reachability from raw advisory count; update constraints or documented supported matrix with scoped reviewed exceptions.",
       "evidence": {
         "source": [
@@ -1285,7 +1514,18 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:20Z",
+        "number": 188,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/188",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1350,7 +1590,7 @@
       "number": 195,
       "title": "Arena `initial_state(seed)` does not validate the seed type: float seed 1.5 is truncated to 1 in metadata and `rng_commitment` changes after the first move",
       "work_package": "W3",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Require the contract seed type/range without bool/float/string coercion surprises; test state hash/rng commitment stability across public creation and step paths.",
       "evidence": {
         "source": [
@@ -1363,7 +1603,18 @@
           "tests/test_seed_boundaries.py",
           "tests/test_runner_http_auth.py"
         ],
-        "verification": "All 50 registered arenas reject six coerced seed types. Zero, negative and 2^40 seeds preserve metadata and commitment through a legal action. Library sessions and authenticated HTTP reject invalid seed types; runner creates no output. 18 targeted tests pass on Python 3.12; Ruff and strict mypy pass."
+        "verification": "All 50 registered arenas reject six coerced seed types. Zero, negative and 2^40 seeds preserve metadata and commitment through a legal action. Library sessions and authenticated HTTP reject invalid seed types; runner creates no output. 18 targeted tests pass on Python 3.12; Ruff and strict mypy pass.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:36Z",
+        "number": 195,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/195",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1410,7 +1661,7 @@
       "number": 201,
       "title": "Windows checkout with core.autocrlf=true (no .gitattributes): shipped sample publication bundles fail 'eslams publish validate' and 2 tests fail (simulated)",
       "work_package": "W7",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Validate a fresh native Windows checkout with ordinary autocrlf configuration and packaged samples; gitattributes must preserve exact hashed bytes without regenerating trusted signatures.",
       "evidence": {
         "source": [
@@ -1426,7 +1677,18 @@
           "CONTRIBUTING.md",
           "README.md"
         ],
-        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:23Z",
+        "number": 201,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/201",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1449,11 +1711,22 @@
       "number": 204,
       "title": "Limit/no-limit Texas hold'em and Leduc: a fold that leaves all remaining players matched does not close the betting round, so the bettor can bet again (about 45% of random games)",
       "work_package": "W4",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Close matched betting rounds correctly after folds and test seat order, pot contributions and repeated betting legality in all three affected poker arenas.",
       "evidence": {
         "implementation": "All three table poker arenas close matched betting rounds after folds as well as calls/checks; matched and still-unmatched sequences checked.",
-        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head"
+        "tests": "tests/test_standard_rule_regressions.py; neighboring existing arena tests; full suites pending latest final head",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:58Z",
+        "number": 204,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/204",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1516,7 +1789,7 @@
       "number": 212,
       "title": "docs/PROTOCOL.md says invalid JSON from an /act agent is retried once and then marked invalid_action; Core does not retry and records agent_crash",
       "work_package": "W5",
-      "status": "implemented; final integration pending",
+      "status": "closed: completed",
       "criterion": "Make malformed /act JSON classification and retry semantics truthful and explicit. Do not add a retry simply because stale prose promises one; any physical retry must preserve attempt provenance.",
       "evidence": {
         "source": [
@@ -1533,7 +1806,18 @@
           "tests/test_model_agents.py",
           "tests/test_provider_wire_v06.py"
         ],
-        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass."
+        "verification": "Bounded streamed response tests stop oversized unknown-length bodies within 17 64-KiB reads; declared oversize and gzip rejected before body reads. Invalid Unicode, nested NaN, finite confidence range and explanation caps verified for HTTP/model/direct agents; valid diagnostic artifacts and false scoring flags. Existing provider-wire and retry tests pass.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:24:45Z",
+        "number": 212,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/212",
+        "kind": "issue",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1548,9 +1832,13 @@
       "number": 214,
       "title": "Four tests use cwd-relative fixture paths: pytest run from tests/ or any directory other than the repo root fails with FileNotFoundError",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; distribution verification pending",
       "criterion": "Resolve fixtures from the installed/test source context rather than cwd; run targeted and full tests from root, tests directory and a clean outside directory.",
-      "evidence": null
+      "evidence": {
+        "commit": "89e9e1a",
+        "changes": "Source archive provenance with export-subst; no-Git expected identity; PEP561 markers; cwd-independent fixtures; accurate TypeScript packaging and absolute PyPI docs links.",
+        "gate": "isolated wheel/sdist consumers, extracted no-Git suite, native matrix"
+      }
     },
     {
       "number": 215,
@@ -1803,12 +2091,22 @@
       "number": 40,
       "head": "30fc1f2294d30440193038eb3e18989210a03474",
       "title": "docs: add .env.example for Core environment names",
-      "status": "incorporated with revisions; final integration pending",
+      "status": "closed: superseded by #218",
       "review_route": "Revise / split",
       "criterion": "Document the final env set, distinguish development and service configuration, state explicit export/loading instructions, ignore actual .env files, and validate placeholders without printing secret values. Merge with replacement for #52.",
       "evidence": {
         "replacement_pr": 218,
-        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:25:00Z",
+        "number": 40,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/40",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1842,32 +2140,61 @@
       "number": 43,
       "head": "cc17a9745c2f56f5974856db812fba42684f5e07",
       "title": "chore: add root EditorConfig (draft, founder HOLD)",
-      "status": "incorporated with revisions; final integration pending",
+      "status": "closed: superseded by #218",
       "review_route": "Retain, conditional",
       "criterion": "Resolve or explain the failed check on a current head. Ensure pinned fixture bytes are preserved; merge after green supported-version checks.",
       "evidence": {
         "replacement_pr": 218,
-        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:25:03Z",
+        "number": 43,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/43",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 44,
       "head": "545af6c8ed54f07187e32f504ebae71cd69af23b",
       "title": "ci: add SHA-pinned pip-audit workflow",
-      "status": "pending",
+      "status": "closed: superseded by #218",
       "review_route": "Revise / split",
-      "criterion": "Choose this as the initial dependency audit, replace broad ignores with reviewed reachability/version notes and expiring scoped exceptions, audit runtime and dev constraints across supported Python, then merge revised PR."
+      "criterion": "Choose this as the initial dependency audit, replace broad ignores with reviewed reachability/version notes and expiring scoped exceptions, audit runtime and dev constraints across supported Python, then merge revised PR.",
+      "closure": {
+        "closedAt": "2026-10-08T08:25:05Z",
+        "number": 44,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/44",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 45,
       "head": "763fcc33136e0b4617a70645c78ede229d03d3ae",
       "title": "chore: add root .gitattributes (draft, founder HOLD)",
-      "status": "incorporated with revisions; final integration pending",
+      "status": "closed: superseded by #218",
       "review_route": "Retain, conditional",
       "criterion": "Verify shipped sample hash checks on native Windows and preserve canonical fixture bytes; merge separately from explicit LF serialization fix. Close #201 only after that evidence.",
       "evidence": {
         "replacement_pr": 218,
-        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:25:08Z",
+        "number": 45,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/45",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
@@ -1901,61 +2228,110 @@
       "number": 48,
       "head": "33e0ddd9e75686167bb8d462835e2f2c5fcc5788",
       "title": "ci: add SHA-pinned wheel smoke workflow",
-      "status": "pending",
+      "status": "incorporated with revisions; distribution verification pending",
       "review_route": "Revise / split",
-      "criterion": "Run wheel/sdist checks outside the checkout: console entry, keyless run, schema export with embedded provenance, validation and public export. Include supported-Python compatibility and Twine metadata support, then merge revised workflow."
+      "criterion": "Run wheel/sdist checks outside the checkout: console entry, keyless run, schema export with embedded provenance, validation and public export. Include supported-Python compatibility and Twine metadata support, then merge revised workflow.",
+      "evidence": {
+        "replacement_pr": 218,
+        "commit": "89e9e1a",
+        "gate": "Distribution consumers workflow and verify_distributions.py; portable isolated installs and no-Git sdist suite."
+      }
     },
     {
       "number": 49,
       "head": "f1e2b7603d5453d735402a31a37dbddfe8ffeb9b",
       "title": "ci: add SHA-pinned actionlint workflow",
-      "status": "incorporated with revisions; final integration pending",
+      "status": "closed: superseded by #218",
       "review_route": "Retain, conditional",
       "criterion": "Use a pinned lint tool with verifiable artifact checksum or equivalent reviewed installer path, test failure propagation and final combined workflows, then merge.",
       "evidence": {
         "replacement_pr": 218,
-        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:25:10Z",
+        "number": 49,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/49",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 50,
       "head": "d4f1d28564ce5c79ee598d4ae7c52dd48d8f9f87",
       "title": "test: offline schema export smoke",
-      "status": "pending",
+      "status": "incorporated with revisions; distribution verification pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Fold meaningful determinism/schema assertions into packaged-provenance coverage using the proven source/embedded commit helper; pass no-Git sdist test mode before closing #185 and this PR."
+      "criterion": "Fold meaningful determinism/schema assertions into packaged-provenance coverage using the proven source/embedded commit helper; pass no-Git sdist test mode before closing #185 and this PR.",
+      "evidence": {
+        "replacement_pr": 218,
+        "commit": "89e9e1a",
+        "gate": "Distribution consumers workflow and verify_distributions.py; portable isolated installs and no-Git sdist suite."
+      }
     },
     {
       "number": 51,
       "head": "581a746dc255e9286a69f221a8c7200f334633f3",
       "title": "chore: raise cryptography and pytest caps for a clean pip-audit",
-      "status": "incorporated with revisions; final integration pending",
+      "status": "closed: superseded by #218",
       "review_route": "Revise / split",
       "criterion": "Select reviewed compatible bounds, test minimum and current dependency sets on Python 3.9\u20133.12, run the chosen audit without unexplained suppression, and document unsupported upstream combinations. Then merge and close #69/#188 to their scoped evidence.",
       "evidence": {
         "replacement_pr": 218,
-        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:25:12Z",
+        "number": 51,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/51",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 52,
       "head": "93c55a65839c2bc2cb42fa6b8245d5fa4d82a4d7",
       "title": "test: keep .env.example aligned with src env names",
-      "status": "incorporated with revisions; final integration pending",
+      "status": "closed: superseded by #218",
       "review_route": "Supersede / consolidate",
       "criterion": "Replace with concise coverage of a single configuration registry or documented env source; test the actual combined tree and redact diagnostic values. Close original/#71 after compatible replacement or explicit withdrawal.",
       "evidence": {
         "replacement_pr": 218,
-        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:25:14Z",
+        "number": 52,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/52",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     },
     {
       "number": 53,
       "head": "205792c657fc80ed08d3c81955841ea81f87892a",
       "title": "ci: add SHA-pinned OSV-Scanner workflow",
-      "status": "pending",
+      "status": "closed: superseded by #218",
       "review_route": "Supersede / consolidate",
-      "criterion": "Close as superseded by the chosen reviewed audit (#44 replacement). Reintroduce OSV only if it adds measurable coverage with reproducible scanner bytes and an actionable baseline."
+      "criterion": "Close as superseded by the chosen reviewed audit (#44 replacement). Reintroduce OSV only if it adds measurable coverage with reproducible scanner bytes and an actionable baseline.",
+      "closure": {
+        "closedAt": "2026-10-08T08:25:17Z",
+        "number": 53,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/53",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
+      }
     },
     {
       "number": 161,
@@ -1979,7 +2355,7 @@
       "number": 220,
       "head": "7731e2f3d712e5f4714d640df670fc0224feede1",
       "title": "Fix preview-discovered Shogi, Xiangqi and Hanabi rules",
-      "status": "incorporated with cooperative metadata, discard rules and explicit compact claims; final integration pending",
+      "status": "closed: superseded by #218",
       "review_route": "critical review then incorporate",
       "criterion": "Verify self-check filtering, canonical Shogi opening, exact Hanabi final turns, deterministic state evidence and version changes; incorporate useful implementation into #218.",
       "evidence": {
@@ -1989,7 +2365,17 @@
           "tests/test_preview_rule_regressions.py",
           "tests/test_hanabi_cooperative_contract.py"
         ],
-        "changes": "Retained king-safety/opening/final-round fixes; versioned scoring semantics and two cooperative schemas, disabled competitive Hanabi surfaces, corrected full-clue discards; compact limits documented."
+        "changes": "Retained king-safety/opening/final-round fixes; versioned scoring semantics and two cooperative schemas, disabled competitive Hanabi surfaces, corrected full-clue discards; compact limits documented.",
+        "integration": "Native CI 37749235923: Python 3.10\u20133.12 Linux and 3.12 Windows/macOS plus TypeScript; dependency audit 37749235936 current/minimum Py3.10/Py3.12; actionlint37749235883. All passed at 5084366."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:25:19Z",
+        "number": 220,
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/220",
+        "kind": "pr",
+        "resolution_commit": "5084366",
+        "replacement_pr": 218
       }
     }
   ],
@@ -2271,6 +2657,15 @@
       "dependency_audit": "pip-audit 2.10.1 current and direct-floor freezes: no known vulnerabilities; no advisory ignores",
       "baseline": "Fresh detached worktree at 7f6bb418974739986e76049d45dfb7de2109a780: 275 passing on Python 3.9, 10164/11911 lines = 85.33288556796239%",
       "pending": "Native Windows/macOS/Linux CI and fresh wheel/Twine check. Original test removal remains 11/55."
+    },
+    {
+      "commit": "5084366",
+      "full_pytest": "482 passed on current Py3.12 and direct-floor Py3.10",
+      "coverage_percent": 87.18149745197961,
+      "native_ci": "https://github.com/ElectronicSlams/eSlams/actions/runs/37749235923",
+      "audit": "https://github.com/ElectronicSlams/eSlams/actions/runs/37749235936",
+      "actionlint": "https://github.com/ElectronicSlams/eSlams/actions/runs/37749235883",
+      "closures": "24 issues and 9 originals verified CLOSED; full goal remains active"
     }
   ],
   "inventory_recheck": {

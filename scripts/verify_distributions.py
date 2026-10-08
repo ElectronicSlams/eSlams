@@ -14,7 +14,20 @@ from pathlib import Path
 
 
 def clean_environment() -> dict[str, str]:
-    sensitive = ("SECRET", "TOKEN", "API_KEY", "ESLAMS", "SIGNING", "HF_", "CLOUDFLARE")
+    sensitive = (
+        "SECRET",
+        "TOKEN",
+        "API_KEY",
+        "ESLAMS",
+        "SIGNING",
+        "HF_",
+        "CLOUDFLARE",
+        "RUNNER_",
+        "AWS_",
+        "BEDROCK",
+        "R2_",
+        "D1_",
+    )
     environment = {
         key: value
         for key, value in os.environ.items()
@@ -46,15 +59,16 @@ def run(command: list[str], cwd: Path, *, expected: int = 0) -> str:
 
 def smoke(distribution: Path, root: Path, expected_commit: str) -> None:
     environment = root / "venv"
-    venv.EnvBuilder(with_pip=True).create(environment)
+    venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(environment)
     binaries = environment / ("Scripts" if os.name == "nt" else "bin")
     python = binaries / ("python.exe" if os.name == "nt" else "python")
     console = binaries / ("eslams.exe" if os.name == "nt" else "eslams")
     run([str(python), "-m", "pip", "install", str(distribution)], root)
     version = run([str(console), "--version"], root)
-    assert version == run([str(python), "-m", "eslams", "--version"], root)
-    error = run([str(console), "run", "--arena", "no-such-arena"], root, expected=1)
+    assert version == run([str(python), "-m", "eslams.cli", "--version"], root)
+    error = run([str(console), "run", "--arena", "no-such-arena"], root, expected=2)
     assert "Traceback" not in error
+    run([str(console), "run", "--agent", "no-such-agent"], root, expected=1)
     source = run(
         [
             str(python),

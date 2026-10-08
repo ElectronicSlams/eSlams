@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import errno
+import os
 import re
 import signal
+import sys
 import threading
 import time
 import uuid
@@ -600,12 +603,22 @@ class Runner:
             overwrite=config.overwrite,
         )
         expanded = expanded_artifact_path(artifact_path).resolve()
-        _publish_latest_links(
-            output_dir=config.output_dir,
-            artifact_path=output,
-            expanded_path=expanded,
-            archive=config.archive,
-        )
+        try:
+            _publish_latest_links(
+                output_dir=config.output_dir,
+                artifact_path=output,
+                expanded_path=expanded,
+                archive=config.archive,
+            )
+        except OSError as exc:
+            if exc.errno not in {errno.EPERM, errno.EACCES, errno.ENOTSUP} and getattr(
+                exc, "winerror", None
+            ) != 1314:
+                raise
+            print(
+                f"Warning: latest links were not updated; use artifact path {output}",
+                file=sys.stderr,
+            )
         return RunResult(
             run_id=run_id,
             artifact_path=output,
@@ -907,8 +920,14 @@ def _assert_latest_paths_replaceable(paths: list[Path]) -> None:
 
 
 def _replace_latest_link(path: Path, target: Path, *, is_dir: bool) -> None:
-    _remove_latest_path(path)
-    path.symlink_to(target.resolve(), target_is_directory=is_dir)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.link")
+    relative_target = os.path.relpath(target.resolve(), path.parent.resolve())
+    try:
+        temporary.symlink_to(relative_target, target_is_directory=is_dir)
+        _assert_latest_paths_replaceable([path])
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _remove_latest_path(path: Path) -> None:
@@ -916,7 +935,7 @@ def _remove_latest_path(path: Path) -> None:
         return
     if not path.is_symlink():
         raise FileExistsError(f"refusing to replace non-symlink latest path: {path}")
-    path.unlink()
+    path.unlink(missing_ok=True)
 
 
 def _agent_versions(agents: dict[str, Any]) -> str:

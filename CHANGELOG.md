@@ -11,6 +11,10 @@
 
 ### Fixed
 
+- Latest pointers use relative symlinks installed atomically. Concurrent runs
+  retain their result paths, relocation preserves links, and unavailable
+  symlink privileges produce a warning after successful artifact writing.
+
 - Commit-based source archives embed Git provenance; packaged provenance tests
   also work in an extracted sdist without Git. Both Python packages include
   `py.typed`, and fixture tests resolve their paths independently of the cwd.

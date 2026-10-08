@@ -127,6 +127,12 @@ Use `--expanded` when you only want the expanded directory:
 eslams run --arena chess --agent first-legal --opponent first-legal --expanded
 ```
 
+After `--expanded`, validate or replay `runs/latest.eslams.d`. The archive
+pointer is removed. Latest links use relative targets so they survive moving
+or copying the runs directory. If symlink privileges are unavailable, Core
+reports the completed artifact path and warns that latest links were not
+updated. Use the returned `artifact` path in automation and concurrent runs.
+
 ## Run Model Agents
 
 Pass `provider:model` to use a provider-backed model agent.
