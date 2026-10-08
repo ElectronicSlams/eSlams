@@ -586,6 +586,13 @@ its results can differ from standard games that continue from that position.
 Catalogue help examples name the initial seed-1 position and contain real legal
 tokens; query each current state's legal actions before playing them.
 
+Auction 1.1.0 separates the item recipient (`allocation_winner`) from the match
+winner by utility. The highest bid receives the item; tied bids alternate by seed
+parity. Utility includes overbid losses, and score is `(utility + 10) / 20`.
+Equal utilities draw. Negotiation 1.1.0 enforces both private reserve utilities;
+below-reserve acceptance cannot produce a deal. Its price grid uses steps of ten,
+which admits a mutually feasible deal for every generated reserve combination.
+
 List arenas from your installed copy:
 
 ```bash

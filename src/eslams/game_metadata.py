@@ -285,6 +285,14 @@ def help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameH
                     "reach that limit; this result is an episode draw, not a claim of "
                     "standard-game or OpenSpiel outcome parity.",
         })
+    if public.game_id == "negotiation":
+        help_payload = replace(
+            help_payload,
+            legal_action_summary="Offer a price from 20 to 100 in steps of 10 and delivery "
+                                 "from 1 to 3. Accept is legal only at your reserve utility.",
+            scoring_summary="An accepted deal must meet both private reserve utilities. "
+                            "Otherwise it settles as reserve_not_met with zero utilities.",
+        )
     return replace(help_payload, example_actions=examples, detail_sections=notes)
 
 
@@ -582,9 +590,12 @@ _HELP_OVERRIDES: dict[str, GameHelp] = {
         objective="Bid for the item without paying more than its value to you.",
         turn_rules=("Both bidders submit sealed bids, then bids reveal together.",),
         legal_action_summary="Choose a legal bid amount.",
-        scoring_summary="Highest bid wins and utility is value minus bid.",
+        scoring_summary="The highest bid receives the item; equal bids use seed parity. "
+                        "Utility is value minus bid, including losses. "
+                        "Score is (utility + 10) / 20.",
         win_loss_draw_summary=(
-            "Highest utility or winning bid determines the result according to the variant."
+            "The match winner has higher utility; equal utilities draw. "
+            "allocation_winner separately names the bidder receiving the item."
         ),
         hidden_info_summary="Private values and bids are hidden until reveal.",
         first_move_tip="Shade your bid below private value when possible.",

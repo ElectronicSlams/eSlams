@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Auction 1.1.0 retains negative utility, uses a fixed affine score scale,
+  alternates tied allocations by seed parity, and reports the match winner by
+  utility separately from the item recipient. Negotiation 1.1.0 enforces reserve
+  utilities and uses a ten-unit price grid to retain feasible deals for all seeds.
+
 - Core-lite aligns canonical state/action hashes, action wrappers, seeds and
   structured terminal/malformed failures with its documented Python parity scope.
   A compiled cross-runtime CI check covers both supported games and all

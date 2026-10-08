@@ -71,7 +71,7 @@ def test_bargaining_and_negotiation_accept_offers():
 
     negotiation = NegotiationArena()
     negotiation_state = negotiation.initial_state(1)
-    negotiation_state = negotiation.apply_action(negotiation_state, "player_1", "offer:60:2")
+    negotiation_state = negotiation.apply_action(negotiation_state, "player_1", "offer:60:1")
     negotiation_state = negotiation.apply_action(negotiation_state, "player_2", "accept")
 
     assert negotiation_state.terminal is True

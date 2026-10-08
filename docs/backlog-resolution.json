@@ -702,9 +702,12 @@
       "number": 99,
       "title": "First-price sealed-bid auction: ties always go to player_1, winner utility floored at 0, and winner can contradict scores",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Auction allocation winner need not maximize bidder utility. Separate documented tie-break policy, potentially negative utility and outcome fields; do not redefine auction winner as the highest utility scorer.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Auction 1.1.0 preserves signed value-minus-bid utility, a fixed (utility+10)/20 score scale, seed-parity tied allocations and separate allocation/match winners. Negotiation 1.1.0 makes below-reserve accept illegal for the accepter, prevents settlement below either reserve, and expands its price grid to ten-unit steps so every generated reserve combination retains a feasible agreement.",
+        "local_verification": "Exhaustive 10-seed x 121 bid-pair payoff/order/allocation checks pass; overbid and feasible-deal Runner artifacts score and validate. Nine negotiation seed classes enumerate all offers, test exact reserve boundaries, below-reserve rejection, proposer reserve failures and reverse offers. Existing strategic/privacy/help regressions, Ruff and mypy pass. Full native CI pending."
+      }
     },
     {
       "number": 100,
@@ -1169,52 +1172,87 @@
       "number": 128,
       "title": "Paddle-ball: win condition (10 bounces) is unreachable within max_turns=160; a perfect player gets 4 bounces, score capped at 0.4",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Decide whether paddle-ball success is completion or a graded score. Align target, physics, horizon and catalogue with that decision; increasing a cap without versioning changes the benchmark.",
       "evidence": {
         "implementation": "Paddle-ball 1.1.0 permits 400 actions; a public-observation tracking policy reaches ten bounces and score 1 within the cap. Ultimate Tic-Tac-Toe 1.1.0 draws with no global line after all local boards are decided, preserving global-line wins. Morris catalogue/help explicitly declare its compact 120-action draw rule. All catalogue help examples are legal in documented initial seed-1 positions and every listed token is accepted through signed human-seat sessions.",
-        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending."
+        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending.",
+        "integration": "Verified 2d3aafb: native Core CI 37756648047, distribution consumers 37756648060, audit 37756648057 and workflow lint 37756648045 all passed. Python 3.12 full suite: 479 passed; 11281/12849 lines covered (87.79671569771966%). Native includes Windows/macOS and compiled Core-lite parity. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:31:08Z",
+        "number": 128,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/128"
       }
     },
     {
       "number": 129,
       "title": "Negotiation: displayed private_reserve_share is never enforced (accept always legal, utilities ignore it) unlike bargaining",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented: verification pending",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: A private reserve can be a preference rather than a legality restriction. Define utilities and observation semantics before forbidding accept; close as documented non-issue if the current nonbinding preference is intentional.",
-      "evidence": null
+      "evidence": {
+        "implementation": "Auction 1.1.0 preserves signed value-minus-bid utility, a fixed (utility+10)/20 score scale, seed-parity tied allocations and separate allocation/match winners. Negotiation 1.1.0 makes below-reserve accept illegal for the accepter, prevents settlement below either reserve, and expands its price grid to ten-unit steps so every generated reserve combination retains a feasible agreement.",
+        "local_verification": "Exhaustive 10-seed x 121 bid-pair payoff/order/allocation checks pass; overbid and feasible-deal Runner artifacts score and validate. Nine negotiation seed classes enumerate all offers, test exact reserve boundaries, below-reserve rejection, proposer reserve failures and reverse offers. Existing strategic/privacy/help regressions, Ruff and mypy pass. Full native CI pending."
+      }
     },
     {
       "number": 130,
       "title": "Ultimate tic-tac-toe: full-board end rule awards the win on local-board count instead of a draw (303 of 431 no-line playouts); catalogue says faithful/standard",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: Choose standard ultimate-tic-tac-toe draws or the local-board-count variant. Correct the faithful/standard label or version the implementation; do not change historical semantics in place.",
       "evidence": {
         "implementation": "Paddle-ball 1.1.0 permits 400 actions; a public-observation tracking policy reaches ten bounces and score 1 within the cap. Ultimate Tic-Tac-Toe 1.1.0 draws with no global line after all local boards are decided, preserving global-line wins. Morris catalogue/help explicitly declare its compact 120-action draw rule. All catalogue help examples are legal in documented initial seed-1 positions and every listed token is accepted through signed human-seat sessions.",
-        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending."
+        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending.",
+        "integration": "Verified 2d3aafb: native Core CI 37756648047, distribution consumers 37756648060, audit 37756648057 and workflow lint 37756648045 all passed. Python 3.12 full suite: 479 passed; 11281/12849 lines covered (87.79671569771966%). Native includes Windows/macOS and compiled Core-lite parity. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:31:10Z",
+        "number": 130,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/130"
       }
     },
     {
       "number": 131,
       "title": "Nine men's morris: max_turns=120 ends 15% of random games as 0.5/0.5 turn_limit draws while play is still decisive (OpenSpiel not terminal); catalogue says faithful/standard",
       "work_package": "W4",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Record and approve the intended contract, then implement/version or close as intentional/not planned with evidence: A finite game horizon is a legitimate benchmark rule when declared. Keep or change it through explicit rules/versioning; disagreement with OpenSpiel alone does not prove a terminal draw is invalid.",
       "evidence": {
         "implementation": "Paddle-ball 1.1.0 permits 400 actions; a public-observation tracking policy reaches ten bounces and score 1 within the cap. Ultimate Tic-Tac-Toe 1.1.0 draws with no global line after all local boards are decided, preserving global-line wins. Morris catalogue/help explicitly declare its compact 120-action draw rule. All catalogue help examples are legal in documented initial seed-1 positions and every listed token is accepted through signed human-seat sessions.",
-        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending."
+        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending.",
+        "integration": "Verified 2d3aafb: native Core CI 37756648047, distribution consumers 37756648060, audit 37756648057 and workflow lint 37756648045 all passed. Python 3.12 full suite: 479 passed; 11281/12849 lines covered (87.79671569771966%). Native includes Windows/macOS and compiled Core-lite parity. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:31:12Z",
+        "number": 131,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/131"
       }
     },
     {
       "number": 132,
       "title": "Catalogue help.exampleActions: 42 of 50 games have no example token that is a legal action (default token \"0\"), and step_session rejects it with turn.failed",
       "work_package": "W5",
-      "status": "implemented: verification pending",
+      "status": "closed: completed",
       "criterion": "Catalogue examples must be legal for a declared reproducible initial context or clearly schematic. Test each advertised example through the public step contract.",
       "evidence": {
         "implementation": "Paddle-ball 1.1.0 permits 400 actions; a public-observation tracking policy reaches ten bounces and score 1 within the cap. Ultimate Tic-Tac-Toe 1.1.0 draws with no global line after all local boards are decided, preserving global-line wins. Morris catalogue/help explicitly declare its compact 120-action draw rule. All catalogue help examples are legal in documented initial seed-1 positions and every listed token is accepted through signed human-seat sessions.",
-        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending."
+        "local_verification": "Four new workflow regressions pass, including full validated scoring artifacts, both Ultimate winners/draws, a live Morris limit position with 4/6 pieces, and all 50 catalogue/session examples. Ruff and mypy pass. Native full CI pending.",
+        "integration": "Verified 2d3aafb: native Core CI 37756648047, distribution consumers 37756648060, audit 37756648057 and workflow lint 37756648045 all passed. Python 3.12 full suite: 479 passed; 11281/12849 lines covered (87.79671569771966%). Native includes Windows/macOS and compiled Core-lite parity. No release."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T09:31:14Z",
+        "number": 132,
+        "state": "CLOSED",
+        "stateReason": "COMPLETED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/132"
       }
     },
     {
