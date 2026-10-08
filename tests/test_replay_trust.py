@@ -9,7 +9,7 @@ from eslams.runner import RunConfig, Runner
 
 def test_normal_replay_refuses_tampering_and_diagnostic_output_is_visibly_untrusted(tmp_path):
     result = Runner().run(RunConfig(arena_id="tic-tac-toe", output_dir=tmp_path))
-    with (result.artifact_path / "traces/public_trace.jsonl").open("a") as stream:
+    with (result.artifact_path / "traces/public_trace.jsonl").open("a", encoding="utf-8", newline="\n") as stream:
         stream.write('{"unexpected":"<script>untrusted</script>"}\n')
     assert ArtifactValidator().validate_report(result.artifact_path).valid is False
     output = tmp_path / "replay.html"
@@ -19,7 +19,7 @@ def test_normal_replay_refuses_tampering_and_diagnostic_output_is_visibly_untrus
     assert main(["replay", str(result.artifact_path), "--output", str(output)]) == 1
     assert not output.exists()
     render_replay_html(result.artifact_path, output, diagnostic=True)
-    text = output.read_text()
+    text = output.read_text(encoding="utf-8")
     assert 'role="status" id="artifactTrust"' in text
     assert "DIAGNOSTIC — UNTRUSTED REPLAY" in text
     assert "hash mismatch" in text
@@ -28,8 +28,8 @@ def test_normal_replay_refuses_tampering_and_diagnostic_output_is_visibly_untrus
 def test_unsigned_content_is_validated_without_claiming_signature_authentication(tmp_path):
     result = Runner().run(RunConfig(arena_id="tic-tac-toe", output_dir=tmp_path, archive=True))
     output = render_replay_html(result.artifact_path)
-    assert "Content validated. Signature: unsigned." in output.read_text()
-    embedded = (result.expanded_path / "replay/index.html").read_text()
+    assert "Content validated. Signature: unsigned." in output.read_text(encoding="utf-8")
+    embedded = (result.expanded_path / "replay/index.html").read_text(encoding="utf-8")
     assert "validate the complete artifact before trusting it" in embedded
 
 

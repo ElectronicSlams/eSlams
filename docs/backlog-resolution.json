@@ -280,10 +280,17 @@
       "number": 86,
       "title": "SECURITY.md advertises GitHub private vulnerability reporting, but the feature is disabled on the repository",
       "work_package": "W2",
-      "status": "resolved on GitHub; closure pending record",
+      "status": "closed: completed",
       "criterion": "Close after the repository owner enables and verifies private vulnerability reporting, or replaces the advertised route with a tested private contact. Settings changes are distinct from code changes.",
       "evidence": {
         "verification": "GitHub private-vulnerability-reporting endpoint was disabled; enabled with repository API PUT, then GET returned enabled:true on 2026-10-08. SECURITY reporting path is now available."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:01:56Z",
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/86",
+        "resolution_commit": "a040dcf",
+        "replacement_pr": 218
       }
     },
     {
@@ -1270,11 +1277,18 @@
       "number": 189,
       "title": "Draft PR #42: the `ruff-format` pre-commit hook would reformat 37 files that already exist on main, and `pre-commit` is not in the dev extras",
       "work_package": "W7",
-      "status": "resolved as not planned; original PR closure pending record",
+      "status": "closed: not planned",
       "criterion": "Choose baseline formatting policy, then align hook installation and CI.",
       "evidence": {
         "source": "CONTRIBUTING.md",
         "decision": "Decline PR #42: formatter introduces unrelated rewrites and undeclared setup. Keep Ruff lint as the required check and avoid imposing pre-commit hooks in this cleanup."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:01:58Z",
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/189",
+        "resolution_commit": "a040dcf",
+        "replacement_pr": 218
       }
     },
     {
@@ -1791,12 +1805,19 @@
       "number": 42,
       "head": "9d1a023c40c181be830454b0898e14906f56ee06",
       "title": "chore: add local pre-commit hooks for Ruff",
-      "status": "declined with recorded rationale; closure pending record",
+      "status": "closed: not planned",
       "review_route": "Decline / defer",
       "criterion": "Close as not planned for this cleanup, resolving #189. A future formatting proposal needs one formatter baseline, documented installation and a separate behavior-free change.",
       "evidence": {
         "replacement_pr": 218,
         "decision": "CONTRIBUTING.md records why pre-commit formatter and blanket-suppressed Bandit additions are not adopted; Ruff and focused privacy/artifact/service regressions remain required. Dependency and workflow audits have distinct reviewed scope."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:01:52Z",
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/42",
+        "resolution_commit": "a040dcf",
+        "replacement_pr": 218
       }
     },
     {
@@ -1843,12 +1864,19 @@
       "number": 47,
       "head": "db15a8abdd65e91a81e291daa900c840fe2cbeb5",
       "title": "ci: add SHA-pinned Bandit workflow",
-      "status": "declined with recorded rationale; closure pending record",
+      "status": "closed: not planned",
       "review_route": "Decline / defer",
       "criterion": "Close as not planned for the initial cleanup; keep specific static checks only where they add findings beyond existing lint/CodeQL and justify exceptions locally. Do not claim scanner coverage proves service safety.",
       "evidence": {
         "replacement_pr": 218,
         "decision": "CONTRIBUTING.md records why pre-commit formatter and blanket-suppressed Bandit additions are not adopted; Ruff and focused privacy/artifact/service regressions remain required. Dependency and workflow audits have distinct reviewed scope."
+      },
+      "closure": {
+        "closedAt": "2026-10-08T08:01:55Z",
+        "state": "CLOSED",
+        "url": "https://github.com/ElectronicSlams/eSlams/pull/47",
+        "resolution_commit": "a040dcf",
+        "replacement_pr": 218
       }
     },
     {

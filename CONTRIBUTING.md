@@ -122,7 +122,8 @@ Include:
 
 Runtime floors are HTTPX 0.28.1, FastAPI 0.142.4, Starlette 1.7.0,
 Uvicorn 0.54.0 and cryptography 50.0.2. The dev extra uses pytest 9.1.1+,
-build 1.6.1+ and Twine 7+. Build isolation uses Hatchling 1.32.4+, whose
+build 1.6.1+, Twine 7+ and setuptools 83+. The setuptools floor upgrades
+older bootstrap copies installed in Python 3.10 virtual environments. Build isolation uses Hatchling 1.32.4+, whose
 Metadata 2.5 output is understood by Twine 7. These are proposed source
 requirements; they do not change an already published wheel.
 
