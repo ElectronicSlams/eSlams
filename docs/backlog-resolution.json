@@ -52,17 +52,47 @@
       "number": 55,
       "title": "Documented `mypy src` / `mypy src/eslams` fails on Python >=3.10 (pyproject python_version=3.9 + anyio 4.15 `match` syntax)",
       "work_package": "W7",
-      "status": "implemented; strict typing verified on Python 3.9 and 3.12",
+      "status": "implemented; final integration pending",
       "criterion": "Use version-matched mypy configuration/tool compatibility and test the exact documented command on each supported Python, rather than ignoring dependency parse errors.",
-      "evidence": "Reproduced anyio pattern-matching parse failure on Python 3.12 with forced 3.9 target. Removed global mypy python_version so documented commands use active interpreter, while CI checks each supported version explicitly. python -m mypy src passes all 95 modules on both Python 3.9.6 and 3.12.13; remaining native versions are final matrix gates."
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 56,
       "title": "`twine check` fails on a fresh build with the dev-extra twine (<7): '2.5' is not a valid metadata version",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Build fresh wheel/sdist, require a Twine version that supports generated metadata, and run twine check on both. No PyPI publication is necessary to verify this.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 57,
@@ -140,9 +170,24 @@
       "number": 69,
       "title": "Dependency caps cryptography<47 and pytest<9 on main block fixes for known advisories (see draft PR #51)",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Close after audited compatible dependency bounds and supported-Python CI permit the reviewed fixes; raising caps alone is not evidence of safe declared floors.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 70,
@@ -156,9 +201,24 @@
       "number": 71,
       "title": "Draft PR #52 env-var coverage test fails once #21 lands alongside #40 (.env.example missing #21 variables)",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Update those PR acceptance criteria together; include #184 debug-observation documentation.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 75,
@@ -220,9 +280,11 @@
       "number": 86,
       "title": "SECURITY.md advertises GitHub private vulnerability reporting, but the feature is disabled on the repository",
       "work_package": "W2",
-      "status": "pending",
+      "status": "resolved on GitHub; closure pending record",
       "criterion": "Close after the repository owner enables and verifies private vulnerability reporting, or replaces the advertised route with a tested private contact. Settings changes are distinct from code changes.",
-      "evidence": null
+      "evidence": {
+        "verification": "GitHub private-vulnerability-reporting endpoint was disabled; enabled with repository API PUT, then GET returned enabled:true on 2026-10-08. SECURITY reporting path is now available."
+      }
     },
     {
       "number": 87,
@@ -430,9 +492,24 @@
       "number": 114,
       "title": "README install: `pip install eslams-core` fails with externally-managed-environment on Debian 13 and the only venv recipe uses `python`, which does not exist",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Use python3 -m venv and python -m pip plus activation instructions; verify the guide on externally managed Debian Python without recommending system-package override flags.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 115,
@@ -670,9 +747,24 @@
       "number": 140,
       "title": "Reading-only (Windows): write_text without newline=\"\\n\" makes artifact bytes, artifact_id and schema bundle hash differ from Linux",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Write canonical LF bytes explicitly independent of platform; compare schema/artifact hashes on native Windows and Linux. gitattributes (#45) alone does not change runtime writes.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 141,
@@ -902,9 +994,24 @@
       "number": 168,
       "title": "CONTRIBUTING.md lists a bare `tsc -p packages/core-contracts/tsconfig.json` that cannot run after the documented setup (no TypeScript installed; CI also checks core-lite)",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Document a reproducible TypeScript installation and checks for both packages, plus version-matched Python typing commands; verify from a clean developer environment.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 169,
@@ -1093,9 +1200,24 @@
       "number": 184,
       "title": "`ESLAMS_ENABLE_DEBUG_OBSERVATION` is read by Core but documented nowhere (README, docs, SECURITY, CONTRIBUTING, CHANGELOG)",
       "work_package": "W2",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Document debug-observation exposure and disable it for untrusted/public clients; test projections so enabling server diagnostics cannot silently make public state private.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 185,
@@ -1125,17 +1247,35 @@
       "number": 188,
       "title": "Declared minimum dependency versions are not security-tested: installing the floors (cryptography 42.0.0, fastapi 0.115.0) gives 29 known vulnerabilities",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Audit compatible declared floors and current resolution, distinguishing runtime reachability from raw advisory count; update constraints or documented supported matrix with scoped reviewed exceptions.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 189,
       "title": "Draft PR #42: the `ruff-format` pre-commit hook would reformat 37 files that already exist on main, and `pre-commit` is not in the dev extras",
       "work_package": "W7",
-      "status": "pending",
+      "status": "resolved as not planned; original PR closure pending record",
       "criterion": "Choose baseline formatting policy, then align hook installation and CI.",
-      "evidence": null
+      "evidence": {
+        "source": "CONTRIBUTING.md",
+        "decision": "Decline PR #42: formatter introduces unrelated rewrites and undeclared setup. Keep Ruff lint as the required check and avoid imposing pre-commit hooks in this cleanup."
+      }
     },
     {
       "number": 190,
@@ -1241,9 +1381,24 @@
       "number": 201,
       "title": "Windows checkout with core.autocrlf=true (no .gitattributes): shipped sample publication bundles fail 'eslams publish validate' and 2 tests fail (simulated)",
       "work_package": "W7",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Validate a fresh native Windows checkout with ordinary autocrlf configuration and packaged samples; gitattributes must preserve exact hashed bytes without regenerating trusted signatures.",
-      "evidence": null
+      "evidence": {
+        "source": [
+          "pyproject.toml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/dependency-audit.yml",
+          ".github/workflows/publish.yml",
+          ".github/workflows/actionlint.yml",
+          ".env.example",
+          ".gitignore",
+          ".editorconfig",
+          ".gitattributes",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "verification": "Current dependency resolution audited with pip-audit 2.10.1 without ignores: no known vulnerabilities. Proposed minimum Python 3.10; patched runtime floors + pytest 9.1.1/Twine 7/Hatchling 1.32.4. Direct-floor 3.10 and 3.12 suites/audit/wheel and native OS checks pending. New source env reference covers auth/session/debug/signing settings with empty values; explicit loading guidance and ignored local files. Workflow pins verified via GitHub commit API; ref resolver treats hostile shell text literally and rejects CR/LF. Actionlint 1.7.12 archive checksum verified before execution; workflows lint clean."
+      }
     },
     {
       "number": 202,
@@ -1588,9 +1743,13 @@
       "number": 37,
       "head": "f10140fa10dcbaf4499b2218a7584eb985e55b0a",
       "title": "ci: pin publish workflow actions to commit SHAs",
-      "status": "pending",
+      "status": "incorporated with revisions; final integration pending",
       "review_route": "Retain, conditional",
-      "criterion": "Rebase onto the final hardened publish workflow, preserve read-only checkout permissions and trusted publishing, run workflow lint, then merge; this task does not publish."
+      "criterion": "Rebase onto the final hardened publish workflow, preserve read-only checkout permissions and trusted publishing, run workflow lint, then merge; this task does not publish.",
+      "evidence": {
+        "replacement_pr": 218,
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+      }
     },
     {
       "number": 38,
@@ -1612,9 +1771,13 @@
       "number": 40,
       "head": "30fc1f2294d30440193038eb3e18989210a03474",
       "title": "docs: add .env.example for Core environment names",
-      "status": "pending",
+      "status": "incorporated with revisions; final integration pending",
       "review_route": "Revise / split",
-      "criterion": "Document the final env set, distinguish development and service configuration, state explicit export/loading instructions, ignore actual .env files, and validate placeholders without printing secret values. Merge with replacement for #52."
+      "criterion": "Document the final env set, distinguish development and service configuration, state explicit export/loading instructions, ignore actual .env files, and validate placeholders without printing secret values. Merge with replacement for #52.",
+      "evidence": {
+        "replacement_pr": 218,
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+      }
     },
     {
       "number": 41,
@@ -1628,17 +1791,25 @@
       "number": 42,
       "head": "9d1a023c40c181be830454b0898e14906f56ee06",
       "title": "chore: add local pre-commit hooks for Ruff",
-      "status": "pending",
+      "status": "declined with recorded rationale; closure pending record",
       "review_route": "Decline / defer",
-      "criterion": "Close as not planned for this cleanup, resolving #189. A future formatting proposal needs one formatter baseline, documented installation and a separate behavior-free change."
+      "criterion": "Close as not planned for this cleanup, resolving #189. A future formatting proposal needs one formatter baseline, documented installation and a separate behavior-free change.",
+      "evidence": {
+        "replacement_pr": 218,
+        "decision": "CONTRIBUTING.md records why pre-commit formatter and blanket-suppressed Bandit additions are not adopted; Ruff and focused privacy/artifact/service regressions remain required. Dependency and workflow audits have distinct reviewed scope."
+      }
     },
     {
       "number": 43,
       "head": "cc17a9745c2f56f5974856db812fba42684f5e07",
       "title": "chore: add root EditorConfig (draft, founder HOLD)",
-      "status": "pending",
+      "status": "incorporated with revisions; final integration pending",
       "review_route": "Retain, conditional",
-      "criterion": "Resolve or explain the failed check on a current head. Ensure pinned fixture bytes are preserved; merge after green supported-version checks."
+      "criterion": "Resolve or explain the failed check on a current head. Ensure pinned fixture bytes are preserved; merge after green supported-version checks.",
+      "evidence": {
+        "replacement_pr": 218,
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+      }
     },
     {
       "number": 44,
@@ -1652,9 +1823,13 @@
       "number": 45,
       "head": "763fcc33136e0b4617a70645c78ede229d03d3ae",
       "title": "chore: add root .gitattributes (draft, founder HOLD)",
-      "status": "pending",
+      "status": "incorporated with revisions; final integration pending",
       "review_route": "Retain, conditional",
-      "criterion": "Verify shipped sample hash checks on native Windows and preserve canonical fixture bytes; merge separately from explicit LF serialization fix. Close #201 only after that evidence."
+      "criterion": "Verify shipped sample hash checks on native Windows and preserve canonical fixture bytes; merge separately from explicit LF serialization fix. Close #201 only after that evidence.",
+      "evidence": {
+        "replacement_pr": 218,
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+      }
     },
     {
       "number": 46,
@@ -1668,9 +1843,13 @@
       "number": 47,
       "head": "db15a8abdd65e91a81e291daa900c840fe2cbeb5",
       "title": "ci: add SHA-pinned Bandit workflow",
-      "status": "pending",
+      "status": "declined with recorded rationale; closure pending record",
       "review_route": "Decline / defer",
-      "criterion": "Close as not planned for the initial cleanup; keep specific static checks only where they add findings beyond existing lint/CodeQL and justify exceptions locally. Do not claim scanner coverage proves service safety."
+      "criterion": "Close as not planned for the initial cleanup; keep specific static checks only where they add findings beyond existing lint/CodeQL and justify exceptions locally. Do not claim scanner coverage proves service safety.",
+      "evidence": {
+        "replacement_pr": 218,
+        "decision": "CONTRIBUTING.md records why pre-commit formatter and blanket-suppressed Bandit additions are not adopted; Ruff and focused privacy/artifact/service regressions remain required. Dependency and workflow audits have distinct reviewed scope."
+      }
     },
     {
       "number": 48,
@@ -1684,9 +1863,13 @@
       "number": 49,
       "head": "f1e2b7603d5453d735402a31a37dbddfe8ffeb9b",
       "title": "ci: add SHA-pinned actionlint workflow",
-      "status": "pending",
+      "status": "incorporated with revisions; final integration pending",
       "review_route": "Retain, conditional",
-      "criterion": "Use a pinned lint tool with verifiable artifact checksum or equivalent reviewed installer path, test failure propagation and final combined workflows, then merge."
+      "criterion": "Use a pinned lint tool with verifiable artifact checksum or equivalent reviewed installer path, test failure propagation and final combined workflows, then merge.",
+      "evidence": {
+        "replacement_pr": 218,
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+      }
     },
     {
       "number": 50,
@@ -1700,17 +1883,25 @@
       "number": 51,
       "head": "581a746dc255e9286a69f221a8c7200f334633f3",
       "title": "chore: raise cryptography and pytest caps for a clean pip-audit",
-      "status": "pending",
+      "status": "incorporated with revisions; final integration pending",
       "review_route": "Revise / split",
-      "criterion": "Select reviewed compatible bounds, test minimum and current dependency sets on Python 3.9\u20133.12, run the chosen audit without unexplained suppression, and document unsupported upstream combinations. Then merge and close #69/#188 to their scoped evidence."
+      "criterion": "Select reviewed compatible bounds, test minimum and current dependency sets on Python 3.9\u20133.12, run the chosen audit without unexplained suppression, and document unsupported upstream combinations. Then merge and close #69/#188 to their scoped evidence.",
+      "evidence": {
+        "replacement_pr": 218,
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+      }
     },
     {
       "number": 52,
       "head": "93c55a65839c2bc2cb42fa6b8245d5fa4d82a4d7",
       "title": "test: keep .env.example aligned with src env names",
-      "status": "pending",
+      "status": "incorporated with revisions; final integration pending",
       "review_route": "Supersede / consolidate",
-      "criterion": "Replace with concise coverage of a single configuration registry or documented env source; test the actual combined tree and redact diagnostic values. Close original/#71 after compatible replacement or explicit withdrawal."
+      "criterion": "Replace with concise coverage of a single configuration registry or documented env source; test the actual combined tree and redact diagnostic values. Close original/#71 after compatible replacement or explicit withdrawal.",
+      "evidence": {
+        "replacement_pr": 218,
+        "changes": "Current combined dependency/CI/env/writer/docs changes incorporate useful intent with verified action pins, checksum-verified workflow lint, no advisory suppressions, and explicit Python 3.10 compatibility migration. .env reference includes runner auth/session variables and no values; concise test replaces 338-line scanner. LF applies to text writers and Git checkouts; binary .eslams archives remain unchanged."
+      }
     },
     {
       "number": 53,
@@ -1913,6 +2104,15 @@
       "python312": "466 passing; 86.775420% line coverage",
       "github_ci": "a517fd6 Linux Python 3.9\u20133.12 and TypeScript passed run 37742689611",
       "pending": "Final compact-fidelity assertion and final combined matrix/wheel/native Windows checks; original test removals remain 11/55."
+    },
+    {
+      "date": "2026-10-08",
+      "scope": "Current and declared direct-floor dependencies; source before final two minimum-mypy repairs",
+      "python310_min": "487 passing; Ruff 0.6.0 passes; three mypy 1.10 findings addressed with explicit failed-receipt type and bounded binary copy loop; recheck pending",
+      "python312_current": "487 passing; current Ruff/mypy pass",
+      "dependency_audit": "pip-audit 2.10.1 current and direct-floor freezes: no known vulnerabilities; no advisory ignores",
+      "baseline": "Fresh detached worktree at 7f6bb418974739986e76049d45dfb7de2109a780: 275 passing on Python 3.9, 10164/11911 lines = 85.33288556796239%",
+      "pending": "Native Windows/macOS/Linux CI and fresh wheel/Twine check. Original test removal remains 11/55."
     }
   ],
   "inventory_recheck": {

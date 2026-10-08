@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
             descriptor = sys.stdout.fileno()
         except (AttributeError, OSError, ValueError):
             return 0
-        with open(os.devnull, "w", encoding="utf-8") as sink:
+        with open(os.devnull, "w", encoding="utf-8", newline="\n") as sink:
             os.dup2(sink.fileno(), descriptor)
         return 0
     except (KeyError, ValueError, OSError) as exc:
@@ -622,8 +622,7 @@ def _bench_command(args: argparse.Namespace) -> int:
         if args.json is not None:
             args.json.parent.mkdir(parents=True, exist_ok=True)
             args.json.write_text(
-                json.dumps(payload, sort_keys=True, indent=2) + "\n",
-                encoding="utf-8",
+                json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8", newline="\n"
             )
             print(json.dumps({"benchmark": str(args.json)}, indent=2))
         else:

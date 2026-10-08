@@ -698,7 +698,8 @@ def _write_archive(artifact_dir: Path, archive_path: Path) -> None:
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = (stat.S_IFREG | 0o600) << 16
             with path.open("rb") as source, archive.open(info, "w") as destination:
-                shutil.copyfileobj(source, destination)
+                for block in iter(lambda: source.read(1024 * 1024), b""):
+                    destination.write(block)
 
 
 def archive_artifact_path(path: Path) -> Path:

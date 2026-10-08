@@ -333,12 +333,12 @@ class ModelProviderAgent:
                 action, confidence, explanation = _parse_model_action(text, request.legal_actions)
             except ProtocolError as exc:
                 parse_error = exc
-                receipt = self.last_receipt or {}
+                failed_receipt: dict[str, Any] = self.last_receipt or {}
                 self._replace_last_receipt(
                     {
-                        **receipt,
+                        **failed_receipt,
                         "outcome": "action_response_unparseable",
-                        "usage_unavailable_reason": receipt.get("usage_unavailable_reason"),
+                        "usage_unavailable_reason": failed_receipt.get("usage_unavailable_reason"),
                         "parse_error": str(exc),
                     }
                 )

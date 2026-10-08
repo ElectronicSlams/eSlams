@@ -9,3 +9,8 @@ out/
 *.egg-info/
 runs/
 .DS_Store
+
+# Local credentials/configuration: only the value-free reference is tracked.
+.env
+.env.*
+!.env.example

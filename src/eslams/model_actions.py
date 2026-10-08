@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from eslams.action_descriptors import action_token
+from eslams.arena import _same_json_action
 from eslams.protocol import ActResponse, ProtocolError
 
 INVALID_ACTION_CODES: tuple[str, ...] = (
@@ -102,7 +103,7 @@ def coerce_action(
     if isinstance(value, str) and value in tokens:
         return tokens[value]
     for action in legal_actions:
-        if value == action or str(value) == str(action):
+        if _same_json_action(value, action):
             return action
     if isinstance(value, str):
         raise InvalidModelAction("unknown_action_id", f"unknown action id {value!r}")

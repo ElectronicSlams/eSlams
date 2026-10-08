@@ -2,7 +2,24 @@
 
 ## Unreleased
 
+### Compatibility
+
+- The proposed supported minimum is Python 3.10. Patched FastAPI/Starlette,
+  pytest and build/publishing tools require it; cryptography and runtime
+  dependency floors now select current patched versions. Published historical
+  Core versions and artifacts are unchanged. No release is published here.
+
 ### Fixed
+
+- Canonical schema and text writers use explicit LF newlines across platforms.
+  Git checkout attributes preserve `.eslams` archives as binary data.
+- Contributor commands cover POSIX and Windows virtual environments and both
+  TypeScript packages. The value-free environment reference includes the final
+  authentication/session/debug/signing settings and documents explicit loading.
+- CI adds native Windows/macOS checks and audits current/direct-floor dependency
+  sets without advisory ignore lists. Workflow actions are pinned and workflow
+  lint downloads are checked against a fixed SHA-256 digest. Publish ref inputs
+  remain literal data and reject CR/LF; no publishing job is run by this work.
 
 - Agent/provider HTTP responses are streamed within a 1 MiB limit and must use
   identity encoding. Invalid Unicode and nonfinite numeric values are rejected

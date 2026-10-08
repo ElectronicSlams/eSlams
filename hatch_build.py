@@ -36,7 +36,7 @@ class CustomBuildHook(BuildHookInterface):
 
         self._temporary_directory = Path(tempfile.mkdtemp(prefix="eslams-build-provenance-"))
         generated_path = self._temporary_directory / "_build_provenance.py"
-        generated_path.write_text(generated, encoding="utf-8")
+        generated_path.write_text(generated, encoding="utf-8", newline="\n")
         destination = (
             "src/eslams/_build_provenance.py"
             if self.target_name == "sdist"

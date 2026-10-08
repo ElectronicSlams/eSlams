@@ -69,7 +69,7 @@ def write_resume_checkpoint(path: Path, records: list[ResumeCheckpointRecord]) -
         ],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
+    path.write_text(canonical_json(payload) + "\n", encoding="utf-8", newline="\n")
     return path
 
 
@@ -149,7 +149,7 @@ def progress_event(
 
 def append_progress_event(path: Path, event: dict[str, Any]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
         handle.write(canonical_json(event) + "\n")
     return path
 

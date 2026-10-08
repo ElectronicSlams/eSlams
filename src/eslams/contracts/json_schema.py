@@ -71,12 +71,13 @@ def export_schemas(output_dir: Path) -> list[Path]:
     written: list[Path] = []
     for version in schema_versions():
         path = output_dir / schema_filename(version)
-        path.write_text(canonical_json(schema_for_version(version)) + "\n", encoding="utf-8")
+        path.write_text(
+            canonical_json(schema_for_version(version)) + "\n", encoding="utf-8", newline="\n"
+        )
         written.append(path)
     manifest_path = output_dir / SCHEMA_BUNDLE_MANIFEST_FILENAME
     manifest_path.write_text(
-        canonical_json(schema_bundle_manifest(written)) + "\n",
-        encoding="utf-8",
+        canonical_json(schema_bundle_manifest(written)) + "\n", encoding="utf-8", newline="\n"
     )
     written.append(manifest_path)
     return written

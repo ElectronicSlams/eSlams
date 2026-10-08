@@ -131,7 +131,9 @@ def main(argv: list[str] | None = None) -> int:
         "models": [records[key] for key in sorted(records)],
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+    )
     print(json.dumps({"output": str(args.output), "models": len(payload["models"])}, indent=2))
     return 0
 

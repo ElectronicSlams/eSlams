@@ -65,8 +65,20 @@ human, validated by a machine, and uploaded as a portable proof package.
 
 ## Install
 
+On Linux/macOS (including systems with an externally managed Python):
+
 ```bash
-pip install eslams-core
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install eslams-core
+```
+
+On Windows PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install eslams-core
+.venv\Scripts\eslams.exe --version
 ```
 
 For local development:
@@ -74,12 +86,16 @@ For local development:
 ```bash
 git clone https://github.com/ElectronicSlams/eSlams.git
 cd eSlams
-python -m venv .venv
+python3 -m venv .venv
 . .venv/bin/activate
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 ```
 
-Core supports Python 3.9 through 3.12.
+This development branch requires Python 3.10+ and tests Python 3.10 through 3.12.
+Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
+configuration names; Core does not load `.env` automatically. Export selected
+settings explicitly and keep secrets in ignored local files or service
+configuration. Cross-platform development commands are in [CONTRIBUTING](CONTRIBUTING.md).
 
 ## Quick Start
 

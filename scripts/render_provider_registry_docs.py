@@ -96,4 +96,6 @@ def render() -> str:
 
 
 if __name__ == "__main__":
-    (ROOT / "docs" / "REGISTRY_AVAILABLE_MODELS.md").write_text(render(), encoding="utf-8")
+    (ROOT / "docs" / "REGISTRY_AVAILABLE_MODELS.md").write_text(
+        render(), encoding="utf-8", newline="\n"
+    )

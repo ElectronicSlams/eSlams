@@ -84,7 +84,7 @@ def merge_official_results(run_dir: Path, output_path: Path) -> Path:
         "audit_links": [],
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
+    output_path.write_text(canonical_json(payload) + "\n", encoding="utf-8", newline="\n")
     return output_path
 
 

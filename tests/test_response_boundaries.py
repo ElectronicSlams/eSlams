@@ -141,3 +141,11 @@ def test_oversized_http_response_leaves_diagnostic_artifact(tmp_path, monkeypatc
 def test_canonical_json_cannot_emit_nonstandard_numeric_tokens():
     with pytest.raises(ValueError):
         canonical_json({"bad": float("nan")})
+
+
+def test_model_actions_preserve_strict_types_but_accept_documented_string_ids():
+    for action in (True, False, 0.0, 1.0):
+        with pytest.raises(InvalidModelAction):
+            parse_model_action(canonical_json({"action": action}), [0, 1])
+    assert parse_model_action('{"action": "0"}', [0, 1]).action == 0
+    assert parse_model_action('{"action": {"action_id": "1"}}', [0, 1]).action == 1

@@ -4,17 +4,53 @@ Thank you for helping build eSlams Core.
 
 ## Development
 
+On Linux/macOS, install from a Git clone inside a virtual environment:
+
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e ".[dev]"
 python -m pytest -q
-python -m ruff check src tests scripts
+python -m ruff check .
 python -m mypy src/eslams
-tsc -p packages/core-contracts/tsconfig.json
 ```
 
-Python 3.9, 3.10, 3.11, and 3.12 are supported. Mypy uses the active
+On Windows PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m ruff check .
+.venv\Scripts\python.exe -m mypy src/eslams
+```
+
+Install Node.js/npm separately for both TypeScript checks (the Python dev extra
+does not install TypeScript). Run these commands from the repository root on
+either platform:
+
+```bash
+npx --yes --package typescript@5.5.4 tsc --noEmit -p packages/core-contracts/tsconfig.json
+npx --yes --package typescript@5.5.4 tsc --noEmit -p packages/core-lite/tsconfig.json
+```
+
+Editor whitespace defaults are in `.editorconfig`; Git text checkouts use LF
+through `.gitattributes`. This consolidation does not install a pre-commit
+formatter or perform repository-wide formatting. Ruff lint is the required
+style check. PR #42 is declined because its formatter would mix unrelated
+rewrites into ordinary commits and its installation is missing from dev setup.
+PR #47's blanket-suppressed Bandit job is also declined; focused service,
+artifact and privacy regressions remain required. Dependency and workflow
+audits are tracked separately and do not establish runtime safety by themselves.
+
+`.env.example` lists supported names with empty values. Core does not load it
+automatically. Export only the settings you intend to configure; exporting
+all empty placeholders can override defaults and trigger fail-closed checks.
+See `SECURITY.md` for session/request secrets and `docs/ARTIFACTS.md` for signing.
+Real `.env` files are ignored.
+
+The proposed dependency baseline requires Python 3.10+; CI checks 3.10, 3.11
+and 3.12. Published Core 0.6.1 remains compatible with Python 3.9. Mypy uses the active
 interpreter version so installed dependency syntax is checked correctly; CI
 checks each supported version explicitly. Run mypy from that interpreter’s
 virtual environment. Before a release, run the
@@ -81,3 +117,21 @@ Include:
 - raw-wire fixture provenance when provider behavior changes
 - validation evidence for Python, Ruff, mypy, TypeScript, build, and schema
   determinism when release-facing code changes
+
+## Dependency baseline
+
+Runtime floors are HTTPX 0.28.1, FastAPI 0.142.4, Starlette 1.7.0,
+Uvicorn 0.54.0 and cryptography 50.0.2. The dev extra uses pytest 9.1.1+,
+build 1.6.1+ and Twine 7+. Build isolation uses Hatchling 1.32.4+, whose
+Metadata 2.5 output is understood by Twine 7. These are proposed source
+requirements; they do not change an already published wheel.
+
+The [pytest advisory](https://osv.dev/vulnerability/GHSA-6w46-j5rx-g56g) affects
+versions through 9.0.2, while [patched pytest](https://pypi.org/project/pytest/9.1.1/)
+and [Twine 7](https://pypi.org/project/twine/7.0.0/) require Python 3.10+.
+Current [FastAPI](https://pypi.org/project/fastapi/0.142.4/) and
+[Starlette](https://pypi.org/project/starlette/1.7.0/) also require 3.10+.
+Keep CI's pytest temporary root inside the runner-owned temporary directory.
+Dependency audits must run against both current resolution and the declared
+direct floors. An audit failure requires a reviewed fix; no blanket advisory
+ignore list is accepted in this consolidation.
