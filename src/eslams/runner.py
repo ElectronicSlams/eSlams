@@ -1125,28 +1125,35 @@ def _call_agent(
 
 @contextmanager
 def _agent_time_limit(time_budget_ms: int) -> Iterator[None]:
-    if threading.current_thread() is not threading.main_thread() or not hasattr(
-        signal,
-        "setitimer",
+    alarm_signal = getattr(signal, "SIGALRM", None)
+    real_timer = getattr(signal, "ITIMER_REAL", None)
+    get_timer = getattr(signal, "getitimer", None)
+    set_timer = getattr(signal, "setitimer", None)
+    if (
+        threading.current_thread() is not threading.main_thread()
+        or alarm_signal is None
+        or real_timer is None
+        or get_timer is None
+        or set_timer is None
     ):
         yield
         return
 
-    previous_handler = signal.getsignal(signal.SIGALRM)
-    previous_timer = signal.getitimer(signal.ITIMER_REAL)
+    previous_handler = signal.getsignal(alarm_signal)
+    previous_timer = get_timer(real_timer)
 
     def _raise_timeout(_signum: int, _frame: Any) -> None:
         raise TimeoutError(f"agent exceeded time budget of {time_budget_ms}ms")
 
-    signal.signal(signal.SIGALRM, _raise_timeout)
-    signal.setitimer(signal.ITIMER_REAL, max(time_budget_ms / 1000, 0.001))
+    signal.signal(alarm_signal, _raise_timeout)
+    set_timer(real_timer, max(time_budget_ms / 1000, 0.001))
     try:
         yield
     finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous_handler)
+        set_timer(real_timer, 0)
+        signal.signal(alarm_signal, previous_handler)
         if previous_timer[0] > 0:
-            signal.setitimer(signal.ITIMER_REAL, previous_timer[0], previous_timer[1])
+            set_timer(real_timer, previous_timer[0], previous_timer[1])
 
 
 def _trace_event(
