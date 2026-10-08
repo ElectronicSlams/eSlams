@@ -1053,9 +1053,14 @@
       "number": 148,
       "title": "Gin Rummy: deadwood evaluator treats the ace as high (Q-K-A is a run, A-2-3 is not) and lets one card count in a set and a run, so knock legality and scoring are wrong",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Compute gin deadwood with disjoint meld selection and the declared ace rule; test overlapping set/run alternatives and knock thresholds.",
-      "evidence": null
+      "evidence": {
+        "source": "src/eslams/arenas/advanced_cards.py; Gin Rummy 1.0.1",
+        "changes": "Ace-low meld enumeration with optimal disjoint partition; stock cancellation only after discard at two cards with no points; knock still allowed on that final discard. Declared turn horizon cancels without comparing mismatched hands.",
+        "tests": "tests/test_standard_rule_regressions.py: concrete overlapping/ace/quad cases, illegal knock boundary, final stock discard and deterministic artifact replay, last-turn knock.",
+        "rules": "https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf"
+      }
     },
     {
       "number": 149,
@@ -1069,9 +1074,14 @@
       "number": 150,
       "title": "Gin Rummy: drawing the last stock card ends the hand at once with an 8-card hand and scores it on deadwood (pagat: hand is cancelled when the stock reaches two cards)",
       "work_package": "W4",
-      "status": "pending",
+      "status": "implemented; final integration pending",
       "criterion": "Implement the declared stock-exhaustion/cancellation rule while preserving valid hand size; test last-draw, discard and scoring transitions.",
-      "evidence": null
+      "evidence": {
+        "source": "src/eslams/arenas/advanced_cards.py; Gin Rummy 1.0.1",
+        "changes": "Ace-low meld enumeration with optimal disjoint partition; stock cancellation only after discard at two cards with no points; knock still allowed on that final discard. Declared turn horizon cancels without comparing mismatched hands.",
+        "tests": "tests/test_standard_rule_regressions.py: concrete overlapping/ace/quad cases, illegal knock boundary, final stock discard and deterministic artifact replay, last-turn knock.",
+        "rules": "https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf"
+      }
     },
     {
       "number": 151,

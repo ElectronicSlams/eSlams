@@ -5,6 +5,7 @@ from __future__ import annotations
 import itertools
 import random
 from collections import Counter
+from functools import cache
 from typing import Any
 
 from eslams.arena import Arena, validate_seed
@@ -28,7 +29,7 @@ HANABI_RANKS = (1, 2, 3)
 
 class GinRummyArena(Arena):
     id = "gin-rummy"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {
         "type": "string",
@@ -92,8 +93,8 @@ class GinRummyArena(Arena):
                 outcome = _gin_outcome(hands, player_id)
             active = _other(player_id)
             phase = "draw"
-        if outcome is None and not deck:
-            outcome = _gin_outcome(hands, player_id, reason="stock_empty")
+        if outcome is None and phase == "draw" and len(deck) <= 2:
+            outcome = {"winner": None, "reason": "stock_exhausted"}
         history = [
             *state.public_state["history"],
             {"player": player_id, "action": action, "phase": state.public_state["phase"]},
@@ -128,7 +129,7 @@ class GinRummyArena(Arena):
     ) -> ArenaState:
         terminal = outcome is not None or turn >= self.max_turns
         if outcome is None and terminal:
-            outcome = _gin_outcome(hands, active, reason="turn_limit")
+            outcome = {"winner": None, "reason": "turn_limit"}
         legal = [] if terminal else _gin_legal(hands[active], deck, discard, phase)
         return _table_state(
             arena_id=self.id,
@@ -145,7 +146,11 @@ class GinRummyArena(Arena):
             },
             private_state=_private_hands(hands, deck),
             legal={player: (legal if player == active else []) for player in PLAYERS},
-            scores=_winner_scores(outcome),
+            scores=(
+                dict.fromkeys(PLAYERS, 0.0)
+                if outcome and outcome["reason"] in {"stock_exhausted", "turn_limit"}
+                else _winner_scores(outcome)
+            ),
             terminal=terminal,
             outcome=outcome,
             renderer="card-table",
@@ -646,33 +651,35 @@ def _without_card(hand: list[str], card: str) -> list[str]:
 
 
 def _deadwood(hand: list[str]) -> int:
-    if not hand:
-        return 0
-    rank_groups: dict[str, list[str]] = {}
-    suit_groups: dict[str, list[str]] = {}
-    for card in hand:
-        rank_groups.setdefault(_rank(card), []).append(card)
-        suit_groups.setdefault(_suit(card), []).append(card)
-    meld_cards: set[str] = set()
-    for cards in rank_groups.values():
-        if len(cards) >= 3:
-            meld_cards.update(cards)
-    for cards in suit_groups.values():
-        ordered = sorted(cards, key=lambda card: RANKS.index(_rank(card)))
-        run: list[str] = []
-        previous = -3
-        for card in ordered:
-            value = RANKS.index(_rank(card))
-            if value == previous + 1:
-                run.append(card)
-            else:
-                if len(run) >= 3:
-                    meld_cards.update(run)
-                run = [card]
-            previous = value
-        if len(run) >= 3:
-            meld_cards.update(run)
-    return sum(_deadwood_value(card) for card in hand if card not in meld_cards)
+    # Enumerate every meld, including sub-runs and three-card subsets of quads:
+    # the longest local meld need not belong to the best disjoint partition.
+    ace_low = ("A", *RANKS[:-1])
+    values = [_deadwood_value(card) for card in hand]
+    melds: list[tuple[int, int]] = []
+    for size in range(3, len(hand) + 1):
+        for indices in itertools.combinations(range(len(hand)), size):
+            ranks = sorted(ace_low.index(_rank(hand[index])) for index in indices)
+            is_set = size <= 4 and len(set(ranks)) == 1
+            is_run = len({_suit(hand[index]) for index in indices}) == 1 and ranks == list(
+                range(ranks[0], ranks[0] + size)
+            )
+            if is_set or is_run:
+                melds.append(
+                    (sum(1 << index for index in indices), sum(values[i] for i in indices))
+                )
+
+    @cache
+    def meld_value(available: int) -> int:
+        return max(
+            (
+                points + meld_value(available ^ mask)
+                for mask, points in melds
+                if available & mask == mask
+            ),
+            default=0,
+        )
+
+    return sum(values) - meld_value((1 << len(hand)) - 1)
 
 
 def _gin_outcome(

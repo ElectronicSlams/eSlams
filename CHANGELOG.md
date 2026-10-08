@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Gin Rummy 1.0.1 fixes ace-low/disjoint meld evaluation and final stock discard
+  cancellation; cancelled hands award no points. The compact hand and omitted
+  full-match rules are documented.
+
 ### Compatibility
 
 - The proposed supported minimum is Python 3.10. Patched FastAPI/Starlette,

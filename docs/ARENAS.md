@@ -174,3 +174,11 @@ normalized showdown score, and a final fold closes a betting round when all
 remaining commitments match. They retain their compact ante-based table,
 profiled bet sizes and normalized winner shares; these scores are not net chip
 returns or a full side-pot accounting implementation.
+
+Gin Rummy 1.0.1 computes minimum deadwood from disjoint sets and ace-low runs.
+The stock reaching two cards cancels the hand only after a discard without
+knocking; cancellation awards neither seat points. The declared 80-action
+horizon also cancels without comparing unequal hands. These rules follow the
+[Gettysburg Gin Rummy competition rules](https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf).
+This remains a seven-card, single-hand compact variant: no opening upcard passes,
+opponent layoff phase, point bonuses or multi-hand match to 100.

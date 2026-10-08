@@ -3,7 +3,13 @@ import random
 import chess
 import pytest
 
-from eslams.arenas.advanced_cards import _cribbage_hand_score, _cribbage_outcome
+from eslams.arenas.advanced_cards import (
+    GinRummyArena,
+    _cribbage_hand_score,
+    _cribbage_outcome,
+    _deadwood,
+    _gin_legal,
+)
 from eslams.arenas.chess import ChessArena
 from eslams.arenas.othello import OthelloArena, _legal_actions
 from eslams.arenas.pentago import PentagoArena
@@ -16,6 +22,79 @@ from eslams.arenas.poker import (
 from eslams.artifacts import ArtifactValidator
 from eslams.protocol import ActResponse
 from eslams.runner import RunConfig, Runner
+
+
+def test_gin_deadwood_uses_ace_low_and_optimal_disjoint_melds():
+    for hand, expected in (
+        (["AH", "2H", "3H", "9C", "9D", "KS", "QD"], 38),
+        (["QH", "KH", "AH", "9C", "8D", "7S", "6D"], 51),
+        (["5H", "5D", "5S", "3H", "4H", "KC", "QD"], 27),
+        (["3H", "4H", "5H", "5D", "5S", "6H", "7H"], 10),
+        (["3H", "4H", "5H", "5D", "5S", "6H", "7H", "5C"], 0),
+        ([], 0),
+    ):
+        assert _deadwood(hand) == expected
+        assert _deadwood(list(reversed(hand))) == expected
+    # The old union-of-melds count was 10, allowing an illegal knock here.
+    hand = ["5H", "5D", "5S", "3H", "4H", "2C", "8C", "KH"]
+    assert "knock:KH" not in _gin_legal(hand, ["AS"], ["AC"], "discard")
+
+
+def test_gin_stock_exhaustion_waits_for_discard_and_cancels_without_points(tmp_path):
+    class StockAgent:
+        id = "stock-exhaustion-fixture"
+        version = "1"
+
+        def act(self, request):
+            action = (
+                "draw:deck"
+                if "draw:deck" in request.legal_actions
+                else next(a for a in request.legal_actions if a.startswith("discard:"))
+            )
+            return ActResponse(action=action)
+
+    result = Runner().run(
+        RunConfig(
+            arena_id="gin-rummy",
+            agent_1=StockAgent(),
+            agent_2=StockAgent(),
+            output_dir=tmp_path,
+        )
+    )
+    assert result.score.outcome == {"winner": None, "reason": "stock_exhausted"}
+    assert result.score.scores_by_player == {"player_1": 0.0, "player_2": 0.0}
+    assert result.replay_events[-1].action.startswith("discard:")
+    assert result.replay_events[-1].public_state["deck_count"] == 2
+    assert result.replay_events[-1].public_state["hand_counts"] == {
+        "player_1": 7,
+        "player_2": 7,
+    }
+    report = ArtifactValidator().validate_report(result.artifact_path)
+    assert report.valid and report.deterministic_replay.verified
+
+
+def test_gin_can_knock_after_drawing_the_third_last_stock_card():
+    arena = GinRummyArena()
+    state = arena._state(
+        hands={
+            "player_1": ["AH", "2H", "3H", "4H", "5H", "6H", "KC"],
+            "player_2": ["AD", "3C", "5S", "7D", "9C", "JS", "KD"],
+        },
+        deck=["7H", "AC", "AS"],
+        discard=["QD"],
+        phase="draw",
+        active="player_1",
+        turn=0,
+        seed=1,
+        history=[],
+        outcome=None,
+    )
+    state = arena.apply_action(state, "player_1", "draw:deck")
+    assert not state.terminal
+    assert "knock:KC" in state.legal_actions_by_player["player_1"]
+    terminal = arena.apply_action(state, "player_1", "knock:KC")
+    assert terminal.outcome["winner"] == "player_1"
+    assert terminal.outcome["deadwood"]["player_1"] == 0
 
 
 def test_cribbage_show_counts_ace_low_multiplicity_flush_and_nobs():
