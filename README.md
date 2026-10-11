@@ -873,7 +873,7 @@ resume. Exports refuse existing destinations, and truncated runs cannot claim
 scoring eligibility. Revised arena behavior has distinct versions; compare
 historical artifacts using their producer Core version and commit. See the
 [full changelog](https://github.com/ElectronicSlams/eSlams/blob/main/CHANGELOG.md),
-[session protocol](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROTOCOL.md),
+[session integration](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PLATFORM_CONTRACTS.md),
 [artifact migration notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/ARTIFACTS.md)
 and [arena versions](https://github.com/ElectronicSlams/eSlams/blob/main/docs/ARENA_VERSIONING.md).
 
