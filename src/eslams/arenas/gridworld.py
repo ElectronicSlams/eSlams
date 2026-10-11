@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, solo_state, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -20,8 +20,8 @@ DIRECTIONS: dict[str, GridPos] = {
 
 class FrozenLakeArena(Arena):
     id = "frozen-lake"
-    version = "1.0.0"
-    players = ("player_1", "player_2")
+    version = "1.0.1"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": list(DIRECTIONS),
@@ -30,6 +30,7 @@ class FrozenLakeArena(Arena):
     max_turns = 32
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(position=(0, 0), turn=0, seed=seed, outcome=None, history=[])
 
     def observation_for(self, state: ArenaState, player_id: str) -> dict[str, Any]:
@@ -74,36 +75,41 @@ class FrozenLakeArena(Arena):
         if outcome is None and terminal:
             outcome = {"winner": "player_2", "reason": "step_limit", "position": list(position)}
         legal = [] if terminal else _legal_moves(position, rows=4, cols=4)
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "grid": [
-                    ["S", "F", "F", "F"],
-                    ["F", "H", "F", "H"],
-                    ["F", "F", "F", "H"],
-                    ["F", "F", "F", "G"],
-                ],
-                "position": list(position),
-                "goal": [3, 3],
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"environment": "frozen-lake"}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores=_single_agent_scores(outcome),
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"frozen-lake:{seed}"),
-            render_hints={"renderer": "gridworld", "rows": 4, "cols": 4},
-            metadata={"seed": seed, "position": position},
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "grid": [
+                        ["S", "F", "F", "F"],
+                        ["F", "H", "F", "H"],
+                        ["F", "F", "F", "H"],
+                        ["F", "F", "F", "G"],
+                    ],
+                    "position": list(position),
+                    "goal": [3, 3],
+                    "history": history,
+                },
+                private_state_by_player={
+                    "player_1": {},
+                    "player_2": {"environment": "frozen-lake"},
+                },
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores=_single_agent_scores(outcome),
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"frozen-lake:{seed}"),
+                render_hints={"renderer": "gridworld", "rows": 4, "cols": 4},
+                metadata={"seed": seed, "position": position},
+            )
         )
 
 
 class CliffWalkingArena(Arena):
     id = "cliff-walking"
-    version = "1.0.0"
-    players = ("player_1", "player_2")
+    version = "1.0.1"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": list(DIRECTIONS),
@@ -112,6 +118,7 @@ class CliffWalkingArena(Arena):
     max_turns = 64
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             position=(3, 0),
             turn=0,
@@ -179,35 +186,40 @@ class CliffWalkingArena(Arena):
         if outcome is None and terminal:
             outcome = {"winner": "player_2", "reason": "step_limit", "position": list(position)}
         legal = [] if terminal else _legal_moves(position, rows=4, cols=12)
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "rows": 4,
-                "cols": 12,
-                "start": [3, 0],
-                "goal": [3, 11],
-                "position": list(position),
-                "cliff": [list(cell) for cell in sorted(_cliff_cells())],
-                "cumulative_reward": reward,
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"environment": "cliff-walking"}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores=_single_agent_scores(outcome),
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"cliff-walking:{seed}"),
-            render_hints={"renderer": "gridworld", "rows": 4, "cols": 12},
-            metadata={"seed": seed, "position": position, "reward": reward},
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "rows": 4,
+                    "cols": 12,
+                    "start": [3, 0],
+                    "goal": [3, 11],
+                    "position": list(position),
+                    "cliff": [list(cell) for cell in sorted(_cliff_cells())],
+                    "cumulative_reward": reward,
+                    "history": history,
+                },
+                private_state_by_player={
+                    "player_1": {},
+                    "player_2": {"environment": "cliff-walking"},
+                },
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores=_single_agent_scores(outcome),
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"cliff-walking:{seed}"),
+                render_hints={"renderer": "gridworld", "rows": 4, "cols": 12},
+                metadata={"seed": seed, "position": position, "reward": reward},
+            )
         )
 
 
 class TaxiArena(Arena):
     id = "taxi"
-    version = "1.0.0"
-    players = ("player_1", "player_2")
+    version = "1.0.1"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["down", "right", "up", "left", "pickup", "dropoff"],
@@ -216,6 +228,7 @@ class TaxiArena(Arena):
     max_turns = 80
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         landmarks = _taxi_landmarks()
         passenger = landmarks[seed % len(landmarks)]
         destination = landmarks[(seed + 2) % len(landmarks)]
@@ -301,34 +314,36 @@ class TaxiArena(Arena):
             legal.append("pickup")
         if not terminal and onboard and taxi == destination:
             legal.append("dropoff")
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "rows": 5,
-                "cols": 5,
-                "taxi": list(taxi),
-                "passenger": "in_taxi" if onboard else list(passenger),
-                "destination": list(destination),
-                "landmarks": [list(cell) for cell in _taxi_landmarks()],
-                "onboard": onboard,
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"environment": "taxi"}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores=_single_agent_scores(outcome),
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"taxi:{seed}"),
-            render_hints={"renderer": "gridworld", "rows": 5, "cols": 5},
-            metadata={
-                "seed": seed,
-                "taxi": taxi,
-                "passenger": passenger,
-                "destination": destination,
-                "onboard": onboard,
-            },
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "rows": 5,
+                    "cols": 5,
+                    "taxi": list(taxi),
+                    "passenger": "in_taxi" if onboard else list(passenger),
+                    "destination": list(destination),
+                    "landmarks": [list(cell) for cell in _taxi_landmarks()],
+                    "onboard": onboard,
+                    "history": history,
+                },
+                private_state_by_player={"player_1": {}, "player_2": {"environment": "taxi"}},
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores=_single_agent_scores(outcome),
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"taxi:{seed}"),
+                render_hints={"renderer": "gridworld", "rows": 5, "cols": 5},
+                metadata={
+                    "seed": seed,
+                    "taxi": taxi,
+                    "passenger": passenger,
+                    "destination": destination,
+                    "onboard": onboard,
+                },
+            )
         )
 
 

@@ -5,9 +5,10 @@ from __future__ import annotations
 import itertools
 import random
 from collections import Counter
+from functools import cache
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.arenas.card_utils import (
     RANKS,
     SUITS,
@@ -28,7 +29,7 @@ HANABI_RANKS = (1, 2, 3)
 
 class GinRummyArena(Arena):
     id = "gin-rummy"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {
         "type": "string",
@@ -37,6 +38,7 @@ class GinRummyArena(Arena):
     max_turns = 80
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _deck(seed)
         hands = {
             "player_1": sorted(deck[:7], key=_card_sort_key),
@@ -91,8 +93,8 @@ class GinRummyArena(Arena):
                 outcome = _gin_outcome(hands, player_id)
             active = _other(player_id)
             phase = "draw"
-        if outcome is None and not deck:
-            outcome = _gin_outcome(hands, player_id, reason="stock_empty")
+        if outcome is None and phase == "draw" and len(deck) <= 2:
+            outcome = {"winner": None, "reason": "stock_exhausted"}
         history = [
             *state.public_state["history"],
             {"player": player_id, "action": action, "phase": state.public_state["phase"]},
@@ -127,7 +129,7 @@ class GinRummyArena(Arena):
     ) -> ArenaState:
         terminal = outcome is not None or turn >= self.max_turns
         if outcome is None and terminal:
-            outcome = _gin_outcome(hands, active, reason="turn_limit")
+            outcome = {"winner": None, "reason": "turn_limit"}
         legal = [] if terminal else _gin_legal(hands[active], deck, discard, phase)
         return _table_state(
             arena_id=self.id,
@@ -144,7 +146,11 @@ class GinRummyArena(Arena):
             },
             private_state=_private_hands(hands, deck),
             legal={player: (legal if player == active else []) for player in PLAYERS},
-            scores=_winner_scores(outcome),
+            scores=(
+                dict.fromkeys(PLAYERS, 0.0)
+                if outcome and outcome["reason"] in {"stock_exhausted", "turn_limit"}
+                else _winner_scores(outcome)
+            ),
             terminal=terminal,
             outcome=outcome,
             renderer="card-table",
@@ -153,12 +159,13 @@ class GinRummyArena(Arena):
 
 class EuchreArena(Arena):
     id = "euchre"
-    version = "1.0.0"
+    version = "1.0.1"
     players = PLAYERS
     action_schema = {"type": "string", "description": "call:<suit>, pass, or play:<card>."}
     max_turns = 16
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _euchre_deck(seed)
         hands = {
             "player_1": sorted(deck[:5], key=_card_sort_key),
@@ -288,13 +295,16 @@ class EuchreArena(Arena):
 
 class CribbageArena(Arena):
     id = "cribbage"
-    version = "1.0.0"
+    version = "1.1.0"
     players = PLAYERS
     action_schema = {"type": "string", "description": "Discard two cards as discard:<card>,<card>."}
     max_turns = 2
 
     def initial_state(self, seed: int) -> ArenaState:
-        deck = _deck(seed + 211)
+        validate_seed(seed)
+        # Consecutive even/odd seeds replay the same deal with opposite dealers.
+        deck = _deck(seed // 2 + 211)
+        dealer = PLAYERS[seed % 2]
         hands = {
             "player_1": sorted(deck[:6], key=_card_sort_key),
             "player_2": sorted(deck[6:12], key=_card_sort_key),
@@ -303,8 +313,8 @@ class CribbageArena(Arena):
             hands=hands,
             discards={"player_1": [], "player_2": []},
             starter=deck[12],
-            dealer="player_2",
-            active="player_1",
+            dealer=dealer,
+            active=_other(dealer),
             turn=0,
             seed=seed,
             history=[],
@@ -397,7 +407,7 @@ class CribbageArena(Arena):
 
 class HanabiArena(Arena):
     id = "hanabi"
-    version = "1.0.0"
+    version = "1.1.0"
     players = PLAYERS
     action_schema = {
         "type": "string",
@@ -406,6 +416,7 @@ class HanabiArena(Arena):
     max_turns = 60
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _hanabi_deck(seed)
         hands = {"player_1": deck[:4], "player_2": deck[4:8]}
         return self._state(
@@ -485,7 +496,15 @@ class HanabiArena(Arena):
                     hints[target][index].append(clue)
             event["target"] = target
             event["clue"] = clue
+        final_turns = state.metadata.get("final_turns_remaining")
+        if final_turns is not None:
+            final_turns = max(0, int(final_turns) - 1)
+        elif state.public_state["deck_count"] > 0 and not deck:
+            # Drawing the last card starts one final turn for each player.
+            final_turns = len(PLAYERS)
         outcome = _hanabi_outcome(fireworks, lives, deck, hands)
+        if outcome is None and final_turns == 0:
+            outcome = _hanabi_result(fireworks, reason="final_round_complete")
         history = [*state.public_state["history"], event]
         return self._state(
             hands=hands,
@@ -500,6 +519,7 @@ class HanabiArena(Arena):
             hints=hints,
             history=history,
             outcome=outcome,
+            final_turns_remaining=final_turns,
         )
 
     def score(self, state: ArenaState) -> dict[str, float]:
@@ -520,7 +540,10 @@ class HanabiArena(Arena):
         hints: dict[str, list[list[str]]],
         history: list[dict[str, Any]],
         outcome: dict[str, Any] | None,
+        final_turns_remaining: int | None = None,
     ) -> ArenaState:
+        if final_turns_remaining is None and not deck:
+            final_turns_remaining = len(PLAYERS)
         terminal = outcome is not None or turn >= self.max_turns
         if outcome is None and terminal:
             outcome = _hanabi_result(fireworks, reason="turn_limit")
@@ -548,7 +571,7 @@ class HanabiArena(Arena):
             outcome=outcome,
             rng_commitment=sha256_text(f"hanabi:{seed}"),
             render_hints={"renderer": "hanabi-table"},
-            metadata={"seed": seed},
+            metadata={"seed": seed, "final_turns_remaining": final_turns_remaining},
         )
 
 
@@ -630,33 +653,35 @@ def _without_card(hand: list[str], card: str) -> list[str]:
 
 
 def _deadwood(hand: list[str]) -> int:
-    if not hand:
-        return 0
-    rank_groups: dict[str, list[str]] = {}
-    suit_groups: dict[str, list[str]] = {}
-    for card in hand:
-        rank_groups.setdefault(_rank(card), []).append(card)
-        suit_groups.setdefault(_suit(card), []).append(card)
-    meld_cards: set[str] = set()
-    for cards in rank_groups.values():
-        if len(cards) >= 3:
-            meld_cards.update(cards)
-    for cards in suit_groups.values():
-        ordered = sorted(cards, key=lambda card: RANKS.index(_rank(card)))
-        run: list[str] = []
-        previous = -3
-        for card in ordered:
-            value = RANKS.index(_rank(card))
-            if value == previous + 1:
-                run.append(card)
-            else:
-                if len(run) >= 3:
-                    meld_cards.update(run)
-                run = [card]
-            previous = value
-        if len(run) >= 3:
-            meld_cards.update(run)
-    return sum(_deadwood_value(card) for card in hand if card not in meld_cards)
+    # Enumerate every meld, including sub-runs and three-card subsets of quads:
+    # the longest local meld need not belong to the best disjoint partition.
+    ace_low = ("A", *RANKS[:-1])
+    values = [_deadwood_value(card) for card in hand]
+    melds: list[tuple[int, int]] = []
+    for size in range(3, len(hand) + 1):
+        for indices in itertools.combinations(range(len(hand)), size):
+            ranks = sorted(ace_low.index(_rank(hand[index])) for index in indices)
+            is_set = size <= 4 and len(set(ranks)) == 1
+            is_run = len({_suit(hand[index]) for index in indices}) == 1 and ranks == list(
+                range(ranks[0], ranks[0] + size)
+            )
+            if is_set or is_run:
+                melds.append(
+                    (sum(1 << index for index in indices), sum(values[i] for i in indices))
+                )
+
+    @cache
+    def meld_value(available: int) -> int:
+        return max(
+            (
+                points + meld_value(available ^ mask)
+                for mask, points in melds
+                if available & mask == mask
+            ),
+            default=0,
+        )
+
+    return sum(values) - meld_value((1 << len(hand)) - 1)
 
 
 def _gin_outcome(
@@ -667,7 +692,10 @@ def _gin_outcome(
 ) -> dict[str, Any]:
     deadwood = {player: _deadwood(cards) for player, cards in hands.items()}
     opponent = _other(knocker)
-    if reason == "knock" and deadwood[opponent] <= deadwood[knocker]:
+    if reason == "knock" and deadwood[knocker] == 0:
+        winner = knocker
+        reason = "gin"
+    elif reason == "knock" and deadwood[opponent] <= deadwood[knocker]:
         winner = opponent
         reason = "undercut"
     elif deadwood["player_1"] == deadwood["player_2"]:
@@ -761,7 +789,7 @@ def _cribbage_outcome(
 ) -> dict[str, Any]:
     hand_scores = {player: _cribbage_hand_score([*hands[player], starter]) for player in PLAYERS}
     crib_cards = [*discards["player_1"], *discards["player_2"], starter]
-    hand_scores[dealer] += _cribbage_hand_score(crib_cards)
+    hand_scores[dealer] += _cribbage_hand_score(crib_cards, crib=True)
     if hand_scores["player_1"] == hand_scores["player_2"]:
         winner = None
     else:
@@ -769,37 +797,44 @@ def _cribbage_outcome(
     return {"winner": winner, "reason": reason, "hand_scores": hand_scores, "starter": starter}
 
 
-def _cribbage_hand_score(cards: list[str]) -> int:
+def _cribbage_hand_score(cards: list[str], *, crib: bool = False) -> int:
+    """Score four retained cards and their starter, using ACC show rules."""
+    if len(cards) != 5:
+        raise ValueError("cribbage show requires four cards and a starter")
     values = [_crib_value(card) for card in cards]
-    score = 0
-    for size in range(2, len(cards) + 1):
-        for combo in itertools.combinations(values, size):
-            if sum(combo) == 15:
-                score += 2
+    score = sum(
+        2
+        for size in range(2, 6)
+        for combo in itertools.combinations(values, size)
+        if sum(combo) == 15
+    )
     counts = Counter(_rank(card) for card in cards)
-    score += sum(count * (count - 1) for count in counts.values() if count >= 2)
-    ordered = sorted({RANKS.index(_rank(card)) for card in cards})
-    run = 1
-    best_run = 0
-    for previous, current in zip(ordered, ordered[1:]):
-        if current == previous + 1:
-            run += 1
-            best_run = max(best_run, run)
-        else:
-            run = 1
-    if best_run >= 3:
-        score += best_run
-    suits = [_suit(card) for card in cards[:-1]]
-    if suits and len(set(suits)) == 1:
-        score += 4
+    score += sum(count * (count - 1) for count in counts.values())
+    # Count each physical combination in the longest run only. Duplicate ranks
+    # multiply runs, but a four-card run must not also count its three-card subsets.
+    ranks = [("A", *RANKS[:-1]).index(_rank(card)) for card in cards]
+    for size in range(5, 2, -1):
+        runs = sum(
+            len(set(combo)) == size and max(combo) - min(combo) == size - 1
+            for combo in itertools.combinations(ranks, size)
+        )
+        if runs:
+            score += size * runs
+            break
+    suits = [_suit(card) for card in cards[:4]]
+    if len(set(suits)) == 1:
         if _suit(cards[-1]) == suits[0]:
-            score += 1
+            score += 5
+        elif not crib:
+            score += 4
+    score += sum(_rank(card) == "J" and _suit(card) == _suit(cards[-1]) for card in cards[:4])
     return score
 
 
 def _hanabi_legal(hand: list[str], active: str, clues: int) -> list[str]:
     legal = [f"play:{index}" for index in range(len(hand))]
-    legal.extend(f"discard:{index}" for index in range(len(hand)))
+    if clues < 8:
+        legal.extend(f"discard:{index}" for index in range(len(hand)))
     if clues > 0:
         target = _other(active)
         legal.extend(f"hint:{target}:{color}" for color in HANABI_COLORS)
@@ -859,7 +894,8 @@ def _hanabi_result(fireworks: dict[str, int], *, reason: str) -> dict[str, Any]:
     score = sum(fireworks.values())
     max_score = len(HANABI_COLORS) * max(HANABI_RANKS)
     return {
-        "winner": "player_1" if score >= max_score else None,
+        "winner": None,
+        "team_success": score >= max_score,
         "reason": reason,
         "cooperative_score": score,
         "max_score": max_score,

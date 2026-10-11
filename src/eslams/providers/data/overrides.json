@@ -6,40 +6,82 @@
       "model": "gpt-5-mini",
       "available_from_api": true,
       "game_agent_supported": true,
-      "endpoints": ["responses"],
-      "modalities": {"input": ["text"], "output": ["text"]},
+      "endpoints": [
+        "responses"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
       "supports_temperature": false,
       "supports_reasoning": true,
-      "reasoning_efforts": ["minimal", "low", "medium", "high"],
+      "reasoning_efforts": [
+        "minimal",
+        "low",
+        "medium",
+        "high"
+      ],
       "default_reasoning_effort": "minimal",
       "supports_google_thinking_config": false,
       "last_verified_at": "2026-06-02T00:00:00Z",
-      "sources": ["local-override"]
+      "sources": [
+        "local-override"
+      ]
     },
     {
       "provider": "openai",
       "model": "gpt-5.4-mini",
       "available_from_api": true,
       "game_agent_supported": true,
-      "endpoints": ["responses"],
-      "modalities": {"input": ["text"], "output": ["text"]},
+      "endpoints": [
+        "responses"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
       "supports_temperature": true,
       "supports_reasoning": true,
-      "reasoning_efforts": ["none", "low", "medium", "high", "xhigh"],
+      "reasoning_efforts": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
       "default_reasoning_effort": "none",
       "supports_google_thinking_config": false,
       "max_output_tokens": null,
       "context_window": null,
       "last_verified_at": "2026-06-02T00:00:00Z",
-      "sources": ["local-override"]
+      "sources": [
+        "local-override"
+      ]
     },
     {
       "provider": "google",
       "model": "gemma-3-27b-it",
       "available_from_api": true,
       "game_agent_supported": true,
-      "endpoints": ["generateContent"],
-      "modalities": {"input": ["text"], "output": ["text"]},
+      "endpoints": [
+        "generateContent"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
       "supports_temperature": true,
       "supports_reasoning": false,
       "reasoning_efforts": [],
@@ -48,15 +90,26 @@
       "max_output_tokens": null,
       "context_window": null,
       "last_verified_at": "2026-06-02T00:00:00Z",
-      "sources": ["local-override"]
+      "sources": [
+        "local-override"
+      ]
     },
     {
       "provider": "openrouter",
       "model": "openai/gpt-5-mini",
       "available_from_api": null,
       "game_agent_supported": true,
-      "endpoints": ["chat-completions"],
-      "modalities": {"input": ["text"], "output": ["text"]},
+      "endpoints": [
+        "chat-completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
       "supports_temperature": true,
       "supports_reasoning": true,
       "reasoning_efforts": [],
@@ -65,7 +118,9 @@
       "max_output_tokens": null,
       "context_window": null,
       "last_verified_at": null,
-      "sources": ["local-override"],
+      "sources": [
+        "local-override"
+      ],
       "lifecycle": "account-dependent"
     },
     {
@@ -73,8 +128,17 @@
       "model": "amazon.nova-micro-v1:0",
       "available_from_api": null,
       "game_agent_supported": true,
-      "endpoints": ["converse"],
-      "modalities": {"input": ["text"], "output": ["text"]},
+      "endpoints": [
+        "converse"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
       "supports_temperature": true,
       "supports_reasoning": false,
       "reasoning_efforts": [],
@@ -83,7 +147,9 @@
       "max_output_tokens": null,
       "context_window": null,
       "last_verified_at": null,
-      "sources": ["local-override"],
+      "sources": [
+        "local-override"
+      ],
       "lifecycle": "account-dependent"
     },
     {
@@ -91,8 +157,17 @@
       "model": "amazon.nova-lite-v1:0",
       "available_from_api": null,
       "game_agent_supported": true,
-      "endpoints": ["converse"],
-      "modalities": {"input": ["text"], "output": ["text"]},
+      "endpoints": [
+        "converse"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
       "supports_temperature": true,
       "supports_reasoning": false,
       "reasoning_efforts": [],
@@ -101,8 +176,57 @@
       "max_output_tokens": null,
       "context_window": null,
       "last_verified_at": null,
-      "sources": ["local-override"],
+      "sources": [
+        "local-override"
+      ],
       "lifecycle": "account-dependent"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-20250514",
+      "available_from_api": false,
+      "lifecycle": "retired",
+      "last_verified_at": "2026-10-08T00:00:00Z",
+      "sources": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ]
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "game_agent_supported": true,
+      "endpoints": [
+        "responses"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": false,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "minimal",
+        "low",
+        "medium",
+        "high"
+      ],
+      "default_reasoning_effort": "minimal",
+      "last_verified_at": "2026-10-08T00:00:00Z",
+      "sources": [
+        "https://developers.openai.com/cookbook/examples/gpt-5/gpt-5_new_params_and_tools"
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "lifecycle": "active",
+      "sources": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ]
     }
   ]
 }

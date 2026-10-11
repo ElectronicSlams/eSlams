@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
+from dataclasses import replace
 from typing import Any, Protocol
 
 from eslams.state import ArenaState
@@ -12,8 +14,7 @@ class AgentLike(Protocol):
     id: str
     version: str
 
-    def act(self, request: Any) -> Any:
-        ...
+    def act(self, request: Any) -> Any: ...
 
 
 class Arena(ABC):
@@ -22,6 +23,24 @@ class Arena(ABC):
     players: tuple[str, ...]
     action_schema: dict[str, Any]
     max_turns: int
+    pending_action_key: str | None = None
+
+    def action_reveal_turn(self, state_after: ArenaState) -> int:
+        """First turn at which an applied action may enter public history.
+
+        Sealed two-seat arenas declare the private commitment field. The
+        following response completes their reveal phase; other arenas reveal
+        immediately. Auditor evidence always retains the original action.
+        """
+        if self.pending_action_key is not None and any(
+            private.get(self.pending_action_key) is not None
+            for private in state_after.private_state_by_player.values()
+        ):
+            return state_after.turn + 1
+        return state_after.turn
+
+    def public_action(self, state_after: ArenaState, action: Any) -> Any:
+        return action if self.action_reveal_turn(state_after) <= state_after.turn else None
 
     @abstractmethod
     def initial_state(self, seed: int) -> ArenaState:
@@ -43,7 +62,10 @@ class Arena(ABC):
         return list(state.legal_actions_by_player.get(player_id, []))
 
     def is_legal(self, state: ArenaState, player_id: str, action: Any) -> bool:
-        return action in self.legal_actions_for(state, player_id)
+        return any(
+            _same_json_action(action, candidate)
+            for candidate in self.legal_actions_for(state, player_id)
+        )
 
     def failure_action(self, state: ArenaState, player_id: str, reason: str) -> Any | None:
         legal = self.legal_actions_for(state, player_id)
@@ -70,3 +92,40 @@ class ArenaRegistry:
 
 
 registry = ArenaRegistry()
+
+
+def solo_state(state: ArenaState) -> ArenaState:
+    """Keep benchmark success separate from competitive winners and seats."""
+    outcome = state.outcome
+    if outcome is not None:
+        outcome = {**outcome, "winner": None, "success": outcome.get("winner") == "player_1"}
+    return replace(
+        state,
+        state_hash=None,
+        outcome=outcome,
+        scores={"player_1": state.scores["player_1"]},
+        private_state_by_player={"player_1": state.private_state_by_player["player_1"]},
+        legal_actions_by_player={"player_1": state.legal_actions_by_player["player_1"]},
+    )
+
+
+def _same_json_action(left: Any, right: Any) -> bool:
+    """Compare JSON action values without Python's bool/int/float equivalence."""
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(
+            isinstance(key, str) and _same_json_action(value, right[key])
+            for key, value in left.items()
+        )
+    if isinstance(left, list):
+        return len(left) == len(right) and all(_same_json_action(a, b) for a, b in zip(left, right))
+    if isinstance(left, float):
+        return math.isfinite(left) and left == right
+    return type(left) in (str, int, bool, type(None)) and left == right
+
+
+def validate_seed(seed: int) -> None:
+    """Seeds are arbitrary signed integers; booleans and numeric coercions are invalid."""
+    if type(seed) is not int:
+        raise ValueError("seed must be an integer (not a boolean, float or string)")

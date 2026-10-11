@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import random
 import re
 import threading
@@ -21,7 +20,9 @@ import httpx
 
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.contracts.versions import PROVIDER_RECEIPT_SCHEMA_VERSION
+from eslams.deadlines import action_deadline, current_deadline, remaining_seconds
 from eslams.hashing import sha256_json
+from eslams.http_io import TotalTimeout, bounded_post
 from eslams.model_actions import (
     coerce_action,
     extract_json,
@@ -29,7 +30,8 @@ from eslams.model_actions import (
     invalid_action_retry_prompt,
     parse_model_action,
 )
-from eslams.protocol import ActRequest, ActResponse, ProtocolError
+from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
+from eslams.provider_credentials import provider_key
 from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
@@ -130,20 +132,28 @@ class HttpAgent:
     attempt_receipts: list[dict[str, Any]] = field(default_factory=list, init=False)
 
     def act(self, request: ActRequest) -> ActResponse:
+        with action_deadline(request.time_budget_ms):
+            return self._act(request)
+
+    def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
         headers = {"content-type": "application/json"}
         if self.bearer_token:
             headers["authorization"] = f"Bearer {self.bearer_token}"
         try:
-            response = httpx.post(
+            response = bounded_post(
                 self.url,
                 json=request.to_dict(),
                 headers=headers,
-                timeout=max(1.0, request.time_budget_ms / 1000),
+                timeout=max(0.001, request.time_budget_ms / 1000),
             )
             response.raise_for_status()
             payload = response.json()
+        except ProtocolError:
+            raise
+        except (ValueError, UnicodeError) as exc:
+            raise ProtocolError("agent response must be valid JSON") from exc
         except httpx.TimeoutException as exc:
             raise TimeoutError("agent timed out") from exc
         except Exception as exc:
@@ -208,6 +218,10 @@ class ModelProviderAgent:
         self.capabilities = load_provider_registry().resolve(self.provider, self.model)
 
     def act(self, request: ActRequest) -> ActResponse:
+        with action_deadline(request.time_budget_ms):
+            return self._act(request)
+
+    def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
         self._reasoning_enabled = _reasoning_enabled_for_request(
@@ -215,7 +229,12 @@ class ModelProviderAgent:
             self.capabilities,
             request,
         )
-        api_key = os.getenv(self.api_key_env)
+        key_error = None
+        try:
+            api_key = provider_key(self.api_key_env)
+        except ValueError as exc:
+            api_key = None
+            key_error = str(exc)
         if not api_key:
             self._remember_receipt(
                 _failure_receipt(
@@ -225,12 +244,16 @@ class ModelProviderAgent:
                     agent_version=self.version,
                     turn_id=request.turn_id,
                     outcome="provider_auth_failed",
-                    usage_unavailable_reason="provider_not_called_missing_api_key",
+                    usage_unavailable_reason=(
+                        "provider_not_called_invalid_api_key"
+                        if key_error
+                        else "provider_not_called_missing_api_key"
+                    ),
                     runtime_config=self.runtime_config,
                 )
             )
             raise ProviderCallError(
-                f"missing API key environment variable {self.api_key_env}",
+                key_error or f"missing API key environment variable {self.api_key_env}",
                 error_kind="provider_auth_failed",
                 provider=self.provider,
                 model=self.model,
@@ -328,12 +351,12 @@ class ModelProviderAgent:
                 action, confidence, explanation = _parse_model_action(text, request.legal_actions)
             except ProtocolError as exc:
                 parse_error = exc
-                receipt = self.last_receipt or {}
+                failed_receipt: dict[str, Any] = self.last_receipt or {}
                 self._replace_last_receipt(
                     {
-                        **receipt,
+                        **failed_receipt,
                         "outcome": "action_response_unparseable",
-                        "usage_unavailable_reason": receipt.get("usage_unavailable_reason"),
+                        "usage_unavailable_reason": failed_receipt.get("usage_unavailable_reason"),
                         "parse_error": str(exc),
                     }
                 )
@@ -426,6 +449,10 @@ class ModelProviderAgent:
             runtime_config=self.runtime_config,
         )
         try:
+            _check_provider_completion(
+                data, provider="openai", model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _openai_text(data)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -489,6 +516,10 @@ class ModelProviderAgent:
             runtime_config=self.runtime_config,
         )
         try:
+            _check_provider_completion(
+                data, provider="anthropic", model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _anthropic_text(data)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -543,6 +574,10 @@ class ModelProviderAgent:
             runtime_config=self.runtime_config,
         )
         try:
+            _check_provider_completion(
+                data, provider=self.provider, model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _gemini_text(data, provider=self.provider)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -597,6 +632,10 @@ class ModelProviderAgent:
             native_cost=native_cost,
         )
         try:
+            _check_provider_completion(
+                data, provider="openrouter", model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _openrouter_text(data)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -647,6 +686,10 @@ class ModelProviderAgent:
             runtime_config=runtime,
         )
         try:
+            _check_provider_completion(
+                data, provider="bedrock", model=self.model,
+                response=response, receipt=receipt,
+            )
             text = _bedrock_text(data)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
@@ -702,6 +745,10 @@ class MockProviderAgent:
         self.attempt_receipts: list[dict[str, Any]] = []
 
     def act(self, request: ActRequest) -> ActResponse:
+        with action_deadline(request.time_budget_ms):
+            return self._act(request)
+
+    def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
         if self.scenario == "timeout":
@@ -857,14 +904,25 @@ def _post_json(
     control_key: str,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
-    with _provider_runtime_guard(runtime_config, control_key):
+    deadline = time.monotonic() + (runtime_config.timeout_ms / 1000 if runtime_config else 60.0)
+    action = current_deadline()
+    if action is not None:
+        deadline = min(deadline, action)
+    with _provider_runtime_guard(runtime_config, control_key, deadline=deadline):
         try:
-            response = httpx.post(
+            response = bounded_post(
                 url,
                 headers=headers,
                 json=payload,
-                timeout=_httpx_timeout(runtime_config),
+                timeout=_httpx_timeout(runtime_config, deadline=deadline),
             )
+        except ProtocolError as exc:
+            raise ProviderCallError(
+                str(exc),
+                error_kind="provider_response_schema_mismatch",
+                provider=provider,
+                model=model,
+            ) from exc
         except httpx.TimeoutException as exc:
             raise TimeoutError("provider timed out") from exc
         except httpx.HTTPError as exc:
@@ -876,6 +934,11 @@ def _post_json(
             ) from exc
     if response.status_code >= 400:
         body = response.text[:500].replace("\n", " ")
+        for name, value in headers.items():
+            if name.lower() in {"authorization", "x-api-key", "x-goog-api-key"}:
+                secret = value.partition(" ")[2] if name.lower() == "authorization" else value
+                if secret:
+                    body = body.replace(secret, "[REDACTED]")
         raise ProviderCallError(
             f"provider returned {response.status_code}: {body}",
             status_code=response.status_code,
@@ -914,7 +977,8 @@ def _retry_after_seconds(response: httpx.Response) -> float | None:
     if not value:
         return None
     try:
-        return max(0.0, float(value))
+        seconds = float(value)
+        return max(0.0, seconds) if math.isfinite(seconds) else None
     except ValueError:
         pass
     try:
@@ -930,10 +994,14 @@ def _retry_after_seconds(response: httpx.Response) -> float | None:
 def _provider_runtime_guard(
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    *, deadline: float | None = None,
 ) -> Iterator[None]:
-    _reserve_rate_slot(runtime_config, control_key)
+    _reserve_rate_slot(runtime_config, control_key, deadline=deadline)
     semaphore = _provider_semaphore(runtime_config, control_key)
-    semaphore.acquire()
+    if deadline is None:
+        semaphore.acquire()
+    elif not semaphore.acquire(timeout=remaining_seconds(deadline)):
+        raise TimeoutError("provider concurrency wait exceeded the deadline")
     try:
         yield
     finally:
@@ -957,6 +1025,7 @@ def _provider_semaphore(
 def _reserve_rate_slot(
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    *, deadline: float | None = None,
 ) -> None:
     rate_limit = runtime_config.rate_limit_per_minute if runtime_config else None
     if rate_limit is None or rate_limit <= 0:
@@ -965,19 +1034,23 @@ def _reserve_rate_slot(
     with _PROVIDER_CONTROL_LOCK:
         now = time.monotonic()
         reserved_at = max(now, _PROVIDER_RATE_RESERVATIONS.get(control_key, 0.0))
+        if deadline is not None and reserved_at >= deadline:
+            raise TimeoutError("provider rate-limit wait exceeds the action deadline")
         _PROVIDER_RATE_RESERVATIONS[control_key] = reserved_at + interval_seconds
     delay = reserved_at - now
     if delay > 0:
         time.sleep(delay)
 
 
-def _httpx_timeout(runtime_config: ProviderRuntimeConfig | None) -> httpx.Timeout:
-    if runtime_config is None:
-        return httpx.Timeout(timeout=60.0)
-    total = max(1.0, runtime_config.timeout_ms / 1000)
-    connect = max(0.001, runtime_config.connect_timeout_ms / 1000)
-    read = max(0.001, runtime_config.read_timeout_ms / 1000)
-    return httpx.Timeout(timeout=total, connect=connect, read=read, write=read, pool=connect)
+def _httpx_timeout(
+    runtime_config: ProviderRuntimeConfig | None, *, deadline: float | None = None,
+) -> httpx.Timeout:
+    total = runtime_config.timeout_ms / 1000 if runtime_config else 60.0
+    limit = deadline if deadline is not None else time.monotonic() + total
+    seconds = min(total, remaining_seconds(limit))
+    connect = runtime_config.connect_timeout_ms / 1000 if runtime_config else 10.0
+    read = runtime_config.read_timeout_ms / 1000 if runtime_config else 60.0
+    return TotalTimeout(seconds, connect=connect, read=read, deadline=limit)
 
 
 def _max_retries(runtime_config: ProviderRuntimeConfig | None) -> int:
@@ -992,11 +1065,22 @@ def _sleep_before_retry(
     retry_after_seconds: float | None = None,
 ) -> None:
     if retry_after_seconds is not None:
+        if not math.isfinite(retry_after_seconds) or retry_after_seconds > 5.0:
+            raise TimeoutError("provider retry delay exceeds the 5-second inline retry limit")
+        deadline = current_deadline()
+        if deadline is not None and retry_after_seconds >= remaining_seconds(deadline):
+            raise TimeoutError("provider retry delay exceeds the action deadline")
         time.sleep(retry_after_seconds)
         return
     if runtime_config is None or runtime_config.retry_backoff_ms <= 0:
         return
-    time.sleep(runtime_config.retry_backoff_ms / 1000)
+    delay = runtime_config.retry_backoff_ms / 1000
+    if delay > 5.0:
+        raise TimeoutError("configured retry delay exceeds the 5-second inline retry limit")
+    deadline = current_deadline()
+    if deadline is not None and delay >= remaining_seconds(deadline):
+        raise TimeoutError("configured retry delay exceeds the action deadline")
+    time.sleep(delay)
 
 
 def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]:
@@ -1165,7 +1249,9 @@ def _failure_receipt(
         "gateway_mode": runtime_config.gateway_mode if runtime_config else "disabled",
         "gateway_request_id": None,
         "retry_after_ms": (
-            round(retry_after_seconds * 1000) if retry_after_seconds is not None else None
+            round(min(retry_after_seconds, 86_400.0) * 1000)
+            if retry_after_seconds is not None
+            else None
         ),
         "usage": {},
         "usage_unavailable_reason": usage_unavailable_reason,
@@ -1947,6 +2033,143 @@ def _openai_text(data: dict[str, Any]) -> str:
     return "".join(chunks)
 
 
+def _check_provider_completion(
+    data: dict[str, Any], *, provider: str, model: str,
+    response: httpx.Response, receipt: dict[str, Any],
+) -> None:
+    """Classify semantic failures before text parsing, retaining billable usage.
+
+    Refusal and incomplete results use the existing request-rejected outcome;
+    finish_status distinguishes them without changing the v2 outcome vocabulary.
+    Never copy refusal prose or arbitrary provider error strings into receipts.
+    """
+    reason: Any = None
+    status: Any = None
+    error = data.get("error")
+    refused = False
+    if provider == "openai":
+        status = data.get("status")
+        details = data.get("incomplete_details")
+        reason = details.get("reason") if isinstance(details, dict) else None
+        output = data.get("output")
+        refused = reason == "content_filter"
+        if isinstance(output, list):
+            for item in output:
+                content = item.get("content") if isinstance(item, dict) else None
+                if isinstance(content, list):
+                    refused = refused or any(
+                        isinstance(part, dict) and part.get("type") == "refusal"
+                        for part in content
+                    )
+    elif provider == "anthropic":
+        reason = data.get("stop_reason")
+        details = data.get("stop_details")
+        refused = reason == "refusal" or (
+            isinstance(details, dict) and details.get("type") == "refusal"
+        )
+    elif provider in {"google", "gemini"}:
+        feedback = data.get("promptFeedback")
+        blocked = feedback.get("blockReason") if isinstance(feedback, dict) else None
+        candidates = data.get("candidates")
+        first = candidates[0] if isinstance(candidates, list) and candidates else None
+        reason = first.get("finishReason") if isinstance(first, dict) else None
+        if blocked is not None and blocked != "BLOCK_REASON_UNSPECIFIED":
+            refused = True
+            reason = blocked
+        refused = refused or (isinstance(reason, str) and reason in {
+            "SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII",
+            "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
+            "PUP_LIMITED_DISABLED",
+        })
+    elif provider == "openrouter":
+        choices = data.get("choices")
+        first = choices[0] if isinstance(choices, list) and choices else None
+        if isinstance(first, dict):
+            error = error or first.get("error")
+            reason = first.get("finish_reason")
+            message = first.get("message")
+            refused = reason == "content_filter" or (
+                isinstance(message, dict) and bool(message.get("refusal"))
+            )
+    elif provider == "bedrock":
+        reason = data.get("stopReason")
+        refused = isinstance(reason, str) and reason in {"guardrail_intervened", "content_filtered"}
+
+    if (reason is not None and not isinstance(reason, str)) or (
+        status is not None and not isinstance(status, str)
+    ):
+        receipt.update(finish_reason="unknown", finish_status="unknown")
+        raise ProviderCallError(
+            "provider returned malformed completion fields",
+            error_kind="provider_response_schema_mismatch", provider=provider, model=model,
+        )
+
+    known_reasons = {
+        "max_output_tokens", "content_filter", "steered", "refusal", "max_tokens",
+        "end_turn", "stop_sequence", "tool_use", "pause_turn", "model_context_window_exceeded",
+        "STOP", "MAX_TOKENS", "SAFETY", "RECITATION", "LANGUAGE", "OTHER", "BLOCKLIST",
+        "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT",
+        "IMAGE_RECITATION", "ESCALATION", "PUP_LIMITED_DISABLED", "MALFORMED_FUNCTION_CALL",
+        "MALFORMED_RESPONSE", "FINISH_REASON_UNSPECIFIED", "BLOCK_REASON_UNSPECIFIED",
+        "stop", "length", "error", "tool_calls", "guardrail_intervened", "content_filtered",
+        "malformed_model_output", "malformed_tool_use",
+    }
+    receipt["finish_reason"] = reason if isinstance(reason, str) and reason in known_reasons else (
+        "unknown" if reason is not None else None
+    )
+    receipt["finish_status"] = status if isinstance(status, str) and status in {
+        "completed", "failed", "incomplete", "cancelled", "queued", "in_progress"
+    } else ("unknown" if status is not None else "completed" if reason is not None else None)
+
+    if error or status == "failed" or reason == "error" or data.get("type") == "error":
+        receipt["finish_status"] = "failed"
+        code = _body_error_status(error)
+        kind = _provider_error_kind(code) if code is not None else "provider_unavailable"
+        raise ProviderCallError(
+            "provider reported an error inside the response body",
+            status_code=code, error_kind=kind, provider=provider, model=model,
+            retry_after_seconds=_retry_after_seconds(response),
+        )
+    if refused:
+        receipt["finish_status"] = "refused"
+        raise ProviderCallError(
+            "provider refused or filtered the requested action",
+            error_kind="provider_request_rejected", provider=provider, model=model,
+        )
+    if status in {"incomplete", "cancelled", "queued", "in_progress"} or reason in {
+        "max_output_tokens", "max_tokens", "MAX_TOKENS", "length",
+        "model_context_window_exceeded", "steered", "tool_use", "tool_calls", "pause_turn",
+        "MALFORMED_FUNCTION_CALL", "MALFORMED_RESPONSE",
+        "malformed_model_output", "malformed_tool_use",
+    }:
+        receipt["finish_status"] = "incomplete"
+        detail = receipt["finish_reason"] or receipt["finish_status"]
+        raise ProviderCallError(
+            f"provider response is incomplete ({detail}); no action accepted",
+            error_kind="provider_request_rejected", provider=provider, model=model,
+        )
+
+
+def _body_error_status(error: Any) -> int | None:
+    if not isinstance(error, dict):
+        return None
+    code = error.get("code")
+    if isinstance(code, int) and not isinstance(code, bool) and 400 <= code <= 599:
+        return code
+    metadata = error.get("metadata")
+    kind = error.get("type") or error.get("code") or (
+        metadata.get("error_type") if isinstance(metadata, dict) else None
+    )
+    codes = {
+        "authentication_error": 401, "invalid_api_key": 401, "permission_error": 403,
+        "rate_limit_error": 429, "rate_limit_exceeded": 429,
+        "overloaded_error": 529, "api_error": 500, "server_error": 500, "server": 500,
+        "internal_error": 500, "timeout_error": 504, "timeout": 504,
+        "not_found_error": 404, "invalid_request_error": 400,
+    }
+    return codes.get(kind) if isinstance(kind, str) else None
+
+
 def _openrouter_text(data: dict[str, Any]) -> str:
     choices = data.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
@@ -2100,7 +2323,8 @@ def _response_json(
 ) -> dict[str, Any]:
     try:
         payload = response.json()
-    except (json.JSONDecodeError, ValueError) as exc:
+        validate_json_payload(payload)
+    except (json.JSONDecodeError, ValueError, UnicodeError) as exc:
         raise ProviderCallError(
             "provider response body is not valid JSON",
             status_code=response.status_code,

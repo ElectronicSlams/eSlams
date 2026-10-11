@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -16,16 +16,17 @@ except Exception:  # pragma: no cover - import failure is surfaced on use
 
 class ChessArena(Arena):
     id = "chess"
-    version = "1.1.0"
+    version = "1.2.0"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
-        "pattern": "^[a-h][1-8][a-h][1-8][qrbn]?$",
-        "description": "UCI move such as e2e4 or e7e8q.",
+        "pattern": "^([a-h][1-8][a-h][1-8][qrbn]?|claim-draw(:[a-h][1-8][a-h][1-8][qrbn]?)?)$",
+        "description": "UCI move, claim-draw, or claim-draw:<intended UCI move>.",
     }
     max_turns = 240
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         self._require_chess()
         board = chess.Board()
         return self._state(board=board, turn=0, seed=seed, outcome=None)
@@ -43,7 +44,8 @@ class ChessArena(Arena):
             "san_history": public["san_history"],
             "last_move_uci": public["last_move_uci"],
             "last_move_san": public["last_move_san"],
-            "legal_uci": state.legal_actions_by_player[player_id],
+            "legal_uci": public["legal_uci"] if player_id == state.active_player else [],
+            "legal_actions": state.legal_actions_by_player[player_id],
             "legal_san": public["legal_san"] if player_id == state.active_player else [],
             "legal_moves": public["legal_moves"] if player_id == state.active_player else [],
             "material": public["material"],
@@ -62,11 +64,27 @@ class ChessArena(Arena):
         if not self.is_legal(state, player_id, action):
             raise ValueError("illegal chess move")
         board = _board_from_state(state)
+        if action.startswith("claim-draw"):
+            intended = action.partition(":")[2]
+            if intended:
+                board.push_uci(intended)
+            reason = "fifty_moves" if board.is_fifty_moves() else "threefold_repetition"
+            if intended:
+                board.pop()
+            return self._state(
+                board=board,
+                turn=state.turn + 1,
+                seed=int(state.metadata["seed"]),
+                outcome={"winner": None, "reason": reason},
+                san_history=state.public_state["san_history"],
+                last_move_uci=state.public_state["last_move_uci"],
+                last_move_san=state.public_state["last_move_san"],
+            )
         move = chess.Move.from_uci(action)
         move_san = board.san(move)
         board.push(move)
         outcome = _chess_outcome(board)
-        if board.fullmove_number > self.max_turns // 2 and outcome is None:
+        if state.turn + 1 >= self.max_turns and outcome is None:
             outcome = {"winner": None, "reason": "max_turns"}
         san_history = [*state.public_state.get("san_history", []), move_san]
         return self._state(
@@ -96,7 +114,8 @@ class ChessArena(Arena):
         active = "player_1" if board.turn == chess.WHITE else "player_2"
         terminal = outcome is not None
         legal_details = [] if terminal else _legal_move_details(board)
-        legal = [item["uci"] for item in legal_details]
+        moves = [item["uci"] for item in legal_details]
+        legal = moves + ([] if terminal else _draw_claim_actions(board))
         scores = _scores(outcome)
         return ArenaState(
             state_id=f"state_{turn:06d}",
@@ -111,7 +130,7 @@ class ChessArena(Arena):
                 "san_history": list(san_history or []),
                 "last_move_uci": last_move_uci,
                 "last_move_san": last_move_san,
-                "legal_uci": legal,
+                "legal_uci": moves,
                 "legal_san": [item["san"] for item in legal_details],
                 "legal_moves": legal_details,
                 "material": _material_table(board),
@@ -123,7 +142,7 @@ class ChessArena(Arena):
                 "final_validation": {
                     "check": board.is_check(),
                     "checkmate": board.is_checkmate(),
-                    "legal_move_count": len(legal),
+                    "legal_move_count": len(moves),
                     "score": scores,
                 },
             },
@@ -146,7 +165,7 @@ class ChessArena(Arena):
 
 
 def _chess_outcome(board: Any) -> dict[str, Any] | None:
-    outcome = board.outcome(claim_draw=True)
+    outcome = board.outcome(claim_draw=False)
     if outcome is None:
         return None
     winner = None
@@ -155,6 +174,20 @@ def _chess_outcome(board: Any) -> dict[str, Any] | None:
     elif outcome.winner is False:
         winner = "player_2"
     return {"winner": winner, "reason": outcome.termination.name.lower()}
+
+
+def _draw_claim_actions(board: Any) -> list[str]:
+    if board.is_fifty_moves() or board.is_repetition(3):
+        return ["claim-draw"]
+    if not board.can_claim_draw():
+        return []
+    claims = []
+    for move in list(board.legal_moves):
+        board.push(move)
+        if board.is_fifty_moves() or board.is_repetition(3):
+            claims.append("claim-draw:" + move.uci())
+        board.pop()
+    return sorted(claims)
 
 
 def _board_from_state(state: ArenaState) -> Any:

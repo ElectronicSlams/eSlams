@@ -45,15 +45,6 @@ def test_catalogue_exports_games_models_and_availability_rows():
     assert by_game["chess"]["public_display_group"] == "Board & Strategy"
     assert by_game["liars-dice"]["public_display_group"] == "Card & Hidden-Info"
 
-
-def test_game_catalogue_skips_missing_renderer_rows(monkeypatch):
-    monkeypatch.setattr(catalogue_module, "renderer_vocabulary_rows", lambda: [])
-
-    assert catalogue_module.game_catalogue_rows() == []
-
-
-def test_game_catalogue_matches_transcribed_platform_identity_for_all_games():
-    games = game_catalogue_rows()
     by_game = {row["game_id"]: row for row in games}
 
     assert set(by_game) == set(PUBLIC_GAME_CATALOGUE_BY_ID)
@@ -68,8 +59,6 @@ def test_game_catalogue_matches_transcribed_platform_identity_for_all_games():
         assert row["variant_slug"] == expected.variant
         assert row["public_variant_label"] == expected.variant_label
 
-
-def test_game_catalogue_non_solo_topology_matches_registered_arena_players():
     for row in game_catalogue_rows():
         arena = registry.create(row["game_id"])
         topology = row["topology"]
@@ -83,8 +72,7 @@ def test_game_catalogue_non_solo_topology_matches_registered_arena_players():
         assert row["default_players"] == len(arena.players)
         assert row["player_count"] == len(arena.players)
 
-
-def test_renderer_vocabulary_classifies_all_arenas_as_safe_or_explicit_absence():
+    # Retain the full renderer vocabulary contract alongside catalogue exports.
     rows = renderer_vocabulary_rows()
     by_game = {row["game_id"]: row for row in rows}
 
@@ -104,25 +92,31 @@ def test_renderer_vocabulary_classifies_all_arenas_as_safe_or_explicit_absence()
     assert all(row["renderer_family"] for row in rows)
 
 
+def test_game_catalogue_skips_missing_renderer_rows(monkeypatch):
+    monkeypatch.setattr(catalogue_module, "renderer_vocabulary_rows", lambda: [])
+
+    assert catalogue_module.game_catalogue_rows() == []
+
+
 def test_official_plan_is_deterministic_and_conservative():
     first = official_plan(
         suite="public-smoke",
         providers=["openai"],
         arenas=["tic-tac-toe"],
-        shard_count=2,
+        shard_count=1,
     )
     second = official_plan(
         suite="public-smoke",
         providers=["openai"],
         arenas=["tic-tac-toe"],
-        shard_count=2,
+        shard_count=1,
     )
 
     assert first == second
     assert first["schema_version"] == "eslams.eval.plan.v1"
     assert first["plan_hash"]
     assert first["selected_arenas"] == ["tic-tac-toe"]
-    assert len(first["shards"]) == 2
+    assert len(first["shards"]) == 1
     openai_game_agents = [
         record
         for record in load_provider_registry().list_models(provider="openai")
@@ -220,14 +214,23 @@ def test_cli_catalogue_and_plan_commands(tmp_path: Path, capsys):
                 "--json",
             ]
         )
-        == 0
+        == 1
     )
-    plan = json.loads(capsys.readouterr().out)
-    assert plan["kind"] == "official"
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "no official-eval-enabled models" in captured.err
 
     assert main(["plan", "public-match", "--request", str(request), "--json"]) == 0
     public_plan = json.loads(capsys.readouterr().out)
     assert public_plan["case_count_expected"] == 2
+
+    # Retained assertions from test_cli_models_list_can_emit_supported_registry_json.
+    status = main(["models", "list", "--provider", "openai", "--game-agent-supported", "--json"])
+
+    assert status == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert any(item["model"] == "gpt-5.4-mini" for item in payload)
+    assert all(item["game_agent_supported"] is True for item in payload)
 
 
 def test_cli_plan_progress_and_resume_check(tmp_path: Path, capsys):

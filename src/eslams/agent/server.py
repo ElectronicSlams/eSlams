@@ -44,11 +44,13 @@ class AgentServer:
                 response = ActResponse.from_mapping(value)
             else:
                 response = ActResponse(action=value)
-            return response.to_dict()
+            return ActResponse.from_mapping(response.to_dict()).to_dict()
         except ProtocolError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    def run(self, *, host: str = "0.0.0.0", port: int = 8000) -> None:
+    def run(self, *, host: str = "127.0.0.1", port: int = 8000) -> None:
+        if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+            raise ValueError("port must be an integer between 1 and 65535")
         import uvicorn
 
         uvicorn.run(self.app, host=host, port=port)

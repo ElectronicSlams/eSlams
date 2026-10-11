@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
+from eslams.action_descriptors import action_descriptors
+from eslams.arena import registry
 from eslams.contracts.animation import GameAnimationSpec, validate_animation_spec
 from eslams.contracts.help import GameHelp, validate_help
 from eslams.contracts.render import GameRenderSpec, validate_render_spec
@@ -11,6 +14,7 @@ from eslams.contracts.result import result_contract_for_topology
 from eslams.contracts.surface import GameSurface, validate_surface
 from eslams.contracts.topology import (
     GameTopology,
+    cooperative_topology,
     head_to_head_topology,
     multi_seat_topology,
     solo_score_topology,
@@ -30,8 +34,6 @@ SOLO_SCORE_GAMES = {
     "bipedal-walker",
     "paddle-ball",
     "alien-shooter",
-    "boxing-style-arena",
-    "ice-hockey-style-arena",
 }
 
 MAIN_ARENA_GAMES = {
@@ -51,6 +53,8 @@ MAIN_ARENA_GAMES = {
 }
 
 ADVANCED_HEAD_TO_HEAD_GAMES = {
+    "boxing-style-arena",
+    "ice-hockey-style-arena",
     "checkers",
     "shogi",
     "xiangqi",
@@ -65,7 +69,6 @@ ADVANCED_HEAD_TO_HEAD_GAMES = {
     "negotiation",
     "crazy-eights",
     "euchre",
-    "hanabi",
     "hearts",
     "shedding-card-game",
     "spades",
@@ -184,6 +187,8 @@ def core_0_5_metadata(
 
 
 def topology_for_game(public: PublicGameMetadata) -> GameTopology:
+    if public.game_id == "hanabi":
+        return cooperative_topology()
     if public.game_id in SOLO_SCORE_GAMES:
         survival_games = {"cartpole", "mountain-car", "bipedal-walker"}
         score_type = "survival" if public.game_id in survival_games else "reward"
@@ -192,6 +197,7 @@ def topology_for_game(public: PublicGameMetadata) -> GameTopology:
         return multi_seat_topology(
             default_players=public.players,
             score_type=_multi_seat_score_type(public.game_id),
+            draw_allowed=public.game_id == "mahjong",
         )
     return head_to_head_topology(
         draw_allowed=_draw_allowed(public.game_id),
@@ -200,6 +206,16 @@ def topology_for_game(public: PublicGameMetadata) -> GameTopology:
 
 
 def surface_for_game(game_id: str) -> GameSurface:
+    if game_id == "hanabi":
+        return GameSurface(
+            arena="advanced_arena",
+            battlefield="disabled",
+            benchmark="disabled",
+            official="not_eligible",
+            public_reason=(
+                "Cooperative team scoring; competitive head-to-head results do not apply."
+            ),
+        )
     if game_id in SOLO_SCORE_GAMES:
         return GameSurface(
             arena="disabled",
@@ -235,6 +251,61 @@ def surface_for_game(game_id: str) -> GameSurface:
 
 
 def help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameHelp:
+    """Use real action descriptors from a named, reproducible example position."""
+    import eslams.arenas  # noqa: F401
+
+    help_payload = _base_help_for_game(public, topology)
+    arena = registry.create(public.game_id)
+    state = arena.initial_state(1)
+    descriptors = action_descriptors(
+        game_id=public.game_id, state=state,
+        actions=arena.legal_actions_for(state, state.active_player),
+    )
+    legal_tokens = {row["token"] for row in descriptors}
+    examples = tuple(row for row in help_payload.example_actions if row["token"] in legal_tokens)
+    if not examples:
+        examples = tuple({
+            "token": str(row["token"]), "label": str(row["label"]),
+            "explanation": "Legal for the active player in the initial seed-1 example position.",
+        } for row in descriptors[:3])
+    notes = (*help_payload.detail_sections, {
+        "title": "Example position",
+        "body": "Example tokens use the initial seed-1 position. Request the current "
+                "state's legal actions before playing, since they change with seed and turn.",
+    })
+    if public.game_id == "nine-mens-morris":
+        help_payload = replace(
+            help_payload,
+            scoring_summary="A mill captures a piece; fewer than three pieces or no legal "
+                            "movement loses. At 120 actions the compact variant draws 0.5/0.5.",
+        )
+        notes = (*notes, {
+            "title": "Compact episode rule",
+            "body": "This variant has a fixed 120-action draw limit. A live position can "
+                    "reach that limit; this result is an episode draw, not a claim of "
+                    "standard-game or OpenSpiel outcome parity.",
+        })
+    if public.game_id == "negotiation":
+        help_payload = replace(
+            help_payload,
+            legal_action_summary="Offer a price from 20 to 100 in steps of 10 and delivery "
+                                 "from 1 to 3. Accept is legal only at your reserve utility.",
+            scoring_summary="An accepted deal must meet both private reserve utilities. "
+                            "Otherwise it settles as reserve_not_met with zero utilities.",
+        )
+    if public.game_id == "backgammon":
+        help_payload = replace(
+            help_payload,
+            legal_action_summary="Move a checker using the maximum playable dice. "
+                                 "Pass only when all remaining dice are blocked.",
+            scoring_summary="This five-checker compact race has a 160-action limit, "
+                            "including explicit passes. Bearing off all checkers wins; "
+                            "otherwise the borne-off count decides the episode result.",
+        )
+    return replace(help_payload, example_actions=examples, detail_sections=notes)
+
+
+def _base_help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameHelp:
     override = _HELP_OVERRIDES.get(public.game_id)
     if override is not None:
         return override
@@ -244,6 +315,32 @@ def help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameH
         if public.game_id in HIDDEN_INFO_GAMES
         else None
     )
+    if mode == "cooperative":
+        return GameHelp(
+            objective="Build the two-color, three-rank fireworks together as one team.",
+            turn_rules=(
+                "Two teammates alternate play, discard, or hint actions.",
+                "Discard is unavailable with all eight clues; "
+                "the last draw gives each seat one final turn.",
+            ),
+            legal_action_summary=(
+                "Play a concealed own card by index, discard when a clue is spent, "
+                "or hint to your partner."
+            ),
+            scoring_summary="Both seats receive the same normalized team fireworks score.",
+            win_loss_draw_summary="There is no individual winner or competitive draw.",
+            hidden_info_summary=(
+                "You see your partner's hand and your own hints, not your own cards."
+            ),
+            first_move_tip="Give your partner a useful color or rank hint.",
+            example_actions=(
+                {
+                    "token": "hint:player_2:R",
+                    "label": "Hint red",
+                    "explanation": "Marks red cards in your partner's hand.",
+                },
+            ),
+        )
     if mode == "solo_score":
         return GameHelp(
             objective=f"Control the agent in {public.name} to maximize the benchmark score.",
@@ -293,8 +390,7 @@ def help_for_game(public: PublicGameMetadata, topology: dict[str, Any]) -> GameH
     return GameHelp(
         objective=f"Win {public.name} by making legal moves that satisfy the game objective.",
         turn_rules=(
-            "Player 1 and Player 2 alternate or commit actions according to the "
-            "variant rules.",
+            "Player 1 and Player 2 alternate or commit actions according to the variant rules.",
         ),
         legal_action_summary="Choose one legal action shown by the current game state.",
         scoring_summary="The result contract reports winner, draw, points, and final scores.",
@@ -385,7 +481,7 @@ def validate_core_0_5_metadata(
 
 
 def _draw_allowed(game_id: str) -> bool:
-    return game_id not in {"hex", "goofspiel", "first-price-sealed-bid-auction"}
+    return game_id not in {"hex", "first-price-sealed-bid-auction"}
 
 
 def _head_to_head_score_type(game_id: str) -> str:
@@ -503,9 +599,12 @@ _HELP_OVERRIDES: dict[str, GameHelp] = {
         objective="Bid for the item without paying more than its value to you.",
         turn_rules=("Both bidders submit sealed bids, then bids reveal together.",),
         legal_action_summary="Choose a legal bid amount.",
-        scoring_summary="Highest bid wins and utility is value minus bid.",
+        scoring_summary="The highest bid receives the item; equal bids use seed parity. "
+                        "Utility is value minus bid, including losses. "
+                        "Score is (utility + 10) / 20.",
         win_loss_draw_summary=(
-            "Highest utility or winning bid determines the result according to the variant."
+            "The match winner has higher utility; equal utilities draw. "
+            "allocation_winner separately names the bidder receiving the item."
         ),
         hidden_info_summary="Private values and bids are hidden until reveal.",
         first_move_tip="Shade your bid below private value when possible.",

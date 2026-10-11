@@ -3,21 +3,17 @@ import os
 import subprocess
 import sys
 import tarfile
+import zipfile
 from pathlib import Path
 
+from eslams._build_provenance import core_source_commit
 from eslams.contracts.json_schema import export_schemas
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_wheel_export_matches_source_without_git_checkout(tmp_path: Path):
-    expected_commit = subprocess.run(
-        ["git", "rev-parse", "--verify", "HEAD"],
-        cwd=REPOSITORY_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+    expected_commit = core_source_commit()
     source_export = tmp_path / "source-export"
     export_schemas(source_export)
     source_manifest = json.loads(
@@ -35,6 +31,9 @@ def test_wheel_export_matches_source_without_git_checkout(tmp_path: Path):
     )
     wheel = next(dist_dir.glob("*.whl"))
     source_distribution = next(dist_dir.glob("*.tar.gz"))
+    with zipfile.ZipFile(wheel) as archive:
+        assert "eslams/py.typed" in archive.namelist()
+        assert "eslams_core/py.typed" in archive.namelist()
     with tarfile.open(source_distribution, "r:gz") as archive:
         provenance_member = next(
             member
@@ -80,7 +79,7 @@ from eslams.contracts.json_schema import export_schemas
 
 install_dir, first, second = map(Path, sys.argv[1:])
 assert Path(eslams.__file__).resolve().is_relative_to(install_dir.resolve())
-assert eslams.__version__ == version("eslams-core") == "0.6.1"
+assert eslams.__version__ == version("eslams-core") == "0.6.2"
 assert PACKAGED_CORE_COMMIT is not None
 export_schemas(first)
 export_schemas(second)

@@ -1,11 +1,14 @@
 import json
 from pathlib import Path
 
+from eslams.artifacts import ArtifactValidator
 from eslams.cli import main
-from eslams.hashing import canonical_json
+from eslams.hashing import canonical_json, sha256_file
 from eslams.planning import battlefield_plan
 from eslams.publication_export import export_publication_bundle, validate_publication_bundle
 from eslams.runner import RunConfig, Runner
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_publication_bundle_export_is_deterministic_and_storage_free(tmp_path: Path):
@@ -77,21 +80,42 @@ def test_publication_bundle_validation_rejects_implicit_leaderboard_predicate(tm
     assert any("leaderboard predicate" in error for error in validation["errors"])
 
 
-def test_publication_battlefield_sample_fixture_validates():
-    fixture = Path("fixtures/publication/battlefield_sample_bundle")
-
-    assert fixture.exists()
-    assert validate_publication_bundle(fixture)["valid"] is True
-
-
 def test_sample_run_publication_bundles_validate_against_current_contract():
-    official = Path("sample_runs/model_eval_sample/publication_bundle")
-    battlefield = Path("sample_runs/model_battle_sample/publication_bundle")
+    official = ROOT / "sample_runs/model_eval_sample/publication_bundle"
+    battlefield = ROOT / "sample_runs/model_battle_sample/publication_bundle"
 
     assert official.exists()
     assert battlefield.exists()
     assert validate_publication_bundle(official)["valid"] is True
     assert validate_publication_bundle(battlefield)["valid"] is True
+
+    fixture = ROOT / "fixtures/publication/battlefield_sample_bundle"
+
+    assert fixture.exists()
+    assert validate_publication_bundle(fixture)["valid"] is True
+    inventory = json.loads((ROOT / "sample_runs/samples.json").read_text(encoding="utf-8"))
+    assert len(inventory) == 2
+    for row in inventory:
+        source = ROOT / row["github_path"]
+        assert sha256_file(source) == row["sha256"]
+        report = ArtifactValidator().validate_report(source, profile=row["validation_profile"])
+        assert report.valid and report.artifact_id == row["artifact_id"]
+        assert row["classification"] == "LOCAL_FIXTURE"
+        assert row["official_trust"] is False and row["dual_home"] is False
+        assert row["hf_url"] is None
+        import zipfile
+
+        with zipfile.ZipFile(source) as archive:
+            for member in archive.namelist():
+                body = archive.read(member)
+                assert b"/Users/" not in body and b"/private/tmp/" not in body
+        official_report = ArtifactValidator().validate_report(source, profile="official-bundle")
+        assert not official_report.valid
+        assert "runner_signature_missing" in official_report.errors
+        bundle = source.parent / "publication_bundle"
+        for proof in _read_jsonl(bundle / "proof_index.jsonl"):
+            assert str(proof["artifact"]).startswith("sha256:")
+            assert proof["aggregate_leaderboard_eligible"] is False
 
 
 def test_cli_publish_export_and_validate(tmp_path: Path):
@@ -120,9 +144,7 @@ def test_cli_publish_export_and_validate(tmp_path: Path):
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 

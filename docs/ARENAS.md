@@ -92,9 +92,11 @@ artifacts, export replay packages, persist sessions, store secrets, or know
 about Cloudflare. They own legality, state transition, hash verification,
 public display frames, public-safe events, and legal action descriptors.
 
-`session_state` is a signed opaque Platform/server envelope. Set
-`ESLAMS_ARENA_SESSION_SECRET` in production so tampering fails by HMAC, and do
-not forward the envelope to browsers. Browser-safe fields are `public_state`,
+`session_state` is a signed server-only Platform/server envelope. Set
+`ESLAMS_ARENA_SESSION_SECRET` to a secret of at least 32 characters on every
+process that creates or steps a live session. A missing, empty, or short secret
+fails closed. Do not forward the envelope to browsers. The envelope is an HMAC,
+not encryption. For the active human recipient, browser-safe fields are `public_state`,
 `display_frame`, `legal_action_descriptors`, `events`, actor metadata,
 terminal/outcome fields, and timing. Live `display_frame` uses the same
 projection shape as
@@ -116,3 +118,79 @@ without engine evaluation:
 Chess replay rendering uses board coordinates, side-colored pieces, highlighted
 last-move squares, FEN, terminal reason, winner, side to move, legal count,
 check/checkmate status, and score.
+
+Session privacy: the HMAC envelope is base64 JSON containing full private state,
+not encryption. Keep `session_state` on trusted servers; never stream it to a
+browser. Legal action lists/descriptors are emitted only for the active human
+recipient and must be privately routed to that person. Model-seat lists stay
+inside the trusted runner, obtainable from the server-side state. Public views
+omit legal action lists. Pending sealed actions and their explanations remain
+hidden until the arena reveal phase.
+
+## Compact Hanabi cooperative rules
+
+Hanabi 1.1.0 uses two colors, three ranks and four copies of each card, with two
+controlled seats sharing the same normalized team score. It is a compact variant,
+not the complete commercial deck. `winner` is always null; `team_success` indicates
+perfect fireworks. The last draw starts exactly one further turn for each seat,
+and discards are illegal while all eight clues are available. These timing and
+clue rules follow the [publisher rulebook](https://cdn.svc.asmodee.net/production-asmodeees/uploads/2023/06/Hanabi_Reglamento_ES.pdf).
+
+Shogi 1.0.1 corrects the initial bishop/rook files and applies own-king safety to
+moves and drops, consistent with the [Japan Shogi Association's check rules](https://www.shogi.or.jp/knowledge/shogi/04.php). Xiangqi 1.0.1 also checks general
+safety after every move. These remain compact adapters: Shogi pawn-drop mate,
+repetition/impasse and Xiangqi perpetual check/chase adjudication are not modeled.
+Historical ruleset versions and artifact bytes are unchanged.
+
+All public arena `initial_state(seed)` calls require a Python integer excluding
+booleans. Zero, negative integers and large integers are supported. JSON/session
+callers must send an integer, rather than a string or floating-point seed. The
+seed metadata and RNG commitment remain constant after actions.
+
+## Corrected standard rule boundaries
+
+Cribbage 1.1.0 counts ace-low runs with physical-card multiplicity, nobs and
+hand/crib flushes according to the [ACC show scoring chart](https://www.cribbage.org/NewSite/rules/rulebook_2025.pdf).
+It remains a single-hand compact discard/show variant without pegging or a
+121-point match. Seeds `2n` and `2n+1` use the same deal with opposite dealers;
+run both for a balanced comparison. The nondealer acts first. Artifacts retain
+`scores_by_player`; `primary_score` reflects the explicitly named
+`metrics.evaluated_player` (player_1). A single hand is not a match average.
+
+Pentago 1.0.1 ends immediately on a placement win, ignoring the rotation part
+of that action. Otherwise it rotates and checks both players; simultaneous
+lines draw, following the [publisher's rules guide](https://bville.com.ua/userfiles/files/Manual/41501104_pentago_rules.pdf).
+Othello 1.0.1 finishes only when neither seat can place, following the
+[World Othello Federation](https://www.worldothello.org/about/about-othello/othello-rules/official-rules/english).
+Its 120-action runner horizon accommodates 60 placements and intervening passes.
+
+Chess 1.2.0 uses automatic fivefold/75-move draws rather than forcing optional
+claims. `claim-draw` is legal when the current position qualifies; an intended
+move claim uses `claim-draw:<uci>` only when that legal move would produce a
+qualifying repetition or fifty-move position. The intended move is declared,
+not played. Checkmate takes precedence. `legal_uci` and SAN/move descriptors
+remain actual moves; the full `legal_actions` list also includes claims. These
+conditions use [python-chess's rule checks](https://python-chess.readthedocs.io/en/latest/core.html).
+
+The three table poker arenas use 1.0.1 rules: only tied best hands share the
+normalized showdown score, and a final fold closes a betting round when all
+remaining commitments match. They retain their compact ante-based table,
+profiled bet sizes and normalized winner shares; these scores are not net chip
+returns or a full side-pot accounting implementation.
+
+Gin Rummy 1.0.1 computes minimum deadwood from disjoint sets and ace-low runs.
+The stock reaching two cards cancels the hand only after a discard without
+knocking; cancellation awards neither seat points. The declared 80-action
+horizon also cancels without comparing unequal hands. These rules follow the
+[Gettysburg Gin Rummy competition rules](https://cs.gettysburg.edu/~tneller/games/ginrummy/eaai/gin-rummy-rules.pdf).
+This remains a seven-card, single-hand compact variant: no opening upcard passes,
+opponent layoff phase, point bonuses or multi-hand match to 100.
+
+Solo benchmark adapters expose only player_1. Their terminal outcome has
+`winner: null` and a boolean `success` field, while numeric reward remains in
+`scores.player_1`. Their ruleset versions are bumped to 1.0.1. Boxing and hockey
+are competitive two-seat games and now use head-to-head topology. The catalogue
+has 11 solo, 32 head-to-head, 6 multi-seat and 1 cooperative game. Goofspiel and
+Mahjong advertise permitted draws. Backgammon (five checkers), Battleship
+(5×5 with three one-cell ships) and Crazy Eights (five-card opening, restricted
+wild-card policy) are labelled compact variants.

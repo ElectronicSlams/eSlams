@@ -6,11 +6,15 @@ objects so agents can implement it in any language.
 
 from __future__ import annotations
 
+import json
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
 PROTOCOL_VERSION = "eslams-act-v1"
+MAX_RESPONSE_BYTES = 1024 * 1024
+MAX_PUBLIC_EXPLANATION_BYTES = 16 * 1024
 
 
 class ProtocolError(ValueError):
@@ -130,18 +134,27 @@ class ActResponse:
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ActResponse:
+        validate_json_payload(value)
         if "action" not in value:
             raise ProtocolError("response.action is required")
         confidence = value.get("confidence")
         if confidence is not None:
-            if not isinstance(confidence, (int, float)):
+            if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
                 raise ProtocolError("response.confidence must be numeric")
-            confidence = float(confidence)
-            if confidence < 0 or confidence > 1:
+            try:
+                confidence = float(confidence)
+            except OverflowError as exc:
+                raise ProtocolError("response.confidence must be finite") from exc
+            if not math.isfinite(confidence) or confidence < 0 or confidence > 1:
                 raise ProtocolError("response.confidence must be between 0 and 1")
         public_explanation = value.get("public_explanation")
         if public_explanation is not None and not isinstance(public_explanation, str):
             raise ProtocolError("response.public_explanation must be a string")
+        if (
+            public_explanation is not None
+            and len(public_explanation.encode("utf-8")) > MAX_PUBLIC_EXPLANATION_BYTES
+        ):
+            raise ProtocolError("response.public_explanation exceeds 16 KiB limit")
         return cls(
             action=value["action"],
             confidence=confidence,
@@ -238,3 +251,17 @@ def _required_history(value: Any) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             raise ProtocolError("history items must be objects")
     return value
+
+
+def validate_json_payload(value: Any) -> None:
+    """Reject invalid JSON/Unicode and oversized payloads before artifact logging."""
+    try:
+        encoded = json.dumps(
+            value, ensure_ascii=False, allow_nan=False, separators=(",", ":")
+        ).encode("utf-8")
+    except (TypeError, ValueError, OverflowError, UnicodeError, RecursionError) as exc:
+        raise ProtocolError(
+            "response must contain finite JSON values and valid UTF-8 text"
+        ) from exc
+    if len(encoded) > MAX_RESPONSE_BYTES:
+        raise ProtocolError("agent/provider response exceeds 1 MiB limit")

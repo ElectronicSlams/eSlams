@@ -9,6 +9,7 @@ import hmac
 import json
 import os
 import shutil
+import stat
 import tempfile
 import zipfile
 from collections import Counter
@@ -18,6 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
@@ -42,8 +44,9 @@ from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 from eslams.policy import artifact_profile_label as policy_artifact_profile_label
 from eslams.policy import policy_key, policy_label
-from eslams.replay import render_replay_html
+from eslams.replay import _write_artifact_replay
 from eslams.replay_projection import display_frame_rows
+from eslams.zip_extract import extract_archive, portable_member_path
 
 ARTIFACT_VERSION = "eslams-artifact-v1"
 RUNNER_SIGNATURE_VERSION = "eslams-runner-signature-v2"
@@ -357,6 +360,7 @@ def write_artifact(
 ) -> Path:
     """Write a directory artifact or zip-compatible .eslams archive."""
 
+    validate_artifact_signing_configuration()
     for index, receipt in enumerate(build.provider_receipts):
         receipt_errors = provider_receipt_validation_errors(receipt)
         if receipt_errors:
@@ -364,14 +368,22 @@ def write_artifact(
                 f"invalid provider receipt at index {index}: " + "; ".join(receipt_errors)
             )
 
-    output_path = output_path.resolve()
-    artifact_dir = expanded_artifact_path(output_path)
-    if artifact_dir.exists():
-        if not overwrite:
-            raise FileExistsError(f"artifact path already exists: {artifact_dir}")
-        shutil.rmtree(artifact_dir)
-    if archive and output_path.exists() and not overwrite:
-        raise FileExistsError(f"artifact path already exists: {output_path}")
+    destinations = [expanded_artifact_path(output_path)]
+    if archive:
+        destinations.append(archive_artifact_path(output_path))
+    with _staged_artifact_outputs(destinations, overwrite=overwrite) as staged:
+        artifact_dir = staged / "payload.eslams.d"
+        _write_artifact_directory(build, artifact_dir)
+        outputs = [(artifact_dir, destinations[0].resolve())]
+        if archive:
+            staged_archive = staged / "payload.eslams"
+            _write_archive(artifact_dir, staged_archive)
+            outputs.append((staged_archive, destinations[1].resolve()))
+        _install_artifact_outputs(outputs, overwrite=overwrite)
+    return destinations[-1].resolve()
+
+
+def _write_artifact_directory(build: ArtifactBuildInput, artifact_dir: Path) -> None:
     required_dirs = {
         str(Path(item).parent) for item in REQUIRED_FILES if Path(item).parent != Path(".")
     }
@@ -409,7 +421,7 @@ def write_artifact(
         artifact_dir / "public_reasoning/reasoning.jsonl",
         _public_reasoning_rows(build.replay_events),
     )
-    render_replay_html(artifact_dir)
+    _write_artifact_replay(artifact_dir)
     _write_json(artifact_dir / "scores/score.json", _canonical_score_summary(build.score))
     publication_eligible = _case_publication_eligible(build.score)
     _write_json(
@@ -417,7 +429,7 @@ def write_artifact(
         _official_result_summary(build.score, arena_id),
     )
     _write_json(artifact_dir / "scores/metrics.json", _canonical_hashed_payload(build.metrics))
-    (artifact_dir / "logs/runner.log").write_text(build.runner_log, encoding="utf-8")
+    _write_text(artifact_dir / "logs/runner.log", build.runner_log)
     _write_jsonl(
         artifact_dir / "logs/agent_io.jsonl",
         (_canonical_hashed_payload(row) for row in build.agent_io),
@@ -432,10 +444,7 @@ def write_artifact(
         artifact_dir / "environment/lockfile.json",
         {"python": ">=3.9", "package": "eslams-core"},
     )
-    (artifact_dir / "environment/container_digest.txt").write_text(
-        "local-development\n",
-        encoding="utf-8",
-    )
+    _write_text(artifact_dir / "environment/container_digest.txt", "local-development\n")
     _write_json(
         artifact_dir / "environment/package_versions.json",
         {"eslams-core": CORE_PACKAGE_VERSION},
@@ -588,16 +597,109 @@ def write_artifact(
         signature_path.parent.mkdir(parents=True, exist_ok=True)
         _write_json(signature_path, _runner_signature(manifest_path, manifest_dict, signing_key))
 
-    if archive:
-        archive_path = archive_artifact_path(output_path)
-        if archive_path.exists():
-            archive_path.unlink()
-        with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            for path in sorted(artifact_dir.rglob("*")):
-                if path.is_file():
-                    zf.write(path, path.relative_to(artifact_dir).as_posix())
-        return archive_path
-    return artifact_dir
+
+
+def _check_artifact_destination(path: Path, *, overwrite: bool) -> None:
+    if path.is_symlink():
+        raise ValueError(f"artifact destination must not be a symlink: {path}")
+    if not path.exists():
+        return
+    if not overwrite:
+        raise FileExistsError(f"artifact path already exists: {path}; pass overwrite=True")
+    if path.is_dir():
+        cwd = Path.cwd().resolve()
+        if cwd == path or cwd.is_relative_to(path) or (path / ".git").exists():
+            raise ValueError(f"refusing to replace working directory or Git checkout: {path}")
+        manifest = path / "manifest.json"
+        if manifest.is_symlink() or not manifest.is_file():
+            raise ValueError(
+                f"refusing to replace a directory without an artifact manifest: {path}"
+            )
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or payload.get("artifact_version") != ARTIFACT_VERSION:
+            raise ValueError(f"refusing to replace a nonartifact directory: {path}")
+
+
+@contextmanager
+def _staged_artifact_outputs(paths: list[Path], *, overwrite: bool) -> Iterator[Path]:
+    # Lock both canonical names: directory-only and archive writers must contend.
+    locks: list[tuple[int, Path]] = []
+    try:
+        for raw in sorted(paths):
+            _check_artifact_destination(raw, overwrite=overwrite)
+            path = raw.resolve()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            lock = path.with_name(f".{path.name}.eslams-output.lock")
+            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            locks.append((descriptor, lock))
+        for raw in paths:
+            _check_artifact_destination(raw, overwrite=overwrite)
+        with tempfile.TemporaryDirectory(
+            prefix=".eslams-artifact-", dir=paths[0].resolve().parent
+        ) as name:
+            yield Path(name)
+    finally:
+        for descriptor, lock in reversed(locks):
+            os.close(descriptor)
+            lock.unlink(missing_ok=True)
+
+
+def _install_artifact_outputs(outputs: list[tuple[Path, Path]], *, overwrite: bool) -> None:
+    # Each installed path is complete. A directory and ZIP cannot be renamed in
+    # one filesystem operation; preserve old outputs to roll back a failed pair.
+    backups: dict[Path, Path] = {}
+    installed: list[Path] = []
+    try:
+        for source, destination in outputs:
+            _check_artifact_destination(destination, overwrite=overwrite)
+            if destination.exists():
+                backup = destination.with_name(f".{destination.name}.eslams-backup-{uuid4().hex}")
+                if destination.is_dir():
+                    destination.rename(backup)
+                else:
+                    # Keep an existing archive continuously available to readers.
+                    os.link(destination, backup)
+                backups[destination] = backup
+            if not overwrite and source.is_file():
+                os.link(source, destination)
+                installed.append(destination)
+                source.unlink()
+            else:
+                os.replace(source, destination)
+                installed.append(destination)
+    except BaseException:
+        for destination in reversed(installed):
+            if destination.is_dir():
+                shutil.rmtree(destination)
+            else:
+                destination.unlink()
+        for destination, backup in backups.items():
+            # If rollback itself fails, the backup stays outside the temporary
+            # tree rather than being erased by its cleanup.
+            os.replace(backup, destination)
+            # POSIX rename is a no-op when both names already reference one inode.
+            backup.unlink(missing_ok=True)
+        raise
+    else:
+        for backup in backups.values():
+            if backup.is_dir():
+                shutil.rmtree(backup, ignore_errors=True)
+            else:
+                backup.unlink(missing_ok=True)
+
+
+def _write_archive(artifact_dir: Path, archive_path: Path) -> None:
+    paths = _artifact_file_paths(artifact_dir)
+    if not paths:
+        raise ValueError("refusing to write an empty artifact archive")
+    with zipfile.ZipFile(archive_path, "x", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in paths:
+            info = zipfile.ZipInfo(path.relative_to(artifact_dir).as_posix(), (1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = (stat.S_IFREG | 0o600) << 16
+            with path.open("rb") as source, archive.open(info, "w") as destination:
+                for block in iter(lambda: source.read(1024 * 1024), b""):
+                    destination.write(block)
 
 
 def archive_artifact_path(path: Path) -> Path:
@@ -624,6 +726,7 @@ def open_artifact(path: Path) -> Iterator[Path]:
 
     artifact_dir, cleanup = _materialize(path)
     try:
+        _artifact_file_paths(artifact_dir)
         yield artifact_dir
     finally:
         if cleanup:
@@ -633,16 +736,11 @@ def open_artifact(path: Path) -> Iterator[Path]:
 def read_member(path: Path, member: str) -> bytes:
     """Read a member from an expanded or archived artifact."""
 
-    member_path = _safe_artifact_subpath(member)
-    if member_path is None:
-        raise ValueError(f"invalid artifact member path {member!r}")
-    path = path.resolve()
-    if path.is_dir():
-        return (path / member_path).read_bytes()
-    if zipfile.is_zipfile(path):
-        with zipfile.ZipFile(path) as zf:
-            return zf.read(member_path.as_posix())
-    raise FileNotFoundError(path)
+    with open_artifact(path) as root:
+        target, error = _confine_artifact_member(root, member)
+        if target is None:
+            raise ValueError(error)
+        return target.read_bytes()
 
 
 def extract_validation_summary(path: Path) -> dict[str, Any] | None:
@@ -693,6 +791,17 @@ class ArtifactValidator:
     ) -> ArtifactValidationReport:
         artifact_dir, cleanup = _materialize(path)
         try:
+            try:
+                _artifact_file_paths(artifact_dir)
+            except ValueError as exc:
+                return ArtifactValidationReport(
+                    errors=[str(exc)], profile=profile, artifact=str(path),
+                    signature=SignatureValidationStatus(status="not_checked"),
+                    deterministic_replay=DeterministicReplayValidationStatus(status="not_checked"),
+                    scoring_eligible=False, per_case_run_valid=False,
+                    per_case_scoring_eligible=False, proof_row_publication_eligible=False,
+                    aggregate_leaderboard_eligible=False,
+                )
             normalized_profile = _normalize_validation_profile(profile, artifact_dir)
             return self._validate_dir(artifact_dir, normalized_profile, path.resolve())
         finally:
@@ -729,6 +838,13 @@ class ArtifactValidator:
                 profile=profile,
                 source_path=source_path,
                 artifact_dir=artifact_dir,
+            )
+        if not isinstance(manifest, dict):
+            return _validation_report(
+                errors=[*errors, "manifest must be a JSON object"],
+                signature=SignatureValidationStatus(status="not_checked"),
+                deterministic_replay=DeterministicReplayValidationStatus(status="not_checked"),
+                profile=profile, source_path=source_path, artifact_dir=artifact_dir,
             )
         if manifest.get("artifact_version") != ARTIFACT_VERSION:
             errors.append("manifest.artifact_version is unsupported")
@@ -801,6 +917,8 @@ def _normalize_validation_profile(profile: str, artifact_dir: Path) -> str:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 return "runner_bundle"
+            if not isinstance(manifest, dict):
+                return "runner_bundle"
             artifact_profile = manifest.get("artifact_profile")
             if isinstance(artifact_profile, str):
                 candidate = PROFILE_ALIASES.get(artifact_profile, artifact_profile).replace(
@@ -829,9 +947,14 @@ def _validate_file_table(
             errors.append("manifest.files contains invalid entry")
             continue
         valid_entries.append(entry)
+        if entry["path"] in listed_paths:
+            errors.append(f"duplicate manifest path: {entry['path']}")
         listed_paths.add(entry["path"])
-        file_path = artifact_dir / entry["path"]
-        if not file_path.exists():
+        file_path, path_error = _confine_artifact_member(artifact_dir, entry["path"])
+        if path_error is not None:
+            errors.append(path_error)
+            continue
+        if file_path is None or not file_path.is_file():
             errors.append(f"manifest file missing on disk: {entry['path']}")
             continue
         expected = entry.get("sha256")
@@ -841,8 +964,7 @@ def _validate_file_table(
     unhashed_paths = _validate_unhashed_file_table(artifact_dir, manifest, errors)
     actual_paths = {
         path.relative_to(artifact_dir).as_posix()
-        for path in artifact_dir.rglob("*")
-        if path.is_file()
+        for path in _artifact_file_paths(artifact_dir)
     }
     actual_payload_paths = {
         rel for rel in actual_paths if rel != "manifest.json" and not rel.startswith("signatures/")
@@ -875,8 +997,11 @@ def _validate_unhashed_file_table(
         paths.add(rel)
         if rel not in UNHASHED_FILE_PATHS:
             errors.append(f"unsupported unhashed artifact file: {rel}")
-        file_path = artifact_dir / rel
-        if not file_path.exists():
+        file_path, path_error = _confine_artifact_member(artifact_dir, rel)
+        if path_error is not None:
+            errors.append(path_error)
+            continue
+        if file_path is None or not file_path.is_file():
             errors.append(f"manifest unhashed file missing on disk: {rel}")
             continue
         expected = entry.get("sha256")
@@ -980,6 +1105,15 @@ def _official_case_integrity_errors(
 
     metrics_value = score.get("metrics")
     metrics = metrics_value if isinstance(metrics_value, dict) else {}
+    suite_context = metrics.get("suite_context")
+    case_id = suite_context.get("case_id") if isinstance(suite_context, dict) else None
+    if not isinstance(case_id, str) or not case_id.strip():
+        errors.append("case_id_missing")
+        case_id = None
+    else:
+        metadata = manifest.get("run_metadata")
+        if not isinstance(metadata, dict) or metadata.get("case_id") != case_id:
+            errors.append("case_id_mismatch")
     evaluated_player = metrics.get("evaluated_player", "player_1")
     statuses = score.get("provider_status_by_player")
     if not isinstance(statuses, dict) or statuses.get(evaluated_player) != "provider_ok":
@@ -997,6 +1131,7 @@ def _official_case_integrity_errors(
         _official_action_reconciliation_errors(
             artifact_dir,
             evaluated_player=str(evaluated_player),
+            case_id=case_id,
             expected_logical_actions=(
                 logical_actions.get(evaluated_player) if isinstance(logical_actions, dict) else None
             ),
@@ -1020,6 +1155,7 @@ def _official_action_reconciliation_errors(
     artifact_dir: Path,
     *,
     evaluated_player: str,
+    case_id: str | None,
     expected_logical_actions: Any,
 ) -> list[str]:
     read_errors: list[str] = []
@@ -1049,6 +1185,8 @@ def _official_action_reconciliation_errors(
         or len(provider_replays) != expected_logical_actions
     )
     ledger_invalid = False
+    case_invalid = False
+    case_id_mismatch = False
 
     receipts_by_event: dict[str, dict[str, Any]] = {}
     for receipt in receipt_rows:
@@ -1060,6 +1198,9 @@ def _official_action_reconciliation_errors(
             ledger_invalid = True
             continue
         receipts_by_event[event_id] = receipt
+        if case_id is not None and receipt.get("case_id") != case_id:
+            ledger_invalid = True
+            case_id_mismatch = True
 
     referenced_event_ids: list[str] = []
     trace_join_keys: list[tuple[str, str]] = []
@@ -1080,9 +1221,13 @@ def _official_action_reconciliation_errors(
             or joined_receipt.get("outcome") != "ok"
             or joined_receipt.get("status") != "completed"
             or joined_receipt.get("action_applied") is not True
-            or joined_receipt.get("case_valid_for_scoring") is not True
         ):
             provenance_invalid = True
+        if (
+            joined_receipt is not None and case_id is not None
+            and joined_receipt.get("case_valid_for_scoring") is not True
+        ):
+            case_invalid = True
 
     if len(referenced_event_ids) != len(set(referenced_event_ids)):
         provenance_invalid = True
@@ -1111,6 +1256,10 @@ def _official_action_reconciliation_errors(
         errors.append("action_provenance_incomplete")
     if ledger_invalid:
         errors.append("attempt_reconciliation_failed")
+    if case_invalid:
+        errors.append("case_scoring_ineligible")
+    if case_id_mismatch:
+        errors.append("case_id_mismatch")
     return errors
 
 
@@ -1197,6 +1346,16 @@ def _validation_report(
     artifact_dir: Path,
     manifest: dict[str, Any] | None = None,
 ) -> ArtifactValidationReport:
+    level = _optional_manifest_str(manifest, "verification_level")
+    level_key = _optional_manifest_str(manifest, "verification_level_key")
+    level_label = _optional_manifest_str(manifest, "verification_level_label")
+    privileged = any(
+        "official" in "".join(char for char in value.lower() if char.isalnum())
+        or "grandslam" in "".join(char for char in value.lower() if char.isalnum())
+        for value in (level, level_key, level_label) if value
+    )
+    if privileged and (errors or not signature.verified):
+        level, level_key, level_label = "Untrusted", "untrusted", "Untrusted"
     return ArtifactValidationReport(
         errors=errors,
         signature=signature,
@@ -1205,29 +1364,31 @@ def _validation_report(
         artifact=str(source_path),
         artifact_id=_optional_manifest_str(manifest, "artifact_id"),
         run_id=_optional_manifest_str(manifest, "run_id"),
-        verification_level=_optional_manifest_str(manifest, "verification_level"),
+        verification_level=level,
         scoring_eligible=(
             False
-            if profile == "official_case" and errors
+            if errors
             else _optional_manifest_bool(manifest, "match_valid_for_scoring")
         ),
         archive_sha256=_artifact_source_hash(source_path, artifact_dir),
         artifact_size_bytes=_artifact_source_size(source_path, artifact_dir),
-        verification_level_key=_optional_manifest_str(manifest, "verification_level_key"),
-        verification_level_label=_optional_manifest_str(manifest, "verification_level_label"),
+        verification_level_key=level_key,
+        verification_level_label=level_label,
         artifact_profile_key=_optional_manifest_str(manifest, "artifact_profile_key") or profile,
         artifact_profile_label=_optional_manifest_str(manifest, "artifact_profile_label")
         or policy_artifact_profile_label(profile),
-        per_case_run_valid=_optional_manifest_bool(manifest, "per_case_run_valid"),
-        per_case_scoring_eligible=_optional_manifest_bool(
+        per_case_run_valid=(
+            False if errors else _optional_manifest_bool(manifest, "per_case_run_valid")
+        ),
+        per_case_scoring_eligible=False if errors else _optional_manifest_bool(
             manifest,
             "per_case_scoring_eligible",
         ),
-        proof_row_publication_eligible=_optional_manifest_bool(
+        proof_row_publication_eligible=False if errors else _optional_manifest_bool(
             manifest,
             "proof_row_publication_eligible",
         ),
-        aggregate_leaderboard_eligible=_optional_manifest_bool(
+        aggregate_leaderboard_eligible=False if errors else _optional_manifest_bool(
             manifest,
             "aggregate_leaderboard_eligible",
         ),
@@ -1264,18 +1425,23 @@ def _artifact_source_size(source_path: Path, artifact_dir: Path) -> int | None:
     if source_path.is_file():
         return source_path.stat().st_size
     if artifact_dir.is_dir():
-        return sum(path.stat().st_size for path in artifact_dir.rglob("*") if path.is_file())
+        return sum(path.stat().st_size for path in _artifact_file_paths(artifact_dir))
     return None
+
+
+def _write_text(path: Path, text: str) -> None:
+    with path.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(text)
 
 
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
+    _write_text(path, canonical_json(payload) + "\n")
 
 
 def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(canonical_json(row) + "\n" for row in rows), encoding="utf-8")
+    _write_text(path, "".join(canonical_json(row) + "\n" for row in rows))
 
 
 def _canonical_hashed_payload(payload: Any) -> Any:
@@ -1476,8 +1642,11 @@ def _official_result_summary(score: ScoreSummary, arena_id: str) -> dict[str, An
 def _case_publication_eligible(score: ScoreSummary) -> bool:
     """Return the fail-closed eligibility claim for proof/publication surfaces."""
 
+    context = score.metrics.get("suite_context")
+    case_id = context.get("case_id") if isinstance(context, dict) else None
     return bool(
-        score.match_valid_for_scoring
+        isinstance(case_id, str) and case_id.strip()
+        and score.match_valid_for_scoring
         and score.integrity_status == "valid"
         and score.usage_complete
         and score.cost_complete
@@ -1584,7 +1753,7 @@ def _validate_deterministic_replay(
     )
     if len(replay_rows) != len(transition_rows) + 1:
         errors.append("deterministic replay event count does not match action trace length")
-    _validate_score_terminal_matches_last_replay(artifact_dir, replay_rows, errors)
+    _validate_score_terminal_matches_last_replay(artifact_dir, manifest, replay_rows, errors)
 
     previous_state = None
     for index, row in enumerate(transition_rows):
@@ -1713,6 +1882,7 @@ def _artifact_arena_id(
 
 def _validate_score_terminal_matches_last_replay(
     artifact_dir: Path,
+    manifest: dict[str, Any],
     replay_rows: list[dict[str, Any]],
     errors: list[str],
 ) -> None:
@@ -1731,6 +1901,14 @@ def _validate_score_terminal_matches_last_replay(
     score_outcome = score.get("outcome")
     last_replay = replay_rows[-1]
     replay_outcome = last_replay.get("outcome")
+    if last_replay.get("terminal") is not True and (
+        score.get("match_valid_for_scoring") is True
+        or any(manifest.get(key) is True for key in (
+            "match_valid_for_scoring", "per_case_scoring_eligible",
+            "proof_row_publication_eligible", "aggregate_leaderboard_eligible",
+        ))
+    ):
+        errors.append("nonterminal replay cannot be eligible for scoring or publication")
     if score_outcome is None:
         if last_replay.get("terminal") and replay_outcome is not None:
             errors.append("last replay terminal outcome does not match score.json")
@@ -1830,18 +2008,37 @@ def _compare_replay_snapshot(
         errors.append(f"replay event {index} turn_id does not match deterministic state")
 
 
+def _artifact_file_paths(artifact_dir: Path) -> list[Path]:
+    """Fail closed on traversal/stat errors, links and nonregular members."""
+    if not stat.S_ISDIR(artifact_dir.lstat().st_mode):
+        raise ValueError("artifact root must be a real directory")
+    paths: list[Path] = []
+
+    def raise_on_walk_error(error: OSError) -> None:
+        raise error
+
+    for root, directories, filenames in os.walk(
+        artifact_dir, onerror=raise_on_walk_error, followlinks=False
+    ):
+        for name in directories:
+            path = Path(root) / name
+            if not stat.S_ISDIR(path.lstat().st_mode):
+                raise ValueError(f"artifact directory must not be a symlink: {path}")
+        for name in filenames:
+            path = Path(root) / name
+            if not stat.S_ISREG(path.lstat().st_mode):
+                raise ValueError(f"artifact member must be a regular file: {path}")
+            paths.append(path)
+    return sorted(paths)
+
+
 def _file_entries(artifact_dir: Path) -> list[dict[str, Any]]:
     entries = []
-    for path in sorted(artifact_dir.rglob("*")):
-        if path.is_file():
-            rel = path.relative_to(artifact_dir).as_posix()
-            if (
-                rel == "manifest.json"
-                or rel.startswith("signatures/")
-                or rel in UNHASHED_FILE_PATHS
-            ):
-                continue
-            entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
+    for path in _artifact_file_paths(artifact_dir):
+        rel = path.relative_to(artifact_dir).as_posix()
+        if rel == "manifest.json" or rel.startswith("signatures/") or rel in UNHASHED_FILE_PATHS:
+            continue
+        entries.append({"path": rel, "sha256": sha256_file(path), "bytes": path.stat().st_size})
     return sorted(entries, key=lambda item: item["path"])
 
 
@@ -1872,7 +2069,7 @@ def _runner_signature(
     signing_key: Ed25519PrivateKey,
 ) -> dict[str, Any]:
     signed_at = utc_now_iso()
-    key_id = os.environ.get(RUNNER_ARTIFACT_SIGNING_KEY_ID_ENV, "runner-artifact-env-key")
+    key_id = _runner_artifact_signing_key_id()
     signed_payload = _signature_payload(
         manifest=manifest,
         manifest_sha256=sha256_file(manifest_path),
@@ -1911,10 +2108,24 @@ def _signature_payload(
     }
 
 
+def validate_artifact_signing_configuration() -> None:
+    """Reject malformed signing configuration before agent/provider work."""
+    _runner_artifact_signing_key()
+
+
+def _runner_artifact_signing_key_id() -> str:
+    key_id = os.environ.get(RUNNER_ARTIFACT_SIGNING_KEY_ID_ENV, "runner-artifact-env-key")
+    if (not key_id or key_id.strip() != key_id or len(key_id) > 128
+            or any(char.isspace() or ord(char) < 32 for char in key_id)):
+        raise ValueError(f"{RUNNER_ARTIFACT_SIGNING_KEY_ID_ENV} must be a nonempty token")
+    return key_id
+
+
 def _runner_artifact_signing_key() -> Ed25519PrivateKey | None:
     value = os.environ.get(RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY_ENV)
-    if value is None or value.strip() == "":
+    if value is None:
         return None
+    _runner_artifact_signing_key_id()
     return Ed25519PrivateKey.from_private_bytes(
         _decode_key_material(value, expected_len=32, label=RUNNER_ARTIFACT_SIGNING_PRIVATE_KEY_ENV)
     )
@@ -2006,7 +2217,10 @@ def _validate_runner_signature(
             ["runner signature path is invalid"],
         )
 
-    signature_path = artifact_dir / signature_subpath
+    signature_path, path_error = _confine_artifact_member(artifact_dir, signature_rel)
+    if signature_path is None:
+        return (SignatureValidationStatus(status="invalid", path=signature_rel),
+                [path_error or "runner signature path is invalid"])
     if not signature_path.exists():
         if manifest_signature_status == "signed":
             return (
@@ -2212,27 +2426,41 @@ def _validate_legacy_runner_signature(
 
 
 def _safe_artifact_subpath(rel: str) -> Path | None:
-    path = Path(rel)
-    if path.is_absolute() or ".." in path.parts or rel == "":
+    try:
+        return Path(portable_member_path(rel))
+    except ValueError:
         return None
-    return path
+
+
+def _confine_artifact_member(artifact_dir: Path, rel: str) -> tuple[Path | None, str | None]:
+    subpath = _safe_artifact_subpath(rel)
+    if subpath is None:
+        return None, f"unsafe manifest member path: {rel!r}"
+    root = artifact_dir.resolve()
+    current = root
+    for part in subpath.parts:
+        current = current / part
+        if current.is_symlink():
+            return None, f"refusing artifact member symlink: {rel!r}"
+    try:
+        current.resolve().relative_to(root)
+    except ValueError:
+        return None, f"manifest path escapes artifact root: {rel!r}"
+    return current, None
 
 
 def _materialize(path: Path) -> tuple[Path, bool]:
     path = path.resolve()
     if path.is_dir():
         return path, False
+    if not path.is_file():
+        raise FileNotFoundError(path)
     if zipfile.is_zipfile(path):
         tmp = Path(tempfile.mkdtemp(prefix=f"{path.stem}.validate."))
-        tmp_root = tmp.resolve()
-        with zipfile.ZipFile(path) as zf:
-            for member in zf.infolist():
-                member_path = (tmp / member.filename).resolve()
-                try:
-                    member_path.relative_to(tmp_root)
-                except ValueError as exc:
-                    shutil.rmtree(tmp)
-                    raise ValueError(f"unsafe artifact archive path: {member.filename}") from exc
-            zf.extractall(tmp)
+        try:
+            extract_archive(path, tmp)
+        except BaseException:
+            shutil.rmtree(tmp)
+            raise
         return tmp, True
-    raise FileNotFoundError(path)
+    raise ValueError(f"not an artifact directory or ZIP archive: {path}")

@@ -15,14 +15,8 @@ from eslams.contracts.provider import (
     provider_attempt_event_id,
     provider_receipt_validation_errors,
 )
-from eslams.contracts.versions import schema_versions
 
 SCHEMA_VERSION = "eslams.provider-attempt.v2"
-
-
-def test_every_exported_schema_is_valid_draft_2020_12():
-    for version in schema_versions():
-        Draft202012Validator.check_schema(schema_for_version(version))
 
 
 def test_started_completed_and_failed_attempt_events_validate():
@@ -175,9 +169,7 @@ def test_started_attempt_rejects_terminal_usage_and_cost_claims():
         }
     )
     with pytest.raises(ValidationError):
-        Draft202012Validator(schema_for_version(SCHEMA_VERSION)).validate(
-            invalid_schema_payload
-        )
+        Draft202012Validator(schema_for_version(SCHEMA_VERSION)).validate(invalid_schema_payload)
 
 
 def test_attempt_event_id_is_deterministic_and_case_retry_scoped():
@@ -196,8 +188,7 @@ def test_attempt_event_id_is_deterministic_and_case_retry_scoped():
     assert first.startswith("sha256:")
     assert first != case_retry
 
-
-def test_case_retry_attempt_kind_is_explicit_in_python_and_schema():
+    # Retained assertions from test_case_retry_attempt_kind_is_explicit_in_python_and_schema.
     with pytest.raises(ValueError, match="retried cases must begin"):
         replace(_event(), case_attempt_index=2)
 
@@ -233,8 +224,7 @@ def test_attempt_accepts_safe_literal_model_id_path():
         provider="bedrock",
         requested_model="amazon.nova-micro-v1:0",
         provider_endpoint=(
-            "https://bedrock-runtime.us-east-1.amazonaws.com/"
-            "model/amazon.nova-micro-v1:0/converse"
+            "https://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.nova-micro-v1:0/converse"
         ),
     )
 

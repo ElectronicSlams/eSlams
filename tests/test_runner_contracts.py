@@ -9,7 +9,6 @@ from eslams.contracts.runner_job import (
     validate_runner_job_result,
 )
 from eslams.runner import RunConfig, Runner
-from eslams.runner_health import current_runner_health
 
 
 def test_runner_job_result_requires_artifact_uri_when_completed():
@@ -34,16 +33,6 @@ def test_runner_job_result_requires_artifact_uri_when_completed():
     assert validate_runner_job_result(valid) == []
     assert valid.to_dict()["runner_completed"] is True
     assert valid.to_dict()["scoring_eligible"] is False
-
-
-def test_runner_health_payload_includes_hashes_and_game_count():
-    payload = current_runner_health()
-
-    assert payload["schema_version"] == "eslams.runner.job.v1"
-    assert payload["game_count"] == 50
-    assert payload["registry_hash"]
-    assert payload["renderer_vocabulary_hash"]
-    assert payload["action_schema_hash"]
 
 
 def test_arena_browser_start_response_contract_shape():
@@ -73,6 +62,12 @@ def test_cli_runner_health(capsys):
     assert main(["runner", "health", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["game_count"] == 50
+
+    assert payload["schema_version"] == "eslams.runner.job.v1"
+    assert payload["game_count"] == 50
+    assert payload["registry_hash"]
+    assert payload["renderer_vocabulary_hash"]
+    assert payload["action_schema_hash"]
 
 
 def test_cli_runner_result_completed_artifact(tmp_path: Path, capsys):

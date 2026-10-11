@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from eslams.contracts.versions import GAME_RESULT_SCHEMA_VERSION
+from eslams.contracts.versions import COOPERATIVE_RESULT_SCHEMA_VERSION, GAME_RESULT_SCHEMA_VERSION
 
 
 @dataclass(frozen=True)
@@ -37,6 +37,16 @@ class GameResultContract:
 
 def result_contract_for_topology(topology: dict[str, Any]) -> GameResultContract:
     mode = str(topology["mode"])
+    if mode == "cooperative":
+        return GameResultContract(
+            mode=mode,
+            result_types=("score",),
+            score_type="cooperative_score",
+            winner_required=False,
+            draw_allowed=False,
+            placements_allowed=False,
+            schema_version=COOPERATIVE_RESULT_SCHEMA_VERSION,
+        )
     if mode == "solo_score":
         return GameResultContract(
             mode=mode,
@@ -73,7 +83,10 @@ def validate_result(payload: dict[str, Any], topology: dict[str, Any]) -> list[s
     mode = topology.get("mode")
     controlled = topology.get("controlledPlayers")
     controlled_players = [str(item) for item in controlled] if isinstance(controlled, list) else []
-    if payload.get("schemaVersion") != GAME_RESULT_SCHEMA_VERSION:
+    expected_version = (
+        COOPERATIVE_RESULT_SCHEMA_VERSION if mode == "cooperative" else GAME_RESULT_SCHEMA_VERSION
+    )
+    if payload.get("schemaVersion") != expected_version:
         errors.append("result.schemaVersion is unsupported")
     if payload.get("mode") != mode:
         errors.append("result.mode must match topology.mode")
@@ -89,7 +102,21 @@ def validate_result(payload: dict[str, Any], topology: dict[str, Any]) -> list[s
             if not isinstance(score, (int, float)) or not math.isfinite(float(score)):
                 errors.append(f"result.scores.{player} must be finite")
 
-    if mode == "solo_score":
+    if mode == "cooperative":
+        if payload.get("winner") is not None or payload.get("draw") is not False:
+            errors.append("cooperative result cannot name an individual winner or draw")
+        if payload.get("resultType") != "score":
+            errors.append("cooperative resultType must be score")
+        if (
+            isinstance(scores, dict)
+            and controlled_players
+            and any(
+                scores.get(player) != scores.get(controlled_players[0])
+                for player in controlled_players
+            )
+        ):
+            errors.append("cooperative seats must share the same team score")
+    elif mode == "solo_score":
         if payload.get("evaluatedPlayer") != topology.get("evaluatedPlayer"):
             errors.append("solo result evaluatedPlayer must match topology")
         if payload.get("winner") is not None:
@@ -97,9 +124,7 @@ def validate_result(payload: dict[str, Any], topology: dict[str, Any]) -> list[s
         if payload.get("draw") is not False:
             errors.append("solo result draw must be false")
         primary_score = payload.get("primaryScore")
-        if not isinstance(primary_score, (int, float)) or not math.isfinite(
-            float(primary_score)
-        ):
+        if not isinstance(primary_score, (int, float)) or not math.isfinite(float(primary_score)):
             errors.append("solo result primaryScore must be finite")
         if payload.get("resultType") != "score":
             errors.append("solo resultType must be score")

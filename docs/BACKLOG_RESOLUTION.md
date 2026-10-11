@@ -1,0 +1,29 @@
+# Backlog consolidation
+
+The backlog is addressed in [Core PR #218](https://github.com/ElectronicSlams/eSlams/pull/218) and one focused [Platform PR #580](https://github.com/makriman/eSlamsPlatform/pull/580), under the user's amended allowance for a reasonable number of PRs. **All 149 inventoried issues and all 44 original PRs are verified closed.** Original heads and branches are preserved, including the two fork branches. The complete [ledger](backlog-resolution.json) records each reviewed head, acceptance criterion, incorporated or declined proposal, implementation evidence and verified GitHub closure timestamp. Core #218 contains the OSS 0.6.2 release preparation. Platform #580 was merged by its owner on 2026-10-11; Platform deployment belongs to a separate deployer.
+
+## Verified implementation
+
+Checkpoint `08fb8a4ef07778eca149f235162cc0a1372fe297` passes every required native/distribution gate:
+
+- [Core CI](https://github.com/ElectronicSlams/eSlams/actions/runs/37771327882): Linux Python 3.10–3.12, Windows/macOS Python 3.12; all-50-arena version fingerprints and initial-state budgets; exact native artifact/schema/publication byte parity; Python/TypeScript contracts and 22 initial states plus 1,401 complete Core-lite step responses.
+- [Distribution consumers](https://github.com/ElectronicSlams/eSlams/actions/runs/37771327695): fresh wheel/sdist installs outside the checkout on Linux, Windows and macOS; console/module normal/debug/closed-pipe behavior, downstream mypy, keyless run/validate/replay/public export, metadata/schema provenance and the full extracted no-Git sdist suite.
+- [Dependency audit](https://github.com/ElectronicSlams/eSlams/actions/runs/37771327692), [workflow lint](https://github.com/ElectronicSlams/eSlams/actions/runs/37771327859) and [CodeQL](https://github.com/ElectronicSlams/eSlams/actions/runs/37771327694).
+
+Browser CI checks all 50 arenas at mobile, tablet and desktop sizes, including 300 initial/final viewport checks, keyboard/focus, target sizes, semantic labels and hostile embedded text. The version diagnostic explicitly normalizes floating values to ten decimal places for cross-libm portability; runtime state hashes and replay validation remain exact.
+
+The final closure-record checkpoint `33c0a2cc79ee0217115981e3365ff5bc9bf482de` also passes all five gates. The subsequent 0.6.2 version/documentation update receives independent final-head and main-branch verification before publication.
+
+## Test reduction
+
+Frozen baseline `7f6bb418974739986e76049d45dfb7de2109a780` contains 275 cases and 85.332886% line coverage over `src/eslams`. Exactly 55 original cases (20%) are removed, mainly by consolidating redundant wrappers while retaining useful assertions. The ledger records baseline identities and retained assertion locations. No removed function is reintroduced; new behavioral/integrity regressions are tracked separately.
+
+All 509 cases pass on local Python 3.12 and direct-dependency-floor Python 3.10. Both cover 11,851 / 13,368 lines (88.652005%), 3.319119 percentage points above baseline. Ruff and strict mypy pass. All eight published 0.6.1 keyless lab commands pass in a fresh external virtual environment. Current sample inventories record exact archive checksums and clean generation commits, honest Local status and no unverified mirrors.
+
+## Hosted Shuffle resolution
+
+[#219](https://github.com/ElectronicSlams/eSlams/issues/219) is closed after verified implementation in [Platform PR #580](https://github.com/makriman/eSlamsPlatform/pull/580), commit `2e4a4f56fd206872ef3434da7139babbb48188ea`. Shuffle now permutes every displayed eligible opponent while preserving the selected model, side and launch parameters. Repeated clicks change the order; zero/one-option rails remain disabled. Catalog changes retain only current eligible rows, and a different game resets the local ordering. The existing rail limit, full roster picker and table autofill remain intact.
+
+The browser regression reproduces the bug on unchanged main. Six new and four existing browser checks pass across desktop/mobile, including keyboard/focus and all six multi-seat game autofills. Frozen install, lint, full typecheck/build and complete `pnpm test` pass: 1,268 root cases and all 18 workspace test tasks, including 715 web cases and 109 Workerd runtime cases. [Native offline React Doctor](https://github.com/makriman/eSlamsPlatform/actions/runs/38114322660) passes on the exact Platform head; the local scan covers 568 files with zero diagnostics. A stale unchanged-main release assertion is aligned with the existing offline CI policy, retaining its exact-source guard and all 68 policy/release-identity checks. Three-way composition with separate Arena setup PR #466 is conflict-free. Platform #580 was merged as `888ecc1d28218caf7b20f2f1a700476e7a8cc29f` on 2026-10-11. Its deployment is outside this OSS release task.
+
+The original backlog task stopped before merge/publication. The user subsequently authorized merging Core #218 and publishing OSS Core 0.6.2 to GitHub and PyPI. That release includes the reviewed repairs and migration notes in the changelog. Platform deployment, paid provider calls, warehouse extraction and production data changes remain outside this release. Existing v0.4.0/v0.5.1 release notes were corrected in place during the original task.

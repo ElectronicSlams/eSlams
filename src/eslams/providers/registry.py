@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
+from eslams.hashing import sha256_json
 from eslams.providers.capabilities import ModelCapabilities
 
 REQUESTED_PROVIDER_ORGANIZATIONS: tuple[tuple[str, str], ...] = (
@@ -274,8 +275,21 @@ def _registry_from_payloads(
             merged = {**records.get(key, {}), **item, "provider": key[0], "model": key[1]}
             records[key] = merged
 
+    models = {key: ModelCapabilities.from_mapping(value) for key, value in records.items()}
+    by_slug: dict[str | None, list[tuple[str, str]]] = {}
+    for key, record in models.items():
+        by_slug.setdefault(record.public_slug, []).append(key)
+    for slug, keys in by_slug.items():
+        if len(keys) > 1:
+            for key in keys:
+                digest = sha256_json(list(key)).split(":", 1)[1][:12]
+                models[key] = replace(
+                    models[key], public_slug=f"{slug}-{digest}"
+                )
+    if len({record.public_slug for record in models.values()}) != len(models):
+        raise ValueError("provider registry public slugs are not unique")
     return ProviderRegistry(
-        models={key: ModelCapabilities.from_mapping(value) for key, value in records.items()},
+        models=models,
         organizations=organizations,
         generated_at=(
             generated.get("generated_at")

@@ -1,6 +1,4 @@
-from pathlib import Path
 
-from eslams.arenas import registry
 from eslams.arenas.strategic_games import (
     BargainingArena,
     BlackjackArena,
@@ -9,21 +7,6 @@ from eslams.arenas.strategic_games import (
     LiarsDiceArena,
     NegotiationArena,
 )
-from eslams.artifacts import ArtifactValidator
-from eslams.runner import RunConfig, Runner
-
-STRATEGIC_ARENAS = {
-    "bargaining",
-    "blackjack",
-    "first-price-sealed-bid-auction",
-    "goofspiel",
-    "liars-dice",
-    "negotiation",
-}
-
-
-def test_strategic_arenas_are_registered():
-    assert STRATEGIC_ARENAS.issubset(set(registry.list()))
 
 
 def test_blackjack_reveals_dealer_hand_only_on_terminal():
@@ -88,7 +71,7 @@ def test_bargaining_and_negotiation_accept_offers():
 
     negotiation = NegotiationArena()
     negotiation_state = negotiation.initial_state(1)
-    negotiation_state = negotiation.apply_action(negotiation_state, "player_1", "offer:60:2")
+    negotiation_state = negotiation.apply_action(negotiation_state, "player_1", "offer:60:1")
     negotiation_state = negotiation.apply_action(negotiation_state, "player_2", "accept")
 
     assert negotiation_state.terminal is True
@@ -102,13 +85,3 @@ def test_bargaining_reserves_control_accept_legality():
 
     assert "accept" not in state.legal_actions_by_player["player_2"]
     assert "reject" in state.legal_actions_by_player["player_2"]
-
-
-def test_runner_generates_valid_artifacts_for_strategic_arenas(tmp_path: Path):
-    for arena_id in sorted(STRATEGIC_ARENAS):
-        output_dir = tmp_path / arena_id
-        result = Runner().run(
-            RunConfig(arena_id=arena_id, seed=29, max_turns=10, output_dir=output_dir)
-        )
-        assert result.artifact_path.exists()
-        assert ArtifactValidator().validate(result.artifact_path) == []

@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any, Optional
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -18,15 +18,16 @@ Board = list[Point]
 
 class BackgammonArena(Arena):
     id = "backgammon"
-    version = "1.0.0"
+    version = "1.1.0"
     players = PLAYERS
     action_schema = {
         "type": "string",
-        "description": "Move a checker as move:<source>-<target>; source can be bar.",
+        "description": "Move as move:<source>-<target>, or pass only when all dice are blocked.",
     }
     max_turns = 160
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board: Board = [None] * POINTS
         board[0] = {"player": "player_1", "count": 2}
         board[5] = {"player": "player_1", "count": 3}
@@ -62,22 +63,28 @@ class BackgammonArena(Arena):
         bar = dict(state.public_state["bar"])
         borne_off = dict(state.public_state["borne_off"])
         dice = list(state.public_state["dice"])
-        try:
-            _, move_part = action.split(":", 1)
-            source_text, target_text = move_part.split("-", 1)
-        except (ValueError, IndexError) as exc:
-            raise ValueError(f"Invalid backgammon action format: {action!r}") from exc
-        die = _die_for_move(board, bar, borne_off, player_id, dice, source_text, target_text)
-        dice.remove(die)
-        _apply_backgammon_move(board, bar, borne_off, player_id, source_text, target_text)
+        if action == "pass":
+            if _legal_backgammon_actions(board, bar, borne_off, player_id, dice):
+                raise ValueError("cannot pass while a backgammon die is playable")
+            dice = []
+        else:
+            try:
+                _, move_part = action.split(":", 1)
+                source_text, target_text = move_part.split("-", 1)
+            except (ValueError, IndexError) as exc:
+                raise ValueError(f"Invalid backgammon action format: {action!r}") from exc
+            die = _die_for_move(board, bar, borne_off, player_id, dice, source_text, target_text)
+            dice.remove(die)
+            _apply_backgammon_move(board, bar, borne_off, player_id, source_text, target_text)
+        remaining_dice = list(dice)
         active = player_id
-        if not dice:
+        outcome = _backgammon_outcome(borne_off)
+        if not dice and outcome is None:
             active = _other(player_id)
             dice = _dice(int(state.metadata["seed"]), state.turn + 1, active)
-        outcome = _backgammon_outcome(borne_off)
         history = [
             *state.public_state["history"],
-            {"player": player_id, "action": action, "remaining_dice": dice},
+            {"player": player_id, "action": action, "remaining_dice": remaining_dice},
         ]
         return self._state(
             board=board,
@@ -112,10 +119,9 @@ class BackgammonArena(Arena):
             outcome = _race_outcome(borne_off, reason="turn_limit")
         legal = [] if terminal else _legal_backgammon_actions(board, bar, borne_off, active, dice)
         if not terminal and not legal:
-            next_player = _other(active)
-            dice = _dice(seed, turn + 1, next_player)
-            legal = _legal_backgammon_actions(board, bar, borne_off, next_player, dice)
-            active = next_player
+            # A blocked roll is an explicit bounded transition, even if both seats
+            # are blocked. No empty-action live state or unrecorded reroll is emitted.
+            legal = ["pass"]
         return ArenaState(
             state_id=f"state_{turn:06d}",
             turn=turn,
@@ -154,12 +160,50 @@ def _legal_backgammon_actions(
     player: str,
     dice: list[int],
 ) -> list[str]:
-    actions: set[str] = set()
-    for die in sorted(set(dice)):
-        for source, target in _candidate_moves(board, bar, borne_off, player, die):
-            if _can_land(board, player, target):
-                actions.add(f"move:{source}-{target}")
-    return sorted(actions)
+    return sorted({f"move:{source}-{target}"
+                   for (source, target), _die in _optimal_first_moves(
+                       board, bar, borne_off, player, dice)})
+
+
+def _optimal_first_moves(
+    board: Board, bar: dict[str, int], borne_off: dict[str, int],
+    player: str, dice: list[int],
+) -> list[tuple[tuple[str, str], int]]:
+    """First moves of maximum-dice continuations, retaining the consumed die."""
+    memo: dict[tuple[Any, ...], int] = {}
+
+    def continuations(b: Board, br: dict[str, int], off: dict[str, int], ds: list[int]) -> int:
+        key = (
+            tuple(None if point is None else (point["player"], point["count"]) for point in b),
+            tuple(br[p] for p in PLAYERS), tuple(off[p] for p in PLAYERS), tuple(sorted(ds)),
+        )
+        if key not in memo:
+            memo[key] = max((length for _move, _die, length in options(b, br, off, ds)), default=0)
+        return memo[key]
+
+    def options(
+        b: Board, br: dict[str, int], off: dict[str, int], ds: list[int],
+    ) -> list[tuple[tuple[str, str], int, int]]:
+        choices = []
+        for die in sorted(set(ds)):
+            for move in _candidate_moves(b, br, off, player, die):
+                if not _can_land(b, player, move[1]):
+                    continue
+                next_board, next_bar, next_off = _public_board(b), dict(br), dict(off)
+                _apply_backgammon_move(next_board, next_bar, next_off, player, *move)
+                rest = list(ds)
+                rest.remove(die)
+                length = 1 + continuations(next_board, next_bar, next_off, rest)
+                choices.append((move, die, length))
+        return choices
+
+    choices = options(board, bar, borne_off, dice)
+    longest = max((length for _move, _die, length in choices), default=0)
+    best = [(move, die) for move, die, length in choices if length == longest]
+    if longest == 1 and len(set(dice)) == 2:
+        higher = [(move, die) for move, die in best if die == max(dice)]
+        best = higher or best
+    return best
 
 
 def _candidate_moves(
@@ -180,7 +224,14 @@ def _candidate_moves(
         if 0 <= target < POINTS:
             candidates.append((str(index), str(target)))
         elif _all_in_home(board, player):
-            candidates.append((str(index), "off"))
+            distance = POINTS - index if player == "player_1" else index + 1
+            farthest = max(
+                POINTS - position if player == "player_1" else position + 1
+                for position, checker in enumerate(board)
+                if checker is not None and checker["player"] == player
+            )
+            if die == distance or (die > distance and distance == farthest):
+                candidates.append((str(index), "off"))
     return candidates
 
 
@@ -234,12 +285,8 @@ def _die_for_move(
     target_text: str,
 ) -> int:
     move = (source_text, target_text)
-    for die in sorted(set(dice)):
-        if move in _candidate_moves(board, bar, borne_off, player, die) and _can_land(
-            board,
-            player,
-            target_text,
-        ):
+    for candidate, die in _optimal_first_moves(board, bar, borne_off, player, dice):
+        if move == candidate:
             return die
     raise ValueError("legal backgammon action was not generated by current dice")
 

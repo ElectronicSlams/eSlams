@@ -1,4 +1,4 @@
-"""Observation and prompt-size budget helpers for Core v0.4."""
+"""Initial-state compact observation and approximate prompt budgets."""
 
 from __future__ import annotations
 
@@ -26,7 +26,16 @@ DEFAULT_OBSERVATION_BUDGET = ObservationBudget(
 OBSERVATION_BUDGETS: dict[str, ObservationBudget] = {
     "tic-tac-toe": ObservationBudget(2_000, 800),
     "connect-four": ObservationBudget(2_000, 800),
-    "gomoku": ObservationBudget(8_000, 2_000),
+    "gomoku": ObservationBudget(
+        8_000,
+        6_000,
+        "15x15 board enumerates up to 225 legal placements in descriptors and output schemas.",
+    ),
+    "pentago": ObservationBudget(
+        16_000,
+        8_000,
+        "36 placements times 8 quadrant rotations enumerate up to 288 composite actions.",
+    ),
     "othello": ObservationBudget(8_000, 2_000),
     "chess": ObservationBudget(12_000, 3_000),
     "go": ObservationBudget(20_000, 5_000, "19x19 board needs a larger compact state budget."),
@@ -50,7 +59,7 @@ def observation_budget_report(*, game_id: str, seed: int = 1) -> dict[str, Any]:
     )
     prompt = prompt_package(arena=arena, state=state, actor_id=state.active_player)
     budget = budget_for_game(game_id)
-    observation_bytes = len(canonical_json(observation))
+    observation_bytes = len(canonical_json(observation).encode("utf-8"))
     prompt_tokens = estimate_prompt_tokens(prompt)
     return {
         "gameId": game_id,

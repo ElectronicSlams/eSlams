@@ -21,7 +21,5 @@ def test_act_request_round_trip():
     request = ActRequest.from_mapping(payload)
     assert request.to_dict() == payload
 
-
-def test_act_response_accepts_required_action_only():
     response = ActResponse.from_mapping({"action": "e2e4"})
     assert response.to_dict() == {"action": "e2e4", "metadata": {}}

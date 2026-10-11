@@ -7,7 +7,7 @@ from collections import Counter
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -36,6 +36,7 @@ class MahjongArena(Arena):
     max_turns = 96
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         wall = _mahjong_wall(seed)
         hands = {
             player: _sorted_tiles(wall[index * 10 : (index + 1) * 10])
@@ -148,6 +149,7 @@ class DouDizhuArena(Arena):
     max_turns = 120
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _dou_dizhu_deck(seed)
         landlord = self.players[seed % len(self.players)]
         hands = {
@@ -292,6 +294,7 @@ class BridgeArena(Arena):
     max_turns = 52
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         deck = _standard_deck(seed)
         hands = {
             player: _sorted_bridge_cards(deck[index * 13 : (index + 1) * 13])

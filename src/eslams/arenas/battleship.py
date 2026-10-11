@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -15,7 +15,7 @@ SHIP_COUNT = 3
 
 class BattleshipArena(Arena):
     id = "battleship"
-    version = "1.0.0"
+    version = "1.1.0"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
@@ -25,6 +25,7 @@ class BattleshipArena(Arena):
     max_turns = GRID_SIZE * GRID_SIZE * 2
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         ships = _ship_layout(seed)
         return self._state(
             ships=ships,
@@ -134,8 +135,7 @@ def _ship_layout(seed: int) -> dict[str, list[str]]:
     cells = [f"{row},{col}" for row in range(GRID_SIZE) for col in range(GRID_SIZE)]
     rng = random.Random(seed)
     player_1 = sorted(rng.sample(cells, SHIP_COUNT))
-    remaining = [cell for cell in cells if cell not in player_1]
-    player_2 = sorted(rng.sample(remaining, SHIP_COUNT))
+    player_2 = sorted(rng.sample(cells, SHIP_COUNT))
     return {"player_1": player_1, "player_2": player_2}
 
 

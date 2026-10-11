@@ -50,7 +50,9 @@ def main(argv: list[str] | None = None) -> int:
             "results": rows,
         }
         args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        args.json.write_text(
+            json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8", newline="\n"
+        )
         return 0
     return 1
 

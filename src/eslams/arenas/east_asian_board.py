@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, Optional
 
-from eslams.arena import Arena
+from eslams.arena import Arena, validate_seed
 from eslams.hashing import sha256_json, sha256_text
 from eslams.state import ArenaState
 
@@ -34,6 +34,7 @@ class GoArena(Arena):
     max_turns = 180
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board = _empty_board(9, 9)
         return self._state(
             board=board,
@@ -146,7 +147,7 @@ class ShogiArena(Arena):
     """Compact Shogi adapter with legal movement, captures, drops, and promotion choices."""
 
     id = "shogi"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
@@ -155,6 +156,7 @@ class ShogiArena(Arena):
     max_turns = 320
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board = _shogi_initial_board()
         hands: dict[str, dict[str, int]] = {"player_1": {}, "player_2": {}}
         return self._state(
@@ -271,7 +273,7 @@ class XiangqiArena(Arena):
     """Compact Xiangqi adapter with palace, river, cannon, and flying-general rules."""
 
     id = "xiangqi"
-    version = "1.0.0"
+    version = "1.0.1"
     players = ("player_1", "player_2")
     action_schema = {
         "type": "string",
@@ -281,6 +283,7 @@ class XiangqiArena(Arena):
     max_turns = 240
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         board = _xiangqi_initial_board()
         return self._state(board=board, turn=0, active="player_1", seed=seed, outcome=None)
 
@@ -303,7 +306,7 @@ class XiangqiArena(Arena):
             raise ValueError("xiangqi move has no source piece")
         captured = board[er][ec]
         outcome = None
-        if captured is not None and _xiangqi_base(captured) == "g":
+        if captured is not None and _xiangqi_base(captured) == "G":
             outcome = {"winner": player_id, "reason": "general_captured"}
         board[sr][sc] = None
         board[er][ec] = piece
@@ -543,13 +546,13 @@ _PROMOTABLE = {"P", "L", "N", "S", "B", "R"}
 def _shogi_initial_board() -> Board:
     return [
         list("lnsgkgsnl"),
-        [None, "b", None, None, None, None, None, "r", None],
+        [None, "r", None, None, None, None, None, "b", None],
         list("ppppppppp"),
         [None for _ in range(9)],
         [None for _ in range(9)],
         [None for _ in range(9)],
         list("PPPPPPPPP"),
-        [None, "R", None, None, None, None, None, "B", None],
+        [None, "B", None, None, None, None, None, "R", None],
         list("LNSGKGSNL"),
     ]
 
@@ -629,7 +632,31 @@ def _shogi_legal_actions(
                 else:
                     actions.append(action)
     actions.extend(_shogi_drop_actions(board, hands.get(player_id, {}), player_id))
-    return sorted(actions)
+    return sorted(action for action in actions if _shogi_safe_action(board, player_id, action))
+
+
+def _shogi_safe_action(board: Board, player_id: str, action: str) -> bool:
+    trial = _clone_board(board)
+    if "*" in action:
+        drop_piece, row, col = _parse_shogi_drop(action)
+        trial[row][col] = _owned_piece(drop_piece, player_id)
+    else:
+        (sr, sc), (er, ec), promote = _parse_shogi_move(action)
+        piece = trial[sr][sc]
+        if piece is None:
+            return False
+        trial[sr][sc] = None
+        trial[er][ec] = _shogi_promote(piece) if promote else piece
+    king = _find_piece(trial, _owned_piece("K", player_id))
+    if king is None:
+        return False
+    opponent = _other(player_id)
+    return not any(
+        king in _shogi_destinations(trial, row, col, piece, opponent)
+        for row, cells in enumerate(trial)
+        for col, piece in enumerate(cells)
+        if piece is not None and _piece_owner(piece) == opponent
+    )
 
 
 def _shogi_destinations(
@@ -827,9 +854,22 @@ def _xiangqi_legal_actions(board: Board, player_id: str) -> list[str]:
                 trial = _clone_board(board)
                 trial[er][ec] = trial[row][col]
                 trial[row][col] = None
-                if not _xiangqi_generals_face(trial):
+                if not _xiangqi_generals_face(trial) and _xiangqi_general_safe(trial, player_id):
                     actions.append(_xiangqi_square(row, col) + _xiangqi_square(er, ec))
     return sorted(actions)
+
+
+def _xiangqi_general_safe(board: Board, player_id: str) -> bool:
+    general = _find_piece(board, _owned_piece("G", player_id))
+    if general is None:
+        return False
+    opponent = _other(player_id)
+    return not any(
+        general in _xiangqi_destinations(board, row, col, piece, opponent)
+        for row, cells in enumerate(board)
+        for col, piece in enumerate(cells)
+        if piece is not None and _piece_owner(piece) == opponent
+    )
 
 
 def _xiangqi_destinations(

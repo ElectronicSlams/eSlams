@@ -6,7 +6,7 @@ import math
 import random
 from typing import Any
 
-from eslams.arena import Arena
+from eslams.arena import Arena, solo_state, validate_seed
 from eslams.hashing import sha256_text
 from eslams.state import ArenaState
 
@@ -15,8 +15,8 @@ PLAYERS = ("player_1", "player_2")
 
 class LunarLanderArena(Arena):
     id = "lunar-lander"
-    version = "1.0.0"
-    players = PLAYERS
+    version = "1.0.1"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["idle", "left", "right", "main"],
@@ -25,6 +25,7 @@ class LunarLanderArena(Arena):
     max_turns = 220
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         rng = random.Random(seed)
         return self._state(
             x=rng.uniform(-0.18, 0.18),
@@ -123,45 +124,47 @@ class LunarLanderArena(Arena):
         legal = [] if terminal else list(self.action_schema["enum"])
         stability = _clip(1.0 - (abs(x) + abs(vy) * 4.0 + abs(angle)), 0.0, 1.0)
         score = 1.0 if outcome and outcome.get("winner") == "player_1" else stability * 0.6
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "lander": {
-                    "x": _round(x),
-                    "y": _round(max(0.0, y)),
-                    "vx": _round(vx),
-                    "vy": _round(vy),
-                    "angle": _round(angle),
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "lander": {
+                        "x": _round(x),
+                        "y": _round(max(0.0, y)),
+                        "vx": _round(vx),
+                        "vy": _round(vy),
+                        "angle": _round(angle),
+                    },
+                    "fuel": _round(fuel),
+                    "landing_pad": {"x_min": -0.2, "x_max": 0.2, "y": 0.0},
+                    "history": history,
                 },
-                "fuel": _round(fuel),
-                "landing_pad": {"x_min": -0.2, "x_max": 0.2, "y": 0.0},
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores={"player_1": score, "player_2": 0.0},
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"lunar-lander:{seed}"),
-            render_hints={"renderer": "lunar-lander"},
-            metadata={
-                "seed": seed,
-                "x": x,
-                "y": y,
-                "vx": vx,
-                "vy": vy,
-                "angle": angle,
-                "angular_velocity": angular_velocity,
-            },
+                private_state_by_player={"player_1": {}, "player_2": {"role": "environment"}},
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores={"player_1": score, "player_2": 0.0},
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"lunar-lander:{seed}"),
+                render_hints={"renderer": "lunar-lander"},
+                metadata={
+                    "seed": seed,
+                    "x": x,
+                    "y": y,
+                    "vx": vx,
+                    "vy": vy,
+                    "angle": angle,
+                    "angular_velocity": angular_velocity,
+                },
+            )
         )
 
 
 class CarRacingArena(Arena):
     id = "car-racing"
-    version = "1.0.0"
-    players = PLAYERS
+    version = "1.0.1"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["accelerate", "brake", "left", "right", "coast"],
@@ -170,6 +173,7 @@ class CarRacingArena(Arena):
     max_turns = 180
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         track = _track_profile(seed)
         return self._state(
             progress=0.0,
@@ -263,47 +267,47 @@ class CarRacingArena(Arena):
             outcome = {"winner": "player_2", "reason": "lap_timeout"}
         legal = [] if terminal else list(self.action_schema["enum"])
         score = (
-            1.0
-            if outcome and outcome.get("winner") == "player_1"
-            else _clip(progress, 0.0, 1.0)
+            1.0 if outcome and outcome.get("winner") == "player_1" else _clip(progress, 0.0, 1.0)
         )
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "car": {
-                    "progress": _round(min(progress, 1.0)),
-                    "speed": _round(speed),
-                    "lane": _round(lane),
-                    "heading": _round(heading),
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "car": {
+                        "progress": _round(min(progress, 1.0)),
+                        "speed": _round(speed),
+                        "lane": _round(lane),
+                        "heading": _round(heading),
+                    },
+                    "track_window": _track_window(track, progress),
+                    "offtrack_ticks": offtrack_ticks,
+                    "history": history,
                 },
-                "track_window": _track_window(track, progress),
-                "offtrack_ticks": offtrack_ticks,
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"track": track}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores={"player_1": score, "player_2": 0.0},
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"car-racing:{seed}"),
-            render_hints={"renderer": "car-racing"},
-            metadata={
-                "seed": seed,
-                "progress": progress,
-                "speed": speed,
-                "lane": lane,
-                "heading": heading,
-                "track": track,
-            },
+                private_state_by_player={"player_1": {}, "player_2": {"track": track}},
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores={"player_1": score, "player_2": 0.0},
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"car-racing:{seed}"),
+                render_hints={"renderer": "car-racing"},
+                metadata={
+                    "seed": seed,
+                    "progress": progress,
+                    "speed": speed,
+                    "lane": lane,
+                    "heading": heading,
+                    "track": track,
+                },
+            )
         )
 
 
 class BipedalWalkerArena(Arena):
     id = "bipedal-walker"
-    version = "1.0.0"
-    players = PLAYERS
+    version = "1.0.1"
+    players = ("player_1",)
     action_schema = {
         "type": "string",
         "enum": ["left-step", "right-step", "balance", "jump"],
@@ -312,6 +316,7 @@ class BipedalWalkerArena(Arena):
     max_turns = 220
 
     def initial_state(self, seed: int) -> ArenaState:
+        validate_seed(seed)
         return self._state(
             distance=0.0,
             velocity=0.08,
@@ -411,36 +416,38 @@ class BipedalWalkerArena(Arena):
             if outcome and outcome.get("winner") == "player_1"
             else _clip(distance / 10.0, 0.0, 1.0)
         )
-        return ArenaState(
-            state_id=f"state_{turn:06d}",
-            turn=turn,
-            active_player="player_1",
-            public_state={
-                "walker": {
-                    "distance": _round(distance),
-                    "velocity": _round(velocity),
-                    "torso_angle": _round(torso_angle),
-                    "next_foot": next_foot,
-                    "energy": _round(energy),
+        return solo_state(
+            ArenaState(
+                state_id=f"state_{turn:06d}",
+                turn=turn,
+                active_player="player_1",
+                public_state={
+                    "walker": {
+                        "distance": _round(distance),
+                        "velocity": _round(velocity),
+                        "torso_angle": _round(torso_angle),
+                        "next_foot": next_foot,
+                        "energy": _round(energy),
+                    },
+                    "terrain_window": _terrain_window(terrain, distance),
+                    "history": history,
                 },
-                "terrain_window": _terrain_window(terrain, distance),
-                "history": history,
-            },
-            private_state_by_player={"player_1": {}, "player_2": {"terrain": terrain}},
-            legal_actions_by_player={"player_1": legal, "player_2": []},
-            scores={"player_1": score, "player_2": 0.0},
-            terminal=terminal,
-            outcome=outcome,
-            rng_commitment=sha256_text(f"bipedal-walker:{seed}"),
-            render_hints={"renderer": "bipedal-walker"},
-            metadata={
-                "seed": seed,
-                "distance": distance,
-                "velocity": velocity,
-                "torso_angle": torso_angle,
-                "next_foot": next_foot,
-                "terrain": terrain,
-            },
+                private_state_by_player={"player_1": {}, "player_2": {"terrain": terrain}},
+                legal_actions_by_player={"player_1": legal, "player_2": []},
+                scores={"player_1": score, "player_2": 0.0},
+                terminal=terminal,
+                outcome=outcome,
+                rng_commitment=sha256_text(f"bipedal-walker:{seed}"),
+                render_hints={"renderer": "bipedal-walker"},
+                metadata={
+                    "seed": seed,
+                    "distance": distance,
+                    "velocity": velocity,
+                    "torso_angle": torso_angle,
+                    "next_foot": next_foot,
+                    "terrain": terrain,
+                },
+            )
         )
 
 

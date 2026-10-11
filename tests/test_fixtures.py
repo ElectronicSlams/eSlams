@@ -31,8 +31,6 @@ def test_provider_fixtures_are_redacted_and_cover_mock_scenarios():
 
     assert expected <= seen
 
-
-def test_public_replay_fixture_is_safe_jsonl():
     rows = [
         json.loads(line)
         for line in (ROOT / "fixtures/replay/public_tic_tac_toe.jsonl")
@@ -47,8 +45,6 @@ def test_public_replay_fixture_is_safe_jsonl():
     assert rows[1]["state_hash_before"] == rows[0]["state_hash"]
     assert not scan_public_payload(rows)
 
-
-def test_publication_plan_fixture_is_no_secret_plan_envelope():
     payload = json.loads(
         (ROOT / "fixtures/publication/official_plan.json").read_text(encoding="utf-8")
     )
