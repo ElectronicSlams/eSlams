@@ -9,11 +9,13 @@
     "scope": "src/eslams; full pytest including packaged provenance; Python 3.9.6"
   },
   "requirements": {
-    "single_consolidation_pr": true,
+    "single_consolidation_pr": false,
     "release_published": false,
     "original_test_removal_target": 55,
     "maximum_coverage_drop_percentage_points": 2,
-    "also_check_relative_coverage_drop": true
+    "also_check_relative_coverage_drop": true,
+    "pr_policy": "One Core consolidation PR plus one focused Platform fix PR; reasonable PR counts explicitly authorized by the user.",
+    "task_pr_count": 2
   },
   "issues": [
     {
@@ -3817,14 +3819,35 @@
       "number": 219,
       "title": "\"Shuffle\" button only switches the selected opponent model instead of shuffling the model list",
       "work_package": "Platform routing",
-      "status": "pending; outside Core implementation",
-      "criterion": "Verify the live Platform control and resolve its label/behavior in the owning Platform repository. Do not pretend a Core code change fixes the hosted UI.",
+      "status": "closed: completed",
+      "criterion": "Shuffle the full displayed eligible opponent list without changing selected model, side or launch settings; preserve table autofill and stable hydration; verify repeated clicks, eligibility, keyboard/focus, and zero/one/two-option lists.",
       "evidence": {
         "owning_repository": "makriman/eSlamsPlatform (live repository; the ElectronicSlams Platform v1/v2 repositories are archives)",
-        "source_commit": "f4f615c908a5e7bcc73d34836368784ca03a904d",
-        "finding": "Live Arena presents a Shuffle control and a model rail. In apps/web/components/arena-client.tsx, the heads-up callback selects a different eligible model and calls onModel; it never changes the displayed roster ordering seed. The rail keeps the same seed and only pins the selected model. This is a hosted UI behavior/label mismatch, not a Core engine defect.",
-        "proposed_resolution": "If full list shuffling is retained as the product meaning, change the display-order state while preserving selected model, eligibility, launch inputs and multi-seat table autofill. Verify roster permutation, repeated clicks, zero/one-option behavior, selection persistence and hydration. A truthful Random opponent label is a narrower alternative if random selection is intended.",
-        "scope_decision": "Awaiting user choice: separate Platform PR for the fix (exception to one-Core-PR scope), or transfer the verified report to the live owning repository. No Platform file, PR, deployment, provider session or production data has been changed."
+        "source_commit": "7a4abae248c63f0a535c6508a7c7ffd0ec8eacf5",
+        "finding": "The heads-up Shuffle callback changed selected opponent and pinned it in the existing rail. A real browser regression reproduces this on unchanged main.",
+        "implementation_commit": "2e4a4f56fd206872ef3434da7139babbb48188ea",
+        "platform_pr": "https://github.com/makriman/eSlamsPlatform/pull/580",
+        "implementation": "A copied full-rail Fisher-Yates permutation changes the display order on each click, with a no-op-order fallback. Component-local IDs preserve the selected opponent and side, retain order after selection, reconcile against current eligible rows and reset for a different game. The 36-item rail limit and full roster picker are preserved; table autofill and launch/session logic remain unchanged.",
+        "local_verification": "Frozen install, full lint/typecheck/build and complete pnpm test pass: 1268 root cases and all 18 workspace test tasks (including 715 web cases and 109 Workerd runtime cases). Six new and four existing browser checks pass across desktop/mobile, with all six table-game autofills. Shuffle checks create no Arena sessions. Offline React Doctor covers 568 files with zero diagnostics. Existing lint/build warnings remain documented.",
+        "validation_followup": "An unchanged-main release test expected the retired transmitting CI score command. Its assertions now require the already-approved offline validator and lifecycle-disabled install, with only its reviewed exact-source digest renewed. All 68 CI-policy/release-identity tests pass; executable deploy edges and the hosted workflow are unchanged.",
+        "native_verification": {
+          "commit": "2e4a4f56fd206872ef3434da7139babbb48188ea",
+          "run_id": 38114322660,
+          "url": "https://github.com/makriman/eSlamsPlatform/actions/runs/38114322660",
+          "conclusion": "success"
+        },
+        "integration": "Three-way composition with separate Arena setup PR #466 at 1c710ad8a4a60ba6f7c67ead82538ab66fb55b91 is conflict-free and retains both fixes.",
+        "scope_decision": "The user amended the goal to allow a reasonable number of PRs, including Platform PRs. One focused Platform PR accompanies the existing Core consolidation PR.",
+        "release_status": "Proposed source only; not merged, released or deployed. No production D1/R2 mutation, paid provider call or live Cloudflare secret check."
+      },
+      "closure": {
+        "number": 219,
+        "state": "CLOSED",
+        "closed_at": "2026-10-11T05:19:48Z",
+        "url": "https://github.com/ElectronicSlams/eSlams/issues/219",
+        "implementation_commit": "2e4a4f56fd206872ef3434da7139babbb48188ea",
+        "platform_pr": "https://github.com/makriman/eSlamsPlatform/pull/580",
+        "stateReason": "COMPLETED"
       }
     }
   ],
@@ -5282,7 +5305,7 @@
     "line_coverage": 88.65200478755236,
     "coverage_change_percentage_points": 3.3191192195899646,
     "scope": "src/eslams; full suite with all 55 baseline removals; current Py3.12 and direct-floor Py3.10",
-    "note": "55/275 original cases removed (20%); useful assertions retained. Final implementation native/distribution integration passes; local full-suite coverage exceeds baseline. Platform issue #219 is awaiting its separate scoped disposition."
+    "note": "55/275 original cases removed (20%); useful assertions retained. Final implementation native/distribution integration passes; local full-suite coverage exceeds baseline. Platform issue #219 is addressed in verified Platform PR #580."
   },
   "verification_checkpoints": [
     {
@@ -5426,29 +5449,73 @@
       "coverage_percent": 88.65200478755236,
       "original_tests_removed": 55,
       "original_test_count": 275
+    },
+    {
+      "commit": "08fb8a4ef07778eca149f235162cc0a1372fe297",
+      "workflows": {
+        "Workflow lint": {
+          "conclusion": "success",
+          "databaseId": 37771327859,
+          "headSha": "08fb8a4ef07778eca149f235162cc0a1372fe297",
+          "name": "Workflow lint",
+          "status": "completed",
+          "url": "https://github.com/ElectronicSlams/eSlams/actions/runs/37771327859"
+        },
+        "CodeQL": {
+          "conclusion": "success",
+          "databaseId": 37771327694,
+          "headSha": "08fb8a4ef07778eca149f235162cc0a1372fe297",
+          "name": "CodeQL",
+          "status": "completed",
+          "url": "https://github.com/ElectronicSlams/eSlams/actions/runs/37771327694"
+        },
+        "Dependency audit": {
+          "conclusion": "success",
+          "databaseId": 37771327692,
+          "headSha": "08fb8a4ef07778eca149f235162cc0a1372fe297",
+          "name": "Dependency audit",
+          "status": "completed",
+          "url": "https://github.com/ElectronicSlams/eSlams/actions/runs/37771327692"
+        },
+        "Distribution consumers": {
+          "conclusion": "success",
+          "databaseId": 37771327695,
+          "headSha": "08fb8a4ef07778eca149f235162cc0a1372fe297",
+          "name": "Distribution consumers",
+          "status": "completed",
+          "url": "https://github.com/ElectronicSlams/eSlams/actions/runs/37771327695"
+        },
+        "Core CI": {
+          "conclusion": "success",
+          "databaseId": 37771327882,
+          "headSha": "08fb8a4ef07778eca149f235162cc0a1372fe297",
+          "name": "Core CI",
+          "status": "completed",
+          "url": "https://github.com/ElectronicSlams/eSlams/actions/runs/37771327882"
+        }
+      },
+      "note": "Prior review head passes all five native gates. The final ledger update changes documentation only and receives normal independent CI."
     }
   ],
   "inventory_recheck": {
-    "checked_at": "2026-10-08T11:37:30Z",
-    "open_issues": [
-      {
-        "number": 219,
-        "title": "\"Shuffle\" button only switches the selected opponent model instead of shuffling the model list",
-        "url": "https://github.com/ElectronicSlams/eSlams/issues/219"
-      }
-    ],
+    "checked_at": "2026-10-11T05:21:02.200957+00:00",
+    "open_issues": [],
     "open_prs": [
       {
-        "headRefOid": "96cc2154bbe700e453b62234e446c6520ec99f1f",
-        "isDraft": true,
+        "headRefOid": "08fb8a4ef07778eca149f235162cc0a1372fe297",
+        "isDraft": false,
         "number": 218,
         "title": "Consolidate Core backlog with verified integrity and contract repairs",
         "url": "https://github.com/ElectronicSlams/eSlams/pull/218"
       }
     ],
-    "closed_inventoried_issues": 148,
+    "closed_inventoried_issues": 149,
     "closed_original_prs": 44,
-    "note": "All original Core PRs are withdrawn after verified disposition; one Core consolidation PR remains. Hosted Platform issue #219 is the sole unresolved issue and needs its repository choice."
+    "task_replacement_prs": [
+      "https://github.com/ElectronicSlams/eSlams/pull/218",
+      "https://github.com/makriman/eSlamsPlatform/pull/580"
+    ],
+    "note": "All 149 inventoried Core issues and 44 original PRs are verified closed after their dispositions; original heads and branches are preserved (including two fork branches). Two replacement PRs remain for review: Core #218 and the focused live Platform #580. No merge or new release."
   },
   "verification_followups": [
     {
@@ -5463,5 +5530,13 @@
       "implementation": "Use an explicit v1 diagnostic format with ten-decimal float normalization and hash source state fields instead of their redundant raw state_hash. No engine state/hash/validation change; native exact byte-parity gate preserved.",
       "verification": "Six control arenas retain identical fingerprints with +/-1 ULP sin/cos perturbations, while changed Mountain Car physics (+1e-7 cosine perturbation) changes its fingerprint. Re-baseline changes diagnostic format, not arena behavior/version."
     }
-  ]
+  ],
+  "platform_fix_pr": {
+    "headRefOid": "2e4a4f56fd206872ef3434da7139babbb48188ea",
+    "isDraft": false,
+    "mergeStateStatus": "CLEAN",
+    "mergeable": "MERGEABLE",
+    "number": 580,
+    "url": "https://github.com/makriman/eSlamsPlatform/pull/580"
+  }
 }
