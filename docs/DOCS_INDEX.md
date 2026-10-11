@@ -15,6 +15,5 @@
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |
 
-The lab guide pins the already published 0.6.1 wheel. The Unreleased source
-changes in [CHANGELOG.md](../CHANGELOG.md) are proposals in PR #218 until merged
-and released. Local validation and green tests do not confer Official trust.
+The lab guide pins Core 0.6.2 and requires Python 3.10+. Release changes and
+migration boundaries are recorded in [CHANGELOG.md](../CHANGELOG.md). Local validation and green tests do not confer Official trust.

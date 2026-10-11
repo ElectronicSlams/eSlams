@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+from eslams import __version__
 from eslams._build_provenance import core_source_commit
 from eslams.artifacts import ArtifactValidator
 from eslams.fixtures import _without_signing_env, create_artifact_fixture
@@ -70,7 +71,7 @@ def main() -> None:
                 "artifact_id": report.artifact_id,
                 "kind": kind,
                 "classification": "LOCAL_FIXTURE",
-                "producer_core_version": "0.6.1",
+                "producer_core_version": __version__,
                 "producer_commit": core_source_commit(),
                 "dual_home": False,
                 "hf_url": None,

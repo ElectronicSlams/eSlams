@@ -1,14 +1,13 @@
 # Local lab quickstart
 
 Install the published engine in a fresh Python virtual environment. The package
-pin below is **published 0.6.1**, not the unreleased changes in PR #218. Published
-0.6.1 requires Python 3.9+; this proposed source branch requires Python 3.10+.
+pin below is **0.6.2**, which requires Python 3.10 or newer.
 Use Python 3.12 for this walkthrough.
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install eslams-core==0.6.1
+python -m pip install eslams-core==0.6.2
 eslams init
 eslams run --arena connect-four --agent random --opponent first-legal
 eslams validate runs/latest.eslams --profile runner-bundle
@@ -22,10 +21,10 @@ Open the reported HTML file in your browser. **Local Artifact ≠ Official or
 Grand Slam.** Validation checks the artifact's contents; it does not confer
 independent trust in a local keyholder or produce a public rank.
 
-For the proposed source changes, clone the repository, use a separate virtual
+For source development, clone the repository, use a separate virtual
 environment and run `python -m pip install -e ".[dev]"` instead of the PyPI
-installation. The native/distribution gates test this source independently;
-the old wheel does not gain these repairs.
+installation. Check out `v0.6.2` to work with the release source; follow
+[CONTRIBUTING.md](../CONTRIBUTING.md) for development checks.
 
 ## Bring your own provider key
 
@@ -43,7 +42,7 @@ CI supplies organization keys. Use the current [provider guide](PROVIDERS.md)
 for supported adapters and account-visible model discovery. A registry listing
 does not prove that your account can call a model or that it supports a game.
 
-After choosing a model and exporting your credential, the proposed CLI can
+After choosing a model and exporting your credential, the CLI can
 check metadata offline and explicitly opt into a live preflight:
 
 ```bash

@@ -49,7 +49,7 @@ all empty placeholders can override defaults and trigger fail-closed checks.
 See `SECURITY.md` for session/request secrets and `docs/ARTIFACTS.md` for signing.
 Real `.env` files are ignored.
 
-The proposed dependency baseline requires Python 3.10+; CI checks 3.10, 3.11
+Core 0.6.2 requires Python 3.10+; CI checks 3.10, 3.11
 and 3.12. Published Core 0.6.1 remains compatible with Python 3.9. Mypy uses the active
 interpreter version so installed dependency syntax is checked correctly; CI
 checks each supported version explicitly. Run mypy from that interpreter’s
@@ -160,8 +160,8 @@ Runtime floors are HTTPX 0.28.1, FastAPI 0.142.4, Starlette 1.7.0,
 Uvicorn 0.54.0 and cryptography 50.0.2. The dev extra uses pytest 9.1.1+,
 build 1.6.1+, Twine 7+ and setuptools 83+. The setuptools floor upgrades
 older bootstrap copies installed in Python 3.10 virtual environments. Build isolation uses Hatchling 1.32.4+, whose
-Metadata 2.5 output is understood by Twine 7. These are proposed source
-requirements; they do not change an already published wheel.
+Metadata 2.5 output is understood by Twine 7. These are the Core 0.6.2
+requirements; historical wheels retain their original dependency metadata.
 
 The [pytest advisory](https://osv.dev/vulnerability/GHSA-6w46-j5rx-g56g) affects
 versions through 9.0.2, while [patched pytest](https://pypi.org/project/pytest/9.1.1/)

@@ -15,7 +15,8 @@
     "maximum_coverage_drop_percentage_points": 2,
     "also_check_relative_coverage_drop": true,
     "pr_policy": "One Core consolidation PR plus one focused Platform fix PR; reasonable PR counts explicitly authorized by the user.",
-    "task_pr_count": 2
+    "task_pr_count": 2,
+    "scope": "Original backlog task constraints; superseded release authorization is recorded separately in release_followup."
   },
   "issues": [
     {
@@ -5538,5 +5539,19 @@
     "mergeable": "MERGEABLE",
     "number": 580,
     "url": "https://github.com/makriman/eSlamsPlatform/pull/580"
+  },
+  "release_followup": {
+    "version": "0.6.2",
+    "core_pr": 218,
+    "authorized_targets": [
+      "GitHub release",
+      "PyPI package"
+    ],
+    "verification_policy": "Require final-head and main-branch gates before publication; verify published distributions afterward.",
+    "historical_evidence": "Prior inventory snapshots and issue closure evidence above describe their recorded checkpoints, not current release state.",
+    "platform_pr": 580,
+    "platform_merged_at": "2026-10-11T14:17:36Z",
+    "platform_merge_commit": "888ecc1d28218caf7b20f2f1a700476e7a8cc29f",
+    "platform_deployment": "Excluded by user; separate deployer owns it."
   }
 }

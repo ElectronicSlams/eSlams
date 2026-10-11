@@ -79,7 +79,7 @@ from eslams.contracts.json_schema import export_schemas
 
 install_dir, first, second = map(Path, sys.argv[1:])
 assert Path(eslams.__file__).resolve().is_relative_to(install_dir.resolve())
-assert eslams.__version__ == version("eslams-core") == "0.6.1"
+assert eslams.__version__ == version("eslams-core") == "0.6.2"
 assert PACKAGED_CORE_COMMIT is not None
 export_schemas(first)
 export_schemas(second)

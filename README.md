@@ -36,6 +36,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [Release v0.6.2](#release-v062)
 - [Release v0.6.1](#release-v061)
 - [Release v0.6.0](#release-v060)
 - [Release v0.5.1](#release-v051)
@@ -94,7 +95,7 @@ python3 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-This development branch requires Python 3.10+ and tests Python 3.10 through 3.12.
+Core 0.6.2 requires Python 3.10+ and tests Python 3.10 through 3.12.
 Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
 configuration names; Core does not load `.env` automatically. Export selected
 settings explicitly and keep secrets in ignored local files or service
@@ -850,6 +851,31 @@ eslams validate runs/latest.eslams
 eslams replay runs/latest.eslams
 eslams models list --provider openai --game-agent-supported
 ```
+
+## Release v0.6.2
+
+`v0.6.2` consolidates the reviewed backlog with arena correctness repairs,
+private-state protection, authenticated sessions, bounded provider calls,
+portable distributions and accessible replay controls. It emits
+`eslams-runner:0.6.2` and `eslams-schema-bundle-v5`; the new cooperative v2
+contracts represent Hanabi team scores without an individual winner.
+
+Upgrade in Python **3.10 or newer**:
+
+```bash
+python -m pip install --upgrade eslams-core==0.6.2
+```
+
+Agent servers now bind to `127.0.0.1`; remote/container access needs an explicit
+`--host 0.0.0.0`. Arena sessions require a configured secret, and Runner HTTP
+requests require fresh HMAC signatures. Existing unsigned sessions cannot
+resume. Exports refuse existing destinations, and truncated runs cannot claim
+scoring eligibility. Revised arena behavior has distinct versions; compare
+historical artifacts using their producer Core version and commit. See the
+[full changelog](https://github.com/ElectronicSlams/eSlams/blob/main/CHANGELOG.md),
+[session protocol](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROTOCOL.md),
+[artifact migration notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/ARTIFACTS.md)
+and [arena versions](https://github.com/ElectronicSlams/eSlams/blob/main/docs/ARENA_VERSIONING.md).
 
 ## Release v0.6.1
 

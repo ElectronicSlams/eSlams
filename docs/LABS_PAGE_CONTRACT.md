@@ -7,7 +7,7 @@ has shipped. Platform owns its route, storage, authentication and browser UI.
 
 | Section | Core input | Platform behavior |
 | --- | --- | --- |
-| Quickstart | [LABS.md](LABS.md), published pin `eslams-core==0.6.1`, provider variable names | Show the tested keyless path and BYO-key boundary. Distinguish published installation from source changes. |
+| Quickstart | [LABS.md](LABS.md), published pin `eslams-core==0.6.2`, provider variable names | Show the tested keyless path and BYO-key boundary. Use the release pin and state its Python 3.10+ minimum. |
 | Samples | [samples.json](../sample_runs/samples.json) | Allowlist sample IDs, kind, producer version/commit, SHA-256, validation profile and explicit Local/fixture status. Link only verified objects. |
 | Upload and visualize | [artifact profiles](ARTIFACTS.md), [custody rules](PUBLIC_CUSTODY.md) | Distinguish private audit intake from public replay input, show authentication/disclosure rules and retain verification status. |
 

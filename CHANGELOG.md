@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.2 - 2026-10-11
 
 - Add one tested lab quickstart, sample classification/checksum inventory,
   private/public custody guidance, Platform Labs handoff and canonical docs
@@ -72,7 +72,7 @@
 - Correct artifact layout, signing-key format, reserved Arena events and the
   random-agent example. Historical topology counts describe their release;
   the 0.5.1 catalogue changed to 13 solo / 31 head-to-head / 6 multi-seat games.
-  Unreleased Hanabi uses a cooperative topology.
+  Hanabi now uses a cooperative topology.
 
 - Gin Rummy 1.0.1 fixes ace-low/disjoint meld evaluation and final stock discard
   cancellation; cancelled hands award no points. The compact hand and omitted
@@ -95,10 +95,11 @@
   paths. Provider projections preserve per-model usage and distinguish known
   partial costs from complete totals. Arena CLI accepts saved start/step outputs.
 
-- The proposed supported minimum is Python 3.10. Patched FastAPI/Starlette,
+- Core 0.6.2 requires Python 3.10 or newer. Patched FastAPI/Starlette,
   pytest and build/publishing tools require it; cryptography and runtime
   dependency floors now select current patched versions. Published historical
-  Core versions and artifacts are unchanged. No release is published here.
+  Core versions and artifacts are unchanged. Upgrade with
+  `python -m pip install --upgrade eslams-core==0.6.2` in a Python 3.10+ environment.
 
 ### Fixed
 
@@ -130,7 +131,8 @@
 - CI adds native Windows/macOS checks and audits current/direct-floor dependency
   sets without advisory ignore lists. Workflow actions are pinned and workflow
   lint downloads are checked against a fixed SHA-256 digest. Publish ref inputs
-  remain literal data and reject CR/LF; no publishing job is run by this work.
+  remain literal data and reject CR/LF. Releases publish through the
+  existing PyPI trusted-publisher workflow.
 
 - Agent/provider HTTP responses are streamed within a 1 MiB limit and must use
   identity encoding. Invalid Unicode and nonfinite numeric values are rejected
@@ -183,7 +185,7 @@
   existing destinations and input/output aliases, stage writes separately,
   and install the completed directory after success. Concurrent Core exporters
   cannot claim the same destination. Use a new output directory for each export;
-  no release or historical artifact bytes are changed by this repair.
+  historical artifact bytes remain unchanged.
 - Replay and golden exports refuse implicit file overwrite. `--overwrite`
   explicitly permits replacing output files, but replay always refuses its
   source or an alias. Expanded-artifact replays are rendered beside the

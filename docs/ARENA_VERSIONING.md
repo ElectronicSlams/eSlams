@@ -20,10 +20,10 @@ against today's rules as though the producer were the same. Current strict
 validation rejects replay or terminal inconsistencies; it does not repair the
 historical version collision.
 
-The consolidation assigns distinct current versions to the remaining affected
+Core 0.6.2 assigns distinct current versions to the remaining affected
 1.0.0 arenas, while retaining the versions already advanced for other repairs:
 
-| Arena | Proposed current version |
+| Arena | Core 0.6.2 arena version |
 | --- | --- |
 | Backgammon | 1.1.0 |
 | Bargaining | 1.0.1 |
@@ -41,8 +41,8 @@ The consolidation assigns distinct current versions to the remaining affected
 | Chess | 1.2.0 |
 | Prisoner's Dilemma | 1.0.1 |
 
-These are unreleased source versions. The already published 0.6.1 wheel does
-not acquire them.
+These versions ship in Core 0.6.2. Historical 0.6.1 wheels retain their
+original arena behavior.
 
 ## Behavior guard
 
