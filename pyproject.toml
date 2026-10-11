@@ -33,13 +33,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=9.1.1,<10",
-  "pytest-cov>=5,<7",
+  "pytest-cov>=5,<8",
   "jsonschema>=4.23,<5",
   "ruff>=0.6,<1",
-  "mypy>=1.10,<1.20",
+  "mypy>=1.10,<2.5",
   "build>=1.6.1,<2",
   "twine>=7,<8",
-  "setuptools>=83,<84"
+  "setuptools>=83,<85"
 ]
 
 [project.urls]
