@@ -421,7 +421,9 @@ def _write_artifact_directory(build: ArtifactBuildInput, artifact_dir: Path) -> 
         artifact_dir / "public_reasoning/reasoning.jsonl",
         _public_reasoning_rows(build.replay_events),
     )
-    _write_artifact_replay(artifact_dir)
+    _write_artifact_replay(
+        artifact_dir, public_summary=_public_result_summary(build.score, arena_id).to_dict()
+    )
     _write_json(artifact_dir / "scores/score.json", _canonical_score_summary(build.score))
     publication_eligible = _case_publication_eligible(build.score)
     _write_json(

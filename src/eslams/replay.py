@@ -32,7 +32,10 @@ def render_replay_html(
         else:
             status = "Content validated. Signature: " + report.signature.status + "."
         events = _read_replay_events(root)
-    return _write_replay(output, events, overwrite=overwrite, source=artifact_path, status=status)
+        scoring = _read_scoring_status(root)
+    return _write_replay(
+        output, events, overwrite=overwrite, source=artifact_path, status=status, scoring=scoring
+    )
 
 
 def _read_replay_events(artifact_path: Path) -> list[dict[str, Any]]:
@@ -44,9 +47,50 @@ def _read_replay_events(artifact_path: Path) -> list[dict[str, Any]]:
     ]
 
 
-def _write_artifact_replay(artifact_path: Path) -> Path:
+def _scoring_from_public_summary(summary: Any) -> dict[str, Any]:
+    """Validity block embedded in replay HTML, taken from the public result summary.
+
+    The viewer never decides who won an invalid run: it shows the published
+    winner (which may be null) and labels the run when it is excluded.
+    """
+    if not isinstance(summary, dict) or not isinstance(summary.get("valid_for_scoring"), bool):
+        return {"source": "unknown"}
+    score_value = summary.get("score")
+    outcome_value = summary.get("outcome")
+    score: dict[str, Any] = score_value if isinstance(score_value, dict) else {}
+    outcome: dict[str, Any] = outcome_value if isinstance(outcome_value, dict) else {}
+    status = score.get("scoring_status")
+    if not isinstance(status, str):
+        status = "scored" if summary["valid_for_scoring"] else "excluded_invalid_run"
+    reason = summary.get("scoring_safety_reason")
+    return {
+        "source": "public_result_summary",
+        "valid_for_scoring": summary["valid_for_scoring"],
+        "scoring_status": status,
+        "public_winner": summary.get("winner"),
+        "board_winner": outcome.get("board_winner", outcome.get("winner")),
+        "excluded_reason": reason if isinstance(reason, str) else None,
+    }
+
+
+def _read_scoring_status(artifact_path: Path) -> dict[str, Any]:
+    """Public replay packages may carry no result summary; the viewer then shows the board."""
+    path = artifact_path / "public" / "public_result_summary.json"
+    if not path.is_file():
+        return _scoring_from_public_summary(None)
+    try:
+        return _scoring_from_public_summary(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return _scoring_from_public_summary(None)
+
+
+def _write_artifact_replay(artifact_path: Path, *, public_summary: dict[str, Any] | None = None) -> Path:
     """Create the in-artifact replay before the artifact writer hashes it."""
-    return _write_replay(artifact_path / "replay" / "index.html", _read_replay_events(artifact_path))
+    return _write_replay(
+        artifact_path / "replay" / "index.html",
+        _read_replay_events(artifact_path),
+        scoring=_scoring_from_public_summary(public_summary),
+    )
 
 
 def _write_replay(
@@ -56,14 +100,20 @@ def _write_replay(
     overwrite: bool = False,
     source: Path | None = None,
     status: str = "Embedded preview — validate the complete artifact before trusting it.",
+    scoring: dict[str, Any] | None = None,
 ) -> Path:
-    payload = json.dumps(events, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    payload = _script_json(events)
+    scoring_payload = _script_json(scoring or _scoring_from_public_summary(None))
     return write_text_file(
-        output_path, _html(payload, status), overwrite=overwrite, sources=[] if source is None else [source]
+        output_path, _html(payload, status, scoring_payload), overwrite=overwrite, sources=[] if source is None else [source]
     )
 
 
-def _html(events_json: str, status: str) -> str:
+def _script_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+
+
+def _html(events_json: str, status: str, scoring_json: str = "{}") -> str:
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -427,8 +477,10 @@ def _html(events_json: str, status: str) -> str:
   </section>
 </main>
 <script type="application/json" id="events">""" + events_json + """</script>
+<script type="application/json" id="scoring">""" + scoring_json + """</script>
 <script>
 const events = JSON.parse(document.getElementById('events').textContent);
+const scoring = JSON.parse(document.getElementById('scoring').textContent || '{}');
 let selected = 0;
 let timer = null;
 let players = [];
@@ -653,14 +705,33 @@ function renderBoard(event) {
   return renderGrid(event);
 }
 
+function winnerRow(event, frameWinner) {
+  // Excluded (invalid) runs: show the published winner from the public result
+  // summary (possibly none), never the board result as a scored win.
+  if (scoring.source === 'public_result_summary' && scoring.scoring_status === 'excluded_invalid_run'
+      && (event.terminal || frameWinner != null)) {
+    const reason = scoring.excluded_reason ? `: ${scoring.excluded_reason}` : '';
+    return ['Winner', `${scoring.public_winner ?? 'none'} (excluded from scoring${reason}; board result: ${frameWinner ?? 'none'})`];
+  }
+  return ['Winner', frameWinner ?? 'none'];
+}
+
+function scoresRow(event) {
+  const text = Object.entries(event.scores || {}).map(([player, score]) => `${player}: ${score}`).join(', ') || 'none';
+  if (scoring.source === 'public_result_summary' && scoring.scoring_status === 'excluded_invalid_run' && text !== 'none') {
+    return ['Scores', `board only, excluded from scoring (${text})`];
+  }
+  return ['Scores', text];
+}
+
 function renderDetails(event, move) {
   const state = event.public_state || {};
   const outcome = event.outcome || {};
   const rows = [
     ['Move', move ? `${move.mover} -> ${labelForAction(move)}` : 'initial'],
-    ['Winner', outcome.winner ?? state.winner ?? 'none'],
+    winnerRow(event, outcome.winner ?? state.winner ?? null),
     ['Terminal', state.terminal_reason ?? outcome.reason ?? String(Boolean(event.terminal))],
-    ['Scores', Object.entries(event.scores || {}).map(([player, score]) => `${player}: ${score}`).join(', ') || 'none'],
+    scoresRow(event),
   ];
   if (state.fen) rows.push(['FEN', state.fen]);
   if (state.final_validation && Object.keys(state.final_validation).length) rows.push(['Validation', Object.entries(state.final_validation).map(([key, value]) => `${fieldName(key)}: ${value}`).join(', ')]);
