@@ -238,6 +238,37 @@ Each applied trace/replay action records one provenance value:
 the successful attempt event ID. Fallback actions are permanently unscoreable,
 including when the artifact has a valid signature.
 
+### Invalid runs in result summaries
+
+When a run is not valid for scoring (`valid_for_scoring: false`), it is
+recorded but excluded from scoring. `public/public_result_summary.json` and
+`scores/official_result.json` then carry:
+
+- `score.scoring_status: "excluded_invalid_run"` (valid runs: `"scored"`);
+- `score.primary_score: null` and `score.scores_by_player: null`;
+- the board result under explicitly labelled keys, `outcome.board_winner` and
+  `score.board_scores_by_player`, plus `score.invalid_reason_codes` and the
+  per-player fallback, agent-error and illegal-action counts.
+
+For a fallback run (the engine substituted the failed seat's moves), an
+`invalid-match` stop and a truncated run, `winner` and `outcome.winner` are
+`null`: a seat that never made a legal move is never published as the winner.
+
+`scores/score.json` `metrics` for an invalid run report `best_score: null`,
+`confidence_interval: null`, `sample_size: 0` and `scoring_status`;
+`raw_best_score` keeps the board value for audit. `best_score` and
+`raw_best_score` are the evaluated player's score (`metrics.evaluated_player`),
+not the best score at the table. The top-level `winner`, `primary_score` and
+`scores_by_player` in `score.json` are the private audit view of the board
+result and are unchanged; their contract for invalid runs is under review.
+
+The CLI `summary.winner` and the replay viewer's Winner row show the winner
+published in the public result summary, never the board result. For an
+excluded run the CLI adds `summary.scoring_status` and `summary.board_winner`,
+and the viewer labels the Winner and Scores rows "excluded from scoring" with
+the board result alongside. Bundle `leaderboard_rows.jsonl` and merged official
+rows copy the public summary's `winner`.
+
 Provider raw request/response bodies and credentials are not public receipt
 fields. Failed HTTP 200 wire parsing preserves sanitized request ID, status,
 usage, and cost evidence when those fields were safely available.
@@ -380,7 +411,9 @@ public state shapes use readable labeled values and lists rather than a JSON
 dump; nested histories show their most recent 40 entries with an explicit count.
 These are public-state summaries, not bespoke interactive simulators. Only
 provided chess FEN/validation data appears in the Details panel; winner comes
-from recorded outcomes rather than inferred nonterminal scores. The browser
+from recorded outcomes rather than inferred nonterminal scores, and for a run
+excluded from scoring it shows the public summary's winner with an "excluded
+from scoring" label (see Invalid runs in result summaries). The browser
 regression job checks all 50 arenas at 390, 768 and 1440 pixels, initial/final
 frames, control order, arrows, focus retention, targets, labels and numeric zero.
 

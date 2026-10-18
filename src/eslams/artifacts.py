@@ -421,7 +421,9 @@ def _write_artifact_directory(build: ArtifactBuildInput, artifact_dir: Path) -> 
         artifact_dir / "public_reasoning/reasoning.jsonl",
         _public_reasoning_rows(build.replay_events),
     )
-    _write_artifact_replay(artifact_dir)
+    _write_artifact_replay(
+        artifact_dir, public_summary=_public_result_summary(build.score, arena_id).to_dict()
+    )
     _write_json(artifact_dir / "scores/score.json", _canonical_score_summary(build.score))
     publication_eligible = _case_publication_eligible(build.score)
     _write_json(
@@ -1580,15 +1582,40 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
     if score.outcome and isinstance(score.outcome.get("reason"), str):
         reason = cast(str, score.outcome["reason"])
     publication_eligible = _case_publication_eligible(score)
+    if score.match_valid_for_scoring:
+        winner = score.winner
+        outcome = score.outcome
+        public_score: dict[str, Any] = {
+            "primary_score": score.primary_score,
+            "scores_by_player": score.scores_by_player,
+            "scoring_status": "scored",
+        }
+    else:
+        # The run is recorded but excluded from scoring. Do not let the
+        # spectator-facing fields claim a winner or a score; keep the raw board
+        # result explicitly labelled, plus the counts that explain the exclusion.
+        winner = None
+        outcome = (
+            {**score.outcome, "winner": None, "board_winner": score.outcome.get("winner")}
+            if score.outcome
+            else score.outcome
+        )
+        public_score = {
+            "primary_score": None,
+            "scores_by_player": None,
+            "scoring_status": "excluded_invalid_run",
+            "board_scores_by_player": score.scores_by_player,
+            "invalid_reason_codes": score.invalid_reason_codes,
+            "fallback_action_count_by_player": score.fallback_action_count_by_player,
+            "agent_error_count_by_player": score.agent_error_count_by_player,
+            "illegal_action_count_by_player": score.illegal_action_count_by_player,
+        }
     return PublicResultSummary(
         run_id=score.run_id,
         arena_id=arena_id,
-        winner=score.winner,
-        outcome=score.outcome,
-        score={
-            "primary_score": score.primary_score,
-            "scores_by_player": score.scores_by_player,
-        },
+        winner=winner,
+        outcome=outcome,
+        score=public_score,
         reason=reason,
         valid_for_scoring=score.match_valid_for_scoring,
         scoring_safety_reason=score.scoring_safety_reason,
@@ -1598,6 +1625,15 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
         aggregate_leaderboard_eligible=False,
         aggregate_ineligibility_reason="single_case_not_full_suite",
     )
+
+
+def public_result_summary_for_score(score: ScoreSummary, arena_id: str) -> dict[str, Any]:
+    """The public result projection, as written to public/public_result_summary.json.
+
+    CLI output and the replay viewer derive their winner display from this
+    projection so they can never disagree with the published summary.
+    """
+    return _public_result_summary(score, arena_id).to_dict()
 
 
 def _official_result_summary(score: ScoreSummary, arena_id: str) -> dict[str, Any]:

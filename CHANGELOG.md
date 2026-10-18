@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased (planned v0.6.3)
+
+- Invalid runs are no longer published as a win (#225, reported by pm25coder).
+  When a run is not valid for scoring, `public_result_summary.json` and
+  `official_result.json` report `primary_score: null`,
+  `scores_by_player: null` and `scoring_status: "excluded_invalid_run"`, with
+  the board result kept under `outcome.board_winner` and
+  `score.board_scores_by_player` plus the reason codes and fallback,
+  agent-error and illegal-action counts. Fallback, `invalid-match` and
+  truncated runs publish `winner: null`. The behaviour predates 0.6.2 (0.6.1
+  artifacts show it).
+- `score.json` metrics for invalid runs: `best_score` and
+  `confidence_interval` are `null`, `sample_size` is 0, `scoring_status` is set
+  and `raw_best_score` keeps the board value.
+- `metrics.best_score` is now the evaluated player's score. It previously took
+  the maximum over all seats, so an opponent's win could appear as the
+  evaluated player's best score.
+- CLI `summary.winner` and the replay viewer's Winner row follow the public
+  result summary. Excluded runs show `scoring_status`/`board_winner` in the CLI
+  and an "excluded from scoring" label in the viewer.
+- Unchanged pending review: top-level `score.json` `winner`/`primary_score`/
+  `scores_by_player`, forfeit winner semantics, and the fallback exit code.
+
 ## v0.6.2 - 2026-10-11
 
 - Add one tested lab quickstart, sample classification/checksum inventory,

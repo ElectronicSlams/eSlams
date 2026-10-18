@@ -376,7 +376,9 @@ def test_score_summary_primary_score_tracks_player_one():
     )
 
     assert summary.primary_score == 0.25
-    assert summary.metrics["best_score"] == 0.9
+    # best_score belongs to the evaluated player, not the best seat (was 0.9 before 0.6.3).
+    assert summary.metrics["evaluated_player"] == "player_1"
+    assert summary.metrics["best_score"] == 0.25
 
 
 def test_multi_player_forfeit_preserves_remaining_scores():
