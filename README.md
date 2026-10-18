@@ -266,8 +266,8 @@ Failure policies:
 
 | Policy | Effect |
 | --- | --- |
-| `fallback` | Use the arena's deterministic failure action, record `fallback_action`, and make the run unscoreable. |
-| `invalid-match` | Stop and mark `match_valid_for_scoring=false`. |
+| `fallback` | Use the arena's deterministic failure action, record `fallback_action`, and make the run unscoreable. The board result over substituted moves is never published as a win: the public summary and CLI print no winner and no score (`scoring_status: excluded_invalid_run`). |
+| `invalid-match` | Stop and mark `match_valid_for_scoring=false`. The public summary publishes no winner and no score. |
 | `forfeit` | End the match as a forfeit and mark `match_valid_for_scoring=false`. |
 
 Execution profiles are `interactive`, `smoke`, and `official_eval`.
