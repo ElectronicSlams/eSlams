@@ -1410,10 +1410,15 @@ def _score_summary(
             "suite_context": suite_context,
             "requested_time_budget_ms": requested_time_budget_ms,
             "effective_time_budget_ms": effective_time_budget_ms,
-            "sample_size": 1,
-            "confidence_interval": [primary, primary],
+            "sample_size": 1 if match_valid_for_scoring else 0,
+            # An invalid run (any fallback, forfeit-on-error, truncation, ...) is
+            # recorded but excluded from scoring: it must never feed best_score
+            # or a confidence interval. Raw values stay available for audit.
+            "confidence_interval": [primary, primary] if match_valid_for_scoring else None,
             "evaluated_player": "player_1",
-            "best_score": best_score,
+            "best_score": best_score if match_valid_for_scoring else None,
+            "scoring_status": "scored" if match_valid_for_scoring else "excluded_invalid_run",
+            "raw_best_score": best_score,
             "estimated_cost": {"status": "cost_unavailable"},
         },
         verification_level=verification_level,
