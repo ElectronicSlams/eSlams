@@ -1625,6 +1625,15 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
     )
 
 
+def public_result_summary_for_score(score: ScoreSummary, arena_id: str) -> dict[str, Any]:
+    """The public result projection, as written to public/public_result_summary.json.
+
+    CLI output and the replay viewer derive their winner display from this
+    projection so they can never disagree with the published summary.
+    """
+    return _public_result_summary(score, arena_id).to_dict()
+
+
 def _official_result_summary(score: ScoreSummary, arena_id: str) -> dict[str, Any]:
     public_summary = _public_result_summary(score, arena_id).to_dict()
     publication_eligible = _case_publication_eligible(score)

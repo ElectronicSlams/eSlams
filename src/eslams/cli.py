@@ -22,7 +22,7 @@ from eslams.arena_transport import (
     start_session,
     step_session,
 )
-from eslams.artifacts import ArtifactValidator
+from eslams.artifacts import ArtifactValidator, public_result_summary_for_score
 from eslams.bench import arena_step_benchmark
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
 from eslams.contracts.json_schema import export_schemas
@@ -972,12 +972,7 @@ def _main(argv: list[str] | None = None) -> int:
             "run_id": result.run_id,
             "artifact": str(result.artifact_path),
             "expanded_artifact": str(result.expanded_path),
-            "summary": {
-                "winner": result.score.winner,
-                "terminal_reason": _terminal_reason(result),
-                "match_valid_for_scoring": result.score.match_valid_for_scoring,
-                "invalid_reason": result.score.invalid_reason,
-            },
+            "summary": _run_summary(result),
             "score": result.score.to_dict(),
         }
         provider_error = _provider_error_summary(result)
@@ -1512,6 +1507,29 @@ def _agent_label(agent: str | HttpAgent | ModelProviderAgent) -> str:
     if isinstance(agent, HttpAgent):
         return agent.url
     return str(agent)
+
+
+def _run_summary(result: Any) -> dict[str, Any]:
+    """CLI summary row.
+
+    The winner shown is the published one (public_result_summary.json), so an
+    invalid run that the public summary excludes is never printed as a win.
+    """
+    score = result.score
+    public = public_result_summary_for_score(score, score.arena_id)
+    summary_score = public.get("score")
+    public_score: dict[str, Any] = summary_score if isinstance(summary_score, dict) else {}
+    summary: dict[str, Any] = {
+        "winner": public.get("winner"),
+        "terminal_reason": _terminal_reason(result),
+        "match_valid_for_scoring": score.match_valid_for_scoring,
+        "invalid_reason": score.invalid_reason,
+        "scoring_status": public_score.get("scoring_status"),
+    }
+    if public_score.get("scoring_status") == "excluded_invalid_run":
+        # Board result kept for audit, explicitly labelled as not a scored win.
+        summary["board_winner"] = score.winner
+    return summary
 
 
 def _terminal_reason(result: Any) -> str | None:
