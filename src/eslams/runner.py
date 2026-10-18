@@ -1364,7 +1364,10 @@ def _score_summary(
     scores = arena.score(state)
     winner = str(state.outcome["winner"]) if state.outcome and state.outcome.get("winner") else None
     primary = float(scores.get("player_1", 0.0)) if scores else 0.0
-    best_score = max(scores.values()) if scores else 0.0
+    # best_score describes the evaluated player (metrics.evaluated_player), not the
+    # best seat at the table. Taking max() over all seats reported an opponent's
+    # win (for example a forfeit) as the evaluated player's best score.
+    best_score = primary
     total_turns = max(1, len(trace_events))
     illegal = sum(
         1 for event in trace_events if "illegal_action" in event.public.get("markers", [])
