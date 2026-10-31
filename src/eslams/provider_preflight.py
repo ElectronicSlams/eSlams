@@ -10,6 +10,7 @@ import eslams.arenas  # noqa: F401
 from eslams.agents import ModelProviderAgent, ProviderCallError
 from eslams.arena import registry
 from eslams.contracts.provider import ProviderRuntimeConfig
+from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
@@ -39,7 +40,16 @@ def provider_preflight(
     arena_id: str,
     *,
     live: bool = False,
+    time_budget_ms: int | None = None,
+    max_output_tokens: int | None = None,
+    runtime_config: ProviderRuntimeConfig | None = None,
 ) -> dict[str, Any]:
+    for name, value in (("time_budget_ms", time_budget_ms),
+                        ("max_output_tokens", max_output_tokens)):
+        if value is not None and (
+            isinstance(value, bool) or not isinstance(value, int) or value < 1
+        ):
+            raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
@@ -135,26 +145,17 @@ def provider_preflight(
                 legal_actions=legal_actions,
                 action_schema=arena.action_schema,
                 history=[],
-                time_budget_ms=30_000,
+                time_budget_ms=time_budget_ms,
                 memory_policy="current_observation_plus_public_history",
-                metadata={"preflight": True},
+                metadata={"preflight": True, "model_execution_policy":
+                          model_execution_policy(time_budget_ms, max_output_tokens)},
             )
             agent = ModelProviderAgent(
                 provider=record.provider,
                 model=model,
                 api_key_env=credential_environment,
-                max_output_tokens=1024 if record.supports_reasoning else 128,
-                runtime_config=ProviderRuntimeConfig(
-                    timeout_ms=30_000,
-                    read_timeout_ms=30_000,
-                    max_retries=0,
-                    # Omitting OpenAI's reasoning control uses the provider's default
-                    # effort, even when Core labels the call reasoning-disabled.
-                    reasoning=(
-                        "enabled" if record.provider == "openai" and record.supports_reasoning
-                        else "disabled"
-                    ),
-                ),
+                max_output_tokens=max_output_tokens,
+                runtime_config=runtime_config or ProviderRuntimeConfig(),
             )
             try:
                 response = agent.act(request)
@@ -191,6 +192,7 @@ def provider_preflight(
         "model": model,
         "arena_id": arena_id,
         "preflight_mode": "live" if live else "registry_only",
+        "model_execution_policy": model_execution_policy(time_budget_ms, max_output_tokens),
         "ok": required,
         "checks": checks,
         "warnings": warnings,

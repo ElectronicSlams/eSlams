@@ -8,6 +8,7 @@ from pathlib import Path
 
 from eslams._build_provenance import core_source_commit
 from eslams.contracts.json_schema import export_schemas
+from eslams.contracts.versions import CORE_PACKAGE_VERSION
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
@@ -77,9 +78,10 @@ import eslams
 from eslams._build_provenance import PACKAGED_CORE_COMMIT, core_source_commit
 from eslams.contracts.json_schema import export_schemas
 
-install_dir, first, second = map(Path, sys.argv[1:])
+install_dir, first, second = map(Path, sys.argv[1:4])
+expected_version = sys.argv[4]
 assert Path(eslams.__file__).resolve().is_relative_to(install_dir.resolve())
-assert eslams.__version__ == version("eslams-core") == "0.6.2"
+assert eslams.__version__ == version("eslams-core") == expected_version
 assert PACKAGED_CORE_COMMIT is not None
 export_schemas(first)
 export_schemas(second)
@@ -100,6 +102,7 @@ print(json.dumps({"commit": core_source_commit(), "module": eslams.__file__}))
             str(install_dir),
             str(first_export),
             str(second_export),
+            CORE_PACKAGE_VERSION,
         ],
         cwd=outside_checkout,
         env=environment,

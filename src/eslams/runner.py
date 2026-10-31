@@ -36,14 +36,19 @@ from eslams.contracts.provider import (
 from eslams.contracts.usage import aggregate_provider_receipts
 from eslams.contracts.versions import RUNNER_VERSION
 from eslams.deadlines import (
+    ExecutionCancelled,
     action_deadline,
     call_in_thread,
+    cancellation_scope,
+    check_cancelled,
     current_deadline,
     ensure_agent_available,
+    receipt_invocation,
     receipt_snapshot,
     remaining_seconds,
 )
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
+from eslams.execution_policy import model_execution_policy
 from eslams.hashing import sha256_json
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, make_act_request
 from eslams.state import ArenaState
@@ -82,7 +87,8 @@ class RunConfig:
     model_id_by_player: dict[str, str] | None = None
     seed: int = 1
     max_turns: int | None = None
-    time_budget_ms: int = 30_000
+    time_budget_ms: int | None = None
+    cancellation: threading.Event | None = None
     run_id: str | None = None
     official_run_id: str | None = None
     model_lane_id: str | None = None
@@ -96,6 +102,8 @@ class RunConfig:
     overwrite: bool = False
 
     def __post_init__(self) -> None:
+        if self.cancellation is not None and not isinstance(self.cancellation, threading.Event):
+            raise ValueError("cancellation must be a thread-safe threading.Event or null")
         if self.max_turns is not None and (
             isinstance(self.max_turns, bool)
             or not isinstance(self.max_turns, int)
@@ -107,7 +115,7 @@ class RunConfig:
             ("case_attempt_index", self.case_attempt_index),
             ("shard_count", self.shard_count),
         ):
-            if name == "shard_count" and number is None:
+            if name in {"shard_count", "time_budget_ms"} and number is None:
                 continue
             if isinstance(number, bool) or not isinstance(number, int) or number < 1:
                 raise ValueError(f"{name} must be a positive integer")
@@ -244,6 +252,7 @@ class Runner:
                 agent,
                 request,
                 time_budget_ms=effective_time_budget_ms,
+                cancellation=config.cancellation,
             )
             receipt = None
             if response is not None and "_deadline_receipts" in response.metadata:
@@ -288,7 +297,16 @@ class Runner:
                 if failure_class not in invalid_reason_codes:
                     invalid_reason_codes.append(failure_class)
                 provider_status[player_id] = _provider_status(agent, response, markers)
-                if config.on_agent_error != "fallback":
+                interruption = failure_class in {
+                    "operator_cancelled", "provider_output_truncated", "provider_timeout",
+                    "provider_pending", "provider_cancelled", "provider_interrupted",
+                    "provider_auth_failed", "provider_permission_failed", "provider_rate_limited",
+                    "provider_request_rejected", "provider_refused",
+                    "provider_response_schema_mismatch",
+                    "provider_transport_error", "provider_unavailable",
+                }
+                error_policy = "invalid-match" if interruption else config.on_agent_error
+                if error_policy != "fallback":
                     invalid_reason = _invalid_reason(player_id, failure_class, markers)
                     match_valid_for_scoring = False
                     errors.append(
@@ -297,10 +315,10 @@ class Runner:
                             player_id=player_id,
                             reason=invalid_reason,
                             response=response,
-                            policy=config.on_agent_error,
+                            policy=error_policy,
                         )
                     )
-                    if config.on_agent_error == "forfeit":
+                    if error_policy == "forfeit":
                         next_state = _forfeit_state(
                             state,
                             forfeited_player=player_id,
@@ -1048,7 +1066,7 @@ def _request(
     episode_id: str,
     agent: Any,
     player_id: str,
-    time_budget_ms: int,
+    time_budget_ms: int | None,
     history: list[dict[str, Any]],
     memory_policy: str,
     case_id: str | None,
@@ -1076,6 +1094,9 @@ def _request(
         time_budget_ms=time_budget_ms,
         memory_policy=memory_policy,
         metadata={
+            "model_execution_policy": model_execution_policy(
+                time_budget_ms, getattr(agent, "max_output_tokens", None),
+            ),
             "state_hash": state.state_hash,
             "physical_run_id": run_id,
             "case_id": case_id,
@@ -1102,29 +1123,43 @@ def _call_agent(
     agent: Any,
     request: ActRequest,
     *,
-    time_budget_ms: int,
+    time_budget_ms: int | None,
+    cancellation: threading.Event | None = None,
 ) -> tuple[ActResponse | None, list[str], int]:
     start = time.perf_counter()
     markers: list[str] = []
+    invocation = object()
     try:
-        with action_deadline(time_budget_ms):
+        with (
+            action_deadline(time_budget_ms), receipt_invocation(invocation),
+            cancellation_scope(cancellation),
+        ):
             ensure_agent_available(agent)
-            if _alarm_supported():
+            if time_budget_ms is not None and cancellation is None and _alarm_supported():
                 with _agent_time_limit(time_budget_ms):
                     response = agent.act(request)
             else:
                 deadline = current_deadline()
-                assert deadline is not None
                 isolated = copy.deepcopy(request)
                 response = call_in_thread(
                     agent, lambda: agent.act(isolated), remaining_seconds(deadline),
                 )
+            remaining_seconds(current_deadline())
+        check_cancelled()
+        if cancellation is not None and cancellation.is_set():
+            raise ExecutionCancelled("execution cancelled by caller")
         if not isinstance(response, ActResponse):
             if isinstance(response, dict):
                 response = ActResponse.from_mapping(response)
             else:
                 response = ActResponse(action=response)
         response = ActResponse.from_mapping(response.to_dict())
+    except ExecutionCancelled as exc:
+        markers.extend(["agent_error", "operator_cancelled"])
+        response = ActResponse(action=None, metadata={
+            "error": _safe_error_text(exc), "error_kind": "operator_cancelled",
+            "_deadline_receipts": receipt_snapshot(agent, invocation=invocation),
+        })
     except TimeoutError as exc:
         markers.extend(["timeout", FailureClass.PROVIDER_TIMEOUT.value])
         response = ActResponse(
@@ -1132,7 +1167,7 @@ def _call_agent(
             metadata={
                 "error": _safe_error_text(exc),
                 "error_kind": FailureClass.PROVIDER_TIMEOUT.value,
-                "_deadline_receipts": receipt_snapshot(agent),
+                "_deadline_receipts": receipt_snapshot(agent, invocation=invocation),
             },
         )
     except ProviderCallError as exc:
@@ -1163,7 +1198,7 @@ def _call_agent(
             metadata={"error": _safe_error_text(exc), "error_kind": "agent_crash"},
         )
     latency_ms = int((time.perf_counter() - start) * 1000)
-    if latency_ms > time_budget_ms and "timeout" not in markers:
+    if time_budget_ms is not None and latency_ms > time_budget_ms and "timeout" not in markers:
         markers.append("timeout")
         response = ActResponse(
             action=None,
@@ -1172,6 +1207,10 @@ def _call_agent(
                 "error_kind": FailureClass.PROVIDER_TIMEOUT.value,
             },
         )
+    if callable(getattr(agent, "_receipt_snapshot", None)):
+        # The invocation-scoped batch is authoritative even when convenience
+        # fields are stale/empty or interruption happens before act starts.
+        response.metadata["_deadline_receipts"] = receipt_snapshot(agent, invocation=invocation)
     if response is None or response.action is None:
         markers.append("no_action")
     return response, markers, latency_ms
@@ -1187,7 +1226,10 @@ def _alarm_supported() -> bool:
 
 
 @contextmanager
-def _agent_time_limit(time_budget_ms: int) -> Iterator[None]:
+def _agent_time_limit(time_budget_ms: int | None) -> Iterator[None]:
+    if time_budget_ms is None:
+        yield
+        return
     alarm_signal = getattr(signal, "SIGALRM", None)
     real_timer = getattr(signal, "ITIMER_REAL", None)
     get_timer = getattr(signal, "getitimer", None)
@@ -1231,8 +1273,8 @@ def _trace_event(
     action: Any,
     latency_ms: int,
     markers: list[str],
-    requested_time_budget_ms: int,
-    effective_time_budget_ms: int,
+    requested_time_budget_ms: int | None,
+    effective_time_budget_ms: int | None,
     suite_context: dict[str, Any],
     event_type: str = "action",
     action_provenance: str | None = None,
@@ -1358,8 +1400,8 @@ def _score_summary(
     aggregate_cost: dict[str, Any],
     model_identity_verified: bool,
     suite_context: dict[str, Any],
-    requested_time_budget_ms: int,
-    effective_time_budget_ms: int,
+    requested_time_budget_ms: int | None,
+    effective_time_budget_ms: int | None,
 ) -> ScoreSummary:
     scores = arena.score(state)
     winner = str(state.outcome["winner"]) if state.outcome and state.outcome.get("winner") else None

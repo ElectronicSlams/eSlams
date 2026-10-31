@@ -46,9 +46,9 @@ def test_provider_finish_fields_survive_success_and_reject_parseable_truncation(
             return httpx.Response(200, json=payload)
 
         monkeypatch.setattr("eslams.agents.bounded_post", post)
-        with pytest.raises(ProviderCallError, match="incomplete") as failure:
+        with pytest.raises(ProviderCallError, match="token/context constraint") as failure:
             agent.act(_request())
-        assert failure.value.error_kind == "provider_request_rejected"
+        assert failure.value.error_kind == "provider_output_truncated"
         assert calls == [1]  # No action-repair or retry on a known incomplete response.
         assert agent.last_receipt["finish_reason"] == limit
         assert agent.last_receipt["finish_status"] == "incomplete"
@@ -86,7 +86,7 @@ def test_refusal_is_distinct_from_wire_or_action_parse_failure_without_prose_lea
         )
         with pytest.raises(ProviderCallError, match="refused") as failure:
             agent.act(_request())
-        assert calls == [1] and failure.value.error_kind == "provider_request_rejected"
+        assert calls == [1] and failure.value.error_kind == "provider_refused"
         assert agent.last_receipt["finish_status"] == "refused"
         assert private not in str(failure.value) and private not in json.dumps(agent.last_receipt)
         assert agent.last_receipt["usage"]["total_tokens"] == 16
@@ -141,8 +141,9 @@ def test_http200_body_errors_follow_the_http_retry_policy_and_preserve_attempts(
         )
         with pytest.raises(ProviderCallError) as failure:
             agent.act(_request())
-        assert failure.value.error_kind == kind and calls == [1, 1]
-        assert len(agent.attempt_receipts) == 2
+        expected_attempts = 2 if kind == "provider_rate_limited" else 1
+        assert failure.value.error_kind == kind and calls == [1] * expected_attempts
+        assert len(agent.attempt_receipts) == expected_attempts
         assert all(
             row["outcome"] == kind and row["finish_status"] == "failed"
             for row in agent.attempt_receipts

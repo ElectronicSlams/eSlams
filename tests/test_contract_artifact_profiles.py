@@ -21,6 +21,7 @@ from eslams.contracts.provider import no_secret_examples as provider_examples
 from eslams.contracts.publication import no_secret_examples as publication_examples
 from eslams.contracts.replay import no_secret_examples as replay_examples
 from eslams.contracts.runner_job import no_secret_examples as runner_job_examples
+from eslams.contracts.versions import CORE_PACKAGE_VERSION
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 from eslams.public_replay import create_uploaded_smoke_fixture, export_public_replay
 from eslams.runner import RunConfig, Runner
@@ -438,8 +439,8 @@ def test_cli_schema_export_validate_and_public_replay_commands(tmp_path: Path, c
         (tmp_path / "schemas" / "schema_bundle_manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["schema_version"] == "eslams.schema.bundle_manifest.v1"
-    assert manifest["core_package_version"] == "0.6.2"
-    assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v5"
+    assert manifest["core_package_version"] == CORE_PACKAGE_VERSION
+    assert manifest["schema_bundle_version"] == "eslams-schema-bundle-v6"
     assert any(
         row["schema_version"] == "eslams.catalogue.renderer.v1" for row in manifest["schemas"]
     )

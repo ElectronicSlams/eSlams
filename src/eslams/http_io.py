@@ -6,11 +6,12 @@ import asyncio
 import concurrent.futures
 import threading
 import time
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
 
-from eslams.deadlines import current_deadline, remaining_seconds
+from eslams.deadlines import check_cancelled, current_deadline, remaining_seconds
 from eslams.protocol import MAX_RESPONSE_BYTES, ProtocolError
 
 
@@ -33,6 +34,24 @@ _NETWORK_LOOP: asyncio.AbstractEventLoop | None = None
 _NETWORK_CAPACITY: asyncio.Semaphore | None = None
 
 
+@dataclass(frozen=True)
+class ResponseObservation:
+    """Private, bounded header evidence; never a claim about body or billing."""
+
+    status_code: int
+    headers: tuple[tuple[str, str], ...]
+
+
+def response_observation(exc: BaseException) -> ResponseObservation | None:
+    value = getattr(exc, "_eslams_response_observation", None)
+    return value if isinstance(value, ResponseObservation) else None
+
+
+def _attach_observation(exc: BaseException, observed: list[ResponseObservation]) -> None:
+    if observed:
+        exc.__dict__["_eslams_response_observation"] = observed[0]
+
+
 def _network_loop() -> asyncio.AbstractEventLoop:
     global _NETWORK_LOOP
     with _LOOP_LOCK:
@@ -51,30 +70,44 @@ def bounded_post(
     json: dict[str, Any],
     timeout: Any,
 ) -> httpx.Response:
+    deadline: float | None
     if isinstance(timeout, TotalTimeout):
         deadline = timeout.deadline
     elif isinstance(timeout, (int, float)):
         deadline = time.monotonic() + float(timeout)
     else:
-        phases = [value for value in timeout.as_dict().values() if value is not None]
-        deadline = time.monotonic() + max(phases, default=60.0)
+        # HTTP phase limits (notably connect/write) are not total thinking limits.
+        deadline = None
     action = current_deadline()
     if action is not None:
-        deadline = min(deadline, action)
+        deadline = min(deadline, action) if deadline is not None else action
     remaining_seconds(deadline)
-    coroutine = _bounded_post(url, headers=headers, json=json, timeout=timeout)
+    observed: list[ResponseObservation] = []
+    coroutine = _bounded_post(
+        url, headers=headers, json=json, timeout=timeout, _observed=observed,
+    )
     try:
         future = asyncio.run_coroutine_threadsafe(coroutine, _network_loop())
     except BaseException:
         coroutine.close()
         raise
     try:
-        return future.result(timeout=remaining_seconds(deadline))
-    except concurrent.futures.TimeoutError as exc:
+        while True:
+            check_cancelled()
+            remaining = remaining_seconds(deadline)
+            try:
+                return future.result(timeout=0.1 if remaining is None else min(0.1, remaining))
+            except concurrent.futures.TimeoutError:
+                if future.done():
+                    return future.result()
+    except TimeoutError as exc:
         future.cancel()
-        raise httpx.ReadTimeout("HTTP total elapsed deadline expired") from exc
-    except BaseException:
+        failure = httpx.ReadTimeout("HTTP total elapsed deadline expired")
+        _attach_observation(failure, observed)
+        raise failure from exc
+    except BaseException as exc:
         future.cancel()
+        _attach_observation(exc, observed)
         raise
 
 
@@ -84,6 +117,7 @@ async def _bounded_post(
     headers: dict[str, str],
     json: dict[str, Any],
     timeout: Any,
+    _observed: list[ResponseObservation] | None = None,
 ) -> httpx.Response:
     global _NETWORK_CAPACITY
     if _NETWORK_CAPACITY is None:
@@ -94,6 +128,19 @@ async def _bounded_post(
             httpx.AsyncClient(timeout=timeout) as client,
             client.stream("POST", url, headers=request_headers, json=json) as response,
         ):
+            if _observed is not None:
+                allowed = (
+                    "x-request-id", "request-id", "x-amzn-requestid",
+                    "cf-aig-request-id", "x-gateway-request-id",
+                )
+                _observed.append(ResponseObservation(
+                    status_code=response.status_code,
+                    headers=tuple(
+                        (key, response.headers[key])
+                        for key in allowed
+                        if key in response.headers and len(response.headers[key]) <= 256
+                    ),
+                ))
             encoding = response.headers.get("content-encoding", "identity").strip().lower()
             if encoding not in ("", "identity"):
                 raise ProtocolError("compressed agent/provider responses are unsupported")

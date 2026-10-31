@@ -161,7 +161,7 @@ def test_retired_models_fail_offline_and_live_without_network_and_default_is_act
     assert provider_preflight("anthropic", agent.model, "tic-tac-toe")["ok"]
 
 
-def test_gpt5_preflight_sends_minimal_effort_with_a_reasoning_and_action_budget(monkeypatch):
+def test_gpt5_preflight_preserves_native_defaults_without_framework_caps(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "fake-key")
     for model in ("gpt-5-mini", "gpt-5-nano"):
         monkeypatch.setattr(
@@ -172,8 +172,8 @@ def test_gpt5_preflight_sends_minimal_effort_with_a_reasoning_and_action_budget(
 
         def post(*args, json, requests=requests, **kwargs):
             requests.append(json)
-            assert json["reasoning"] == {"effort": "minimal"}
-            assert json["max_output_tokens"] >= 4096
+            assert "reasoning" not in json
+            assert "max_output_tokens" not in json
             return httpx.Response(
                 200,
                 json=_openai_wire(

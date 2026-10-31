@@ -64,22 +64,28 @@ class ActRequest:
     legal_actions: list[Any]
     action_schema: dict[str, Any]
     history: list[dict[str, Any]]
-    time_budget_ms: int
+    time_budget_ms: int | None
     memory_policy: str
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> ActRequest:
+        validate_json_payload(value, max_bytes=None)
         protocol_version = _required_str(value, "protocol_version")
-        if protocol_version != PROTOCOL_VERSION:
+        if protocol_version not in {PROTOCOL_VERSION, "eslams-act-v2"}:
             raise ProtocolError(
                 f"unsupported protocol_version {protocol_version!r}; expected {PROTOCOL_VERSION!r}"
             )
         turn_id = _required_int(value, "turn_id")
-        time_budget_ms = _required_int(value, "time_budget_ms")
+        if "time_budget_ms" not in value:
+            raise ProtocolError("time_budget_ms is required; v2 explicit null means unbounded")
+        time_budget_ms = (
+            None if protocol_version == "eslams-act-v2" and value.get("time_budget_ms") is None
+            else _required_int(value, "time_budget_ms")
+        )
         if turn_id < 0:
             raise ProtocolError("turn_id must be non-negative")
-        if time_budget_ms <= 0:
+        if time_budget_ms is not None and time_budget_ms <= 0:
             raise ProtocolError("time_budget_ms must be positive")
 
         arena = value.get("arena")
@@ -89,6 +95,14 @@ class ActRequest:
         if not isinstance(agent, Mapping):
             raise ProtocolError("agent must be an object")
 
+        metadata = _optional_dict(value, "metadata")
+        from eslams.execution_policy import validate_model_execution_policy
+        try:
+            if "execution_policy" in value:
+                raise ValueError("execution policy belongs in metadata.model_execution_policy")
+            validate_model_execution_policy(protocol_version, time_budget_ms, metadata)
+        except ValueError as exc:
+            raise ProtocolError(str(exc)) from exc
         return cls(
             protocol_version=protocol_version,
             run_id=_required_str(value, "run_id"),
@@ -103,7 +117,7 @@ class ActRequest:
             history=_required_history(value.get("history")),
             time_budget_ms=time_budget_ms,
             memory_policy=_required_str(value, "memory_policy"),
-            metadata=_optional_dict(value, "metadata"),
+            metadata=metadata,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -185,12 +199,16 @@ def make_act_request(
     legal_actions: list[Any],
     action_schema: dict[str, Any],
     history: list[dict[str, Any]],
-    time_budget_ms: int,
+    time_budget_ms: int | None,
     memory_policy: str,
     metadata: dict[str, Any] | None = None,
 ) -> ActRequest:
+    if time_budget_ms is None:
+        from eslams.execution_policy import model_execution_policy
+        metadata = dict(metadata or {})
+        metadata.setdefault("model_execution_policy", model_execution_policy(None))
     return ActRequest(
-        protocol_version=PROTOCOL_VERSION,
+        protocol_version="eslams-act-v2" if time_budget_ms is None else PROTOCOL_VERSION,
         run_id=run_id,
         episode_id=episode_id,
         turn_id=turn_id,
@@ -253,7 +271,7 @@ def _required_history(value: Any) -> list[dict[str, Any]]:
     return value
 
 
-def validate_json_payload(value: Any) -> None:
+def validate_json_payload(value: Any, *, max_bytes: int | None = MAX_RESPONSE_BYTES) -> None:
     """Reject invalid JSON/Unicode and oversized payloads before artifact logging."""
     try:
         encoded = json.dumps(
@@ -263,5 +281,6 @@ def validate_json_payload(value: Any) -> None:
         raise ProtocolError(
             "response must contain finite JSON values and valid UTF-8 text"
         ) from exc
-    if len(encoded) > MAX_RESPONSE_BYTES:
-        raise ProtocolError("agent/provider response exceeds 1 MiB limit")
+    if max_bytes is not None and len(encoded) > max_bytes:
+        detail = "1 MiB limit" if max_bytes == MAX_RESPONSE_BYTES else "configured byte limit"
+        raise ProtocolError(f"agent/provider response exceeds {detail}")

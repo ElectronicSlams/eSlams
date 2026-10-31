@@ -39,8 +39,9 @@ def test_failed_write_preserves_prior_outputs_and_installs_no_partial_artifact(
         assert (tmp_path / "proof.eslams.d/manifest.json").read_bytes() == old_manifest
         assert ArtifactValidator().validate(tmp_path / "proof.eslams") == []
     else:
-        assert list(tmp_path.iterdir()) == []
-    assert not list(tmp_path.glob(".*eslams*"))
+        assert not [p for p in tmp_path.iterdir() if not p.name.endswith(".eslams-output.lock")]
+    assert not [p for p in tmp_path.glob(".*eslams*")
+                if not p.name.endswith(".eslams-output.lock")]
 
 
 def test_install_failure_rolls_back_both_artifact_outputs(tmp_path: Path, monkeypatch):
@@ -60,7 +61,8 @@ def test_install_failure_rolls_back_both_artifact_outputs(tmp_path: Path, monkey
     assert prior.artifact_path.read_bytes() == archive
     assert (prior.expanded_path / "manifest.json").read_bytes() == manifest
     assert ArtifactValidator().validate(prior.artifact_path) == []
-    assert not list(tmp_path.glob(".*eslams*"))
+    assert not [p for p in tmp_path.glob(".*eslams*")
+                if not p.name.endswith(".eslams-output.lock")]
 
 
 def test_artifact_walk_propagates_nested_emfile(tmp_path: Path, monkeypatch):

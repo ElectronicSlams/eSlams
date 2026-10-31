@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "eslams-core"
-version = "0.6.2"
+version = "0.7.0.dev2+corebacklog.1"
 description = "Public eSlams framework for AI game agents, deterministic runs, artifacts, and replays."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -45,6 +45,8 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/ElectronicSlams/eSlams"
 Issues = "https://github.com/ElectronicSlams/eSlams/issues"
+Documentation = "https://github.com/ElectronicSlams/eSlams/blob/main/docs/DOCS_INDEX.md"
+Changelog = "https://github.com/ElectronicSlams/eSlams/blob/main/CHANGELOG.md"
 
 [project.scripts]
 eslams = "eslams.cli:main"

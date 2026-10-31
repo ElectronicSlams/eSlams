@@ -19,6 +19,7 @@ from eslams.contracts.versions import (
 class FailureClass(str, Enum):
     PROVIDER_TRANSPORT_ERROR = "provider_transport_error"
     PROVIDER_REQUEST_REJECTED = "provider_request_rejected"
+    PROVIDER_REFUSED = "provider_refused"
     PROVIDER_RESPONSE_SCHEMA_MISMATCH = "provider_response_schema_mismatch"
     ACTION_RESPONSE_UNPARSEABLE = "action_response_unparseable"
     ACTION_NOT_LEGAL = "action_not_legal"
@@ -27,6 +28,11 @@ class FailureClass(str, Enum):
     PROVIDER_PERMISSION_FAILED = "provider_permission_failed"
     PROVIDER_RATE_LIMITED = "provider_rate_limited"
     PROVIDER_TIMEOUT = "provider_timeout"
+    OPERATOR_CANCELLED = "operator_cancelled"
+    PROVIDER_OUTPUT_TRUNCATED = "provider_output_truncated"
+    PROVIDER_PENDING = "provider_pending"
+    PROVIDER_CANCELLED = "provider_cancelled"
+    PROVIDER_INTERRUPTED = "provider_interrupted"
     PROVIDER_UNAVAILABLE = "provider_unavailable"
 
 

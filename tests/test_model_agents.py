@@ -226,7 +226,7 @@ def test_http_agent_recursively_redacts_sensitive_endpoint_metadata(monkeypatch)
     )
 
 
-def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):
+def test_openai_gpt5_explicit_operator_reasoning_effort(monkeypatch):
     def fake_post(
         url: str,
         *,
@@ -254,7 +254,7 @@ def test_openai_gpt5_model_agent_limits_reasoning_budget(monkeypatch):
         provider="openai",
         model="gpt-5-mini",
         api_key_env="OPENAI_API_KEY",
-        runtime_config=ProviderRuntimeConfig(reasoning="enabled"),
+        runtime_config=ProviderRuntimeConfig(reasoning="enabled", reasoning_effort="minimal"),
     ).act(_request())
 
     assert response.action == 1
@@ -284,7 +284,7 @@ def test_openai_registry_can_select_none_reasoning_effort(monkeypatch):
         provider="openai",
         model="gpt-5.4-mini",
         api_key_env="OPENAI_API_KEY",
-        runtime_config=ProviderRuntimeConfig(reasoning="enabled"),
+        runtime_config=ProviderRuntimeConfig(reasoning="enabled", reasoning_effort="none"),
     ).act(_request())
 
     assert response.action == 1
@@ -300,7 +300,7 @@ def test_gemini_model_agent_receipt_does_not_include_key(monkeypatch):
     ) -> httpx.Response:
         assert "gemini-test:generateContent" in url
         assert headers["x-goog-api-key"] == "gemini-key"
-        assert json["generationConfig"] == {"maxOutputTokens": 1024}
+        assert json["generationConfig"] == {}
         return httpx.Response(
             200,
             json={
@@ -349,7 +349,6 @@ def test_google_provider_uses_gemini_endpoint_and_configurable_thinking(monkeypa
         assert "gemini-thinking:generateContent" in url
         assert headers["x-goog-api-key"] == "gemini-key"
         assert json["generationConfig"] == {
-            "maxOutputTokens": 4096,
             "thinkingConfig": {"thinkingBudget": 256},
         }
         return httpx.Response(
@@ -404,7 +403,7 @@ def test_gemma_model_agent_omits_thinking_config(monkeypatch):
         timeout: Any,
     ) -> httpx.Response:
         assert "gemma-3-27b-it:generateContent" in url
-        assert json["generationConfig"] == {"maxOutputTokens": 1024, "temperature": 0.0}
+        assert json["generationConfig"] == {}
         return httpx.Response(
             200,
             json={
@@ -458,6 +457,7 @@ def test_anthropic_model_agent_sends_thinking_budget(monkeypatch):
         provider="anthropic",
         model="claude-thinking",
         api_key_env="ANTHROPIC_API_KEY",
+        max_output_tokens=4096,  # Explicit operator policy, never the framework default.
         runtime_config=ProviderRuntimeConfig(
             reasoning_budget_tokens=1024,
             reasoning="enabled",
@@ -531,7 +531,7 @@ def test_provider_agent_retries_and_records_every_attempt(monkeypatch):
     ) -> httpx.Response:
         calls["count"] += 1
         if calls["count"] == 1:
-            return httpx.Response(500, text="temporary provider failure")
+            return httpx.Response(429, text="definitive rate rejection")
         return httpx.Response(
             200,
             json=_openai_wire(
@@ -557,7 +557,7 @@ def test_provider_agent_retries_and_records_every_attempt(monkeypatch):
     assert calls["count"] == 2
     assert [receipt["attempt"] for receipt in agent.attempt_receipts] == [1, 2]
     assert [receipt["outcome"] for receipt in agent.attempt_receipts] == [
-        "provider_unavailable",
+        "provider_rate_limited",
         "ok",
     ]
 

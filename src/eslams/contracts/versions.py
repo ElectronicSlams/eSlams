@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-CORE_PACKAGE_VERSION = "0.6.2"
+CORE_PACKAGE_VERSION = "0.7.0.dev2+corebacklog.1"
 RUNNER_VERSION = f"eslams-runner:{CORE_PACKAGE_VERSION}"
 PROTOCOL_VERSION = "eslams-act-v1"
-SCHEMA_BUNDLE_VERSION = "eslams-schema-bundle-v5"
+SCHEMA_BUNDLE_VERSION = "eslams-schema-bundle-v6"
 CORE_CONTRACT_VERSION = "2.0"
 CORE_PROMPT_VERSION = "eslams.core.prompt.v2"
 CORE_ACTION_SCHEMA_VERSION = "eslams.core.action_schema.v2"
@@ -26,6 +26,8 @@ OFFICIAL_RESULT_SCHEMA_VERSION = "eslams.official.result.v1"
 PUBLICATION_BUNDLE_SCHEMA_VERSION = "eslams.publication.bundle.v1"
 PUBLICATION_VALIDATION_SCHEMA_VERSION = "eslams.publication.validation.v1"
 RUNNER_JOB_SCHEMA_VERSION = "eslams.runner.job.v1"
+RUNNER_JOB_REQUEST_SCHEMA_VERSION = "eslams.runner.job.request.v2"
+MODEL_EXECUTION_POLICY_SCHEMA_VERSION = "eslams.model-execution-policy.v1"
 CATALOGUE_GAME_SCHEMA_VERSION = "eslams.catalogue.game.v1"
 CATALOGUE_MODEL_SCHEMA_VERSION = "eslams.catalogue.model.v1"
 CATALOGUE_RENDERER_SCHEMA_VERSION = "eslams.catalogue.renderer.v1"
@@ -72,6 +74,8 @@ SCHEMA_VERSIONS: tuple[str, ...] = (
     PUBLICATION_BUNDLE_SCHEMA_VERSION,
     PUBLICATION_VALIDATION_SCHEMA_VERSION,
     RUNNER_JOB_SCHEMA_VERSION,
+    RUNNER_JOB_REQUEST_SCHEMA_VERSION,
+    MODEL_EXECUTION_POLICY_SCHEMA_VERSION,
     CATALOGUE_GAME_SCHEMA_VERSION,
     CATALOGUE_MODEL_SCHEMA_VERSION,
     CATALOGUE_RENDERER_SCHEMA_VERSION,

@@ -72,7 +72,7 @@ def test_preflight_distinguishes_catalogue_namespaces_from_available_adapters(mo
         assert "unknown" not in result["error"]["message"]
 
 
-def test_excessive_retry_after_aborts_worker_calls_without_sleeping_or_losing_receipt(monkeypatch):
+def test_retry_after_beyond_explicit_deadline_preserves_receipt_without_sleeping(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setattr("eslams.agents.time.sleep", lambda *a: pytest.fail("must not sleep"))
     for value in ("86400", "1e300", "Thu, 31 Dec 2099 23:59:59 GMT"):
@@ -91,7 +91,7 @@ def test_excessive_retry_after_aborts_worker_calls_without_sleeping_or_losing_re
         )
         with ThreadPoolExecutor(max_workers=1) as executor:
             attempt = executor.submit(agent.act, _request())
-            with pytest.raises(TimeoutError, match="5-second"):
+            with pytest.raises(TimeoutError, match="action deadline"):
                 attempt.result(timeout=2)
         assert calls == [1]
         assert len(agent.attempt_receipts) == 1

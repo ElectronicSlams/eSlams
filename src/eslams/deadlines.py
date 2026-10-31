@@ -12,19 +12,85 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar, copy_context
-from typing import Any
+from typing import Any, overload
 
 _DEADLINE: ContextVar[float | None] = ContextVar("eslams_action_deadline", default=None)
+_RECEIPT_INVOCATION: ContextVar[object | None] = ContextVar(
+    "eslams_receipt_invocation", default=None,
+)
+_CANCELLATION: ContextVar[threading.Event | None] = ContextVar("eslams_cancellation", default=None)
 _CALL_LOCK = threading.Lock()
 _CALLS: dict[int, Any] = {}
 _CALL_CAPACITY = threading.BoundedSemaphore(32)
+
+
+def current_receipt_invocation() -> object | None:
+    return _RECEIPT_INVOCATION.get()
+
+
+@contextmanager
+def receipt_invocation(invocation: object) -> Iterator[None]:
+    token = _RECEIPT_INVOCATION.set(invocation)
+    try:
+        yield
+    finally:
+        _RECEIPT_INVOCATION.reset(token)
 
 
 def current_deadline() -> float | None:
     return _DEADLINE.get()
 
 
-def remaining_seconds(deadline: float) -> float:
+class ExecutionCancelled(RuntimeError):
+    """Caller interruption; never a competitive game result."""
+
+
+def check_cancelled() -> None:
+    cancellation = _CANCELLATION.get()
+    if cancellation is not None and cancellation.is_set():
+        raise ExecutionCancelled("execution cancelled by caller; remote work may remain unknown")
+
+
+@contextmanager
+def cancellation_scope(cancellation: threading.Event | None) -> Iterator[None]:
+    token = _CANCELLATION.set(cancellation if cancellation is not None else _CANCELLATION.get())
+    try:
+        check_cancelled()
+        yield
+    finally:
+        _CANCELLATION.reset(token)
+
+
+def sleep_with_cancellation(seconds: float) -> None:
+    check_cancelled()
+    if _CANCELLATION.get() is None:
+        time.sleep(seconds)
+        return
+    remaining = seconds
+    while remaining > 0:
+        check_cancelled()
+        remaining_seconds(current_deadline())
+        interval = min(remaining, 0.05)
+        time.sleep(interval)
+        remaining -= interval
+
+
+@overload
+def remaining_seconds(deadline: float) -> float: ...
+
+
+@overload
+def remaining_seconds(deadline: None) -> None: ...
+
+
+@overload
+def remaining_seconds(deadline: float | None) -> float | None: ...
+
+
+def remaining_seconds(deadline: float | None) -> float | None:
+    check_cancelled()
+    if deadline is None:
+        return None
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise TimeoutError("action deadline expired")
@@ -32,11 +98,15 @@ def remaining_seconds(deadline: float) -> float:
 
 
 @contextmanager
-def action_deadline(milliseconds: int) -> Iterator[None]:
-    requested = time.monotonic() + milliseconds / 1000
+def action_deadline(milliseconds: int | None) -> Iterator[None]:
+    requested = time.monotonic() + milliseconds / 1000 if milliseconds is not None else None
     existing = current_deadline()
-    token = _DEADLINE.set(min(requested, existing) if existing is not None else requested)
+    effective = min(requested, existing) if requested is not None and existing is not None else (
+        existing if existing is not None else requested
+    )
+    token = _DEADLINE.set(effective)
     try:
+        check_cancelled()
         yield
     finally:
         _DEADLINE.reset(token)
@@ -48,7 +118,7 @@ def ensure_agent_available(agent: Any) -> None:
             raise TimeoutError("agent still has an unfinished action; late work is quarantined")
 
 
-def call_in_thread(agent: Any, function: Callable[[], Any], seconds: float) -> Any:
+def call_in_thread(agent: Any, function: Callable[[], Any], seconds: float | None) -> Any:
     identity = id(agent)
     with _CALL_LOCK:
         if identity in _CALLS:
@@ -80,14 +150,26 @@ def call_in_thread(agent: Any, function: Callable[[], Any], seconds: float) -> A
             _CALLS.pop(identity, None)
             _CALL_CAPACITY.release()
         raise
-    if not done.wait(seconds):
-        raise TimeoutError("agent action deadline expired; late result will be discarded")
+    deadline = time.monotonic() + seconds if seconds is not None else None
+    while not done.is_set():
+        check_cancelled()
+        remaining = remaining_seconds(deadline)
+        done.wait(0.05 if remaining is None else min(0.05, remaining))
+    check_cancelled()
     if failures:
         raise failures[0]
     return result[0]
 
 
-def receipt_snapshot(agent: Any) -> list[dict[str, Any]]:
+def receipt_snapshot(
+    agent: Any, *, invocation: object | None = None,
+) -> list[dict[str, Any]]:
+    snapshot = getattr(agent, "_receipt_snapshot", None)
+    if invocation is not None and callable(snapshot):
+        rows: object = snapshot(invocation)
+        if not isinstance(rows, list):
+            return []
+        return copy.deepcopy([row for row in rows if isinstance(row, dict)])
     receipts = getattr(agent, "attempt_receipts", None)
     if isinstance(receipts, list):
         return copy.deepcopy([row for row in receipts if isinstance(row, dict)])

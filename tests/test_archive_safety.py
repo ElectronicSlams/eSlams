@@ -120,7 +120,8 @@ def test_all_archive_consumers_reject_traversal_without_public_output(tmp_path: 
     ):
         with pytest.raises(ValueError):
             consume()
-    assert list(tmp_path.iterdir()) == [path]
+    assert [p for p in tmp_path.iterdir()
+            if not p.name.endswith(".eslams-output.lock")] == [path]
 
 
 def test_existing_nonarchives_are_distinguished_from_missing_files(tmp_path: Path):

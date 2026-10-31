@@ -20,6 +20,7 @@ PROVIDER_OUTCOMES: tuple[str, ...] = (
     "ok",
     "provider_transport_error",
     "provider_request_rejected",
+    "provider_refused",
     "provider_response_schema_mismatch",
     "action_response_unparseable",
     "action_not_legal",
@@ -28,6 +29,11 @@ PROVIDER_OUTCOMES: tuple[str, ...] = (
     "provider_permission_failed",
     "provider_rate_limited",
     "provider_timeout",
+    "operator_cancelled",
+    "provider_output_truncated",
+    "provider_interrupted",
+    "provider_cancelled",
+    "provider_pending",
     "provider_unavailable",
     "no_action",
     "gateway_auth_failed",
@@ -89,16 +95,20 @@ GATEWAY_AUTH_MODES: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class ProviderRuntimeConfig:
-    timeout_ms: int = 60_000
+    timeout_ms: int | None = None
     connect_timeout_ms: int = 10_000
-    read_timeout_ms: int = 60_000
+    read_timeout_ms: int | None = None
     max_retries: int = 0
+    action_repair_attempts: int = 0
+    retry_jitter: bool = True
     retry_backoff_ms: int = 250
     concurrency_limit: int = 1
     rate_limit_per_minute: int | None = None
     gateway_base_url: str | None = None
     gateway_mode: str = "direct_provider"
     gateway_auth_mode: str = "disabled"
+    reasoning_effort: str | None = None
+    history_window_turns: int | None = None
     reasoning_budget_tokens: int | None = None
     gemini_thinking_budget: int | None = None
     reasoning: Literal["disabled", "enabled", "auto"] = "auto"
@@ -115,30 +125,47 @@ class ProviderRuntimeConfig:
             ("read_timeout_ms", self.read_timeout_ms),
             ("concurrency_limit", self.concurrency_limit),
         ):
-            if isinstance(value, bool) or value < 1:
+            if name in {"timeout_ms", "read_timeout_ms"} and value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
                 raise ValueError(f"{name} must be a positive integer")
         for name, value in (
             ("max_retries", self.max_retries),
+            ("action_repair_attempts", self.action_repair_attempts),
             ("retry_backoff_ms", self.retry_backoff_ms),
         ):
-            if isinstance(value, bool) or value < 0:
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"{name} must be a non-negative integer")
         if self.rate_limit_per_minute is not None and (
-            isinstance(self.rate_limit_per_minute, bool) or self.rate_limit_per_minute < 1
+            isinstance(self.rate_limit_per_minute, bool)
+            or not isinstance(self.rate_limit_per_minute, int) or self.rate_limit_per_minute < 1
         ):
             raise ValueError("rate_limit_per_minute must be a positive integer or null")
+        if not isinstance(self.retry_jitter, bool):
+            raise ValueError("retry_jitter must be boolean")
         if self.gateway_mode not in GATEWAY_MODES:
             raise ValueError(f"unsupported gateway_mode {self.gateway_mode!r}")
         if self.gateway_auth_mode not in GATEWAY_AUTH_MODES:
             raise ValueError(f"unsupported gateway_auth_mode {self.gateway_auth_mode!r}")
+        if self.reasoning_effort is not None and (
+            not isinstance(self.reasoning_effort, str) or not self.reasoning_effort.strip()
+        ):
+            raise ValueError("reasoning_effort must be a nonempty explicit choice or null")
+        if self.history_window_turns is not None and (
+            isinstance(self.history_window_turns, bool)
+            or not isinstance(self.history_window_turns, int) or self.history_window_turns < 1
+        ):
+            raise ValueError("history_window_turns must be a positive operator choice or null")
         if self.reasoning not in {"disabled", "enabled", "auto"}:
             raise ValueError(f"unsupported reasoning mode {self.reasoning!r}")
         if self.reasoning_budget_tokens is not None and (
-            isinstance(self.reasoning_budget_tokens, bool) or self.reasoning_budget_tokens < 0
+            isinstance(self.reasoning_budget_tokens, bool)
+            or not isinstance(self.reasoning_budget_tokens, int) or self.reasoning_budget_tokens < 0
         ):
             raise ValueError("reasoning_budget_tokens must be non-negative or null")
         if self.gemini_thinking_budget is not None and (
-            isinstance(self.gemini_thinking_budget, bool) or self.gemini_thinking_budget < -1
+            isinstance(self.gemini_thinking_budget, bool)
+            or not isinstance(self.gemini_thinking_budget, int) or self.gemini_thinking_budget < -1
         ):
             raise ValueError("gemini_thinking_budget must be -1 or a non-negative integer")
         if any(not item.strip() for item in self.openrouter_provider_order):
@@ -162,12 +189,16 @@ class ProviderRuntimeConfig:
             "connect_timeout_ms": self.connect_timeout_ms,
             "read_timeout_ms": self.read_timeout_ms,
             "max_retries": self.max_retries,
+            "action_repair_attempts": self.action_repair_attempts,
+            "retry_jitter": self.retry_jitter,
             "retry_backoff_ms": self.retry_backoff_ms,
             "concurrency_limit": self.concurrency_limit,
             "rate_limit_per_minute": self.rate_limit_per_minute,
             "gateway_base_url": self.gateway_base_url,
             "gateway_mode": self.gateway_mode,
             "gateway_auth_mode": self.gateway_auth_mode,
+            "reasoning_effort": self.reasoning_effort,
+            "history_window_turns": self.history_window_turns,
             "reasoning_budget_tokens": self.reasoning_budget_tokens,
             "gemini_thinking_budget": self.gemini_thinking_budget,
             "reasoning": self.reasoning,

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -29,6 +31,7 @@ from eslams.contracts.versions import (
     ARENA_START_RESULT_SCHEMA_VERSION,
     ARENA_STEP_RESULT_SCHEMA_VERSION,
 )
+from eslams.hashing import canonical_json, sha256_json
 from eslams.public_catalogue import PUBLIC_GAME_CATALOGUE_BY_ID
 from eslams.replay_projection import display_frame_for_state
 from eslams.state import ArenaState
@@ -46,6 +49,8 @@ _MAX_CLOCK_SKEW_SECONDS = 60
 DEFAULT_SESSION_ACTION_LIMIT = 200
 DEFAULT_PAGE_LIMIT = 50
 MAX_ACTION_LIMIT = 200
+_ACTION_CURSOR_PREFIX = "ep2"
+_ACTION_CURSOR_DOMAIN = b"eslams.arena.legal-actions-cursor.v2\n"
 log = logging.getLogger(__name__)
 
 
@@ -575,6 +580,8 @@ def legal_actions_page(
     query: str | None = None,
     limit: int = DEFAULT_PAGE_LIMIT,
     cursor: str | None = None,
+    *,
+    allow_legacy_cursor: bool = False,
 ) -> dict[str, Any]:
     state = deserialize_session_state(session_state, strict_hash=True)
     session = _session_metadata(state)
@@ -586,6 +593,7 @@ def legal_actions_page(
         query=query,
         limit=limit,
         cursor=cursor,
+        allow_legacy_cursor=allow_legacy_cursor,
     )
 
 
@@ -747,9 +755,9 @@ def _legal_action_page(
     query: str | None,
     limit: int,
     cursor: str | None,
+    allow_legacy_cursor: bool = False,
 ) -> dict[str, Any]:
     bounded_limit = _bounded_limit(limit)
-    offset = _cursor_offset(cursor)
     # This response is for the active human recipient. Model-seat actions
     # remain inside the trusted runner; legal actions can encode private hands.
     players = _dict(_session_metadata(state).get("players"))
@@ -760,6 +768,11 @@ def _legal_action_page(
     )
     descriptors = action_descriptors(game_id=game_slug, state=state, actions=legal)
     matching = _filter_descriptors(descriptors, query)
+    scope = sha256_json({"state_hash": state.state_hash, "player_id": player_id,
+                         "query": query, "ordered_action_descriptors": descriptors})
+    offset = _cursor_offset(cursor, scope=scope, allow_legacy=allow_legacy_cursor)
+    if offset > len(matching):
+        raise ValueError("legal-action cursor offset exceeds this result set")
     page_rows = matching[offset : offset + bounded_limit]
     next_offset = offset + len(page_rows)
     has_more = next_offset < len(matching)
@@ -769,7 +782,7 @@ def _legal_action_page(
         "query": query,
         "limit": bounded_limit,
         "cursor": cursor,
-        "next_cursor": str(next_offset) if has_more else None,
+        "next_cursor": _action_cursor(scope, next_offset) if has_more else None,
         "total_legal_actions": len(descriptors),
         "total_matching_actions": len(matching),
         "has_more": has_more,
@@ -789,13 +802,43 @@ def _filter_descriptors(rows: list[dict[str, Any]], query: str | None) -> list[d
     ]
 
 
-def _cursor_offset(cursor: str | None) -> int:
+def _action_cursor(scope: str, offset: int) -> str:
+    payload = base64.urlsafe_b64encode(canonical_json(
+        {"version": 2, "scope": scope, "offset": offset},
+    ).encode()).decode().rstrip("=")
+    signature = hmac.new(_session_secret().encode(), _ACTION_CURSOR_DOMAIN + payload.encode(),
+                         hashlib.sha256).hexdigest()
+    return f"{_ACTION_CURSOR_PREFIX}.{payload}.{signature}"
+
+
+def _cursor_offset(cursor: str | None, *, scope: str, allow_legacy: bool = False) -> int:
     if cursor is None or cursor == "":
         return 0
+    if not isinstance(cursor, str) or len(cursor) > 1024:
+        raise ValueError("invalid legal-action cursor")
+    if allow_legacy and cursor.isascii() and cursor.isdecimal():
+        return int(cursor)
     try:
-        return max(0, int(cursor))
-    except ValueError:
-        return 0
+        prefix, payload, signature = cursor.split(".")
+        if prefix != _ACTION_CURSOR_PREFIX or len(signature) != 64 or not signature.isascii():
+            raise ValueError("unsupported cursor")
+        expected = hmac.new(_session_secret().encode(), _ACTION_CURSOR_DOMAIN + payload.encode(),
+                            hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            raise ValueError("signature mismatch")
+        raw = base64.b64decode(payload + "=" * (-len(payload) % 4), altchars=b"-_", validate=True)
+        value = json.loads(raw)
+        if not isinstance(value, dict) or set(value) != {"version", "scope", "offset"}:
+            raise ValueError("invalid fields")
+        offset = value["offset"]
+        if (type(value["version"]) is not int or value["version"] != 2 or value["scope"] != scope
+                or isinstance(offset, bool) or not isinstance(offset, int) or offset < 0):
+            raise ValueError("cursor binding mismatch")
+        return int(offset)
+    except (ValueError, UnicodeError, KeyError) as exc:
+        raise ValueError(
+            "invalid or stale legal-action cursor; restart pagination for this state/actor/query"
+        ) from exc
 
 
 def _token_pairs(actions: list[Any]) -> list[tuple[str, Any]]:

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Any
 
-from eslams.contracts.versions import RUNNER_JOB_SCHEMA_VERSION
+from eslams.contracts.versions import RUNNER_JOB_REQUEST_SCHEMA_VERSION, RUNNER_JOB_SCHEMA_VERSION
+from eslams.execution_policy import model_execution_policy, validate_model_execution_policy
 from eslams.hashing import sha256_json
+from eslams.protocol import validate_json_payload
 
 FAILURE_CATEGORIES: tuple[str, ...] = (
     "provider_timeout",
@@ -37,11 +39,61 @@ class RunnerJobRequest:
     suite_context: dict[str, Any] = field(default_factory=dict)
     case_id: str | None = None
     model_id: str | None = None
-    time_budget_ms: int = 30_000
+    time_budget_ms: int | None = None
     shard_index: int | None = None
     shard_count: int | None = None
     policy_ids: list[str] = field(default_factory=list)
-    schema_version: str = RUNNER_JOB_SCHEMA_VERSION
+    metadata: dict[str, Any] = field(default_factory=dict)
+    schema_version: str = RUNNER_JOB_REQUEST_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        budget = self.time_budget_ms
+        if budget is not None and (
+            isinstance(budget, bool) or not isinstance(budget, int) or budget < 1
+        ):
+            raise ValueError("time_budget_ms must be a positive operator choice or null")
+        if self.schema_version not in {RUNNER_JOB_SCHEMA_VERSION,
+                                       RUNNER_JOB_REQUEST_SCHEMA_VERSION}:
+            raise ValueError("unsupported runner job request version")
+        if self.schema_version == RUNNER_JOB_SCHEMA_VERSION and budget is None:
+            raise ValueError("legacy runner job v1 requires an explicit finite time budget")
+        if not isinstance(self.metadata, dict):
+            raise ValueError("runner metadata must be an object")
+        metadata = dict(self.metadata)
+        if self.schema_version == RUNNER_JOB_REQUEST_SCHEMA_VERSION:
+            metadata.setdefault("model_execution_policy", model_execution_policy(budget))
+        validate_model_execution_policy(
+            "eslams-act-v2" if self.schema_version == RUNNER_JOB_REQUEST_SCHEMA_VERSION
+            else "eslams-act-v1", budget, metadata,
+        )
+        object.__setattr__(self, "metadata", metadata)
+        if (not isinstance(self.job_id, str) or not self.job_id
+                or not isinstance(self.arena_id, str) or not self.arena_id
+                or isinstance(self.seed, bool)):
+            raise ValueError("job_id/arena_id and an integer seed are required")
+        if not isinstance(self.seed, int) or not isinstance(self.agents, dict):
+            raise ValueError("invalid runner seed or agents object")
+        if not isinstance(self.artifact_output, dict):
+            raise ValueError("artifact_output must be an object")
+
+    @classmethod
+    def from_mapping(cls, value: dict[str, Any]) -> RunnerJobRequest:
+        validate_json_payload(value, max_bytes=None)
+        if set(value) - {entry.name for entry in fields(cls)}:
+            raise ValueError("unknown runner job fields; execution policy belongs in metadata")
+        required = {"schema_version", "job_id", "arena_id", "seed", "agents",
+                    "artifact_output", "time_budget_ms"}
+        if not required <= value.keys():
+            raise ValueError(
+                "runner request requires explicit version and time_budget_ms (v2 null)",
+            )
+        version = value["schema_version"]
+        if version == RUNNER_JOB_REQUEST_SCHEMA_VERSION:
+            metadata = value.get("metadata", {})
+            if not isinstance(metadata, dict):
+                raise ValueError("runner metadata must be an object")
+            validate_model_execution_policy("eslams-act-v2", value["time_budget_ms"], metadata)
+        return cls(**value)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -58,6 +110,7 @@ class RunnerJobRequest:
             "shard_index": self.shard_index,
             "shard_count": self.shard_count,
             "policy_ids": list(self.policy_ids),
+            "metadata": dict(self.metadata),
         }
 
 
@@ -173,8 +226,8 @@ def runner_health_payload(
 
 
 def no_secret_examples() -> dict[str, dict[str, Any]]:
-    return {
-        RUNNER_JOB_SCHEMA_VERSION: RunnerJobRequest(
+    examples = {
+        RUNNER_JOB_REQUEST_SCHEMA_VERSION: RunnerJobRequest(
             job_id="job_example",
             arena_id="tic-tac-toe",
             seed=1,
@@ -185,3 +238,8 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
             policy_ids=["public-smoke-v1"],
         ).to_dict()
     }
+
+    legacy = dict(examples[RUNNER_JOB_REQUEST_SCHEMA_VERSION])
+    legacy.update(schema_version=RUNNER_JOB_SCHEMA_VERSION, time_budget_ms=30000, metadata={})
+    examples[RUNNER_JOB_SCHEMA_VERSION] = legacy
+    return examples

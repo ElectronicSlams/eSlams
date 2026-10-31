@@ -1,0 +1,278 @@
+{
+  "schema_version": "eslams.provider-body-interruption-vectors.v1",
+  "scope": "Synthetic bounded-reader/adapter/Runner/archive cases, no live transport or billing proof",
+  "precedence": "An unverified body is a transport/resource failure even when HTTP429/503 headers were observed. Complete provider completion classification is a separate corpus.",
+  "receipt_contract": "Existing receipt-v2 fields; no provider_error_kind extension",
+  "vectors": [
+    {
+      "id": "http200-timeout-empty",
+      "http_status": 200,
+      "body_prefix_present": false,
+      "injected_failure": "timeout",
+      "expected": {
+        "outcome": "provider_timeout",
+        "status_code": 200,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http200-reset-empty",
+      "http_status": 200,
+      "body_prefix_present": false,
+      "injected_failure": "reset",
+      "expected": {
+        "outcome": "provider_transport_error",
+        "status_code": 200,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http200-resource-empty",
+      "http_status": 200,
+      "body_prefix_present": false,
+      "injected_failure": "resource",
+      "expected": {
+        "outcome": "provider_response_schema_mismatch",
+        "status_code": 200,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http200-timeout-partial",
+      "http_status": 200,
+      "body_prefix_present": true,
+      "injected_failure": "timeout",
+      "expected": {
+        "outcome": "provider_timeout",
+        "status_code": 200,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http200-reset-partial",
+      "http_status": 200,
+      "body_prefix_present": true,
+      "injected_failure": "reset",
+      "expected": {
+        "outcome": "provider_transport_error",
+        "status_code": 200,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http200-resource-partial",
+      "http_status": 200,
+      "body_prefix_present": true,
+      "injected_failure": "resource",
+      "expected": {
+        "outcome": "provider_response_schema_mismatch",
+        "status_code": 200,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http429-timeout-empty",
+      "http_status": 429,
+      "body_prefix_present": false,
+      "injected_failure": "timeout",
+      "expected": {
+        "outcome": "provider_timeout",
+        "status_code": 429,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http429-reset-empty",
+      "http_status": 429,
+      "body_prefix_present": false,
+      "injected_failure": "reset",
+      "expected": {
+        "outcome": "provider_transport_error",
+        "status_code": 429,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http429-resource-empty",
+      "http_status": 429,
+      "body_prefix_present": false,
+      "injected_failure": "resource",
+      "expected": {
+        "outcome": "provider_response_schema_mismatch",
+        "status_code": 429,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http429-timeout-partial",
+      "http_status": 429,
+      "body_prefix_present": true,
+      "injected_failure": "timeout",
+      "expected": {
+        "outcome": "provider_timeout",
+        "status_code": 429,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http429-reset-partial",
+      "http_status": 429,
+      "body_prefix_present": true,
+      "injected_failure": "reset",
+      "expected": {
+        "outcome": "provider_transport_error",
+        "status_code": 429,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http429-resource-partial",
+      "http_status": 429,
+      "body_prefix_present": true,
+      "injected_failure": "resource",
+      "expected": {
+        "outcome": "provider_response_schema_mismatch",
+        "status_code": 429,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http503-timeout-empty",
+      "http_status": 503,
+      "body_prefix_present": false,
+      "injected_failure": "timeout",
+      "expected": {
+        "outcome": "provider_timeout",
+        "status_code": 503,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http503-reset-empty",
+      "http_status": 503,
+      "body_prefix_present": false,
+      "injected_failure": "reset",
+      "expected": {
+        "outcome": "provider_transport_error",
+        "status_code": 503,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http503-resource-empty",
+      "http_status": 503,
+      "body_prefix_present": false,
+      "injected_failure": "resource",
+      "expected": {
+        "outcome": "provider_response_schema_mismatch",
+        "status_code": 503,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http503-timeout-partial",
+      "http_status": 503,
+      "body_prefix_present": true,
+      "injected_failure": "timeout",
+      "expected": {
+        "outcome": "provider_timeout",
+        "status_code": 503,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http503-reset-partial",
+      "http_status": 503,
+      "body_prefix_present": true,
+      "injected_failure": "reset",
+      "expected": {
+        "outcome": "provider_transport_error",
+        "status_code": 503,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    },
+    {
+      "id": "http503-resource-partial",
+      "http_status": 503,
+      "body_prefix_present": true,
+      "injected_failure": "resource",
+      "expected": {
+        "outcome": "provider_response_schema_mismatch",
+        "status_code": 503,
+        "usage": {},
+        "cost": "unknown",
+        "action_applied": false,
+        "physical_attempts": 1,
+        "competitive_outcome": null
+      }
+    }
+  ]
+}

@@ -81,11 +81,13 @@ def _agent(
     env_name: str,
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
+    max_output_tokens: int | None = None,
 ) -> ModelProviderAgent:
     return ModelProviderAgent(
         provider=provider,
         model=model,
         api_key_env=env_name,
+        max_output_tokens=max_output_tokens,
         runtime_config=runtime_config or ProviderRuntimeConfig(reasoning="disabled"),
     )
 
@@ -273,6 +275,7 @@ def test_anthropic_reasoning_temperature_matrix(monkeypatch):
         "anthropic",
         "claude-reasoning",
         "ANTHROPIC_API_KEY",
+        max_output_tokens=4096,
         runtime_config=ProviderRuntimeConfig(
             reasoning="enabled",
             reasoning_budget_tokens=1024,
@@ -292,6 +295,7 @@ def test_anthropic_reasoning_temperature_matrix(monkeypatch):
         "anthropic",
         "claude-reasoning",
         "ANTHROPIC_API_KEY",
+        max_output_tokens=4096,
         runtime_config=ProviderRuntimeConfig(reasoning="disabled"),
     )
     disabled.temperature = 0.25
@@ -302,6 +306,7 @@ def test_anthropic_reasoning_temperature_matrix(monkeypatch):
         "anthropic",
         "claude-reasoning",
         "ANTHROPIC_API_KEY",
+        max_output_tokens=4096,
         runtime_config=ProviderRuntimeConfig(reasoning="auto"),
     )
     automatic.temperature = 0.25
@@ -335,6 +340,7 @@ def test_anthropic_adaptive_and_manual_budget_contracts(monkeypatch):
         "anthropic",
         "claude-sonnet-5",
         "ANTHROPIC_API_KEY",
+        max_output_tokens=4096,
         runtime_config=ProviderRuntimeConfig(
             reasoning="enabled",
             reasoning_budget_tokens=512,
@@ -360,6 +366,7 @@ def test_anthropic_adaptive_and_manual_budget_contracts(monkeypatch):
         "anthropic",
         "claude-sonnet-4-20250514",
         "ANTHROPIC_API_KEY",
+        max_output_tokens=4096,
         runtime_config=ProviderRuntimeConfig(
             reasoning="enabled",
             reasoning_budget_tokens=512,
@@ -403,7 +410,8 @@ def test_action_repair_is_a_distinct_physical_attempt(monkeypatch):
         return httpx.Response(200, json=payload)
 
     monkeypatch.setattr("eslams.agents.bounded_post", fake_post)
-    agent = _agent("openai", "gpt-5-mini", "OPENAI_API_KEY")
+    agent = _agent("openai", "gpt-5-mini", "OPENAI_API_KEY",
+                   runtime_config=ProviderRuntimeConfig(action_repair_attempts=1))
 
     response = agent.act(_request())
 

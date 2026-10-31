@@ -237,8 +237,8 @@ class ModelCapabilities:
             and "text" in self.modalities.get("output", [])
         )
 
-    def reasoning_payload(self) -> dict[str, str] | None:
-        effort = self.default_reasoning_effort
+    def reasoning_payload(self, effort: str | None = None) -> dict[str, str] | None:
+        """Render only an explicit caller effort; catalogue defaults are descriptive."""
         if not self.supports_reasoning or not effort:
             return None
         if self.reasoning_efforts and effort not in self.reasoning_efforts:

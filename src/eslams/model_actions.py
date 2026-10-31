@@ -106,8 +106,8 @@ def coerce_action(
         if _same_json_action(value, action):
             return action
     if isinstance(value, str):
-        raise InvalidModelAction("unknown_action_id", f"unknown action id {value!r}")
-    raise InvalidModelAction("illegal_action_for_state", f"model returned illegal action {value!r}")
+        raise InvalidModelAction("unknown_action_id", "unknown action id")
+    raise InvalidModelAction("illegal_action_for_state", "model returned illegal action")
 
 
 def find_legal_action(text: str, legal_actions: list[Any]) -> Any:

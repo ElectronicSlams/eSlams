@@ -17,7 +17,8 @@ def test_registry_resolves_known_and_unknown_models_safely():
     unknown = registry.resolve("openai", "not-a-real-model")
 
     assert known.known is True
-    assert known.reasoning_payload() == {"effort": "none"}
+    assert known.reasoning_payload() is None
+    assert known.reasoning_payload("none") == {"effort": "none"}
     assert known.accepted_control_fields == ["reasoning_effort"]
     assert known.default_reasoning_track == "none"
     assert known.reasoning_track_kind == "provider_controlled"
@@ -121,7 +122,8 @@ def test_registry_merges_local_overrides(tmp_path: Path):
     record = registry.resolve("openai", "model-a")
 
     assert record.game_agent_supported is True
-    assert record.reasoning_payload() == {"effort": "none"}
+    assert record.reasoning_payload() is None
+    assert record.reasoning_payload("none") == {"effort": "none"}
     assert record.supported_reasoning_modes == ["none"]
     assert record.accepted_control_fields == ["reasoning_effort"]
     assert record.sources == ["local-override"]

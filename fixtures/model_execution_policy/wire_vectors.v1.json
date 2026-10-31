@@ -1,0 +1,1142 @@
+{
+  "schema_version": "eslams.shared-policy-wire-vectors.v1",
+  "status": "CANDIDATE_FOR_PAIRED_REVIEW",
+  "policy_schema": "eslams.model-execution-policy.v1",
+  "policy_objects": "closed at each policy level; general metadata open",
+  "defaults": "No Core thinking deadline or optional provider output maximum. provider_default does not mean upstream unlimited.",
+  "vectors": [
+    {
+      "id": "v2-unbounded-provider-default",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": true
+    },
+    {
+      "id": "v2-explicit-finite-operator",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": 1800000,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "bounded",
+              "duration_ms": 1800000
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": true
+    },
+    {
+      "id": "v2-explicit-provider-hardmax-cohort-choice",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "bounded",
+              "max_tokens": 131072
+            }
+          }
+        }
+      },
+      "accepted": true
+    },
+    {
+      "id": "v1-legacy-finite",
+      "request": {
+        "protocol_version": "eslams-act-v1",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": 30000,
+        "memory_policy": "stateless",
+        "metadata": {}
+      },
+      "accepted": true
+    },
+    {
+      "id": "missing-time",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "v1-null",
+      "request": {
+        "protocol_version": "eslams-act-v1",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "missing-v2-policy",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {}
+      },
+      "accepted": false
+    },
+    {
+      "id": "unknown-protocol",
+      "request": {
+        "protocol_version": "eslams-act-v3",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "top-level-lookalike-policy",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        },
+        "execution_policy": {
+          "schema_version": "eslams.execution_policy.v2",
+          "mode": "none"
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "wrong-policy-version",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "unknown",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "null-plus-finite-thinking",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "bounded",
+              "duration_ms": 1800000
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "unbounded-with-extra-duration",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded",
+              "duration_ms": null
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "wrong-output-mode",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "unlimited"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "provider-default-with-hidden-limit",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default",
+              "max_tokens": 1024
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "boolean-output-cap",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "bounded",
+              "max_tokens": true
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "null-output-cap",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "bounded",
+              "max_tokens": null
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "negative-output-cap",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "bounded",
+              "max_tokens": -1
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "zero-time",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": 0,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "boolean-time",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": true,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "boolean-thinking-duration-not-integer-one",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": 1,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "bounded",
+              "duration_ms": true
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "finite-one-ms-with-unbounded-thinking",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": 1,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "unknown-policy-key",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            },
+            "extra": true
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "unbounded-hidden-time-cap",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded",
+              "time_budget_ms": 1
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "unbounded-hidden-token-cap",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded",
+              "max_tokens": 1
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "provider-default-hidden-time-cap",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default",
+              "time_budget_ms": 1
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "provider-default-unknown-key",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default",
+              "extra": true
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "general-metadata-remains-open",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          },
+          "caller_label": "synthetic"
+        }
+      },
+      "accepted": true
+    },
+    {
+      "id": "bounded-output-unknown-key",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": null,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "unbounded"
+            },
+            "output": {
+              "mode": "bounded",
+              "max_tokens": 131072,
+              "extra": true
+            }
+          }
+        }
+      },
+      "accepted": false
+    },
+    {
+      "id": "bounded-thinking-unknown-key",
+      "request": {
+        "protocol_version": "eslams-act-v2",
+        "run_id": "synthetic-run",
+        "episode_id": "synthetic-episode",
+        "turn_id": 0,
+        "arena": {
+          "id": "tic-tac-toe",
+          "version": "1"
+        },
+        "agent": {
+          "id": "synthetic-agent",
+          "version": "1"
+        },
+        "active_player": "player_1",
+        "observation": {},
+        "legal_actions": [
+          0,
+          1
+        ],
+        "action_schema": {},
+        "history": [],
+        "time_budget_ms": 1800000,
+        "memory_policy": "stateless",
+        "metadata": {
+          "model_execution_policy": {
+            "schema_version": "eslams.model-execution-policy.v1",
+            "thinking": {
+              "mode": "bounded",
+              "duration_ms": 1800000,
+              "extra": true
+            },
+            "output": {
+              "mode": "provider_default"
+            }
+          }
+        }
+      },
+      "accepted": false
+    }
+  ]
+}

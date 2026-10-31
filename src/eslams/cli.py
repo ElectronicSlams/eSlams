@@ -84,7 +84,12 @@ def main(argv: list[str] | None = None) -> int:
     except (KeyError, ValueError, OSError) as exc:
         if os.getenv("ESLAMS_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
             raise
-        print(f"error: {exc}", file=sys.stderr)
+        message = str(exc)
+        if isinstance(exc, FileNotFoundError):
+            message = f"path not found: {exc.filename or message}"
+        elif isinstance(exc, FileExistsError):
+            message = message.replace("overwrite=True", "--overwrite")
+        print(f"error: {message}", file=sys.stderr)
         return 1
 
 
@@ -173,6 +178,11 @@ def _main(argv: list[str] | None = None) -> int:
     )
     arena_page.add_argument(
         "--cursor", help="Opaque cursor returned by a previous legal-action page."
+    )
+
+    arena_page.add_argument(
+        "--allow-legacy-cursor", action="store_true",
+        help="Explicit migration mode for old unbound numeric offsets; new cursors stay bound.",
     )
 
     core = sub.add_parser("core", help="Core v2 contract helper commands.")
@@ -530,9 +540,17 @@ def _main(argv: list[str] | None = None) -> int:
         "--live",
         action="store_true",
         help=(
-            "Query account-visible model APIs; preflight also makes a small "
+            "Query account-visible model APIs; preflight also makes one "
             "inference request using your key."
         ),
+    )
+    providers_preflight.add_argument(
+        "--time-budget-ms", type=int,
+        help="Optional explicit preflight inference deadline; omitted means no Core deadline.",
+    )
+    providers_preflight.add_argument(
+        "--max-output-tokens", type=int,
+        help="Optional explicit preflight output maximum; provider defaults otherwise apply.",
     )
     providers_models = providers_sub.add_parser(
         "models",
@@ -616,12 +634,12 @@ def _main(argv: list[str] | None = None) -> int:
     run.add_argument(
         "--agent",
         default="random",
-        help="Agent for player_1: random, first-legal, URL, or provider:model.",
+        help="Agent for player_1: random (default), first-legal, URL, or provider:model.",
     )
     run.add_argument(
         "--opponent",
         default="first-legal",
-        help="Agent for player_2: random, first-legal, URL, or provider:model.",
+        help="Agent for player_2: first-legal (default), random, URL, or provider:model.",
     )
     run.add_argument(
         "--seat-agent",
@@ -655,8 +673,8 @@ def _main(argv: list[str] | None = None) -> int:
     run.add_argument(
         "--time-budget-ms",
         type=int,
-        default=30_000,
-        help="Per-action agent time budget in milliseconds.",
+        default=None,
+        help="Optional caller action deadline in milliseconds; omitted means unbounded thinking.",
     )
     run.add_argument(
         "--output-dir",
@@ -1136,6 +1154,7 @@ def _arena_command(args: argparse.Namespace) -> int:
             query=args.query,
             limit=args.limit,
             cursor=args.cursor,
+            allow_legacy_cursor=args.allow_legacy_cursor,
         )
         print(json.dumps(payload, indent=2))
         return 0
@@ -1288,7 +1307,10 @@ def _official_command(args: argparse.Namespace) -> int:
 
 def _providers_command(args: argparse.Namespace) -> int:
     if args.providers_command == "preflight":
-        payload = provider_preflight(args.provider, args.model, args.arena, live=args.live)
+        payload = provider_preflight(
+            args.provider, args.model, args.arena, live=args.live,
+            time_budget_ms=args.time_budget_ms, max_output_tokens=args.max_output_tokens,
+        )
         print(json.dumps(payload, indent=2))
         return 0 if payload["ok"] is True else 1
     if args.providers_command == "models":

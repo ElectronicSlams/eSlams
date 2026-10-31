@@ -20,11 +20,13 @@ process. It is ignored when ``ESLAMS_ENV`` is ``production``, ``prod``, or
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import Response
 
 from eslams.arena_transport import SessionSecretError, require_session_secret
@@ -35,16 +37,25 @@ from eslams.contracts.security import (
     load_runner_auth_config,
     verify_signed_runner_request,
 )
+from eslams.nonce_store import MemoryNonceStore, NonceStore, NonceStoreError, SQLiteNonceStore
+from eslams.request_limits import DEFAULT_REQUEST_BYTES, RequestBodyLimitMiddleware
 from eslams.runner_session import (
+    RunnerSessionCapacityError,
     RunnerSessionExists,
     RunnerSessionStore,
     default_runner_session_store,
 )
 
 
-def create_runner_app(store: RunnerSessionStore | None = None) -> FastAPI:
+def create_runner_app(
+    store: RunnerSessionStore | None = None, *, nonce_store: NonceStore | None = None,
+    max_request_bytes: int = DEFAULT_REQUEST_BYTES,
+) -> FastAPI:
     session_store = store or default_runner_session_store
-    seen_nonces: dict[str, float] = {}
+    if nonce_store is None:
+        database = os.environ.get("ESLAMS_RUNNER_NONCE_DB")
+        nonce_store = SQLiteNonceStore(database) if database else MemoryNonceStore()
+    replay_store = nonce_store
     app = FastAPI(title="eSlams Core Runner")
 
     @app.middleware("http")
@@ -53,17 +64,19 @@ def create_runner_app(store: RunnerSessionStore | None = None) -> FastAPI:
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         if request.url.path.startswith("/runner/"):
-            denial = await _authorize_request(request, seen_nonces)
+            denial = await _authorize_request(
+                request, replay_store, max_request_bytes=max_request_bytes,
+            )
             if denial is not None:
                 return denial
         return await call_next(request)
 
     @app.get("/runner/session/ping")
-    async def ping() -> dict[str, Any]:
+    def ping() -> dict[str, Any]:
         return session_store.ping()
 
     @app.post("/runner/session/create")
-    async def create(payload: dict[str, Any]) -> dict[str, Any]:
+    def create(payload: dict[str, Any]) -> dict[str, Any]:
         try:
             _require_arena_signing()
             created = session_store.create(
@@ -72,8 +85,11 @@ def create_runner_app(store: RunnerSessionStore | None = None) -> FastAPI:
                 initial_seed=_optional_int(payload.get("initialSeed"), default=1),
                 session_id=_optional_str(payload.get("sessionId")),
                 snapshot=_optional_dict(payload.get("snapshot")),
+                include_signed_state=True,
             )
             return _with_signed_state(session_store, created, created["sessionId"])
+        except RunnerSessionCapacityError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         except RunnerSessionExists as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except SessionSecretError as exc:
@@ -85,7 +101,7 @@ def create_runner_app(store: RunnerSessionStore | None = None) -> FastAPI:
             raise HTTPException(status_code=422, detail=_safe_detail(exc)) from exc
 
     @app.post("/runner/session/{session_id}/step")
-    async def step(session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def step(session_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         try:
             _require_arena_signing()
             response = session_store.step(
@@ -96,6 +112,7 @@ def create_runner_app(store: RunnerSessionStore | None = None) -> FastAPI:
                 deadline_ms=_optional_positive_int(payload.get("deadlineMs")),
                 include_observation=bool(payload.get("includeObservation", True)),
                 include_legal_actions=str(payload.get("includeLegalActions") or "compact"),
+                include_signed_state=True,
             )
             return _with_signed_state(session_store, response, session_id)
         except KeyError as exc:
@@ -109,10 +126,10 @@ def create_runner_app(store: RunnerSessionStore | None = None) -> FastAPI:
             raise HTTPException(status_code=422, detail=_safe_detail(exc)) from exc
 
     @app.post("/runner/session/{session_id}/snapshot")
-    async def snapshot(session_id: str) -> dict[str, Any]:
+    def snapshot(session_id: str) -> dict[str, Any]:
         try:
             _require_arena_signing()
-            payload = session_store.snapshot(session_id)
+            payload = session_store.snapshot(session_id, include_signed_state=True)
             return _with_signed_state(session_store, payload, session_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -123,19 +140,20 @@ def create_runner_app(store: RunnerSessionStore | None = None) -> FastAPI:
             ) from exc
 
     @app.post("/runner/session/{session_id}/ping")
-    async def session_ping(session_id: str) -> dict[str, Any]:
+    def session_ping(session_id: str) -> dict[str, Any]:
         try:
             return _strip_private_state(session_store.session_ping(session_id))
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.post("/runner/session/{session_id}/close")
-    async def close(session_id: str) -> dict[str, Any]:
+    def close(session_id: str) -> dict[str, Any]:
         try:
             return _strip_private_state(session_store.close(session_id))
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    app.add_middleware(RequestBodyLimitMiddleware, max_bytes=max_request_bytes)
     return app
 
 
@@ -144,7 +162,9 @@ app = create_runner_app()
 
 async def _authorize_request(
     request: Request,
-    seen_nonces: dict[str, float],
+    nonce_store: NonceStore,
+    *,
+    max_request_bytes: int = DEFAULT_REQUEST_BYTES,
 ) -> JSONResponse | None:
     try:
         config = load_runner_auth_config()
@@ -167,8 +187,8 @@ async def _authorize_request(
     size = 0
     async for chunk in request.stream():
         size += len(chunk)
-        if size > 1024 * 1024:
-            return _auth_error(413, "runner request exceeds 1 MiB")
+        if size > max_request_bytes:
+            return _auth_error(413, "runner request exceeds host byte admission policy")
         chunks.append(chunk)
     raw_body = b"".join(chunks)
     # FastAPI must see the same bounded body after authentication.
@@ -183,14 +203,17 @@ async def _authorize_request(
     if not isinstance(body, dict):
         return _auth_error(401, "runner request signature is invalid")
     try:
-        verify_signed_runner_request(
+        await run_in_threadpool(
+            verify_signed_runner_request,
             config=config,
             method=request.method,
             path=request.url.path,
             body=body,
             signature_payload=parsed,
-            seen_nonces=seen_nonces,
+            nonce_store=nonce_store,
         )
+    except NonceStoreError:
+        return _auth_error(503, "runner replay protection is unavailable")
     except RunnerRequestAuthError:
         return _auth_error(401, "runner request signature is invalid")
     return None
@@ -211,7 +234,8 @@ def _with_signed_state(
 ) -> dict[str, Any]:
     public = _strip_private_state(payload)
     public.pop("state", None)
-    public["sessionState"] = store.export_signed_state(session_id)
+    if "sessionState" not in public:
+        public["sessionState"] = store.export_signed_state(session_id)
     return public
 
 

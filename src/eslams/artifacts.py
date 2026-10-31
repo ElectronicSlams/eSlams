@@ -14,7 +14,7 @@ import tempfile
 import zipfile
 from collections import Counter
 from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,6 +42,7 @@ from eslams.contracts.versions import (
 )
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json, sha256_file, sha256_json
+from eslams.output_lock import output_lock
 from eslams.policy import artifact_profile_label as policy_artifact_profile_label
 from eslams.policy import policy_key, policy_label
 from eslams.replay import _write_artifact_replay
@@ -625,26 +626,19 @@ def _check_artifact_destination(path: Path, *, overwrite: bool) -> None:
 @contextmanager
 def _staged_artifact_outputs(paths: list[Path], *, overwrite: bool) -> Iterator[Path]:
     # Lock both canonical names: directory-only and archive writers must contend.
-    locks: list[tuple[int, Path]] = []
-    try:
+    with ExitStack() as ownership:
         for raw in sorted(paths):
             _check_artifact_destination(raw, overwrite=overwrite)
             path = raw.resolve()
             path.parent.mkdir(parents=True, exist_ok=True)
             lock = path.with_name(f".{path.name}.eslams-output.lock")
-            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            locks.append((descriptor, lock))
+            ownership.enter_context(output_lock(lock))
         for raw in paths:
             _check_artifact_destination(raw, overwrite=overwrite)
         with tempfile.TemporaryDirectory(
             prefix=".eslams-artifact-", dir=paths[0].resolve().parent
         ) as name:
             yield Path(name)
-    finally:
-        for descriptor, lock in reversed(locks):
-            os.close(descriptor)
-            lock.unlink(missing_ok=True)
-
 
 def _install_artifact_outputs(outputs: list[tuple[Path, Path]], *, overwrite: bool) -> None:
     # Each installed path is complete. A directory and ZIP cannot be renamed in

@@ -333,8 +333,10 @@ def test_runner_enforces_in_process_agent_timeout(tmp_path: Path):
     agent_io = _read_jsonl(result.artifact_path / "logs" / "agent_io.jsonl")
 
     assert ArtifactValidator().validate(result.artifact_path) == []
-    assert "timeout" in trace[0]["markers"]
-    assert agent_io[0]["response"]["metadata"]["error_kind"] == "provider_timeout"
+    # A caller deadline interrupts execution; it must not manufacture a move.
+    assert trace == [] and agent_io == []
+    assert "provider_timeout" in result.score.invalid_reason_codes
+    assert result.score.fallback_action_count_by_player["player_1"] == 0
     assert result.score.agent_error_count_by_player["player_1"] == 1
     assert result.score.match_valid_for_scoring is False
 

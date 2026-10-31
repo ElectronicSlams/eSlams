@@ -8,7 +8,7 @@ from eslams.runner import RunConfig, Runner
 
 @pytest.mark.parametrize("options", [
     {"time_budget_ms": 0}, {"time_budget_ms": -1}, {"time_budget_ms": True},
-    {"time_budget_ms": 1.5}, {"time_budget_ms": None},
+    {"time_budget_ms": 1.5},
     {"case_attempt_index": 1.5}, {"case_attempt_index": None},
     {"shard_index": -1}, {"shard_index": True}, {"shard_index": 1.5},
     {"shard_count": 0}, {"shard_count": -1}, {"shard_count": True},
@@ -28,4 +28,12 @@ def test_valid_shard_and_time_budget_are_recorded_without_clamping(tmp_path):
     assert manifest["run_metadata"]["shard_count"] == 2
     assert manifest["run_metadata"]["requested_time_budget_ms"] == 5000
     assert manifest["run_metadata"]["effective_time_budget_ms"] == 5000
+    assert ArtifactValidator().validate(result.artifact_path) == []
+
+
+def test_explicit_none_budget_is_unbounded_and_retains_literal_null_in_manifest(tmp_path):
+    result = Runner().run(RunConfig("tic-tac-toe", time_budget_ms=None, output_dir=tmp_path))
+    manifest = json.loads((result.artifact_path / "manifest.json").read_text())
+    assert manifest["run_metadata"]["requested_time_budget_ms"] is None
+    assert manifest["run_metadata"]["effective_time_budget_ms"] is None
     assert ArtifactValidator().validate(result.artifact_path) == []

@@ -1,6 +1,7 @@
 export type FailureClass =
   | "provider_transport_error"
   | "provider_request_rejected"
+  | "provider_refused"
   | "provider_response_schema_mismatch"
   | "action_response_unparseable"
   | "action_not_legal"
@@ -9,6 +10,11 @@ export type FailureClass =
   | "provider_permission_failed"
   | "provider_rate_limited"
   | "provider_timeout"
+  | "operator_cancelled"
+  | "provider_output_truncated"
+  | "provider_pending"
+  | "provider_cancelled"
+  | "provider_interrupted"
   | "provider_unavailable";
 
 export type ActionProvenance =

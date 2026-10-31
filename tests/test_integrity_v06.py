@@ -22,6 +22,7 @@ from eslams.artifacts import ArtifactValidator
 from eslams.contracts.integrity import FailureClass
 from eslams.contracts.json_schema import schema_for_version
 from eslams.contracts.provider import ProviderRuntimeConfig
+from eslams.execution_policy import model_execution_policy
 from eslams.runner import RunConfig, Runner, _enrich_attempt_receipts
 from eslams.state import ArenaState
 
@@ -128,17 +129,14 @@ def test_agent_failure_mutation_is_fail_closed_across_all_fifty_arenas(tmp_path:
         assert ArtifactValidator().validate(result.artifact_path) == [], arena_id
 
 
-def test_june_twenty_turn_all_failure_regression_has_zero_scoreable_output(
+def test_twenty_turn_trusted_callback_fallback_diagnostics_have_zero_scoreable_output(
     tmp_path: Path,
     monkeypatch,
 ):
     monkeypatch.setitem(registry._arenas, JuneFailureArena.id, JuneFailureArena)
 
     def fail(_request: Any) -> Any:
-        raise ProviderCallError(
-            "June regression fixture provider failure",
-            error_kind="provider_response_schema_mismatch",
-        )
+        raise RuntimeError("trusted callback failure fixture")
 
     result = Runner().run(
         RunConfig(
@@ -526,6 +524,7 @@ def test_act_request_exposes_frozen_physical_attempt_join_context(tmp_path: Path
     )
 
     assert seen == {
+        "model_execution_policy": model_execution_policy(None),
         "state_hash": seen["state_hash"],
         "physical_run_id": "physical_run_001",
         "case_id": "case_001",
@@ -589,3 +588,20 @@ class JuneFailureArena(Arena):
             render_hints={"kind": "counter"},
             metadata={"seed": seed},
         )
+
+
+def test_operational_provider_failure_cannot_create_twenty_diagnostic_fallback_actions(
+    tmp_path: Path, monkeypatch,
+):
+    monkeypatch.setitem(registry._arenas, JuneFailureArena.id, JuneFailureArena)
+    def fail(_request: Any) -> Any:
+        raise ProviderCallError("synthetic provider schema failure",
+                                error_kind="provider_response_schema_mismatch")
+    result = Runner().run(RunConfig(arena_id=JuneFailureArena.id,
+        agents={"player_1": FunctionAgent(fail, id="failing-provider")}, max_turns=20,
+        output_dir=tmp_path, on_agent_error="fallback"))
+    assert result.trace_events == []
+    assert sum(result.score.fallback_action_count_by_player.values()) == 0
+    assert sum(result.score.agent_error_count_by_player.values()) == 1
+    assert not result.score.match_valid_for_scoring and result.score.winner is None
+    assert ArtifactValidator().validate(result.artifact_path) == []

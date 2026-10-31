@@ -22,8 +22,8 @@ catalogue listed below.
 
 ## Contents
 
-- [Local lab quickstart](docs/LABS.md)
-- [Docs index](docs/DOCS_INDEX.md)
+- [Local lab quickstart](https://github.com/ElectronicSlams/eSlams/blob/main/docs/LABS.md)
+- [Docs index](https://github.com/ElectronicSlams/eSlams/blob/main/docs/DOCS_INDEX.md)
 
 - [Install](#install)
 - [Quick Start](#quick-start)
@@ -119,6 +119,10 @@ The chess dependency remains required in this branch; it has not been silently
 made optional or replaced.
 
 ## Quick Start
+
+`eslams run` without flags runs a local Connect Four demo: `random` versus
+`first-legal`, seed `1`, and writes its artifact under `runs/`. Pass `--arena`,
+`--agent`, and `--opponent` to select a different matchup.
 
 Create a workspace, run a match, validate the artifact, and render a replay:
 
@@ -429,7 +433,7 @@ Platform-facing TypeScript source in `packages/core-contracts` and the gated
 are not published npm packages; integrate them from a pinned source checkout.
 Core-lite's supported tic-tac-toe/connect-four deterministic state and step
 fields are checked against Python fixtures in CI; see its
-[supported scope](packages/core-lite/README.md).
+[supported scope](https://github.com/ElectronicSlams/eSlams/blob/main/packages/core-lite/README.md).
 
 ## Arena Session Transport
 
@@ -489,8 +493,8 @@ material, or private reasoning.
 
 ## Sample Runs
 
-The [sample tree](sample_runs/README.md) contains keyless Local fixtures and
-validated publication shapes, with [checksums and expected status](docs/SAMPLE_CLASSIFICATION.md).
+The [sample tree](https://github.com/ElectronicSlams/eSlams/blob/main/sample_runs/README.md) contains keyless Local fixtures and
+validated publication shapes, with [checksums and expected status](https://github.com/ElectronicSlams/eSlams/blob/main/docs/SAMPLE_CLASSIFICATION.md).
 
 - `model_battle_sample/sample_builtin_chess.eslams` is a completed built-in
   first-legal versus first-legal chess run; it is not a provider model battle.
@@ -501,7 +505,7 @@ validated publication shapes, with [checksums and expected status](docs/SAMPLE_C
 The former `run_d48ff364a0b949df` model-battle claim did not match the tracked
 file. Historical invalid/HMAC samples are replaced, rather than described as
 current validated proofs. Producer commits and unchanged historical limitations
-are explicit in [sample classification](docs/SAMPLE_CLASSIFICATION.md).
+are explicit in [sample classification](https://github.com/ElectronicSlams/eSlams/blob/main/docs/SAMPLE_CLASSIFICATION.md).
 
 ## Upload to eslams.com
 

@@ -70,7 +70,7 @@ def test_failed_export_does_not_install_partial_output(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
         export_public_replay(tmp_path / "missing.eslams", output)
 
-    assert list(tmp_path.iterdir()) == []
+    assert not [p for p in tmp_path.iterdir() if not p.name.endswith(".eslams-output.lock")]
 
 
 def test_competing_exporters_cannot_replace_each_other(tmp_path: Path):
@@ -82,7 +82,7 @@ def test_competing_exporters_cannot_replace_each_other(tmp_path: Path):
         assert not output.exists()
 
     assert (output / "complete.txt").read_bytes() == b"complete"
-    assert list(tmp_path.iterdir()) == [output]
+    assert [p for p in tmp_path.iterdir() if not p.name.endswith(".eslams-output.lock")] == [output]
 
 
 @pytest.mark.parametrize("archive", [False, True])

@@ -41,6 +41,7 @@ from eslams.contracts.versions import (
     GAME_RESULT_SCHEMA_VERSION,
     GAME_SURFACE_SCHEMA_VERSION,
     GAME_TOPOLOGY_SCHEMA_VERSION,
+    MODEL_EXECUTION_POLICY_SCHEMA_VERSION,
     OFFICIAL_RESULT_SCHEMA_VERSION,
     PRICE_CARD_REFERENCE_SCHEMA_VERSION,
     PROVIDER_ATTEMPT_SCHEMA_VERSION,
@@ -51,6 +52,7 @@ from eslams.contracts.versions import (
     REPLAY_MANIFEST_SCHEMA_VERSION,
     REPLAY_PUBLIC_SCHEMA_VERSION,
     RUN_INTEGRITY_SCHEMA_VERSION,
+    RUNNER_JOB_REQUEST_SCHEMA_VERSION,
     RUNNER_JOB_SCHEMA_VERSION,
     SCHEMA_BUNDLE_MANIFEST_SCHEMA_VERSION,
     SCHEMA_BUNDLE_VERSION,
@@ -58,6 +60,7 @@ from eslams.contracts.versions import (
     USAGE_SUMMARY_SCHEMA_VERSION,
     schema_versions,
 )
+from eslams.execution_policy import model_execution_policy, model_execution_policy_schema
 from eslams.hashing import canonical_json, sha256_file, sha256_json
 
 SCHEMA_BUNDLE_MANIFEST_FILENAME = "schema_bundle_manifest.json"
@@ -127,6 +130,7 @@ def schema_bundle_manifest(schema_paths: list[Path]) -> dict[str, Any]:
 
 def no_secret_examples() -> dict[str, dict[str, Any]]:
     return {
+        MODEL_EXECUTION_POLICY_SCHEMA_VERSION: model_execution_policy(None),
         COOPERATIVE_TOPOLOGY_SCHEMA_VERSION: cooperative_topology().to_dict(),
         COOPERATIVE_RESULT_SCHEMA_VERSION: {
             "schemaVersion": COOPERATIVE_RESULT_SCHEMA_VERSION,
@@ -376,6 +380,34 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
             ],
         },
     }
+
+
+
+def _runner_job_request_schema() -> dict[str, Any]:
+    schema = _object_schema(
+        RUNNER_JOB_REQUEST_SCHEMA_VERSION,
+        required=["schema_version", "job_id", "arena_id", "seed", "agents",
+                  "artifact_output", "time_budget_ms", "metadata"],
+        properties={
+            "schema_version": {"const": RUNNER_JOB_REQUEST_SCHEMA_VERSION},
+            "job_id": {"type": "string", "minLength": 1},
+            "arena_id": {"type": "string", "minLength": 1},
+            "seed": {"type": "integer"},
+            "agents": {"type": "object"},
+            "artifact_output": {"type": "object"},
+            "suite_context": {"type": "object"},
+            "case_id": {"type": ["string", "null"]},
+            "model_id": {"type": ["string", "null"]},
+            "time_budget_ms": {"type": ["integer", "null"], "minimum": 1},
+            "shard_index": {"type": ["integer", "null"]},
+            "shard_count": {"type": ["integer", "null"]},
+            "policy_ids": {"type": "array", "items": {"type": "string"}},
+            "metadata": {"type": "object", "required": ["model_execution_policy"],
+                         "properties": {"model_execution_policy": model_execution_policy_schema()}},
+        },
+    )
+    schema["additionalProperties"] = False
+    return schema
 
 
 def _schemas() -> dict[str, dict[str, Any]]:
@@ -800,6 +832,8 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "errors": {"type": "array", "items": {"type": "string"}},
             },
         ),
+        MODEL_EXECUTION_POLICY_SCHEMA_VERSION: model_execution_policy_schema(),
+        RUNNER_JOB_REQUEST_SCHEMA_VERSION: _runner_job_request_schema(),
         RUNNER_JOB_SCHEMA_VERSION: _object_schema(
             RUNNER_JOB_SCHEMA_VERSION,
             required=["schema_version", "job_id", "arena_id", "artifact_output"],

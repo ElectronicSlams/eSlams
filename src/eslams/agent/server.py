@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from inspect import isawaitable, iscoroutinefunction
 from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from eslams.protocol import ActRequest, ActResponse, ProtocolError
+from eslams.request_limits import DEFAULT_REQUEST_BYTES, RequestBodyLimitMiddleware
 
 
 class AgentServer:
@@ -16,11 +19,13 @@ class AgentServer:
         title: str = "eSlams Agent",
         agent_id: str = "custom-agent",
         version: str = "1",
+        max_request_bytes: int = DEFAULT_REQUEST_BYTES,
     ) -> None:
         self.title = title
         self.agent_id = agent_id
         self.version = version
         self.app = FastAPI(title=title)
+        self.app.add_middleware(RequestBodyLimitMiddleware, max_bytes=max_request_bytes)
         self._handler: Callable[[ActRequest], Any] | None = None
         self.app.post("/act")(self._act)
         self.app.get("/health")(self._health)
@@ -29,15 +34,21 @@ class AgentServer:
         self._handler = func
         return func
 
-    async def _health(self) -> dict[str, str]:
-        return {"status": "ok", "agent_id": self.agent_id, "version": self.version}
+    async def _health(self) -> dict[str, Any]:
+        return {"status": "ok", "agent_id": self.agent_id, "version": self.version,
+                "supported_protocol_versions": ["eslams-act-v1", "eslams-act-v2"]}
 
     async def _act(self, payload: dict[str, Any]) -> dict[str, Any]:
         if self._handler is None:
             raise HTTPException(status_code=503, detail="No /act handler registered")
         try:
             request = ActRequest.from_mapping(payload)
-            value = self._handler(request)
+            if iscoroutinefunction(self._handler):
+                value = await self._handler(request)
+            else:
+                value = await run_in_threadpool(self._handler, request)
+                if isawaitable(value):
+                    value = await value
             if isinstance(value, ActResponse):
                 response = value
             elif isinstance(value, dict):

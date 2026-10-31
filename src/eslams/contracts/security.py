@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from eslams.hashing import canonical_json, sha256_text
+from eslams.nonce_store import NonceStore
 
 DEFAULT_SIGNATURE_ALGORITHM = "hmac-sha256"
 MIN_HMAC_SECRET_LENGTH = 32
@@ -279,7 +280,8 @@ def verify_signed_runner_request(
     path: str,
     body: Any,
     signature_payload: dict[str, Any],
-    seen_nonces: dict[str, float],
+    seen_nonces: dict[str, float] | None = None,
+    nonce_store: NonceStore | None = None,
     now: float | None = None,
 ) -> None:
     """Authorize one runner HTTP request. Raises ``RunnerRequestAuthError`` on failure."""
@@ -329,6 +331,15 @@ def verify_signed_runner_request(
     if age > config.max_age_seconds or age < -_MAX_CLOCK_SKEW_SECONDS:
         raise RunnerRequestAuthError()
     current_epoch = current.timestamp()
+    if nonce_store is not None:
+        if not nonce_store.claim(
+            normalized["nonce"], expires_at=signed_at.timestamp() + config.max_age_seconds,
+            now=current_epoch,
+        ):
+            raise RunnerRequestAuthError()
+        return
+    if seen_nonces is None:
+        raise RunnerAuthConfigError("an explicit replay protection backend is required")
     expired = [nonce for nonce, expiry in seen_nonces.items() if expiry < current_epoch]
     for nonce in expired:
         del seen_nonces[nonce]

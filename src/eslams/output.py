@@ -8,6 +8,8 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
+from eslams.output_lock import output_lock
+
 
 @contextmanager
 def staged_directory(output: Path, *, sources: Sequence[Path] = ()) -> Iterator[Path]:
@@ -32,22 +34,22 @@ def staged_directory(output: Path, *, sources: Sequence[Path] = ()) -> Iterator[
     _require_new_destination(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     lock = destination.with_name(f".{destination.name}.eslams-output.lock")
-    descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    try:
-        with tempfile.TemporaryDirectory(
-            prefix=f".{destination.name}.eslams-output-", dir=destination.parent
-        ) as temporary:
-            staged = Path(temporary)
-            yield staged
-            _require_new_destination(destination)
-            staged.rename(destination)
-    finally:
-        os.close(descriptor)
-        lock.unlink()
+    with output_lock(lock), tempfile.TemporaryDirectory(
+        prefix=f".{destination.name}.eslams-output-", dir=destination.parent
+    ) as temporary:
+        staged = Path(temporary)
+        yield staged
+        _require_new_destination(destination)
+        staged.rename(destination)
 
 
-def _require_new_destination(path: Path) -> None:
+def _require_new_destination(path: Path, *, kind: str = "directory") -> None:
     if path.exists() or path.is_symlink():
+        if kind == "file":
+            raise FileExistsError(
+                f"output file already exists: {path}; pass overwrite=True to replace it "
+                "or choose a new output file"
+            )
         raise FileExistsError(f"output already exists: {path}; choose a new output directory")
 
 
@@ -68,7 +70,7 @@ def staged_file(
     if destination.is_dir():
         raise IsADirectoryError(f"output is a directory: {destination}")
     if not overwrite:
-        _require_new_destination(destination)
+        _require_new_destination(destination, kind="file")
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, name = tempfile.mkstemp(prefix=".eslams-output-", dir=destination.parent)
     os.close(descriptor)

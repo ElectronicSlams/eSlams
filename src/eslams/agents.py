@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import math
 import random
@@ -20,9 +21,17 @@ import httpx
 
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.contracts.versions import PROVIDER_RECEIPT_SCHEMA_VERSION
-from eslams.deadlines import action_deadline, current_deadline, remaining_seconds
+from eslams.deadlines import (
+    ExecutionCancelled,
+    action_deadline,
+    check_cancelled,
+    current_deadline,
+    current_receipt_invocation,
+    remaining_seconds,
+    sleep_with_cancellation,
+)
 from eslams.hashing import sha256_json
-from eslams.http_io import TotalTimeout, bounded_post
+from eslams.http_io import TotalTimeout, bounded_post, response_observation
 from eslams.model_actions import (
     coerce_action,
     extract_json,
@@ -130,14 +139,37 @@ class HttpAgent:
     endpoint_metadata: dict[str, Any] = field(default_factory=dict)
     last_receipt: dict[str, Any] | None = field(default=None, init=False)
     attempt_receipts: list[dict[str, Any]] = field(default_factory=list, init=False)
+    _receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = field(
+        default=None, init=False, repr=False,
+    )
 
     def act(self, request: ActRequest) -> ActResponse:
+        request = ActRequest.from_mapping(request.to_dict())
+        # Token and batch change together; a timeout before this assignment
+        # cannot attribute an old invocation's receipt to the new request.
+        self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
             return self._act(request)
 
+    def _receipt_snapshot(self, invocation: object) -> list[dict[str, Any]]:
+        batch = self._receipt_batch
+        if batch is None or batch[0] is not invocation:
+            return []
+        return copy.deepcopy(list(batch[1]))
+
+    def _publish_receipts(self, receipts: list[dict[str, Any]]) -> None:
+        batch = self._receipt_batch
+        invocation = current_receipt_invocation()
+        if batch is None or (invocation is not None and batch[0] is not invocation):
+            return
+        # Private copies are never mutated/exposed. One reference assignment
+        # transfers the complete observed batch before convenience fields.
+        published = (batch[0], tuple(copy.deepcopy(receipts)))
+        self._receipt_batch = published
+
     def _act(self, request: ActRequest) -> ActResponse:
-        self.last_receipt = None
         self.attempt_receipts = []
+        self.last_receipt = None
         headers = {"content-type": "application/json"}
         if self.bearer_token:
             headers["authorization"] = f"Bearer {self.bearer_token}"
@@ -146,21 +178,50 @@ class HttpAgent:
                 self.url,
                 json=request.to_dict(),
                 headers=headers,
-                timeout=max(0.001, request.time_budget_ms / 1000),
+                timeout=(request.time_budget_ms / 1000 if request.time_budget_ms is not None
+                         else httpx.Timeout(None, connect=10, write=10, pool=None)),
             )
             response.raise_for_status()
             payload = response.json()
+        except httpx.HTTPStatusError as exc:
+            # Body bytes are already bounded by bounded_post. Receipt custody
+            # is independent of whether this failed callback returns an action.
+            try:
+                failure = exc.response.json()
+            except (ValueError, UnicodeError, RecursionError):
+                failure = None
+            kind = _http_failure_kind(exc.response.status_code, failure)
+            self._remember_failure_receipt(failure, kind, error_envelope=True)
+            raise ProviderCallError(
+                f"agent HTTP request failed with status {exc.response.status_code}",
+                status_code=exc.response.status_code,
+                error_kind=kind,
+                provider=self.provider,
+                model=self.model,
+                receipt=self.last_receipt,
+            ) from exc
         except ProtocolError:
             raise
         except (ValueError, UnicodeError) as exc:
             raise ProtocolError("agent response must be valid JSON") from exc
+        except ExecutionCancelled:
+            raise
         except httpx.TimeoutException as exc:
             raise TimeoutError("agent timed out") from exc
         except Exception as exc:
-            raise AgentError(f"agent request failed: {exc}") from exc
+            raise ProviderCallError(
+                "agent HTTP transport failed", error_kind="provider_transport_error",
+                provider=self.provider, model=self.model,
+            ) from exc
         if not isinstance(payload, dict):
             raise ProtocolError("agent response must be a JSON object")
-        act_response = ActResponse.from_mapping(payload)
+        try:
+            act_response = ActResponse.from_mapping(payload)
+        except ProtocolError:
+            self._remember_failure_receipt(
+                payload, "action_response_unparseable", error_envelope=False,
+            )
+            raise
         receipt = act_response.metadata.get("provider_receipt")
         raw_attempts = act_response.metadata.get("attempt_receipts")
         candidates = (
@@ -178,14 +239,145 @@ class HttpAgent:
             normalized_receipt.setdefault("attempt", attempt_index)
             normalized_receipt.setdefault("attempt_index", attempt_index)
             normalized_receipt.setdefault("attempt_kind", "primary")
-            self.last_receipt = normalized_receipt
+            self._publish_receipts([*self.attempt_receipts, normalized_receipt])
             self.attempt_receipts.append(normalized_receipt)
+            self.last_receipt = normalized_receipt
         if self.last_receipt is not None:
             act_response.metadata["provider_receipt"] = self.last_receipt
             act_response.metadata["attempt_receipts"] = [
                 dict(item) for item in self.attempt_receipts
             ]
         return act_response
+
+    def _remember_failure_receipt(
+        self, payload: Any, failure_kind: str, *, error_envelope: bool,
+    ) -> None:
+        # This first contract supports one structured callback receipt. Multi-
+        # attempt carriers need an explicit complete/gap-free ledger contract.
+        if not isinstance(payload, dict):
+            return
+        try:
+            validate_json_payload(payload)
+            if error_envelope:
+                error = payload.get("error")
+                details = error.get("details") if isinstance(error, dict) else None
+                carrier = details if isinstance(details, dict) else {}
+                candidate = carrier.get("providerReceipt")
+            else:
+                metadata = payload.get("metadata")
+                carrier = metadata if isinstance(metadata, dict) else {}
+                candidate = carrier.get("provider_receipt")
+            if any(key in carrier for key in ("attempt_receipts", "attemptReceipts")):
+                return
+            if not isinstance(candidate, dict) or candidate.get("schema_version") not in {
+                "eslams.provider.receipt.v1", PROVIDER_RECEIPT_SCHEMA_VERSION,
+            }:
+                return
+            if any(
+                key in candidate and (
+                    isinstance(candidate[key], bool)
+                    or not isinstance(candidate[key], int) or candidate[key] != 1
+                ) for key in ("attempt", "attempt_index")
+            ) or candidate.get("attempt_kind") not in (None, "primary"):
+                return
+            code = candidate.get("status_code")
+            if code is not None and (
+                isinstance(code, bool) or not isinstance(code, int) or not 100 <= code <= 599
+            ):
+                return
+            latency = candidate.get("latency_ms")
+            if latency is not None and (
+                isinstance(latency, bool) or not isinstance(latency, int) or latency < 0
+            ):
+                return
+            # This carrier admits observations, never remote price-card or
+            # model attestation claims. Project before the legacy normalizer.
+            projected = _http_error_receipt_projection(candidate, failure_kind)
+            normalized = _http_provider_receipt(
+                projected,
+                provider=_http_error_identifier(self.provider),
+                model=_http_error_identifier(self.model),
+                endpoint_metadata={
+                    key: value for key in ("region", "route", "gateway_mode")
+                    if (value := _http_error_identifier(self.endpoint_metadata.get(key)))
+                },
+            )
+            usage = normalized.get("usage")
+            if isinstance(usage, dict) and usage.get("usage_validation_errors"):
+                normalized["usage"] = {}
+                normalized["usage_unavailable_reason"] = "provider_usage_malformed"
+            elif normalized.get("usage"):
+                normalized["usage_unavailable_reason"] = None
+            else:
+                normalized["usage_unavailable_reason"] = "provider_outcome_unknown"
+            normalized.update(attempt=1, attempt_index=1, attempt_kind="primary")
+            validate_json_payload(normalized)
+        except (ProtocolError, ValueError, TypeError, OverflowError, UnicodeError, RecursionError):
+            return
+        self._publish_receipts([normalized])
+        self.attempt_receipts = [normalized]
+        self.last_receipt = normalized
+
+
+
+def _http_error_identifier(value: Any) -> str | None:
+    # Bounded identifier syntax, not a content-redaction or authenticity proof.
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
+        return None
+    sanitized = _sanitize_receipt_value(value)
+    return sanitized if isinstance(sanitized, str) else None
+
+
+def _http_error_receipt_projection(receipt: dict[str, Any], outcome: str) -> dict[str, Any]:
+    projected: dict[str, Any] = {
+        "schema_version": PROVIDER_RECEIPT_SCHEMA_VERSION,
+        "outcome": outcome,
+        # Normalization reads only defined numeric/boolean usage fields. Raw
+        # nested fields are never copied into normalized usage.
+        "usage": receipt.get("usage"),
+        "status_code": receipt.get("status_code"),
+        "latency_ms": receipt.get("latency_ms"),
+        "pricing": {
+            "status": "cost_unavailable", "source": "http_error_receipt",
+            "unavailable_reason": "unverified_error_receipt_pricing",
+        },
+        "estimated_cost": {
+            "status": "cost_unavailable",
+            "unavailable_reason": "unverified_error_receipt_pricing",
+        },
+        # Fixed-shape local provenance: no remote free-form dictionaries,
+        # raw output, price references, rates, URLs, or model attestations.
+        "pricing_provenance": {
+            "schema_version": "eslams.http-error-provenance.v1",
+            "source": "unverified_http_error_receipt",
+            "accounting_status": "quarantined",
+            "model_identity_status": "unverified",
+        },
+    }
+    for key in ("provider", "model", "request_id", "gateway_request_id", "provider_response_id"):
+        value = _http_error_identifier(receipt.get(key))
+        if value is not None:
+            projected[key] = value
+    return projected
+
+
+def _http_failure_kind(status_code: int, payload: Any) -> str:
+    # HTTP status does not prove whether the provider accepted/charged work.
+    error = payload.get("error") if isinstance(payload, dict) else None
+    code = error.get("code") if isinstance(error, dict) else None
+    if status_code == 502 and isinstance(code, str):
+        kind = {
+            "runner_agent_invalid_action": "action_response_unparseable",
+            "action_response_unparseable": "action_response_unparseable",
+            "action_not_legal": "action_not_legal",
+            "provider_response_schema_mismatch": "provider_response_schema_mismatch",
+        }.get(code)
+        if kind is not None:
+            return kind
+    return {
+        401: "provider_auth_failed", 403: "provider_permission_failed",
+        429: "provider_rate_limited", 504: "provider_timeout",
+    }.get(status_code, "provider_unavailable")
 
 
 @dataclass
@@ -202,8 +394,8 @@ class ModelProviderAgent:
     api_key_env: str
     id: str | None = None
     version: str = "1.0.0"
-    temperature: float = 0.0
-    max_output_tokens: int = 1024
+    temperature: float | None = None
+    max_output_tokens: int | None = None
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
@@ -212,18 +404,40 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
         self._reasoning_enabled = False
+        self._request_max_output_tokens: int | None = self.max_output_tokens
         self.capabilities = load_provider_registry().resolve(self.provider, self.model)
+        if self.max_output_tokens is not None and (
+            isinstance(self.max_output_tokens, bool)
+            or not isinstance(self.max_output_tokens, int) or self.max_output_tokens < 1
+        ):
+            raise ValueError("max_output_tokens must be a positive operator limit or null")
 
     def act(self, request: ActRequest) -> ActResponse:
+        request = ActRequest.from_mapping(request.to_dict())
+        self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
             return self._act(request)
 
     def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
+        request = ActRequest.from_mapping(request.to_dict())
+        policy = request.metadata.get("model_execution_policy")
+        output = policy.get("output", {}) if isinstance(policy, dict) else {}
+        requested = output.get("max_tokens") if output.get("mode") == "bounded" else None
+        if (requested is not None and self.max_output_tokens is not None
+                and requested != self.max_output_tokens):
+            raise ProviderCallError(
+                "request and adapter operator output policies conflict; no request submitted",
+                error_kind="provider_request_rejected", provider=self.provider, model=self.model,
+            )
+        self._request_max_output_tokens = (
+            requested if requested is not None else self.max_output_tokens
+        )
         self._reasoning_enabled = _reasoning_enabled_for_request(
             self.runtime_config,
             self.capabilities,
@@ -258,10 +472,15 @@ class ModelProviderAgent:
                 provider=self.provider,
                 model=self.model,
             )
-        prompt = _provider_prompt(request)
+        prompt = _provider_prompt(
+            request, history_window_turns=(
+                self.runtime_config.history_window_turns if self.runtime_config else None
+            ),
+        )
         parse_error: ProtocolError | None = None
         provider_attempt = 0
-        for parse_attempt in range(2):
+        for parse_attempt in range(1 + (self.runtime_config.action_repair_attempts
+                                        if self.runtime_config else 0)):
             if parse_attempt:
                 prompt = _retry_prompt(prompt, request.legal_actions, parse_error)
             retry_index = 0
@@ -284,10 +503,8 @@ class ModelProviderAgent:
                             attempt_kind=("action_repair" if parse_attempt else "primary"),
                         )
                     )
-                    if retry_index < _max_retries(self.runtime_config):
-                        retry_index += 1
-                        _sleep_before_retry(self.runtime_config)
-                        continue
+                    # A timeout does not prove remote work stopped or was rejected.
+                    # Never replay it automatically, even with optional safe retries.
                     raise
                 except ProviderCallError as exc:
                     failure_receipt = (
@@ -380,16 +597,31 @@ class ModelProviderAgent:
             model=self.model,
         )
 
+    def _receipt_snapshot(self, invocation: object) -> list[dict[str, Any]]:
+        batch = self._receipt_batch
+        if batch is None or batch[0] is not invocation:
+            return []
+        return copy.deepcopy(list(batch[1]))
+
+    def _publish_receipts(self, receipts: list[dict[str, Any]]) -> None:
+        batch = self._receipt_batch
+        invocation = current_receipt_invocation()
+        if batch is None or (invocation is not None and batch[0] is not invocation):
+            return
+        # One immutable-reference transfer precedes convenience-field updates.
+        self._receipt_batch = (batch[0], tuple(copy.deepcopy(receipts)))
+
     def _remember_receipt(self, receipt: dict[str, Any]) -> None:
+        receipts = [*self.attempt_receipts, receipt]
+        self._publish_receipts(receipts)
+        self.attempt_receipts = receipts
         self.last_receipt = receipt
-        self.attempt_receipts.append(receipt)
 
     def _replace_last_receipt(self, receipt: dict[str, Any]) -> None:
+        receipts = [*self.attempt_receipts[:-1], receipt]
+        self._publish_receipts(receipts)
+        self.attempt_receipts = receipts
         self.last_receipt = receipt
-        if self.attempt_receipts:
-            self.attempt_receipts[-1] = receipt
-        else:
-            self.attempt_receipts.append(receipt)
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         if self.provider == "openai":
@@ -410,7 +642,7 @@ class ModelProviderAgent:
         )
 
     def _call_openai(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.model,
             "input": [
                 {"role": "developer", "content": _SYSTEM_INSTRUCTIONS},
@@ -418,7 +650,19 @@ class ModelProviderAgent:
             ],
             "max_output_tokens": self._effective_max_output_tokens(),
         }
-        reasoning = self.capabilities.reasoning_payload() if self._reasoning_enabled else None
+        effort = self.runtime_config.reasoning_effort if self.runtime_config else None
+        reasoning = {"effort": effort} if effort is not None else None
+        if effort is not None and (
+            not self.capabilities.supports_reasoning
+            or (self.capabilities.reasoning_efforts
+                and effort not in self.capabilities.reasoning_efforts)
+        ):
+            raise ProviderCallError(
+                "requested reasoning effort is unsupported by the verified endpoint capability",
+                error_kind="provider_request_rejected", provider=self.provider, model=self.model,
+            )
+        if self.temperature is not None and self.capabilities.supports_temperature:
+            payload["temperature"] = self.temperature
         if reasoning:
             payload["reasoning"] = reasoning
         response = _post_json(
@@ -461,6 +705,15 @@ class ModelProviderAgent:
 
     def _call_anthropic(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         max_output_tokens = self._effective_max_output_tokens()
+        if max_output_tokens is None:
+            max_output_tokens = self.capabilities.max_output_tokens
+            if max_output_tokens is None or not self.capabilities.sources:
+                raise ProviderCallError(
+                    "Anthropic requires max_tokens; no verified maximum is available. "
+                    "Supply an operator limit or a verified capability record.",
+                    error_kind="provider_request_rejected",
+                    provider=self.provider, model=self.model,
+                )
         payload = {
             "model": self.model,
             "max_tokens": max_output_tokens,
@@ -485,7 +738,8 @@ class ModelProviderAgent:
                 payload["thinking"] = {"type": "adaptive"}
             # ``default`` deliberately sends neither thinking nor temperature;
             # the provider owns the current model's default reasoning policy.
-        elif self.capabilities.supports_temperature and thinking_mode != "adaptive":
+        elif (self.temperature is not None and self.capabilities.supports_temperature
+              and thinking_mode != "adaptive"):
             payload["temperature"] = self.temperature
         response = _post_json(
             _provider_endpoint(MESSAGES_ENDPOINT, self.runtime_config),
@@ -528,7 +782,7 @@ class ModelProviderAgent:
 
     def _call_gemini(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         generation_config: dict[str, Any] = {"maxOutputTokens": self._effective_max_output_tokens()}
-        if self.capabilities.supports_temperature:
+        if self.temperature is not None and self.capabilities.supports_temperature:
             generation_config["temperature"] = self.temperature
         if self._reasoning_enabled and self.capabilities.supports_google_thinking_config:
             thinking_budget = self._gemini_thinking_budget()
@@ -593,7 +847,7 @@ class ModelProviderAgent:
             ],
             "max_tokens": self._effective_max_output_tokens(),
         }
-        if self.capabilities.supports_temperature:
+        if self.temperature is not None and self.capabilities.supports_temperature:
             payload["temperature"] = self.temperature
         runtime = self.runtime_config
         if runtime and runtime.openrouter_provider_order:
@@ -647,7 +901,7 @@ class ModelProviderAgent:
         inference_config: dict[str, Any] = {
             "maxTokens": self._effective_max_output_tokens(),
         }
-        if self.capabilities.supports_temperature:
+        if self.temperature is not None and self.capabilities.supports_temperature:
             inference_config["temperature"] = self.temperature
         payload = {
             "system": [{"text": _SYSTEM_INSTRUCTIONS}],
@@ -696,15 +950,18 @@ class ModelProviderAgent:
             raise
         return text, receipt
 
-    def _effective_max_output_tokens(self) -> int:
-        if not self._reasoning_enabled or self.max_output_tokens > 1024:
-            return self.max_output_tokens
-        capability_limit = self.capabilities.max_output_tokens or 4096
-        return max(self.max_output_tokens, min(capability_limit, 4096))
+    def _effective_max_output_tokens(self) -> int | None:
+        return self._request_max_output_tokens
 
     def _reasoning_budget_tokens(self, *, max_tokens: int) -> int:
         configured = self.runtime_config.reasoning_budget_tokens if self.runtime_config else None
-        budget = configured if configured is not None else 1024
+        if configured is None:
+            raise ProviderCallError(
+                "This provider manual-thinking mode requires an explicit finite budget; "
+                "select a supported provider-native/adaptive mode or caller policy",
+                error_kind="provider_request_rejected", provider=self.provider, model=self.model,
+            )
+        budget = configured
         if budget < 1024:
             raise ProviderCallError(
                 "Anthropic manual thinking budget must be at least 1024 tokens",
@@ -851,11 +1108,6 @@ _SYSTEM_INSTRUCTIONS = (
     "public_explanation."
 )
 
-# Auto mode avoids paid extended thinking for arenas whose public state and
-# legal-action sets are intentionally small.  Callers can force it with
-# ``reasoning="enabled"`` or disable it for every arena.
-_SIMPLE_REASONING_OPTIONAL_ARENAS = frozenset({"tic-tac-toe", "connect-four"})
-
 
 def _reasoning_enabled_for_request(
     runtime_config: ProviderRuntimeConfig | None,
@@ -869,17 +1121,26 @@ def _reasoning_enabled_for_request(
         return False
     if mode == "enabled":
         return True
-    return request.arena.id not in _SIMPLE_REASONING_OPTIONAL_ARENAS
+    # Native defaults belong to the provider; neither arena labels nor a
+    # catalogue's recommended effort should silently select reasoning policy.
+    return bool(runtime_config and (
+        runtime_config.reasoning_effort is not None
+        or runtime_config.reasoning_budget_tokens is not None
+        or runtime_config.gemini_thinking_budget is not None
+    ))
 
 
-def _provider_prompt(request: ActRequest) -> str:
+def _provider_prompt(
+    request: ActRequest, *, history_window_turns: int | None = None,
+) -> str:
     payload = {
         "arena": request.arena.to_dict(),
         "active_player": request.active_player,
         "observation": request.observation,
         "legal_actions": request.legal_actions,
         "action_schema": request.action_schema,
-        "history": request.history[-12:],
+        "history": (request.history if history_window_turns is None
+                    else request.history[-history_window_turns:]),
         "memory_policy": request.memory_policy,
     }
     return (
@@ -904,10 +1165,20 @@ def _post_json(
     control_key: str,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
-    deadline = time.monotonic() + (runtime_config.timeout_ms / 1000 if runtime_config else 60.0)
+    check_cancelled()
+    # None removes only framework limits; omitted wire parameters retain
+    # genuine provider defaults/constraints, whose actual ceiling may be unknown.
+    payload = {key: value for key, value in payload.items() if value is not None}
+    for group in ("generationConfig", "inferenceConfig"):
+        if isinstance(payload.get(group), dict):
+            payload[group] = {
+                key: value for key, value in payload[group].items() if value is not None
+            }
+    timeout_ms = runtime_config.timeout_ms if runtime_config else None
+    deadline = time.monotonic() + timeout_ms / 1000 if timeout_ms is not None else None
     action = current_deadline()
     if action is not None:
-        deadline = min(deadline, action)
+        deadline = min(deadline, action) if deadline is not None else action
     with _provider_runtime_guard(runtime_config, control_key, deadline=deadline):
         try:
             response = bounded_post(
@@ -916,7 +1187,12 @@ def _post_json(
                 json=payload,
                 timeout=_httpx_timeout(runtime_config, deadline=deadline),
             )
+        except ExecutionCancelled:
+            raise
         except ProtocolError as exc:
+            _raise_observed_transport_failure(
+                exc, "provider_response_schema_mismatch", provider, model, runtime_config,
+            )
             raise ProviderCallError(
                 str(exc),
                 error_kind="provider_response_schema_mismatch",
@@ -924,30 +1200,71 @@ def _post_json(
                 model=model,
             ) from exc
         except httpx.TimeoutException as exc:
+            _raise_observed_transport_failure(
+                exc, "provider_timeout", provider, model, runtime_config,
+            )
             raise TimeoutError("provider timed out") from exc
         except httpx.HTTPError as exc:
+            _raise_observed_transport_failure(
+                exc, "provider_transport_error", provider, model, runtime_config,
+            )
             raise ProviderCallError(
-                f"provider request failed: {exc}",
+                "provider transport request failed",
                 error_kind="provider_transport_error",
                 provider=provider,
                 model=model,
             ) from exc
     if response.status_code >= 400:
-        body = response.text[:500].replace("\n", " ")
-        for name, value in headers.items():
-            if name.lower() in {"authorization", "x-api-key", "x-goog-api-key"}:
-                secret = value.partition(" ")[2] if name.lower() == "authorization" else value
-                if secret:
-                    body = body.replace(secret, "[REDACTED]")
+        kind = _provider_error_kind(response.status_code)
+        retry_after = _retry_after_seconds(response)
+        receipt = _failure_receipt(
+            provider=provider, model=model, agent_id="", agent_version="", turn_id=0,
+            outcome=kind, usage_unavailable_reason="provider_error_usage_unverified",
+            runtime_config=runtime_config, status_code=response.status_code,
+            retry_after_seconds=retry_after,
+        )
+        receipt["request_id"] = _http_error_identifier(
+            response.headers.get("x-request-id") or response.headers.get("request-id")
+            or response.headers.get("x-amzn-requestid"),
+        )
+        receipt["gateway_request_id"] = _http_error_identifier(
+            response.headers.get("cf-aig-request-id")
+            or response.headers.get("x-gateway-request-id"),
+        )
         raise ProviderCallError(
-            f"provider returned {response.status_code}: {body}",
-            status_code=response.status_code,
-            error_kind=_provider_error_kind(response.status_code),
-            retry_after_seconds=_retry_after_seconds(response),
-            provider=provider,
-            model=model,
+            f"provider returned HTTP {response.status_code}",
+            status_code=response.status_code, error_kind=kind,
+            retry_after_seconds=retry_after, provider=provider, model=model, receipt=receipt,
         )
     return response
+
+
+def _raise_observed_transport_failure(
+    exc: BaseException, kind: str, provider: str, model: str,
+    runtime_config: ProviderRuntimeConfig | None,
+) -> None:
+    observed = response_observation(exc)
+    if observed is None:
+        return
+    headers = dict(observed.headers)
+    receipt = _failure_receipt(
+        provider=provider, model=model, agent_id="", agent_version="", turn_id=0,
+        outcome=kind, usage_unavailable_reason="response_body_not_verified",
+        runtime_config=runtime_config, status_code=observed.status_code,
+    )
+    receipt["request_id"] = _http_error_identifier(
+        headers.get("x-request-id") or headers.get("request-id")
+        or headers.get("x-amzn-requestid"),
+    )
+    receipt["gateway_request_id"] = _http_error_identifier(
+        headers.get("cf-aig-request-id") or headers.get("x-gateway-request-id"),
+    )
+    # An observed error status does not make an incomplete response safely
+    # retryable. No body, generation, token or cost claim is inferred here.
+    raise ProviderCallError(
+        "provider response body could not be verified", error_kind=kind,
+        status_code=observed.status_code, provider=provider, model=model, receipt=receipt,
+    ) from exc
 
 
 def _provider_error_kind(status_code: int | None) -> str:
@@ -965,11 +1282,15 @@ def _provider_error_kind(status_code: int | None) -> str:
 
 
 def _provider_error_is_retryable(exc: ProviderCallError) -> bool:
-    if exc.status_code == 429:
-        return True
-    if exc.status_code is not None:
-        return exc.status_code >= 500
-    return exc.error_kind in {"provider_transport_error", "provider_unavailable"}
+    # max_retries is a maximum for definitive rejection, not permission to
+    # replay an ambiguous timeout, gateway5xx or accepted generation.
+    if exc.status_code != 429 or exc.error_kind != "provider_rate_limited":
+        return False
+    receipt = exc.receipt or {}
+    if receipt.get("provider_response_id") or receipt.get("usage"):
+        return False
+    cost = receipt.get("estimated_cost")
+    return not (isinstance(cost, dict) and cost.get("status") == "ok")
 
 
 def _retry_after_seconds(response: httpx.Response) -> float | None:
@@ -998,10 +1319,11 @@ def _provider_runtime_guard(
 ) -> Iterator[None]:
     _reserve_rate_slot(runtime_config, control_key, deadline=deadline)
     semaphore = _provider_semaphore(runtime_config, control_key)
-    if deadline is None:
-        semaphore.acquire()
-    elif not semaphore.acquire(timeout=remaining_seconds(deadline)):
-        raise TimeoutError("provider concurrency wait exceeded the deadline")
+    while True:
+        check_cancelled()
+        remaining = remaining_seconds(deadline)
+        if semaphore.acquire(timeout=0.1 if remaining is None else min(0.1, remaining)):
+            break
     try:
         yield
     finally:
@@ -1039,18 +1361,24 @@ def _reserve_rate_slot(
         _PROVIDER_RATE_RESERVATIONS[control_key] = reserved_at + interval_seconds
     delay = reserved_at - now
     if delay > 0:
-        time.sleep(delay)
+        sleep_with_cancellation(delay)
 
 
 def _httpx_timeout(
     runtime_config: ProviderRuntimeConfig | None, *, deadline: float | None = None,
 ) -> httpx.Timeout:
-    total = runtime_config.timeout_ms / 1000 if runtime_config else 60.0
-    limit = deadline if deadline is not None else time.monotonic() + total
-    seconds = min(total, remaining_seconds(limit))
+    total_ms = runtime_config.timeout_ms if runtime_config else None
+    limit = deadline
+    if limit is None and total_ms is not None:
+        limit = time.monotonic() + total_ms / 1000
     connect = runtime_config.connect_timeout_ms / 1000 if runtime_config else 10.0
-    read = runtime_config.read_timeout_ms / 1000 if runtime_config else 60.0
-    return TotalTimeout(seconds, connect=connect, read=read, deadline=limit)
+    read_ms = runtime_config.read_timeout_ms if runtime_config else None
+    read = read_ms / 1000 if read_ms is not None else None
+    if limit is None:
+        return httpx.Timeout(None, connect=connect, read=read, write=connect, pool=None)
+    seconds = remaining_seconds(limit)
+    return TotalTimeout(seconds, connect=connect, read=read if read is not None else seconds,
+                        deadline=limit)
 
 
 def _max_retries(runtime_config: ProviderRuntimeConfig | None) -> int:
@@ -1065,22 +1393,22 @@ def _sleep_before_retry(
     retry_after_seconds: float | None = None,
 ) -> None:
     if retry_after_seconds is not None:
-        if not math.isfinite(retry_after_seconds) or retry_after_seconds > 5.0:
-            raise TimeoutError("provider retry delay exceeds the 5-second inline retry limit")
+        if not math.isfinite(retry_after_seconds) or retry_after_seconds < 0:
+            raise ValueError("Retry-After must be finite and non-negative")
         deadline = current_deadline()
         if deadline is not None and retry_after_seconds >= remaining_seconds(deadline):
             raise TimeoutError("provider retry delay exceeds the action deadline")
-        time.sleep(retry_after_seconds)
+        sleep_with_cancellation(retry_after_seconds)
         return
     if runtime_config is None or runtime_config.retry_backoff_ms <= 0:
         return
     delay = runtime_config.retry_backoff_ms / 1000
-    if delay > 5.0:
-        raise TimeoutError("configured retry delay exceeds the 5-second inline retry limit")
+    if runtime_config.retry_jitter:
+        delay *= random.uniform(0.5, 1.5)
     deadline = current_deadline()
     if deadline is not None and delay >= remaining_seconds(deadline):
         raise TimeoutError("configured retry delay exceeds the action deadline")
-    time.sleep(delay)
+    sleep_with_cancellation(delay)
 
 
 def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]:
@@ -2039,8 +2367,8 @@ def _check_provider_completion(
 ) -> None:
     """Classify semantic failures before text parsing, retaining billable usage.
 
-    Refusal and incomplete results use the existing request-rejected outcome;
-    finish_status distinguishes them without changing the v2 outcome vocabulary.
+    Refusal, truncation, pending work and cancellation have distinct outcomes.
+    No legal-looking partial text is accepted after a non-complete envelope.
     Never copy refusal prose or arbitrary provider error strings into receipts.
     """
     reason: Any = None
@@ -2134,7 +2462,26 @@ def _check_provider_completion(
         receipt["finish_status"] = "refused"
         raise ProviderCallError(
             "provider refused or filtered the requested action",
-            error_kind="provider_request_rejected", provider=provider, model=model,
+            error_kind="provider_refused", provider=provider, model=model,
+        )
+    if reason in {
+        "max_output_tokens", "max_tokens", "MAX_TOKENS", "length", "model_context_window_exceeded",
+    }:
+        receipt["finish_status"] = "incomplete"
+        raise ProviderCallError(
+            "provider token/context constraint interrupted the response; no action accepted",
+            error_kind="provider_output_truncated", provider=provider, model=model,
+        )
+    deferred_kind = (
+        "provider_cancelled" if status == "cancelled" else
+        "provider_pending" if status in {"queued", "in_progress"} or reason == "pause_turn" else
+        "provider_interrupted" if status == "incomplete" else None
+    )
+    if deferred_kind is not None:
+        raise ProviderCallError(
+            "provider response requires cancellation/pending/interruption handling; "
+            "no action accepted",
+            error_kind=deferred_kind, provider=provider, model=model,
         )
     if status in {"incomplete", "cancelled", "queued", "in_progress"} or reason in {
         "max_output_tokens", "max_tokens", "MAX_TOKENS", "length",
