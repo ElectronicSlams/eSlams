@@ -14,7 +14,14 @@ from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
-from eslams.providers.deepseek import API_KEY_ENV, MODELS_ENDPOINT, canonical_provider
+from eslams.providers.deepseek import (
+    API_KEY_ENV,
+    MODELS_ENDPOINT,
+    canonical_provider,
+    configuration_error,
+    credential_values,
+    has_credential_echo,
+)
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -58,8 +65,11 @@ def provider_preflight(
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
     provider = canonical_provider(provider)
+    provider_config_error = (configuration_error(model, runtime_config)
+                             if provider == "deepseek" else None)
+    registry_model = "" if provider == "deepseek" and not isinstance(model, str) else model
     provider_registry = load_provider_registry()
-    record = provider_registry.resolve(provider, model)
+    record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
@@ -89,13 +99,15 @@ def provider_preflight(
         "response_parsing": False,
         "usage_extraction": False,
     }
-    warnings = provider_registry.warnings_for(provider, model)
+    warnings = provider_registry.warnings_for(provider, registry_model)
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
 
-    if credential_environment is None:
+    if provider_config_error:
+        error = {"error_class": "provider_request_rejected", "message": provider_config_error}
+    elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
@@ -215,7 +227,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True and credential_error is None
+                                    and provider_config_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -323,6 +336,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == "deepseek" and has_credential_echo(raw, credential_values(api_key)):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

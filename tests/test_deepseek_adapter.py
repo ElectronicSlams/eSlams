@@ -93,7 +93,8 @@ def test_namespace_alias_end_to_end(monkeypatch, provider):
     assert model is not None and model.provider == "deepseek"
     assert model.act(_request()).action == 1
     assert model.last_receipt["provider"] == "deepseek" and len(calls) == 1
-    assert _provider_agent(provider).model == "deepseek-flash"
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _provider_agent(provider)
 
 
 def test_exact_unknown_model_and_missing_identity_usage_stay_unknown(monkeypatch):
@@ -360,11 +361,15 @@ def test_gateway_keeps_native_path_and_identity_gap(monkeypatch):
 
 
 @pytest.mark.parametrize("status", [200, 429, 503])
-def test_actual_partial_body_custody_never_replays(monkeypatch, status):
+@pytest.mark.parametrize("echo", [None, "primary", "secondary"])
+def test_actual_partial_body_custody_never_replays(monkeypatch, status, echo):
     from eslams import http_io
 
     original_client = httpx.AsyncClient
     calls = []
+    secondary = "partial-secondary-key"
+    monkeypatch.setenv("SECONDARY_API_KEY", secondary)
+    echoed_value = SECRET if echo == "primary" else secondary if echo else "partial-deepseek"
 
     class Stream(httpx.AsyncByteStream):
         async def __aiter__(self):
@@ -374,7 +379,8 @@ def test_actual_partial_body_custody_never_replays(monkeypatch, status):
     def respond(request):
         calls.append(1)
         return httpx.Response(status, stream=Stream(), request=request,
-                              headers={"x-request-id": "partial-deepseek"})
+                              headers={"x-request-id": echoed_value,
+                                       "cf-aig-request-id": echoed_value})
 
     class Client:
         async def __aenter__(self):
@@ -397,7 +403,9 @@ def test_actual_partial_body_custody_never_replays(monkeypatch, status):
         model.act(_request())
     assert caught.value.error_kind == "provider_timeout" and calls == [1]
     assert model.last_receipt["status_code"] == status
-    assert model.last_receipt["request_id"] == "partial-deepseek"
+    assert model.last_receipt["request_id"] == (None if echo else "partial-deepseek")
+    assert model.last_receipt["gateway_request_id"] == (None if echo else "partial-deepseek")
+    assert secondary not in json.dumps(model.last_receipt)
     assert model.last_receipt["usage"] == {}
     assert model.last_receipt.get("provider_response_id") is None
     assert SECRET not in json.dumps(model.last_receipt)
@@ -407,3 +415,136 @@ def test_whitespace_keepalive_is_accepted(monkeypatch):
     monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **kw:
                         httpx.Response(200, content=b"\n\r\n " + json.dumps(fixture()).encode()))
     assert agent().act(_request()).action == 1
+
+
+@pytest.mark.parametrize("model", [None, "", " ", "\t\r\n"])
+def test_missing_or_blank_models_rejected_everywhere_before_io(monkeypatch, model):
+    calls = wire(monkeypatch, fixture())
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **kw: pytest.fail("invalid model must not discover"))
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        ModelProviderAgent("deep-seek", model, "DEEPSEEK_API_KEY")
+    result = provider_preflight("deep-seek", model, "tic-tac-toe", live=True)
+    assert not result["ok"] and not result["readiness"]["configuration_ready"]
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    assert calls == []
+
+
+@pytest.mark.parametrize("value", ["deepseek", "deepseek:", "deep-seek:  ", "deep_seek:\t"])
+def test_cli_never_defaults_missing_model(value):
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _provider_agent(value)
+
+
+@pytest.mark.parametrize("controls", [
+    {"reasoning_budget_tokens": 0}, {"reasoning_budget_tokens": 1000},
+    {"gemini_thinking_budget": -1}, {"gemini_thinking_budget": 0},
+])
+@pytest.mark.parametrize("live", [False, True])
+def test_unsupported_explicit_budgets_fail_preflight_and_before_transport(
+    monkeypatch, controls, live,
+):
+    calls = wire(monkeypatch, fixture())
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **kw: pytest.fail("unsupported budget must not discover"))
+    runtime = ProviderRuntimeConfig(**controls, max_retries=2)
+    result = provider_preflight("deep_seek", "deepseek-flash", "tic-tac-toe", live=live,
+                                runtime_config=runtime)
+    assert not result["ok"] and not result["readiness"]["configuration_ready"]
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    model = agent(runtime_config=runtime)
+    with pytest.raises(ProviderCallError, match="does not support explicit token reasoning budgets"
+                       ):
+        model.act(_request())
+    assert calls == []
+    assert len(model.attempt_receipts) == 1
+    assert model.last_receipt["outcome"] == "provider_request_rejected"
+
+
+@pytest.mark.parametrize("credential", ["primary", "secondary"])
+@pytest.mark.parametrize("fault", ["success", "http-error", "body-error", "malformed"])
+@pytest.mark.parametrize("encoded", [False, True])
+def test_credential_echoes_in_any_receipt_identifier_are_removed(
+    monkeypatch, credential, fault, encoded,
+):
+    from urllib.parse import quote
+
+    primary, secondary = "primary/secret+credential", "secondary/secret+credential"
+    monkeypatch.setenv("DEEPSEEK_API_KEY", primary)
+    monkeypatch.setenv("DEEPSEEK_SECONDARY_API_KEY", secondary)
+    secret = primary if credential == "primary" else secondary
+    echo = quote(secret, safe="") if encoded else secret
+    payload = fixture()
+    payload.update(id=f"id-{echo}-tail", model=f"model-{echo}-tail")
+    payload["choices"][0]["message"]["reasoning_content"] = secret
+    if fault in {"http-error", "body-error"}:
+        payload["error"] = {"code": 429, "message": secret}
+    calls = []
+
+    def post(*a, **kw):
+        calls.append(1)
+        assert kw["headers"]["Authorization"] == f"Bearer {primary}"
+        kwargs = {"content": b'{"id":'} if fault == "malformed" else {"json": payload}
+        return httpx.Response(429 if fault == "http-error" else 200, **kwargs,
+                              headers={"x-request-id": f"req-{echo}",
+                                       "x-gateway-request-id": f"gateway-{echo}"})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    model = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    if fault == "success":
+        response = model.act(_request())
+        assert primary not in json.dumps(response.to_dict())
+        assert secondary not in json.dumps(response.to_dict())
+        assert model.last_receipt["locked_model_id"] is None
+        assert model.last_receipt["model_identity_source"] is None
+    else:
+        with pytest.raises(ProviderCallError) as caught:
+            model.act(_request())
+        assert echo not in str(caught.value) + json.dumps(caught.value.receipt)
+    assert calls == [1]  # Echo removal never erases original accepted-work retry evidence.
+    receipt = model.last_receipt
+    assert receipt["request_id"] is None and receipt["gateway_request_id"] is None
+    assert receipt.get("provider_response_id") is None
+    assert echo not in json.dumps(model.attempt_receipts)
+    assert primary not in json.dumps(receipt) and secondary not in json.dumps(receipt)
+    if fault != "malformed":
+        assert receipt["usage"]["total_tokens"] == 16
+
+
+@pytest.mark.parametrize("escaped", [False, True])
+def test_credential_echo_in_action_text_never_becomes_public_output(monkeypatch, escaped):
+    payload = fixture()
+    text = json.dumps({"action": 1, "public_explanation": SECRET})
+    if escaped:
+        text = text.replace(SECRET[0], f"\\u{ord(SECRET[0]):04x}")
+    payload["choices"][0]["message"]["content"] = text
+    calls = wire(monkeypatch, payload)
+    model = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=1))
+    with pytest.raises(ProviderCallError, match="credential echo") as caught:
+        model.act(_request())
+    assert SECRET not in str(caught.value) + json.dumps(model.attempt_receipts)
+    assert len(calls) == 1 and model.last_receipt["usage"]["total_tokens"] == 16
+
+
+def test_secondary_canonical_key_is_redacted_with_custom_primary_environment(monkeypatch):
+    monkeypatch.setenv("CUSTOM_DEEPSEEK_ACCESS", "custom-primary-key")
+    payload = fixture()
+    payload["id"] = SECRET
+    payload["model"] = "custom-primary-key"
+    wire(monkeypatch, payload)
+    model = ModelProviderAgent("deepseek", "deepseek-flash", "CUSTOM_DEEPSEEK_ACCESS")
+    model.act(_request())
+    assert model.last_receipt["provider_response_id"] is None
+    assert model.last_receipt["locked_model_id"] is None
+    assert SECRET not in json.dumps(model.last_receipt)
+
+
+def test_discovery_never_returns_echoed_credentials_as_model_ids(monkeypatch):
+    monkeypatch.setenv("SECONDARY_API_KEY", "secondary-discovery-key")
+    for echo in [SECRET, "secondary-discovery-key"]:
+        monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, echo=echo, **kw:
+                            httpx.Response(200, json={"data": [{"id": echo}]}))
+        with pytest.raises(ProviderCallError) as caught:
+            provider_models_live("deep-seek")
+        assert caught.value.error_kind == "provider_response_schema_mismatch"
+        assert echo not in str(caught.value)

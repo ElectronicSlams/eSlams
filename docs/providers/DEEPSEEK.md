@@ -10,6 +10,8 @@ Core uses `deepseek` as the provider namespace and accepts `deep-seek` (includin
 underscore/case normalization) as a Core spelling alias. These names resolve to
 the same adapter through registry lookup, preflight, CLI construction and dispatch.
 Export `DEEPSEEK_API_KEY`; Core sends it only in the Bearer authorization header.
+An explicit nonblank model ID is required, including in the CLI; `deepseek` and
+`deepseek:` without a model are rejected rather than replaced by a default.
 The [official quick start](https://api-docs.deepseek.com/) identifies
 `https://api.deepseek.com` as the OpenAI-format base URL. The adapter uses
 `POST /chat/completions`; account discovery uses `GET /models`.
@@ -55,7 +57,10 @@ receipt content. Missing/unknown finish reasons and malformed choices fail close
 The [thinking guide](https://api-docs.deepseek.com/guides/thinking_mode/)
 documents native thinking defaults and explicit controls. Core's `auto` omits
 thinking controls, explicit enabled/disabled sends `thinking.type`, and an explicit
-`reasoning_effort` passes through unchanged. It never derives these choices from
+`reasoning_effort` passes through unchanged. Explicit token budgets
+(`reasoning_budget_tokens` or `gemini_thinking_budget`, including zero or -1)
+are unsupported and fail configuration preflight and the execution guard before
+any discovery/inference transport. It never derives these choices from
 the game or catalogue default. Temperature is forwarded only when thinking is
 explicitly disabled, because it has no effect in thinking mode. Output limits
 are omitted unless the caller selects one, then sent as `max_tokens` unchanged.
@@ -148,3 +153,29 @@ registry update, workflow change, merge, deployment or release is included.
 - Only this Linux/Python environment was executed; no native Windows/macOS or
   Python 3.10/3.11 validation is claimed. Hosted Actions and live API calls were
   not initiated. The commit carries `[skip ci]` for preserving the remote branch.
+
+
+### Review hardening
+
+The adapter rejects missing/blank model IDs at construction and CLI parsing;
+preflight returns a rejected configuration, and execution rechecks the model and
+unsupported token budgets before transport. Nonblank model names are preserved
+exactly. This changes the initial draft's provider-only CLI default behavior.
+
+Credential redaction compares provider-derived strings against the active primary
+key and nonempty environment values whose names identify keys, tokens, secrets,
+passwords or credentials. These values are private comparison material; secondary
+credentials are never sent to DeepSeek. Literal and URL-encoded echoes in receipt
+values are removed, and credential-bearing dictionary keys are discarded. An
+identity removed by redaction becomes unknown. This applies to success, HTTP
+errors, in-body errors, malformed JSON and interrupted-body header evidence.
+Action text containing credentials, including JSON-escaped values, is rejected
+before it can enter public explanations or raw-action metadata. Discovery also
+rejects credential echoes masquerading as model IDs.
+
+Redaction happens after retry admission is determined from original evidence:
+removing an echoed accepted-work ID cannot make an ambiguous failure retryable.
+The expanded suite has 110 deterministic DeepSeek cases, retaining full-history,
+native-default, explicit-limit and existing safe-retry coverage. Validation of the
+updated head is reported in PR #251; the initial 68-case results above refer to
+commit `844b7c7559c2b86763b37c89c44d2b69ceaaf039`.

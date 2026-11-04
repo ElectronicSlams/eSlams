@@ -47,6 +47,7 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.deepseek import call as call_deepseek
 from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
 from eslams.providers.deepseek import normalize_usage as normalize_deepseek_usage
+from eslams.providers.deepseek import validate_model as validate_deepseek_model
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
@@ -406,6 +407,8 @@ class ModelProviderAgent:
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
         self.provider = canonical_deepseek_provider(self.provider)
+        if self.provider == "deepseek":
+            validate_deepseek_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

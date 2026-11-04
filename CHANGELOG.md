@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reject missing DeepSeek model IDs and unsupported explicit reasoning budgets;
+  remove primary/secondary credential echoes across native receipt paths.
 - Add a native DeepSeek Chat Completions adapter with conservative identity, usage,
   safe retry and interruption handling; see `docs/providers/DEEPSEEK.md` for scope
   and synthetic fixture provenance. No live service availability is claimed.

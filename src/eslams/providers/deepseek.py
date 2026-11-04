@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import os
+import re
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote, quote_plus
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent, ProviderCallError
+    from eslams.contracts.provider import ProviderRuntimeConfig
 
 PROVIDER_ID = "deepseek"
 API_KEY_ENV = "DEEPSEEK_API_KEY"
 CHAT_COMPLETIONS_ENDPOINT = "https://api.deepseek.com/chat/completions"
 MODELS_ENDPOINT = "https://api.deepseek.com/models"
-DEFAULT_MODEL = "deepseek-flash"
 
 
 def canonical_provider(value: str) -> str:
@@ -21,7 +24,95 @@ def canonical_provider(value: str) -> str:
     } else value
 
 
+def validate_model(model: Any) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("DeepSeek requires an explicit nonblank model ID")
+
+
+def configuration_error(model: Any, runtime: ProviderRuntimeConfig | None) -> str | None:
+    try:
+        validate_model(model)
+    except ValueError as exc:
+        return str(exc)
+    if runtime and (runtime.reasoning_budget_tokens is not None
+                    or runtime.gemini_thinking_budget is not None):
+        return "DeepSeek does not support explicit token reasoning budgets"
+    return None
+
+
+def credential_values(primary: str | None = None) -> tuple[str, ...]:
+    """Private comparison material, including secondary credential environment values."""
+    values = {primary} if primary else set()
+    for name, value in os.environ.items():
+        if re.search(
+            r"(?:^|_)(?:API_KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?|ACCESS_KEY|PRIVATE_KEY|KEY)(?:$|_)",
+            name.upper(),
+        ) and value.strip():
+            values.add(value.strip())
+    return tuple(sorted({variant for value in values for variant in
+                         (value, quote(value, safe=""), quote_plus(value, safe=""))},
+                        key=len, reverse=True))
+
+
+def has_credential_echo(value: Any, secrets: tuple[str, ...]) -> bool:
+    if isinstance(value, str):
+        return any(secret in value for secret in secrets)
+    if isinstance(value, dict):
+        return any(has_credential_echo(key, secrets) or has_credential_echo(item, secrets)
+                   for key, item in value.items())
+    if isinstance(value, list):
+        return any(has_credential_echo(item, secrets) for item in value)
+    return False
+
+
+def _redact_echoes(value: Any, secrets: tuple[str, ...]) -> Any:
+    if isinstance(value, str):
+        return None if has_credential_echo(value, secrets) else value
+    if isinstance(value, dict):
+        return {key: _redact_echoes(item, secrets) for key, item in value.items()
+                if not has_credential_echo(key, secrets)}
+    if isinstance(value, list):
+        return [_redact_echoes(item, secrets) for item in value]
+    return value
+
+
+def _redact_receipt(receipt: dict[str, Any], secrets: tuple[str, ...]) -> dict[str, Any]:
+    result: dict[str, Any] = _redact_echoes(receipt, secrets)
+    if not result.get("locked_model_id"):
+        result["model_identity_source"] = None
+    return result
+
+
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    from eslams.agents import ProviderCallError
+    from eslams.model_actions import extract_json
+
+    problem = configuration_error(agent.model, agent.runtime_config)
+    if problem:
+        raise ProviderCallError(problem, error_kind="provider_request_rejected",
+                                provider=PROVIDER_ID, model=agent.model)
+    secrets = credential_values(api_key)
+    try:
+        text, receipt = _call(agent, api_key, prompt)
+    except ProviderCallError as exc:
+        # Preserve retry admission from the original evidence before removing echoes.
+        # In particular, an accepted-work ID must not disappear into a safe retry.
+        if exc.receipt is not None:
+            exc.receipt = _redact_receipt(exc.receipt, secrets)
+        if has_credential_echo(str(exc), secrets):
+            exc.args = ("DeepSeek request failed; credential echo removed",)
+        raise
+    receipt = _redact_receipt(receipt, secrets)
+    if has_credential_echo(text, secrets) or has_credential_echo(extract_json(text), secrets):
+        raise ProviderCallError(
+            "DeepSeek output contained a credential echo; no action accepted",
+            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+            model=agent.model, receipt=receipt,
+        )
+    return text, receipt
+
+
+def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     # Import at execution time: shared attempt/transport machinery owns the agent.
     from eslams.agents import (
         _SYSTEM_INSTRUCTIONS,
