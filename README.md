@@ -204,6 +204,11 @@ not marked game-agent-supported, or missing its API key. See
 [the provider guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDERS.md) for the exact wire adapters, model
 identity rules, reasoning behavior, usage semantics, and rate-card contract.
 
+The next-release native `perceptron:<explicit-model-id>` adapter uses
+`PERCEPTRON_API_KEY` and direct text Chat Completions. See the
+[Perceptron guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PERCEPTRON.md) for configuration checks, reasoning controls,
+official sources, and the limits of offline validation.
+
 Use the verified provider workflow before spending on a run:
 
 ```bash

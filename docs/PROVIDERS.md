@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `perceptron:<model>` | `PERCEPTRON_API_KEY` | Direct Chat Completions | `choices[0].message.content` | response `model` |
+
+The next-release [Perceptron adapter and evidence](PERCEPTRON.md) requires an
+explicit model ID and documents native reasoning controls, finality, usage,
+lifecycle, regional uncertainty, and keyless raw-wire validation.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

@@ -402,6 +402,9 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider == "perceptron":
+            from eslams.providers.perceptron import validate_settings
+            validate_settings(self.model, self.runtime_config)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +629,9 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "perceptron":
+            from eslams.providers.perceptron import call
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1221,7 +1227,7 @@ def _post_json(
         )
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
-            or response.headers.get("x-amzn-requestid"),
+            or response.headers.get("x-amzn-requestid") or response.headers.get("x-trace-id"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
             response.headers.get("cf-aig-request-id")
@@ -1356,7 +1362,7 @@ def _raise_observed_transport_failure(
     )
     receipt["request_id"] = _http_error_identifier(
         headers.get("x-request-id") or headers.get("request-id")
-        or headers.get("x-amzn-requestid"),
+        or headers.get("x-amzn-requestid") or headers.get("x-trace-id"),
     )
     receipt["gateway_request_id"] = _http_error_identifier(
         headers.get("cf-aig-request-id") or headers.get("x-gateway-request-id"),
@@ -1970,6 +1976,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "perceptron": "perceptron_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,6 +1988,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "perceptron": "perceptron-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
@@ -2144,7 +2152,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "perceptron"}
+            else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2759,7 +2768,8 @@ def _response_json_with_receipt(
                 "request_id": _http_error_identifier(response.headers.get("x-request-id")
                 or response.headers.get("request-id")
                 or response.headers.get("x-cloud-trace-context")
-                or response.headers.get("x-amzn-requestid")),
+                or response.headers.get("x-amzn-requestid")
+                or response.headers.get("x-trace-id")),
                 "gateway_request_id": _http_error_identifier(
                     response.headers.get("cf-aig-request-id")
                     or response.headers.get("x-gateway-request-id")),
