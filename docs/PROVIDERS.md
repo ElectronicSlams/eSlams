@@ -14,6 +14,10 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `sensetime:<model>` (alias `sensenova`) | `SENSENOVA_API_KEY` | SenseNova Token Plan Chat Completions | `choices[0].message.content` | response `model` |
+
+See the [SenseNova adapter notes](providers/SENSENOVA.md) for the verified direct API,
+reasoning limitations, region evidence, and live availability caveat.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
