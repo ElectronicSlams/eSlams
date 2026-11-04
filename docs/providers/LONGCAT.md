@@ -26,7 +26,9 @@ Images, tools, streaming and structured-output controls are also outside scope.
 Canonical provider: `meituan`. Aliases: `longcat`, `meituan-longcat` (case
 insensitive, underscore spelling accepted). Aliases normalize the provider only;
 the model string is preserved byte for byte, including case, slashes and colons.
-There is **no default model**: select one explicitly.
+There is **no default model**: select one explicitly. Missing, empty and
+whitespace-only IDs fail before registry lookup in direct construction and
+preflight, as well as in the CLI. Nonblank IDs remain unchanged.
 
 Configure `LONGCAT_API_KEY` in the process environment only when deliberately
 making a live call. Core does not automatically read `.env` files.
@@ -63,7 +65,10 @@ Default `ProviderRuntimeConfig(reasoning="auto")` omits `thinking` and
 independent of arena or catalogue knowledge. Explicit `reasoning_budget_tokens`
 maps unchanged to `thinking_budget`; explicit temperature is forwarded and may
 be overridden by the provider as documented. Unsupported `reasoning_effort` and
-`gemini_thinking_budget` fail before submission with `provider_request_rejected`.
+`gemini_thinking_budget` fail before submission with `provider_request_rejected`;
+offline and live preflight also reject these explicit controls before discovery.
+This includes zero and automatic Gemini budgets, not just positive values.
+Native `reasoning_budget_tokens` remains supported and is forwarded unchanged.
 Conflicting disabled reasoning and budgets are rejected by the existing runtime
 contract. Example Python configuration:
 
@@ -103,6 +108,18 @@ envelopes fail closed. HTTP 200 body errors are classified before action parsing
 Private reasoning, arbitrary error/refusal prose, headers and raw bodies are
 never copied into receipts. Accepted public action text follows Core's existing
 action metadata behavior.
+
+LongCat inference takes a request-scoped snapshot of the selected credential,
+the ordinary `LONGCAT_API_KEY`, and configured LongCat secondary key/token/secret
+environment values. Exact or embedded matches in provider-controlled identifiers
+are omitted, leaving model identity unknown when necessary. This applies to
+success, HTTP error, malformed JSON, and partial/invalid transport responses.
+Credential-bearing completion metadata and action content, including JSON-escaped
+explanations after decoding, are rejected rather than copied into public
+explanations or raw action metadata. Models discovery rejects matching IDs.
+Credentials are not retained on the agent or in global mutable redaction state;
+the scope resets after each invocation. Redacting a generation ID never removes
+the original work observation or authorizes a retry.
 
 Usage records retain only documented non-negative integer `prompt_tokens`,
 `completion_tokens`, `total_tokens` and

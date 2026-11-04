@@ -55,7 +55,9 @@ def provider_preflight(
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
-    provider = provider.lower()
+    provider = longcat.normalize_provider(provider)
+    if provider == longcat.PROVIDER_ID:
+        longcat.validate_configuration(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -327,6 +329,10 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == longcat.PROVIDER_ID and longcat.credential_echo(
+                raw, longcat.credential_values(api_key, api_key_env),
+            ):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

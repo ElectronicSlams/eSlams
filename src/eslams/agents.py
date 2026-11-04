@@ -326,6 +326,8 @@ def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
+    if longcat.credential_echo(value):
+        return None
     sanitized = _sanitize_receipt_value(value)
     return sanitized if isinstance(sanitized, str) else None
 
@@ -402,6 +404,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = longcat.normalize_provider(self.provider)
+        if self.provider == longcat.PROVIDER_ID:
+            longcat.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

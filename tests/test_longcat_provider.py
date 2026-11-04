@@ -44,6 +44,8 @@ def transport(monkeypatch):
         response = responses.pop(0)
         if isinstance(response, Exception):
             raise response
+        if not response.is_stream_consumed:
+            return response
         return httpx.Response(response.status_code, headers=response.headers,
                               stream=httpx.ByteStream(response.content))
 
@@ -452,3 +454,291 @@ def test_request_operator_output_policy_is_forwarded_without_an_adapter_default(
     })
     _agent().act(request)
     assert json.loads(requests[0].content)["max_tokens"] == 9876
+
+
+@pytest.mark.parametrize("alias", ALIASES)
+@pytest.mark.parametrize("model", [None, "", " \t\n"])
+def test_missing_models_are_rejected_at_construction_and_preflight(alias, model, monkeypatch):
+    def no_network(*args, **kwargs):
+        pytest.fail("invalid configuration must not reach discovery or inference")
+
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", no_network)
+    monkeypatch.setattr("eslams.agents.bounded_post", no_network)
+    with pytest.raises(ValueError, match="explicit provider-native model"):
+        ModelProviderAgent(alias, model, longcat.API_KEY_ENV)
+    for live in (False, True):
+        with pytest.raises(ValueError, match="explicit provider-native model"):
+            provider_preflight(alias, model, "tic-tac-toe", live=live)
+
+
+@pytest.mark.parametrize("alias", ALIASES)
+def test_cli_rejects_blank_model_in_run_and_preflight(alias, monkeypatch, capsys):
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda **kw: pytest.fail("no inference"))
+    assert main(["run", "--agent", alias + ":   "]) == 1
+    assert "explicit provider-native model" in capsys.readouterr().err
+    assert main(["providers", "preflight", "--provider", alias, "--model", "   "]) == 1
+    assert "explicit provider-native model" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("alias", ALIASES)
+@pytest.mark.parametrize("controls", [
+    {"gemini_thinking_budget": -1}, {"gemini_thinking_budget": 0},
+    {"gemini_thinking_budget": 1234}, {"reasoning_effort": "high"},
+])
+def test_preflight_rejects_unsupported_explicit_controls_even_offline(alias, controls, monkeypatch):
+    def no_network(*args, **kwargs):
+        pytest.fail("unsupported controls must not reach any transport")
+
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", no_network)
+    monkeypatch.setattr("eslams.agents.bounded_post", no_network)
+    runtime = ProviderRuntimeConfig(**controls)
+    for live in (False, True):
+        with pytest.raises(ValueError, match="unsupported"):
+            provider_preflight(alias, "LongCat-2.5", "tic-tac-toe",
+                               runtime_config=runtime, live=live)
+    agent = _agent(alias, runtime_config=runtime)
+    monkeypatch.setenv(longcat.API_KEY_ENV, KEY)
+    with pytest.raises(ProviderCallError, match="unsupported") as error:
+        agent.act(_request())
+    assert error.value.error_kind == "provider_request_rejected"
+
+
+@pytest.mark.parametrize("budget", [0, 1234])
+def test_native_reasoning_budget_remains_supported_in_preflight(budget):
+    result = provider_preflight("longcat", "LongCat-2.5", "tic-tac-toe",
+                                runtime_config=ProviderRuntimeConfig(reasoning_budget_tokens=budget))
+    assert result["ok"] is True
+
+
+PRIMARY = "opaquePrimaryCredential92x"
+SECONDARY = "opaqueSecondaryCredential74z"
+
+
+def _custom_credentials(monkeypatch):
+    monkeypatch.setenv("CUSTOM_LONGCAT_API_KEY", PRIMARY)
+    monkeypatch.setenv("LONGCAT_SECONDARY_API_KEY", SECONDARY)
+    # The ordinary LONGCAT_API_KEY remains configured separately as KEY.
+    return ModelProviderAgent("longcat", "LongCat-2.5", "CUSTOM_LONGCAT_API_KEY")
+
+
+def _assert_no_credentials(value):
+    text = json.dumps(value, sort_keys=True)
+    assert all(secret not in text for secret in (PRIMARY, SECONDARY, KEY))
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY, KEY])
+@pytest.mark.parametrize("embedded", [False, True])
+@pytest.mark.parametrize("field", [
+    "id", "model", "x-request-id", "request-id", "cf-aig-request-id", "x-gateway-request-id",
+])
+def test_success_drops_echoed_credentials_in_identity_fields(
+    credential, embedded, field, transport, monkeypatch,
+):
+    requests, responses = transport
+    agent = _custom_credentials(monkeypatch)
+    echo = f"prefix-{credential}-suffix" if embedded else credential
+    data = _wire()
+    headers = {}
+    if field in {"id", "model"}:
+        data[field] = echo
+    else:
+        headers[field] = echo
+    responses.append(httpx.Response(200, json=data, headers=headers))
+    result = agent.act(_request())
+    _assert_no_credentials(result.to_dict())
+    receipt_field = {"id": "provider_response_id", "model": "locked_model_id",
+                     "cf-aig-request-id": "gateway_request_id",
+                     "x-gateway-request-id": "gateway_request_id"}.get(field, "request_id")
+    assert agent.last_receipt[receipt_field] is None
+    if field == "model":
+        assert agent.last_receipt["model_identity_source"] is None
+    assert result.action == 1 and len(requests) == 1
+    assert requests[0].headers["Authorization"] == f"Bearer {PRIMARY}"
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY, KEY])
+@pytest.mark.parametrize("location", ["top", "error", "metadata"])
+@pytest.mark.parametrize("status", [400, 401, 429, 500])
+def test_http_error_credential_ids_remain_work_observations_without_leaking(
+    credential, location, status, transport, monkeypatch,
+):
+    requests, responses = transport
+    agent = _custom_credentials(monkeypatch)
+    agent.runtime_config = ProviderRuntimeConfig(max_retries=2)
+    data = _rate_error()
+    if location == "top":
+        data["id"] = credential
+    elif location == "error":
+        data["error"]["generation_id"] = credential
+    else:
+        data["error"]["metadata"] = {"provider_response_id": f"generation-{credential}"}
+    responses.append(httpx.Response(status, json=data, headers={
+        "x-request-id": PRIMARY, "cf-aig-request-id": SECONDARY,
+    }))
+    with pytest.raises(ProviderCallError) as error:
+        agent.act(_request())
+    _assert_no_credentials(error.value.receipt)
+    _assert_no_credentials(agent.attempt_receipts)
+    assert len(requests) == 1 and agent.last_receipt.get("provider_response_id") is None
+    assert agent.last_receipt["pricing_provenance"]["work_observation_present"] is True
+    assert not error.value.retry_permitted
+
+
+class _InterruptedBody(httpx.AsyncByteStream):
+    async def __aiter__(self):
+        yield b'{"id":"incomplete'
+        raise httpx.ReadError("connection interrupted")
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY, KEY])
+@pytest.mark.parametrize("status", [200, 429])
+@pytest.mark.parametrize("phase", ["malformed", "oversized", "compressed", "interrupted"])
+def test_unverified_response_headers_cannot_echo_credentials(
+    credential, status, phase, transport, monkeypatch,
+):
+    requests, responses = transport
+    agent = _custom_credentials(monkeypatch)
+    agent.runtime_config = ProviderRuntimeConfig(max_retries=2)
+    headers = {"x-request-id": f"request-{credential}", "cf-aig-request-id": credential}
+    if phase == "oversized":
+        headers["Content-Length"] = str(2**21)
+    elif phase == "compressed":
+        headers["Content-Encoding"] = "gzip"
+    if phase == "interrupted":
+        responses.append(httpx.Response(status, stream=_InterruptedBody(), headers=headers))
+    else:
+        responses.append(httpx.Response(status, content=b"{", headers=headers))
+    with pytest.raises(ProviderCallError) as error:
+        agent.act(_request())
+    assert len(requests) == 1
+    assert agent.last_receipt["request_id"] is None
+    assert agent.last_receipt["gateway_request_id"] is None
+    _assert_no_credentials(error.value.receipt)
+    _assert_no_credentials(agent.attempt_receipts)
+    assert agent.last_receipt["usage"] == {} and agent.last_receipt["locked_model_id"] is None
+    assert not error.value.retry_permitted
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY, KEY])
+def test_credentials_in_action_content_fail_closed(credential, transport, monkeypatch):
+    _, responses = transport
+    agent = _custom_credentials(monkeypatch)
+    data = _wire()
+    data["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": f"echo-{credential}",
+    })
+    responses.append(httpx.Response(200, json=data))
+    with pytest.raises(ProviderCallError, match="credential-bearing") as error:
+        agent.act(_request())
+    _assert_no_credentials(error.value.receipt)
+    _assert_no_credentials(agent.attempt_receipts)
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert credential not in str(error.value)
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY, KEY])
+def test_discovery_rejects_credential_echoes(credential, monkeypatch, capsys):
+    monkeypatch.setenv(longcat.API_KEY_ENV, KEY)
+    _custom_credentials(monkeypatch)
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, **k: httpx.Response(
+        200, json={"data": [{"id": f"model-{credential}"}]},
+    ))
+    assert main(["providers", "models", "--provider", "longcat", "--live"]) == 1
+    payload = json.loads(capsys.readouterr().out)
+    _assert_no_credentials(payload)
+    assert payload["error"]["error_class"] == "provider_response_schema_mismatch"
+
+
+def test_credential_scope_does_not_retain_previous_requests(transport, monkeypatch):
+    _, responses = transport
+    data = _wire()
+    data["id"] = KEY
+    responses.extend([httpx.Response(200, json=data), httpx.Response(200, json=data)])
+    agent = _agent()
+    agent.act(_request())
+    assert agent.last_receipt["provider_response_id"] is None
+    assert not longcat.credential_echo(KEY)
+    monkeypatch.setenv(longcat.API_KEY_ENV, "replacementCredential83k")
+    agent.act(_request())
+    assert agent.last_receipt["provider_response_id"] == KEY
+
+
+@pytest.mark.parametrize("finish", ["length", "content_filter"])
+def test_incomplete_completion_receipts_drop_credentials(finish, transport, monkeypatch):
+    _, responses = transport
+    agent = _custom_credentials(monkeypatch)
+    data = _wire()
+    data["id"] = PRIMARY
+    data["model"] = SECONDARY
+    data["choices"][0]["finish_reason"] = finish
+    responses.append(httpx.Response(200, json=data, headers={"request-id": KEY}))
+    with pytest.raises(ProviderCallError) as error:
+        agent.act(_request())
+    _assert_no_credentials(error.value.receipt)
+    _assert_no_credentials(agent.attempt_receipts)
+    assert agent.last_receipt["locked_model_id"] is None
+    assert agent.last_receipt["model_identity_source"] is None
+    assert agent.last_receipt["usage"]["total_tokens"] == 35
+
+
+def test_cli_artifact_does_not_persist_echoed_credentials(transport, monkeypatch, tmp_path):
+    _, responses = transport
+    monkeypatch.setenv("LONGCAT_SECONDARY_API_KEY", SECONDARY)
+    data = _wire()
+    data["id"] = SECONDARY
+    data["model"] = KEY
+    responses.append(httpx.Response(200, json=data, headers={
+        "x-request-id": KEY, "cf-aig-request-id": SECONDARY,
+    }))
+    assert main([
+        "run", "--arena", "tic-tac-toe", "--agent", "longcat:LongCat-2.5",
+        "--opponent", "first-legal", "--max-turns", "1", "--expanded",
+        "--run-id", "longcat-echo-privacy", "--output-dir", str(tmp_path),
+    ]) == 0
+    receipt_files = list(tmp_path.rglob("provider_receipts.jsonl"))
+    assert len(receipt_files) == 1
+    receipt = json.loads(receipt_files[0].read_text().splitlines()[0])
+    assert receipt["locked_model_id"] is None and receipt["model_identity_source"] is None
+    assert receipt["provider_response_id"] is None
+    for path in tmp_path.rglob("*"):
+        if path.is_file():
+            content = path.read_bytes()
+            assert all(secret.encode() not in content for secret in (KEY, SECONDARY))
+
+
+@pytest.mark.parametrize("reason", ["stop", "length"])
+@pytest.mark.parametrize("choice_count", [1, 2])
+def test_known_finish_reason_cannot_echo_a_configured_credential(
+    reason, choice_count, transport, monkeypatch,
+):
+    _, responses = transport
+    monkeypatch.setenv(longcat.API_KEY_ENV, reason)
+    data = _wire()
+    data["choices"][0]["finish_reason"] = reason
+    data["choices"] *= choice_count
+    responses.append(httpx.Response(200, json=data))
+    agent = _agent()
+    with pytest.raises(ProviderCallError, match="credential-bearing completion metadata"):
+        agent.act(_request())
+    assert agent.last_receipt.get("finish_reason") is None
+    assert reason not in json.dumps(agent.attempt_receipts)
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY, KEY])
+@pytest.mark.parametrize("fenced", [False, True])
+def test_json_escaped_credentials_cannot_leak_through_decoded_explanation(
+    credential, fenced, transport, monkeypatch,
+):
+    _, responses = transport
+    agent = _custom_credentials(monkeypatch)
+    data = _wire()
+    escaped = "".join(f"\\u{ord(character):04x}" for character in credential)
+    content = '{"action":1,"public_explanation":"' + escaped + '"}'
+    if fenced:
+        content = "```json\n" + content + "\n```"
+    data["choices"][0]["message"]["content"] = content
+    responses.append(httpx.Response(200, json=data))
+    with pytest.raises(ProviderCallError, match="credential-bearing") as error:
+        agent.act(_request())
+    _assert_no_credentials(error.value.receipt)
+    _assert_no_credentials(agent.attempt_receipts)

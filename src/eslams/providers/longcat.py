@@ -7,6 +7,10 @@ Shared transport/receipt imports are local to keep provider dispatch acyclic.
 from __future__ import annotations
 
 import math
+import os
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
@@ -14,6 +18,7 @@ import httpx
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
+    from eslams.contracts.provider import ProviderRuntimeConfig
 
 PROVIDER_ID = "meituan"
 PROVIDER_ALIASES = ("meituan", "longcat", "meituan-longcat")
@@ -22,6 +27,7 @@ CHAT_COMPLETIONS_ENDPOINT = "https://api.longcat.chat/openai/v1/chat/completions
 MODELS_ENDPOINT = "https://api.longcat.chat/openai/v1/models"
 ENDPOINT_KIND = "longcat_chat_completions"
 PARSER_VERSION = "longcat-chat-completions-raw-v1"
+_REQUEST_CREDENTIALS: ContextVar[tuple[str, ...]] = ContextVar("longcat_credentials", default=())
 
 
 def normalize_provider(provider: str) -> str:
@@ -29,7 +35,64 @@ def normalize_provider(provider: str) -> str:
     return PROVIDER_ID if normalized in PROVIDER_ALIASES else provider.lower()
 
 
+def validate_model(model: object) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("LongCat requires an explicit provider-native model ID")
+
+
+def validate_configuration(model: object, runtime: ProviderRuntimeConfig | None) -> None:
+    validate_model(model)
+    if runtime and (runtime.reasoning_effort is not None
+                    or runtime.gemini_thinking_budget is not None):
+        raise ValueError(
+            "LongCat accepts reasoning enabled/disabled/auto and reasoning_budget_tokens; "
+            "reasoning_effort and gemini_thinking_budget are unsupported"
+        )
+
+
+def credential_values(primary: str, api_key_env: str) -> tuple[str, ...]:
+    # Include the selected key and configured LongCat secondary credentials.
+    # Do not retain this per-request snapshot on the agent or in public receipts.
+    names = {API_KEY_ENV, api_key_env}
+    names.update(name for name in os.environ if "LONGCAT" in name.upper()
+                 and any(part in name.upper() for part in ("KEY", "TOKEN", "SECRET", "PASSWORD")))
+    values = {primary}
+    values.update(os.environ[name].strip() for name in names if os.environ.get(name, "").strip())
+    return tuple(sorted(values - {""}, key=len, reverse=True))
+
+
+def credential_echo(value: Any, credentials: tuple[str, ...] | None = None) -> bool:
+    active = _REQUEST_CREDENTIALS.get() if credentials is None else credentials
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str) and any(secret in item for secret in active):
+            return True
+        if isinstance(item, dict):
+            pending.extend(item)
+            pending.extend(item.values())
+        elif isinstance(item, (list, tuple)):
+            pending.extend(item)
+    return False
+
+
+@contextmanager
+def credential_scope(primary: str, api_key_env: str) -> Iterator[None]:
+    token = _REQUEST_CREDENTIALS.set(credential_values(primary, api_key_env))
+    try:
+        yield
+    finally:
+        _REQUEST_CREDENTIALS.reset(token)
+
+
 def complete(
+    agent: ModelProviderAgent, api_key: str, prompt: str, *, system_instructions: str,
+) -> tuple[str, dict[str, Any]]:
+    with credential_scope(api_key, agent.api_key_env):
+        return _complete(agent, api_key, prompt, system_instructions=system_instructions)
+
+
+def _complete(
     agent: ModelProviderAgent, api_key: str, prompt: str, *, system_instructions: str,
 ) -> tuple[str, dict[str, Any]]:
     from eslams.agents import (
@@ -40,21 +103,16 @@ def complete(
         _receipt,
         _response_json_with_receipt,
     )
+    from eslams.model_actions import extract_json
 
     runtime = agent.runtime_config
-    if not agent.model.strip():
+    try:
+        validate_configuration(agent.model, runtime)
+    except ValueError as exc:
         raise ProviderCallError(
-            "LongCat requires an explicit provider-native model ID",
+            str(exc),
             error_kind="provider_request_rejected", provider=PROVIDER_ID, model=agent.model,
-        )
-    # Do not translate unrelated providers' effort/controls or silently ignore them.
-    if runtime and (runtime.reasoning_effort is not None
-                    or runtime.gemini_thinking_budget is not None):
-        raise ProviderCallError(
-            "LongCat accepts reasoning enabled/disabled/auto and reasoning_budget_tokens; "
-            "reasoning_effort and gemini_thinking_budget are unsupported",
-            error_kind="provider_request_rejected", provider=PROVIDER_ID, model=agent.model,
-        )
+        ) from None
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [
@@ -87,20 +145,43 @@ def complete(
         runtime_config=runtime,
     )
     try:
+        choices = data.get("choices")
+        first = choices[0] if isinstance(choices, list) and choices else None
+        if isinstance(first, dict) and credential_echo(first.get("finish_reason")):
+            raise ProviderCallError(
+                "LongCat returned credential-bearing completion metadata; no action accepted",
+                error_kind="provider_response_schema_mismatch",
+                provider=PROVIDER_ID, model=agent.model,
+            )
         _check_provider_completion(
             data, provider=PROVIDER_ID, model=agent.model, response=response, receipt=receipt,
         )
-        choices = data.get("choices")
-        first = choices[0] if isinstance(choices, list) and len(choices) == 1 else None
         message = first.get("message") if isinstance(first, dict) else None
         content = message.get("content") if isinstance(message, dict) else None
         # Reasoning is private telemetry, never an alternate source of action text.
-        if (not isinstance(first, dict) or first.get("finish_reason") != "stop"
+        if (not isinstance(choices, list) or len(choices) != 1
+                or not isinstance(first, dict) or first.get("finish_reason") != "stop"
                 or not isinstance(message, dict) or message.get("role") != "assistant"
                 or message.get("tool_calls") or message.get("function_call")
                 or not isinstance(content, str) or not content.strip()):
             raise ProviderCallError(
                 "LongCat returned no complete assistant text choice",
+                error_kind="provider_response_schema_mismatch",
+                provider=PROVIDER_ID, model=agent.model,
+            )
+        try:
+            content_has_credentials = (
+                credential_echo(content) or credential_echo(extract_json(content))
+            )
+        except (ValueError, RecursionError):
+            raise ProviderCallError(
+                "LongCat returned unverifiable action content; no action accepted",
+                error_kind="provider_response_schema_mismatch",
+                provider=PROVIDER_ID, model=agent.model,
+            ) from None
+        if content_has_credentials:
+            raise ProviderCallError(
+                "LongCat returned credential-bearing action content; no action accepted",
                 error_kind="provider_response_schema_mismatch",
                 provider=PROVIDER_ID, model=agent.model,
             )
