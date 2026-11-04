@@ -5,6 +5,10 @@ Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
+The prospective 0.7.1 IBM Cloud `watsonx` adapter adds direct base-model chat
+with IAM authentication and explicit project/space and region configuration.
+See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
@@ -13,6 +17,7 @@ convenience properties.
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `watsonx:<exact-model-id>` | `WATSONX_API_KEY` (IAM exchange) | IBM `/ml/v1/text/chat` | `choices[0].message.content` | response `model_id` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 
 An absent provider model identity remains `null`. Core never copies the

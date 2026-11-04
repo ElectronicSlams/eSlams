@@ -23,6 +23,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "watsonx": "WATSONX_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -129,7 +130,9 @@ def provider_preflight(
                 )
         if visible_models is None and error is None:
             warnings.append(
-                "This adapter has no Models API; account visibility remains unverified."
+                "Adapter model discovery is unavailable; account visibility remains unverified."
+                 if record.provider == "watsonx" else
+                 "This adapter has no Models API; account visibility remains unverified."
             )
         if visible_models is not None:
             checks["account_model_visible"] = model in visible_models
@@ -184,6 +187,12 @@ def provider_preflight(
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
+    if record.provider == "watsonx" and not live:
+        from eslams.providers.watsonx import configuration_error
+        problem = configuration_error(runtime_config)
+        if problem:
+            error = {"error_class": "provider_request_rejected", "message": problem}
+
     required = (
         checks["adapter_available"] is True
         and (not strict_catalogue or all(checks[key] is True for key in (
@@ -211,7 +220,9 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None
+                                    and (record.provider != "watsonx" or error is None)),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

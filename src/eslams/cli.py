@@ -1452,7 +1452,12 @@ def _provider_agent(
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    from eslams.providers.watsonx import normalize_alias
+    provider = normalize_alias(provider.lower())
+    if provider == "watsonx":
+        if not model:
+            raise ValueError("watsonx requires an exact explicit model ID")
+        defaults[provider] = (model, "WATSONX_API_KEY")
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

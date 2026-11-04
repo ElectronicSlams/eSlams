@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add the native IBM Cloud watsonx.ai base-model chat adapter, explicit host aliases,
+  IAM API-key exchange, sanitized receipts and deterministic wire tests. Author
+  catalogue names remain separate. See `docs/PROVIDER_WATSONX.md` for configuration,
+  reasoning/accounting limits and unsupported deployment/gateway surfaces.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
