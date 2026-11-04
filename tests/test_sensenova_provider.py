@@ -13,7 +13,11 @@ from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
-from eslams.provider_preflight import provider_models_live, provider_preflight
+from eslams.provider_preflight import (
+    provider_models_live,
+    provider_models_result,
+    provider_preflight,
+)
 from eslams.providers import load_provider_registry
 from eslams.providers.sensenova import API_KEY_ENV, CHAT_COMPLETIONS_ENDPOINT
 
@@ -126,7 +130,8 @@ def test_explicit_output_temperature_and_timeout(wire):
     {"reasoning": "enabled"}, {"reasoning": "disabled"}, {"reasoning_effort": "high"},
     {"reasoning_budget_tokens": 5000}, {"gemini_thinking_budget": 2000},
 ])
-def test_unsupported_reasoning_controls_fail_without_call(wire, control):
+@pytest.mark.parametrize("live", [False, True])
+def test_unsupported_reasoning_controls_fail_without_call(wire, control, live):
     calls = wire(success())
     selected = agent(runtime_config=ProviderRuntimeConfig(**control))
     with pytest.raises(ProviderCallError, match="no verified reasoning control"):
@@ -134,7 +139,7 @@ def test_unsupported_reasoning_controls_fail_without_call(wire, control):
     assert not calls
     assert selected.last_receipt["outcome"] == "provider_request_rejected"
     preflight = provider_preflight("sensenova", DEFAULT_MODEL, "tic-tac-toe",
-                                   runtime_config=ProviderRuntimeConfig(**control))
+                                   runtime_config=ProviderRuntimeConfig(**control), live=live)
     assert preflight["ok"] is False
     assert preflight["readiness"]["configuration_ready"] is False
     assert preflight["error"]["error_class"] == "provider_request_rejected"
@@ -404,3 +409,95 @@ def test_ambiguous_transport_failures_never_retried(monkeypatch, wire, failure):
         selected.act(request())
     assert len(calls) == 1
     assert selected.last_receipt["usage"] == {}
+
+
+@pytest.mark.parametrize("secondary", [False, True])
+@pytest.mark.parametrize("encoded", [False, True])
+@pytest.mark.parametrize("location", ["prose", "explanation", "action", "metadata", "key"])
+def test_action_text_credential_echo_fails_before_parsing_or_repair(
+    monkeypatch, wire, secondary, encoded, location,
+):
+    secondary_secret = "secondary-super-secret"
+    monkeypatch.setenv("SENSENOVA_ACCESS_KEY_SECRET", secondary_secret)
+    echo = secondary_secret if secondary else SECRET
+    action = {"action": 1}
+    if location == "explanation":
+        action["public_explanation"] = echo
+    elif location == "action":
+        action["action"] = echo
+    elif location == "metadata":
+        action["metadata"] = {"note": [echo]}
+    elif location == "key":
+        action[echo] = "untrusted extension"
+    text = json.dumps(action)
+    if location == "prose":
+        text = echo + "\n" + text
+    if encoded:
+        text = text.replace(echo, "".join(f"\\u{ord(char):04x}" for char in echo))
+    payload = success()
+    payload["choices"][0]["message"]["content"] = text
+    calls = wire(payload)
+    selected = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=2))
+    with pytest.raises(ProviderCallError) as caught:
+        selected.act(request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert echo not in str(caught.value) + json.dumps(caught.value.receipt)
+    assert echo not in json.dumps(selected.attempt_receipts)
+    assert len(calls) == 1
+    assert selected.last_receipt["usage"]["total_tokens"] == 16
+    assert selected.last_receipt["provider_response_id"] == "sensenova-fixture-response"
+
+
+@pytest.mark.parametrize("secondary", [False, True])
+def test_live_preflight_rejects_echoed_action_text_without_disclosure(monkeypatch, wire, secondary):
+    secondary_secret = "secondary-super-secret"
+    monkeypatch.setenv("SENSENOVA_SECRET_KEY", secondary_secret)
+    echo = secondary_secret if secondary else SECRET
+    payload = success()
+    payload["choices"][0]["message"]["content"] = json.dumps(
+        {"action": 1, "public_explanation": echo},
+    )
+    calls = wire(payload)
+    result = provider_preflight("sensenova", DEFAULT_MODEL, "tic-tac-toe", live=True)
+    assert result["ok"] is False
+    assert result["error"]["error_class"] == "provider_response_schema_mismatch"
+    assert echo not in json.dumps(result)
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("provider", ALIASES)
+def test_discovery_has_no_network_or_credential_echo_path(monkeypatch, wire, capsys, provider):
+    calls = wire(success())
+    monkeypatch.setenv("SENSENOVA_SECRET_KEY", "secondary-super-secret")
+
+    def fail(*args, **kwargs):
+        pytest.fail("SenseNova discovery must not read credentials or make a network call")
+
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", fail)
+    monkeypatch.setattr("eslams.provider_preflight.provider_key", fail)
+    assert provider_models_live(provider) is None
+    result = provider_models_result(provider)
+    assert result["ok"] is False
+    assert result["error"]["error_class"] == "provider_discovery_unavailable"
+    assert main(["providers", "models", "--provider", provider, "--live"]) == 1
+    output = capsys.readouterr().out
+    for secret in (SECRET, "secondary-super-secret"):
+        assert secret not in output + json.dumps(result)
+    assert not calls
+
+
+def test_privacy_scan_of_nested_invalid_action_retains_receipt(wire):
+    payload = success()
+    depth = 1100
+    payload["choices"][0]["message"]["content"] = (
+        '{"action":' + '[' * depth + '0' + ']' * depth + '}'
+    )
+    calls = wire(payload)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as caught:
+        selected.act(request())
+    assert caught.value.error_kind in {
+        "provider_response_schema_mismatch", "action_response_unparseable",
+    }
+    assert selected.last_receipt["usage"]["total_tokens"] == 16
+    assert len(calls) == 1

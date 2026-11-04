@@ -7,6 +7,7 @@ See docs/providers/SENSENOVA.md for pinned official sources and limitations.
 from __future__ import annotations
 
 import os
+import re
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -21,9 +22,32 @@ CHAT_COMPLETIONS_ENDPOINT = "https://token.sensenova.cn/v1/chat/completions"
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams.agents import ProviderCallError
+    from eslams.model_actions import extract_json
 
     try:
         text, receipt = _call(agent, api_key, prompt)
+        secrets = _credential_values(api_key)
+        # Test decoded action fields as well as wire text: JSON Unicode escapes
+        # can hide an echo until the shared action parser decodes it. Reject the
+        # response rather than editing an action or publishing its explanation.
+        try:
+            echoed = _contains_credentials(text, secrets) or _contains_credentials(
+                extract_json(text), secrets,
+            )
+        except (ValueError, RecursionError):
+            raise ProviderCallError(
+                "SenseNova returned malformed action text; no action accepted",
+                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+                model=agent.model,
+                receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
+            ) from None
+        if echoed:
+            raise ProviderCallError(
+                "SenseNova response echoed configured credentials; no action accepted",
+                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+                model=agent.model,
+                receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
+            )
     except ProviderCallError as exc:
         if exc.receipt is not None:
             exc.receipt = redact_credentials(exc.receipt, api_key)
@@ -44,18 +68,39 @@ def configuration_error(model: str, runtime: ProviderRuntimeConfig | None) -> st
     return None
 
 
-def redact_credentials(receipt: dict[str, Any], api_key: str) -> dict[str, Any]:
-    """Remove reflected credentials, including unused legacy secondary secrets.
-
-    Identifier syntax alone cannot distinguish an ID from an echoed API key.
-    This projection also covers error and partial-body transport receipts.
-    """
+def _credential_values(api_key: str) -> set[str]:
     secrets = {api_key}
     for name, value in os.environ.items():
         if name.upper().startswith(("SENSENOVA_", "SENSETIME_")) and any(
             part in name.upper() for part in ("KEY", "SECRET", "TOKEN", "PASSWORD", "AUTH")
         ) and value.strip():
             secrets.add(value.strip())
+    return secrets
+
+
+def _contains_credentials(value: Any, secrets: set[str]) -> bool:
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str):
+            decoded = re.sub(r"\\u([0-9a-fA-F]{4})", lambda match: chr(int(match[1], 16)), item)
+            if any(secret and (secret in item or secret in decoded) for secret in secrets):
+                return True
+        elif isinstance(item, dict):
+            pending.extend(item.keys())
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+    return False
+
+
+def redact_credentials(receipt: dict[str, Any], api_key: str) -> dict[str, Any]:
+    """Remove reflected credentials, including unused legacy secondary secrets.
+
+    Identifier syntax alone cannot distinguish an ID from an echoed API key.
+    This projection also covers error and partial-body transport receipts.
+    """
+    secrets = _credential_values(api_key)
 
     def clean(value: Any) -> Any:
         if isinstance(value, str):

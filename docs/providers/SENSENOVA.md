@@ -85,6 +85,10 @@ or zero-cost assumption is inferred from a free-plan advertisement. This
 adapter has no verified rate card; cost remains unavailable. Credential echoes
 are removed from receipt identifiers on success and failure, including legacy
 secondary SenseNova/SenseTime secret environment values.
+The same primary and secondary credentials are checked in final action text,
+decoded JSON fields, keys and prose, including Unicode escapes. An echo rejects
+the response before action parsing, explanation publication or action repair;
+the sanitized failure receipt retains observed usage and response evidence.
 
 No Models API is established by these pinned guides. Core reports discovery
 unavailable and leaves account visibility unverified, rather than inventing a
@@ -108,3 +112,6 @@ through CLI, registry, preflight and dispatch; exact model identity; full histor
 omitted defaults; explicit limits; reasoning rejection; malformed JSON; refusal;
 truncation; HTTP/body errors; conservative retry; missing/invalid usage; and
 primary/secondary credential echoes in every receipt path.
+Discovery tests also prove that its unsupported route neither reads credentials
+nor makes a network request. Action-text and live-preflight tests cover raw and
+escaped credential echoes without publishing the affected answer.
