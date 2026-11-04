@@ -68,11 +68,23 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
 
     # Include secondary credentials: providers may echo unrelated process secrets
     # in syntactically valid identifiers. Never log or persist these values.
-    secrets = tuple({api_key, *(value.strip() for name, value in os.environ.items()
-                               if value.strip() and (name == agent.api_key_env or any(
-                                   marker in name.upper() for marker in
-                                   ("KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
-                               )))})
+    credentials = {api_key}
+    for name, raw_value in os.environ.items():
+        if name != agent.api_key_env and not any(
+            marker in name.upper()
+            for marker in ("KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH", "BEARER")
+        ):
+            continue
+        value = raw_value.strip()
+        if not value:
+            continue
+        credentials.add(value)
+        # An Authorization-style variable may contain the complete header while
+        # the provider echoes only its credential in an otherwise valid ID.
+        authorization = value.split(None, 1)
+        if len(authorization) == 2 and authorization[0].casefold() in {"bearer", "basic"}:
+            credentials.add(authorization[1].strip())
+    secrets = tuple(credentials)
     try:
         text, receipt = _call(agent, api_key, prompt)
     except ProviderCallError as exc:

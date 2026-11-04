@@ -120,8 +120,9 @@ per-request cost was verified. Cost remains unavailable without valid accounting
 free developer access is not a measured zero-dollar receipt.
 
 Raw bodies, error/refusal prose and reasoning are excluded from receipts. Exact
-environment credential values (including secondary secrets) echoed in receipt
-strings are removed; redacted identity fields become null. The existing bounded
+environment credential values (including secondary secrets and the credential
+portion of Authorization-style variables) echoed in receipt strings are removed;
+redacted identity fields become null. The existing bounded
 reader retains only safe header evidence after incomplete bodies. Synthetic
 success/error/refusal/malformed/partial-body tests inspect persisted artifacts.
 

@@ -125,12 +125,13 @@ def test_blank_model_rejected_by_cli_constructor_and_preflight(provider, model, 
     ("nvidia/unknown-exact-id", {"reasoning": "disabled"}),
 ])
 @pytest.mark.parametrize("provider", ALIASES)
+@pytest.mark.parametrize("live", [False, True])
 def test_unsupported_reasoning_rejected_in_preflight_and_transport(
-    model, options, provider, transport,
+    model, options, provider, live, transport,
 ):
     calls, _ = transport
     runtime = ProviderRuntimeConfig(**options)
-    result = provider_preflight(provider, model, "tic-tac-toe", live=True, runtime_config=runtime)
+    result = provider_preflight(provider, model, "tic-tac-toe", live=live, runtime_config=runtime)
     assert not result["ok"] and result["error"]["error_class"] == "provider_request_rejected"
     assert not result["readiness"]["configuration_ready"]
     configured = agent(provider, model, runtime_config=runtime)
@@ -260,13 +261,21 @@ def test_missing_identity_and_accounting_stay_unknown(missing, transport):
 
 
 @pytest.mark.parametrize("case", ["success", "http_error", "malformed", "partial", "refusal"])
-@pytest.mark.parametrize("secret", ["synthetic-nvidia-primary", "synthetic-nvidia-secondary"])
+@pytest.mark.parametrize("secret", [
+    "synthetic-nvidia-primary", "synthetic-nvidia-secondary", "synthetic-nvidia-authorization",
+])
 def test_echoed_credentials_never_enter_receipts_artifacts_or_identifiers(
-    case, secret, transport, tmp_path,
+    case, secret, transport, tmp_path, monkeypatch,
 ):
     calls, responses = transport
+    if secret == "synthetic-nvidia-authorization":
+        monkeypatch.setenv("SECONDARY_AUTHORIZATION", f"Bearer {secret}")
     body = wire()
     body.update(id=f"id-{secret}", model=secret)
+    body["choices"][0]["message"]["content"] = json.dumps({
+        "action": 0, "public_explanation": f"synthetic echo {secret}",
+    })
+    body["choices"][0]["message"]["reasoning_content"] = secret
     headers = {"x-request-id": f"request-{secret}", "cf-aig-request-id": secret}
     status = 200
     if case == "http_error":
@@ -349,3 +358,15 @@ def test_catalogue_prices_cannot_manufacture_hosted_billing(transport):
     assert configured.last_receipt["pricing"]["status"] == "cost_unavailable"
     assert configured.last_receipt["estimated_cost"]["status"] == "cost_unavailable"
     assert configured.last_receipt["rate_card_reference"] is None
+
+
+@pytest.mark.parametrize("provider", ALIASES)
+@pytest.mark.parametrize("suffix", ["", ":", ": \t"])
+def test_cli_run_rejects_missing_or_blank_model_before_artifact_or_transport(
+    provider, suffix, transport, tmp_path, capsys,
+):
+    calls, _ = transport
+    assert main(["run", "--arena", "tic-tac-toe", "--agent", provider + suffix,
+                 "--output-dir", str(tmp_path)]) == 1
+    assert "explicit nonblank model ID" in capsys.readouterr().err
+    assert not calls and not list(tmp_path.iterdir())
