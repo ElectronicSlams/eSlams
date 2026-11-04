@@ -7,6 +7,8 @@
   Preserve unknown identity/accounting and reject unsupported controls. Tencent
   announces retirement of this legacy API on 2026-12-21; TokenHub and Coding
   Plan remain separate, unsupported inference routes.
+- Require explicit nonblank Hunyuan model IDs for every alias and exclude
+  reflected credential values from success and failure receipt identifiers.
 
 ## v0.7.0 - 2026-11-04
 

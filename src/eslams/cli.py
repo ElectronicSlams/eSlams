@@ -1447,7 +1447,7 @@ def _provider_agent(
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
-        "tencent-hunyuan": ("hunyuan-a13b", "TENCENTCLOUD_SECRET_ID"),
+        "tencent-hunyuan": ("", "TENCENTCLOUD_SECRET_ID"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1455,6 +1455,9 @@ def _provider_agent(
         provider, model = value, ""
     provider = provider.lower()
     if provider.strip().replace("_", "-") in {"hunyuan", "tencent-hunyuan"}:
+        from eslams.providers.tencent_hunyuan import require_model
+
+        require_model(model)
         provider = "tencent-hunyuan"
     if provider not in defaults:
         return None

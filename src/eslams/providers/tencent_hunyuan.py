@@ -45,9 +45,15 @@ def credentials() -> tuple[str, str | None, str | None]:
     return secret, token, region
 
 
+def require_model(model: str) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("native Hunyuan requires an explicit nonblank model ID")
+
+
 def validate_controls(
     model: str, runtime: ProviderRuntimeConfig, max_output_tokens: int | None,
 ) -> None:
+    require_model(model)
     # Neither the native request documentation nor the official SDK defines
     # MaxTokens. Never silently ignore an operator policy or invent a wire field.
     if (runtime.gateway_base_url is not None or max_output_tokens is not None
@@ -148,6 +154,26 @@ def _error_kind(code: Any) -> str:
     return "provider_request_rejected"
 
 
+def _exclude_credential_identifiers(
+    receipt: dict[str, Any], credentials: tuple[str, ...],
+) -> dict[str, Any]:
+    from eslams.agents import _redact_sensitive_text
+
+    # Identifier syntax alone cannot distinguish a request ID from an echoed
+    # credential. Apply this before publishing either success or failure receipts,
+    # including receipts constructed by the shared malformed/partial-body paths.
+    safe = dict(receipt)
+    for field in ("request_id", "provider_response_id", "gateway_request_id", "locked_model_id"):
+        value = safe.get(field)
+        if isinstance(value, str) and (
+            any(credential in value for credential in credentials if credential)
+            or _redact_sensitive_text(value) != value
+            or re.search(r"(?i)\b(?:AKID|AKIA|ASIA)[A-Za-z0-9]{12,}\b", value)
+        ):
+            safe[field] = None
+    return safe
+
+
 def call(
     agent: ModelProviderAgent, secret_id: str, prompt: str, system: str,
 ) -> tuple[str, dict[str, Any]]:
@@ -180,6 +206,7 @@ def call(
         raise ProviderCallError(
             str(exc), error_kind="provider_auth_failed", provider=PROVIDER_ID, model=agent.model,
         ) from None
+    excluded = tuple(value for value in (secret_id, secret, token) if value is not None)
     payload: dict[str, Any] = {
         "Model": agent.model, "Stream": False, "EnableEnhancement": False,
         "Messages": [{"Role": "system", "Content": system}, {"Role": "user", "Content": prompt}],
@@ -223,7 +250,7 @@ def call(
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("X-TC-RequestId") or data.get("RequestId"),
         )
-        return data, receipt
+        return data, _exclude_credential_identifiers(receipt, excluded)
 
     def check_error(response: httpx.Response) -> None:
         try:
@@ -251,14 +278,19 @@ def call(
             receipt=receipt, retry_after_seconds=_retry_after_seconds(response),
         )
 
-    response = _post_json(
-        ENDPOINT, headers={}, payload=payload, runtime_config=runtime,
-        control_key=f"{PROVIDER_ID}:{agent.model}",
-        header_factory=lambda body: signed_headers(
-            body, secret_id, secret, token=token, region=region,
-        ),
-        response_handler=check_error,
-    )
+    try:
+        response = _post_json(
+            ENDPOINT, headers={}, payload=payload, runtime_config=runtime,
+            control_key=f"{PROVIDER_ID}:{agent.model}",
+            header_factory=lambda body: signed_headers(
+                body, secret_id, secret, token=token, region=region,
+            ),
+            response_handler=check_error,
+        )
+    except ProviderCallError as exc:
+        if exc.receipt is not None:
+            exc.receipt = _exclude_credential_identifiers(exc.receipt, excluded)
+        raise
     data, receipt = read(response)
     choices = data.get("Choices")
     first = choices[0] if isinstance(choices, list) and len(choices) == 1 else None

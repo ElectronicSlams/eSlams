@@ -5,6 +5,8 @@ Cloud's native text inference product. The existing `tencent`,
 `tencent-tokenhub`, and `tencent-coding-plan` catalogue names retain their
 existing meaning and do not dispatch to this adapter. They include models
 from different products. There is no cross-product or model fallback.
+An explicit nonblank model ID is required; bare provider aliases and empty or
+whitespace-only model suffixes are rejected before inference.
 
 ## Product and lifecycle
 
@@ -38,6 +40,9 @@ host and lowercase action header. The UTC date determines credential scope
 `date/hunyuan/tc3_request`. Signing happens after the shared concurrency/rate
 guard, for every physical request. Gateway replacement is rejected because the
 signed destination is fixed. Keys, tokens and Authorization never enter receipts.
+Receipt identifiers matching configured primary/secondary credentials, embedded
+credential values or recognizable credential shapes are discarded on success,
+HTTP errors, malformed responses and partial-body failures before publication.
 
 Configuration preflight makes no network request:
 

@@ -478,3 +478,122 @@ def test_native_runtime_error_msg_preserves_usage(monkeypatch, code, kind):
     assert current.last_receipt["usage"]["total_tokens"] == 113
     assert "private-runtime-error" not in str(error.value) + json.dumps(current.last_receipt)
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("alias", ["hunyuan", "tencent-hunyuan", "HUNYUAN", "TENCENT_HUNYUAN"])
+@pytest.mark.parametrize("suffix", [None, "", " ", "\t\n"])
+def test_missing_model_is_rejected_for_every_cli_alias(monkeypatch, alias, suffix, capsys):
+    calls = wire(monkeypatch)
+    value = alias if suffix is None else f"{alias}:{suffix}"
+    with pytest.raises(ValueError, match="explicit nonblank model ID"):
+        _provider_agent(value)
+    assert main(["run", "--arena", "tic-tac-toe", "--agent", value]) == 1
+    assert "explicit nonblank model ID" in capsys.readouterr().err
+    assert not calls
+
+
+@pytest.mark.parametrize("alias", ["hunyuan", "tencent-hunyuan", "HUNYUAN", "TENCENT_HUNYUAN"])
+@pytest.mark.parametrize("model", ["", " \t"])
+def test_blank_model_preflight_and_dispatch_fail_without_submitting(monkeypatch, alias, model):
+    calls = wire(monkeypatch)
+    result = provider_preflight(alias, model, "tic-tac-toe", live=True)
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    with pytest.raises(ProviderCallError, match="explicit nonblank model ID"):
+        agent(alias, model).act(_request())
+    assert not calls
+
+
+@pytest.mark.parametrize("mode", [
+    "success", "native-error", "native-http-error", "http-error-malformed",
+    "malformed-json", "malformed-wrapper", "malformed-completion", "partial-body",
+])
+@pytest.mark.parametrize("source", [
+    "primary", "secondary", "token", "custom-primary", "key-shaped", "akid-shaped",
+])
+@pytest.mark.parametrize("embedded", [False, True])
+def test_receipt_identifiers_exclude_credentials_on_every_response_path(
+    monkeypatch, mode, source, embedded,
+):
+    configured = {
+        "TENCENTCLOUD_SECRET_ID": "opaqueprimaryvalue9123",
+        "TENCENTCLOUD_SECRET_KEY": "opaquesecondaryvalue9123",
+        "TENCENTCLOUD_TOKEN": "opaquetemporaryvalue9123",
+        "HUNYUAN_TEST_PRIMARY": "opaquecustomprimaryvalue9123",
+    }
+    for name, value in configured.items():
+        monkeypatch.setenv(name, value)
+    values = dict(zip(("primary", "secondary", "token", "custom-primary"), configured.values()))
+    values.update({"key-shaped": "sk-unconfiguredcredential12345",
+                   "akid-shaped": "AKIDunconfiguredcredential12345"})
+    credential = values[source]
+    reflected = f"prefix-{credential}-suffix" if embedded else credential
+    headers = dict.fromkeys((
+        "X-TC-RequestId", "x-request-id", "request-id", "x-amzn-requestid",
+        "cf-aig-request-id", "x-gateway-request-id",
+    ), reflected)
+    payload = fixture()
+    payload["Response"].update(Id=reflected, RequestId=reflected)
+    status = 200
+    content = None
+    if mode in {"native-error", "native-http-error"}:
+        payload["Response"]["Error"] = {"Code": "AuthFailure.SignatureFailure"}
+        if mode == "native-http-error":
+            status = 401
+    elif mode in {"malformed-json", "http-error-malformed"}:
+        content = b"not-json"
+        if mode == "http-error-malformed":
+            status = 401
+    elif mode == "malformed-wrapper":
+        payload = {"Response": []}
+    elif mode == "malformed-completion":
+        payload["Response"]["Choices"][0]["Message"] = None
+    calls = []
+    if mode == "partial-body":
+        real_client = httpx.AsyncClient
+
+        class BrokenBody(httpx.AsyncByteStream):
+            async def __aiter__(self):
+                yield b'{"Response":'
+                raise httpx.ReadError("synthetic partial response")
+
+        def receive(request):
+            calls.append(request)
+            return httpx.Response(429, headers=headers, stream=BrokenBody())
+
+        monkeypatch.setattr("eslams.http_io.httpx.AsyncClient", lambda **kwargs: real_client(
+            transport=httpx.MockTransport(receive), **kwargs,
+        ))
+    else:
+        def post(*args, **kwargs):
+            calls.append(kwargs)
+            return httpx.Response(status, headers=headers, **(
+                {"content": content} if content is not None else {"json": payload}
+            ))
+
+        monkeypatch.setattr("eslams.agents.bounded_post", post)
+    current = ModelProviderAgent(
+        "hunyuan", "hunyuan-a13b", "HUNYUAN_TEST_PRIMARY" if source == "custom-primary"
+        else "TENCENTCLOUD_SECRET_ID",
+    )
+    public = []
+    if mode == "success":
+        response = current.act(_request())
+        assert response.action == 1
+        public.append(response.to_dict())
+    else:
+        with pytest.raises(ProviderCallError) as error:
+            current.act(_request())
+        public.extend([str(error.value), error.value.receipt])
+    assert len(calls) == 1
+    assert current._receipt_batch is not None
+    snapshot = current._receipt_snapshot(current._receipt_batch[0])
+    public.extend([current.last_receipt, current.attempt_receipts, snapshot])
+    assert snapshot
+    for receipt in (current.last_receipt, *snapshot):
+        for field in (
+            "request_id", "provider_response_id", "gateway_request_id", "locked_model_id",
+        ):
+            assert receipt.get(field) is None
+    serialized = json.dumps(public)
+    for value in (*configured.values(), credential):
+        assert value not in serialized
