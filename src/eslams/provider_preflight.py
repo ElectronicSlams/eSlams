@@ -13,10 +13,13 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import load_provider_registry, writer
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.writer import API_KEY_ENV as WRITER_API_KEY_ENV
+from eslams.providers.writer import MODELS_ENDPOINT as WRITER_MODELS_ENDPOINT
 
 DEFAULT_PROVIDER_ENV = {
+    "writer": WRITER_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -26,6 +29,7 @@ DEFAULT_PROVIDER_ENV = {
 }
 
 _MODELS_ENDPOINTS = {
+    "writer": WRITER_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -54,6 +58,11 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider in writer.ALIASES:
+        writer.validate_model(model)
+    writer_config_error = (
+        writer.configuration_error(runtime_config) if provider in writer.ALIASES else None
+    )
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -91,7 +100,9 @@ def provider_preflight(
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
 
-    if credential_environment is None:
+    if writer_config_error:
+        error = {"error_class": "provider_request_rejected", "message": writer_config_error}
+    elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
@@ -211,7 +222,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and writer_config_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -248,6 +260,8 @@ def provider_models_live(provider: str) -> list[str] | None:
     """
     provider = provider.strip().lower().replace("_", "-")
     provider = PROVIDER_ALIASES.get(provider, provider)
+    if provider == "writer":
+        return writer.models_live()
     endpoint = _MODELS_ENDPOINTS.get(provider)
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
     if api_key_env is None:
@@ -310,7 +324,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             raise _discovery_schema_error(provider) from None
         if not isinstance(payload, dict):
             raise _discovery_schema_error(provider)
-        rows = payload.get("models" if provider == "google" else "data")
+        rows = payload.get("models" if provider in {"google", "writer"} else "data")
         if not isinstance(rows, list):
             raise _discovery_schema_error(provider)
         for row in rows:
