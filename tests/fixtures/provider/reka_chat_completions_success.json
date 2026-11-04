@@ -1,0 +1,24 @@
+{
+  "id": "reka-wire-fixture",
+  "object": "chat.completion",
+  "created": 1790758370,
+  "model": "reka-flash-3",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "{\"action\": 1}",
+      "reasoning_content": "private-reka-reasoning-fixture",
+      "tool_calls": null
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16,
+    "reasoning_tokens": 2,
+    "completion_tokens_details": {"reasoning_tokens": 2}
+  },
+  "metadata": {"weight_version": "default"}
+}
