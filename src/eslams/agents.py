@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, baichuan, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -402,6 +402,10 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider in baichuan.ALIASES:
+            self.provider = baichuan.PROVIDER_ID
+        if self.provider == baichuan.PROVIDER_ID and not isinstance(self.model, str):
+            raise ValueError("Baichuan requires an exact provider-native model ID")
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +630,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == baichuan.PROVIDER_ID:
+            return baichuan.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1221,7 +1227,8 @@ def _post_json(
         )
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
-            or response.headers.get("x-amzn-requestid"),
+            or response.headers.get("x-amzn-requestid")
+            or response.headers.get("x-bc-request-id"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
             response.headers.get("cf-aig-request-id")
@@ -1356,7 +1363,7 @@ def _raise_observed_transport_failure(
     )
     receipt["request_id"] = _http_error_identifier(
         headers.get("x-request-id") or headers.get("request-id")
-        or headers.get("x-amzn-requestid"),
+        or headers.get("x-amzn-requestid") or headers.get("x-bc-request-id"),
     )
     receipt["gateway_request_id"] = _http_error_identifier(
         headers.get("cf-aig-request-id") or headers.get("x-gateway-request-id"),
@@ -1610,7 +1617,8 @@ def _receipt(
         "status_code": response.status_code,
         "request_id": _http_error_identifier(response.headers.get("x-request-id")
         or response.headers.get("request-id")
-        or response.headers.get("x-cloud-trace-context")),
+        or response.headers.get("x-cloud-trace-context")
+        or response.headers.get("x-bc-request-id")),
         "gateway_mode": runtime_config.gateway_mode if runtime_config else "disabled",
         "gateway_request_id": _http_error_identifier(response.headers.get("cf-aig-request-id")
         or response.headers.get("x-gateway-request-id")),
@@ -1964,6 +1972,7 @@ def _provider_endpoint(
 
 def _endpoint_kind(provider: str) -> str:
     return {
+        baichuan.PROVIDER_ID: baichuan.ENDPOINT_KIND,
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -1975,6 +1984,7 @@ def _endpoint_kind(provider: str) -> str:
 
 def _parser_version(provider: str) -> str:
     return {
+        baichuan.PROVIDER_ID: baichuan.PARSER_VERSION,
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -1985,6 +1995,8 @@ def _parser_version(provider: str) -> str:
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == baichuan.PROVIDER_ID:
+        return baichuan.normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []
@@ -2759,7 +2771,8 @@ def _response_json_with_receipt(
                 "request_id": _http_error_identifier(response.headers.get("x-request-id")
                 or response.headers.get("request-id")
                 or response.headers.get("x-cloud-trace-context")
-                or response.headers.get("x-amzn-requestid")),
+                or response.headers.get("x-amzn-requestid")
+                or response.headers.get("x-bc-request-id")),
                 "gateway_request_id": _http_error_identifier(
                     response.headers.get("cf-aig-request-id")
                     or response.headers.get("x-gateway-request-id")),

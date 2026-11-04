@@ -13,10 +13,12 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import baichuan, load_provider_registry
+from eslams.providers.baichuan import API_KEY_ENV as BAICHUAN_API_KEY_ENV
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
+    "baichuan-ai": BAICHUAN_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -54,6 +56,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider in baichuan.ALIASES and not isinstance(model, str):
+        raise ValueError("Baichuan requires an exact provider-native model ID")
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -90,12 +94,20 @@ def provider_preflight(
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
+    configuration_error = None
+    if record.provider == baichuan.PROVIDER_ID:
+        try:
+            baichuan.validate_controls(model, runtime_config)
+        except ProviderCallError as exc:
+            configuration_error = _public_error(exc, provider=provider, model=model)
 
     if credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif configuration_error is not None:
+        error = configuration_error
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -181,6 +193,11 @@ def provider_preflight(
                     _is_int(usage.get(key))
                     for key in ("input_tokens", "output_tokens", "total_tokens")
                 )
+                if record.provider == baichuan.PROVIDER_ID and isinstance(usage, dict):
+                    checks["usage_extraction"] = (
+                        checks["usage_extraction"] is True
+                        and not usage.get("usage_validation_errors")
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -201,6 +218,11 @@ def provider_preflight(
         )
         and (not strict_catalogue or not live or checks["account_model_visible"] is not False)
     )
+    usage_complete = checks["usage_extraction"] is True
+    if record.provider == baichuan.PROVIDER_ID:
+        usage = receipt.get("usage") if isinstance(receipt, dict) else None
+        usage_complete = (usage_complete and isinstance(usage, dict)
+                          and isinstance(usage.get("reasoning_included_in_output"), bool))
     payload: dict[str, Any] = {
         "provider": provider,
         "model": model,
@@ -211,11 +233,12 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
             "cost_and_official_eligibility": "not_assessed",
             "meaning_of_ok": "configuration ready, and if live, one legal action observed",
         },
@@ -230,7 +253,7 @@ def provider_preflight(
             "schema_version": "eslams.provider.receipt.v2",
             "outcome": receipt.get("outcome") if isinstance(receipt, dict) else "not_called",
             "redaction_version": "provider-receipt-redaction-v1",
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
         },
     }
     if error is not None:
