@@ -15,8 +15,11 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.writer import API_KEY_ENV as WRITER_API_KEY_ENV
+from eslams.providers.writer import MODELS_ENDPOINT as WRITER_MODELS_ENDPOINT
 
 DEFAULT_PROVIDER_ENV = {
+    "writer": WRITER_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -26,6 +29,7 @@ DEFAULT_PROVIDER_ENV = {
 }
 
 _MODELS_ENDPOINTS = {
+    "writer": WRITER_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -310,7 +314,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             raise _discovery_schema_error(provider) from None
         if not isinstance(payload, dict):
             raise _discovery_schema_error(provider)
-        rows = payload.get("models" if provider == "google" else "data")
+        rows = payload.get("models" if provider in {"google", "writer"} else "data")
         if not isinstance(rows, list):
             raise _discovery_schema_error(provider)
         for row in rows:

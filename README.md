@@ -704,6 +704,7 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` |
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
+| `writer:<model>` | `WRITER_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
