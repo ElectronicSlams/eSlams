@@ -1,7 +1,7 @@
 # Provider Guide
 
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Upstage (planned for 0.7.1). The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -13,6 +13,7 @@ convenience properties.
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `upstage:<model>` | `UPSTAGE_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 
 An absent provider model identity remains `null`. Core never copies the
@@ -20,6 +21,9 @@ requested model into `locked_model_id` as if it came from the response. Bedrock
 is the deliberate exception: the literal model ID is part of the signed
 Converse endpoint and is recorded with `model_identity_source:
 pinned_endpoint`.
+
+See the [Upstage adapter guide](providers/UPSTAGE.md) for current primary sources,
+reasoning controls, retry limits and keyless verification.
 
 ## Setup and Preflight
 
