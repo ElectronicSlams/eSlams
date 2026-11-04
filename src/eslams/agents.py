@@ -402,6 +402,10 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider in {"kuaishou", "kwaipilot"}:
+            from eslams.providers.kuaishou import validate_configuration
+
+            validate_configuration(self.model, self.runtime_config, self.temperature)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +630,10 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider in {"kuaishou", "kwaipilot"}:
+            from eslams.providers.kuaishou import call
+
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1227,6 +1235,10 @@ def _post_json(
             response.headers.get("cf-aig-request-id")
             or response.headers.get("x-gateway-request-id"),
         )
+        if provider in {"kuaishou", "kwaipilot"}:
+            from eslams.providers.kuaishou import error_kind
+
+            kind = error_kind(response, kind, receipt)
         raise ProviderCallError(
             f"provider returned HTTP {response.status_code}",
             status_code=response.status_code, error_kind=kind,
@@ -1970,6 +1982,8 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "kuaishou": "streamlake_chat_completions",
+        "kwaipilot": "streamlake_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,10 +1995,16 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "kuaishou": "streamlake-chat-completions-raw-v1",
+        "kwaipilot": "streamlake-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider in {"kuaishou", "kwaipilot"}:
+        from eslams.providers.kuaishou import normalize_usage
+
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []
