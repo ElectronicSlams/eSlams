@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, load_provider_registry, zai
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -401,7 +401,7 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = zai.canonical_provider(self.provider.lower())
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +626,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider in zai.ENDPOINTS:
+            return zai.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1337,7 +1339,11 @@ def _capture_error_body_observations(
             provenance["cost_observation_status"] = "reported_unverified"
     # Error-body pricing never supplies a trusted rate card or a measured cost.
     # Quoted observations remain diagnostic; canonical cost stays unknown.
-    return (_safe_rate_rejection(data, response.status_code)
+    safe_rejection = (
+        zai.safe_rate_rejection(data, response.status_code) if provider in zai.ENDPOINTS
+        else _safe_rate_rejection(data, response.status_code)
+    )
+    return (safe_rejection
             and not provenance["work_observation_present"])
 
 
@@ -1970,6 +1976,8 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "zai": "zai_chat_completions",
+        "zhipu": "zhipu_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,10 +1989,14 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "zai": "zai-chat-completions-raw-v1",
+        "zhipu": "zhipu-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider in zai.ENDPOINTS:
+        return zai.normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []

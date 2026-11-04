@@ -11,6 +11,7 @@ from typing import Any, cast
 
 from eslams.hashing import sha256_json
 from eslams.providers.capabilities import ModelCapabilities
+from eslams.providers.zai import ALIASES as ZAI_ALIASES
 
 REQUESTED_PROVIDER_ORGANIZATIONS: tuple[tuple[str, str], ...] = (
     ("qwen", "Alibaba / Qwen"),
@@ -166,8 +167,7 @@ PROVIDER_ALIASES = {
     "tencent-coding-plan": "tencent",
     "tencent-tokenhub": "tencent",
     "volcengine": "bytedance",
-    "zhipuai": "zhipu",
-    "zhipuai-coding-plan": "zhipu",
+    **ZAI_ALIASES,
     "bailing": "ant-group",
     "inception": "core42",
     "gigachat": "sber",

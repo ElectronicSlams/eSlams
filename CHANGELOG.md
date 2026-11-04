@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add native Z.ai international and Zhipu China standard Chat Completions adapters,
+  explicit reasoning controls, conservative accounting and deterministic wire tests.
+- Remove the `zhipuai-coding-plan` catalogue alias so it cannot activate standard
+  API billing. Coding Plan endpoints remain unsupported. See `docs/PROVIDER_ZAI.md`.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
