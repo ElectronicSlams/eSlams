@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Perceptron text Chat Completions adapter with explicit model IDs,
+  provider-specific reasoning validation, CLI/preflight wiring, documented
+  lifecycle and accounting, and deterministic raw-wire/privacy regressions.
+  Preserve native defaults, full history, safe transport, and zero default retries.
+  No paid inference or package version change.
+  Follow-up review rejects credential-bearing discovery IDs, protects configured
+  secondary credentials, and closes whitespace-provider preflight bypasses.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
