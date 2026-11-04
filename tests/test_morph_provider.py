@@ -24,12 +24,17 @@ from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
-from eslams.provider_preflight import provider_models_live, provider_preflight
+from eslams.provider_preflight import (
+    provider_models_live,
+    provider_models_result,
+    provider_preflight,
+)
 from eslams.providers import load_provider_registry
 from eslams.providers.morph import CHAT_COMPLETIONS_ENDPOINT, MODEL_EFFORTS, MODELS_ENDPOINT
 from eslams.runner import RunConfig, Runner
 
 SECRET = "opaque-morph-credential-X9"
+SECONDARY = "opaque-secondary-credential-Y8"
 MODEL = "morph-kimik3"
 
 
@@ -58,6 +63,7 @@ def agent(**kwargs):
 @pytest.fixture(autouse=True)
 def isolated_provider(monkeypatch):
     monkeypatch.setenv("MORPH_API_KEY", SECRET)
+    monkeypatch.setenv("OTHER_PROVIDER_API_KEY", SECONDARY)
 
     def forbidden(*args, **kwargs):
         pytest.fail("unexpected real network call")
@@ -322,23 +328,24 @@ def test_missing_partial_or_invalid_usage_does_not_become_complete(monkeypatch, 
 
 @pytest.mark.parametrize("status", [200, 429, 503])
 @pytest.mark.parametrize("failure", ["timeout", "reset", "resource"])
-def test_actual_partial_reader_preserves_only_safe_evidence(monkeypatch, status, failure):
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY])
+def test_actual_partial_reader_preserves_only_safe_evidence(monkeypatch, status, failure, secret):
     calls = []
     original_client = httpx.AsyncClient
 
     class Stream(httpx.AsyncByteStream):
         async def __aiter__(self):
-            yield json.dumps({"model": SECRET, "usage": {"total_tokens": 99}})[:-1].encode()
+            yield json.dumps({"model": secret, "usage": {"total_tokens": 99}})[:-1].encode()
             if failure == "timeout":
-                raise httpx.ReadTimeout(SECRET)
+                raise httpx.ReadTimeout(secret)
             if failure == "reset":
-                raise httpx.ReadError(SECRET)
+                raise httpx.ReadError(secret)
             yield b"x" * (1024 * 1024 + 1)
 
     def handler(req):
         calls.append(1)
         return httpx.Response(status, stream=Stream(), request=req,
-                              headers={"x-request-id": SECRET, "cf-aig-request-id": SECRET})
+                              headers={"x-request-id": secret, "cf-aig-request-id": secret})
 
     class Client:
         async def __aenter__(self):
@@ -364,7 +371,7 @@ def test_actual_partial_reader_preserves_only_safe_evidence(monkeypatch, status,
     assert a.last_receipt["status_code"] == status
     assert a.last_receipt["request_id"] is None and a.last_receipt["gateway_request_id"] is None
     assert not a.last_receipt["usage"] and a.last_receipt["locked_model_id"] is None
-    assert SECRET not in str(error.value) + json.dumps(a.last_receipt)
+    assert secret not in str(error.value) + json.dumps(a.last_receipt)
 
 
 def test_timeout_before_headers_never_retries(monkeypatch):
@@ -513,3 +520,223 @@ def test_runner_invalid_output_cannot_score_or_fallback_and_leak_credentials(mon
     for path in result.expanded_path.rglob("*"):
         if path.is_file():
             assert SECRET.encode() not in path.read_bytes()
+
+
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY])
+def test_discovery_rejects_configured_credential_echoes(monkeypatch, capsys, secret):
+    def get(*args, **kwargs):
+        return httpx.Response(200, json={"data": [{"id": f"prefix-{secret}-suffix"}]})
+
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", get)
+    result = provider_models_result("morph")
+    assert not result["ok"] and not result["models"]
+    assert secret not in json.dumps(result)
+    assert main(["providers", "models", "--provider", "morph", "--live"]) == 1
+    assert secret not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("position", ["model", "id", "header", "gateway", "explanation"])
+def test_secondary_credential_echoes_in_success_are_contained(monkeypatch, position):
+    data = wire()
+    headers = {}
+    if position in {"id", "model"}:
+        data[position] = SECONDARY
+    elif position in {"header", "gateway"}:
+        headers["x-request-id" if position == "header" else "cf-aig-request-id"] = SECONDARY
+    else:
+        data["choices"][0]["message"]["content"] = json.dumps({
+            "action": 1, "public_explanation": SECONDARY,
+        })
+    respond(monkeypatch, data, headers=headers)
+    a = agent()
+    if position == "explanation":
+        with pytest.raises(ProviderCallError):
+            a.act(request())
+    else:
+        result = a.act(request())
+        assert SECONDARY not in json.dumps(result.to_dict())
+    assert SECONDARY not in json.dumps(a.attempt_receipts)
+
+
+@pytest.mark.parametrize("budget", [0, 1, 4096])
+@pytest.mark.parametrize("field", ["reasoning_budget_tokens", "gemini_thinking_budget"])
+@pytest.mark.parametrize("live", [False, True])
+def test_explicit_budgets_fail_preflight_and_reconfigured_agent_before_transport(
+    monkeypatch, field, budget, live,
+):
+    runtime = ProviderRuntimeConfig(**{field: budget})
+    with pytest.raises(ValueError, match="provider-specific control"):
+        provider_preflight("morph", MODEL, "tic-tac-toe", live=live, runtime_config=runtime)
+    a = agent()
+    a.runtime_config = runtime
+    monkeypatch.delenv("MORPH_API_KEY")
+    with pytest.raises(ValueError, match="provider-specific control"):
+        a.act(request())
+    assert not a.attempt_receipts
+
+
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY])
+@pytest.mark.parametrize("status", [200, 400, 401, 403, 404, 429, 500, 503])
+@pytest.mark.parametrize("malformed", [False, True])
+def test_error_and_malformed_echoes_are_scrubbed_for_all_credentials(
+    monkeypatch, secret, status, malformed,
+):
+    data = {"error": {"code": "rate_limited", "message": secret, "id": secret,
+                      "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}}}
+    calls = respond(monkeypatch, data, status=status,
+                    headers={"x-request-id": secret, "cf-aig-request-id": secret},
+                    content=(f'{{"secret_echo":"{secret}",'.encode() if malformed else None))
+    a = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=2))
+    with pytest.raises(ProviderCallError) as error:
+        a.act(request())
+    assert len(calls) == 1 and len(a.attempt_receipts) == 1
+    assert a.last_receipt["request_id"] is None
+    assert a.last_receipt["gateway_request_id"] is None
+    assert a.last_receipt.get("provider_response_id") is None
+    observed = json.dumps(a.attempt_receipts) + str(error.value) + str(error.value.receipt)
+    assert secret not in observed
+
+
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY])
+@pytest.mark.parametrize("encoding", ["raw", "json_unicode", "url", "url_lower"])
+def test_encoded_credentials_in_action_text_fail_before_repair(monkeypatch, secret, encoding):
+    from urllib.parse import quote
+
+    text = json.dumps({"action": 1, "ignored_private_field": secret})
+    if encoding == "json_unicode":
+        text = text.replace(secret, "".join(f"\\u{ord(char):04x}" for char in secret))
+    elif encoding in {"url", "url_lower"}:
+        # Percent-encode a selected credential that actually contains URI delimiters.
+        secret = f"{secret}/+%?"
+        monkeypatch.setenv("OTHER_PROVIDER_API_KEY", secret)
+        encoded = quote(secret, safe="")
+        if encoding == "url_lower":
+            encoded = encoded.replace("%2F", "%2f").replace("%2B", "%2b")
+        text = json.dumps({"action": 1, "ignored_private_field": encoded})
+    data = wire()
+    data["choices"][0]["message"]["content"] = text
+    calls = respond(monkeypatch, data)
+    a = agent(runtime_config=ProviderRuntimeConfig(action_repair_attempts=2, max_retries=2))
+    with pytest.raises(ProviderCallError) as error:
+        a.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch" and len(calls) == 1
+    assert secret not in json.dumps(a.attempt_receipts) + str(error.value)
+
+
+@pytest.mark.parametrize("name", ["MORPH_API_KEY_SECONDARY", "OTHER_PROVIDER_API_KEY",
+    "CLOUDFLARE_AI_GATEWAY_TOKEN", "AWS_BEARER_TOKEN_BEDROCK", "SECONDARY_SECRET",
+    "SERVICE_PASSWORD", "SERVICE_CREDENTIALS", "SERVICE_ACCESS_KEY_ID"])
+def test_secondary_credential_names_are_redaction_only(monkeypatch, name):
+    monkeypatch.delenv("OTHER_PROVIDER_API_KEY")
+    monkeypatch.setenv(name, SECONDARY)
+    data = wire()
+    data["id"] = SECONDARY
+    calls = respond(monkeypatch, data)
+    a = agent()
+    a.act(request())
+    assert a.last_receipt["provider_response_id"] is None
+    assert calls[0][1]["headers"] == {"Authorization": f"Bearer {SECRET}",
+                                     "Content-Type": "application/json"}
+    assert SECONDARY not in json.dumps(calls[0][1]["json"])
+
+
+def test_credential_snapshot_survives_environment_change_until_receipts_publish(monkeypatch):
+    data = wire()
+    data["id"] = SECONDARY
+
+    def post(*args, **kwargs):
+        monkeypatch.delenv("OTHER_PROVIDER_API_KEY")
+        monkeypatch.setenv("MORPH_API_KEY", "rotated-primary-Z7")
+        return httpx.Response(200, json=data, headers={"x-request-id": SECRET})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    a = agent()
+    result = a.act(request())
+    assert result.action == 1
+    assert a.last_receipt["provider_response_id"] is None and a.last_receipt["request_id"] is None
+    assert all(value not in json.dumps(a.attempt_receipts) for value in (SECRET, SECONDARY))
+
+
+@pytest.mark.parametrize("status", [200, 401, 429, 503])
+@pytest.mark.parametrize("shape", ["model_list", "malformed", "partial"])
+def test_discovery_faults_never_publish_either_credential(monkeypatch, status, shape):
+    def get(*args, **kwargs):
+        if shape == "partial":
+            raise httpx.ReadError(f"{SECRET}/{SECONDARY}")
+        if shape == "malformed":
+            return httpx.Response(status, content=f'{{"echo":"{SECRET}/{SECONDARY}",'.encode())
+        return httpx.Response(status, json={"data": [
+            {"id": MODEL}, {"id": SECRET}, {"id": SECONDARY},
+        ]})
+
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", get)
+    calls = respond(monkeypatch)
+    result = provider_models_result("morph")
+    assert not result["ok"] and not result["models"]
+    preflight = provider_preflight("morph", MODEL, "tic-tac-toe", live=True,
+                                   strict_catalogue=True)
+    assert not preflight["ok"] and not calls
+    assert all(secret not in json.dumps([result, preflight]) for secret in (SECRET, SECONDARY))
+
+
+def test_custom_primary_environment_also_protects_default_credential(monkeypatch):
+    monkeypatch.setenv("CUSTOM_INFERENCE_PASSWORD", "custom-primary-P6")
+    data = wire()
+    data["id"] = SECRET
+    calls = respond(monkeypatch, data)
+    a = ModelProviderAgent("morph", MODEL, "CUSTOM_INFERENCE_PASSWORD")
+    result = a.act(request())
+    assert calls[0][1]["headers"]["Authorization"] == "Bearer custom-primary-P6"
+    assert a.last_receipt["provider_response_id"] is None
+    assert SECRET not in json.dumps(result.to_dict())
+
+
+@pytest.mark.parametrize("content", [
+    b'{"data": [{"id":"opaque-secondary-credential-Y8", "id":"morph-kimik3"}]}',
+    b'{"data": [], "private": NaN}',
+    b'{"data": [], "error": {"message":"opaque-secondary-credential-Y8"}}',
+    b'{"data": "opaque-secondary-credential-Y8"}',
+    b'\xffopaque-secondary-credential-Y8',
+])
+def test_discovery_rejects_ambiguous_and_malformed_wire_without_echo(monkeypatch, content):
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: httpx.Response(200, content=content))
+    result = provider_models_result("morph")
+    assert not result["ok"] and not result["models"]
+    assert SECONDARY not in json.dumps(result)
+
+
+def test_discovery_keeps_credential_snapshot_during_environment_rotation(monkeypatch):
+    def get(*args, **kwargs):
+        monkeypatch.delenv("OTHER_PROVIDER_API_KEY")
+        return httpx.Response(200, json={"data": [{"id": SECONDARY}]})
+
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", get)
+    result = provider_models_result("morph")
+    assert not result["ok"] and not result["models"]
+    assert SECONDARY not in json.dumps(result)
+
+
+def test_credential_patterns_beyond_500_characters_are_rejected_before_repair(monkeypatch):
+    data = wire()
+    data["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": "a" * 600 + " Bearer unconfigured-opaque-value",
+    })
+    calls = respond(monkeypatch, data)
+    a = agent(runtime_config=ProviderRuntimeConfig(action_repair_attempts=2))
+    with pytest.raises(ProviderCallError):
+        a.act(request())
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY])
+def test_sensitive_model_identity_cannot_become_an_altered_safe_identity(monkeypatch, secret):
+    data = wire()
+    data["model"] = f"https://user:{secret}@model.invalid"
+    data["id"] = f"https://user:{secret}@request.invalid"
+    respond(monkeypatch, data)
+    a = agent()
+    a.act(request())
+    assert a.last_receipt["locked_model_id"] is None
+    assert a.last_receipt["model_identity_source"] is None
+    assert a.last_receipt["provider_response_id"] is None

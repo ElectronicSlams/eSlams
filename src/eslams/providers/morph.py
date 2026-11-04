@@ -9,13 +9,17 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote, quote_plus
+from urllib.parse import quote, quote_plus, unquote, unquote_plus
 
 from eslams.contracts.provider import ProviderRuntimeConfig
-from eslams.protocol import ActRequest, ActResponse
+from eslams.protocol import ActRequest, ActResponse, validate_json_payload
 
 if TYPE_CHECKING:
+    import httpx
+
     from eslams.agents import ModelProviderAgent
 
 PROVIDER_ID = "morph"
@@ -35,6 +39,13 @@ MODEL_EFFORTS: dict[str, tuple[str, ...]] = dict.fromkeys((
 ), _COMMON_EFFORTS)
 MODEL_EFFORTS["morph-kimik3"] = ("none", "low", "medium", "high", "xhigh", "max")
 MODEL_EFFORTS["morph-kimik3-fast"] = ("none", "low", "medium", "high")
+
+_CREDENTIAL_NAME = re.compile(
+    r"(?:^|_)(?:API_?KEY(?:_[A-Z0-9]+)?|ACCESS_KEY(?:_ID)?|SECRET_ACCESS_KEY|"
+    r"PRIVATE_KEY|BEARER_TOKEN(?:_[A-Z0-9]+)?|TOKEN|PASSWORD|PASSWD|CREDENTIALS?|SECRET|KEY)$",
+    re.IGNORECASE,
+)
+_ACTIVE_CREDENTIALS: ContextVar[tuple[str, ...]] = ContextVar("morph_credentials", default=())
 
 
 def validate_configuration(model: str, runtime: ProviderRuntimeConfig) -> str | None:
@@ -81,63 +92,95 @@ def capability_records() -> list[dict[str, Any]]:
     } for model, efforts in MODEL_EFFORTS.items()]
 
 
-def _unsafe(value: str, secret: str) -> bool:
-    from eslams.agents import _redact_sensitive_text, _sanitize_url_secrets
+def credential_values(environment: str = API_KEY_ENV) -> tuple[str, ...]:
+    """Private redaction-only snapshot; secondary credentials are never sent."""
+    values = set(_ACTIVE_CREDENTIALS.get())
+    for name, raw in os.environ.items():
+        if (name in {environment, API_KEY_ENV} or _CREDENTIAL_NAME.search(name)) and raw.strip():
+            values.add(raw.strip())
+    return tuple(values)
 
-    variants = {secret, quote(secret, safe=""), quote_plus(secret),
-                json.dumps(secret)[1:-1]} if secret else set()
+
+def _unsafe(value: str, secrets: tuple[str, ...]) -> bool:
+    from eslams.agents import _SECRET_TEXT_PATTERNS, _sanitize_receipt_value
+
+    variants = {variant for secret in secrets for variant in (
+        secret, quote(secret, safe=""), quote_plus(secret), json.dumps(secret)[1:-1],
+    )}
     return (
-        any(part in value for part in variants if part)
-        or _redact_sensitive_text(value) != value.replace("\r", " ").replace("\n", " ")[:500]
-        or _sanitize_url_secrets(value) != value
+        any(part in candidate for part in variants if part
+            for candidate in (value, unquote(value), unquote_plus(value)))
+        or any(pattern.search(value) for pattern in _SECRET_TEXT_PATTERNS)
+        or _sanitize_receipt_value(value) != value
     )
 
 
-def _scrub(value: Any, secret: str) -> Any:
+def _scrub(value: Any, secrets: tuple[str, ...]) -> Any:
     if isinstance(value, dict):
-        return {key: _scrub(item, secret) for key, item in value.items()
-                if not _unsafe(str(key), secret)}
+        return {key: _scrub(item, secrets) for key, item in value.items()
+                if not _unsafe(str(key), secrets)}
     if isinstance(value, list):
-        return [_scrub(item, secret) for item in value]
-    if isinstance(value, str) and _unsafe(value, secret):
+        return [_scrub(item, secrets) for item in value]
+    if isinstance(value, str) and _unsafe(value, secrets):
         return None
     return value
 
 
 def sanitize_receipt(receipt: dict[str, Any], environment: str) -> dict[str, Any]:
-    cleaned: dict[str, Any] = _scrub(receipt, os.getenv(environment, "").strip())
+    cleaned: dict[str, Any] = _scrub(receipt, credential_values(environment))
     if cleaned.get("locked_model_id") is None:
         cleaned["model_identity_source"] = None
     return cleaned
 
 
-def _contains_secret(value: Any, secret: str) -> bool:
+def contains_credentials(value: Any, secrets: tuple[str, ...]) -> bool:
     if isinstance(value, dict):
-        return any(_unsafe(str(key), secret) or _contains_secret(item, secret)
+        return any(_unsafe(str(key), secrets) or contains_credentials(item, secrets)
                    for key, item in value.items())
     if isinstance(value, list):
-        return any(_contains_secret(item, secret) for item in value)
-    return isinstance(value, str) and _unsafe(value, secret)
+        return any(contains_credentials(item, secrets) for item in value)
+    return isinstance(value, str) and _unsafe(value, secrets)
+
+
+def discovery_payload(response: httpx.Response) -> Any:
+    from eslams.agents import _strict_provider_json
+
+    data = _strict_provider_json(response)
+    validate_json_payload(data)
+    if isinstance(data, dict) and data.get("error") is not None:
+        raise ValueError("Morph model discovery failed")
+    return data
 
 
 def act(agent: ModelProviderAgent, request: ActRequest) -> ActResponse:
     """Check decoded action fields too, before returning anything to the caller."""
+    validate_configuration(agent.model, agent.runtime_config or ProviderRuntimeConfig())
+    secrets = credential_values(agent.api_key_env)
+    token = _ACTIVE_CREDENTIALS.set(secrets)
+    try:
+        return _act_checked(agent, request, secrets)
+    finally:
+        _ACTIVE_CREDENTIALS.reset(token)
+
+
+def _act_checked(
+    agent: ModelProviderAgent, request: ActRequest, secrets: tuple[str, ...],
+) -> ActResponse:
     from eslams.agents import ProviderCallError
 
-    secret = os.getenv(agent.api_key_env, "").strip()
     try:
         result = agent._act(request)
     except ProviderCallError as exc:
         raise ProviderCallError(
             "Morph request failed", status_code=exc.status_code,
             error_kind=exc.error_kind, retry_after_seconds=exc.retry_after_seconds,
-            provider=PROVIDER_ID, model=_scrub(agent.model, secret),
+            provider=PROVIDER_ID, model=_scrub(agent.model, secrets),
             receipt=(sanitize_receipt(exc.receipt, agent.api_key_env)
                      if exc.receipt is not None else None),
         ) from None
     except TimeoutError:
         raise TimeoutError("Morph request timed out") from None
-    if _contains_secret(result.to_dict(), secret):
+    if contains_credentials(result.to_dict(), credential_values(agent.api_key_env)):
         receipt = {**(agent.last_receipt or {}), "outcome": "provider_response_schema_mismatch"}
         agent._replace_last_receipt(receipt)
         raise ProviderCallError(
@@ -167,6 +210,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         _SYSTEM_INSTRUCTIONS,
         ProviderCallError,
         _capture_error_body_observations,
+        _extract_json,
         _post_json,
         _provider_endpoint,
         _receipt,
@@ -175,6 +219,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
 
     runtime = agent.runtime_config or ProviderRuntimeConfig()
     effort = validate_configuration(agent.model, runtime)
+    secrets = (*credential_values(agent.api_key_env), api_key)
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [
@@ -206,15 +251,17 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     except ProviderCallError as exc:
         raise ProviderCallError(
             "Morph response could not be verified", status_code=exc.status_code,
-            error_kind=exc.error_kind, provider=PROVIDER_ID, model=_scrub(agent.model, api_key),
+            error_kind=exc.error_kind, provider=PROVIDER_ID, model=_scrub(agent.model, secrets),
             retry_after_seconds=exc.retry_after_seconds,
             receipt=(sanitize_receipt(exc.receipt, agent.api_key_env)
                      if exc.receipt is not None else None),
             # No Morph-specific proof of safe replay is established here.
         ) from None
+    secrets = (*secrets, *credential_values(agent.api_key_env))
     receipt = sanitize_receipt(_receipt(
         provider=PROVIDER_ID, model=agent.model, response=response,
-        provider_response_id=data.get("id"), resolved_model=data.get("model"),
+        provider_response_id=_scrub(data.get("id"), secrets),
+        resolved_model=_scrub(data.get("model"), secrets),
         usage=data.get("usage"), capabilities=agent.capabilities, runtime_config=runtime,
     ), agent.api_key_env)
     choices = data.get("choices")
@@ -227,7 +274,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         receipt = sanitize_receipt(receipt, agent.api_key_env)
     try:
         text = _completion_text(data, receipt)
-        if _unsafe(text, api_key):
+        if _unsafe(text, secrets) or contains_credentials(_extract_json(text), secrets):
             raise ProviderCallError(
                 "Morph action contains sensitive data",
                 error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,

@@ -272,6 +272,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             f"missing API key environment variable {api_key_env}",
             error_kind="provider_auth_failed", provider=provider,
         )
+    discovery_credentials = morph.credential_values(api_key_env) if provider == "morph" else ()
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -309,8 +310,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 error_kind=kind, provider=provider,
             )
         try:
-            payload = response.json()
-        except ValueError:
+            payload = morph.discovery_payload(response) if provider == "morph" else response.json()
+        except (ValueError, UnicodeError, RecursionError):
             raise _discovery_schema_error(provider) from None
         if not isinstance(payload, dict):
             raise _discovery_schema_error(provider)
@@ -323,6 +324,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == "morph" and morph.contains_credentials(raw, discovery_credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
