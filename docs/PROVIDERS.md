@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `iflytek:<model>` | `IFLYTEK_API_PASSWORD` | Spark HTTP | `choices[0].message.content` | optional response `model`; otherwise unknown |
+
+The [Spark adapter guide](providers/IFLYTEK.md) records exact X2/v1 routing,
+aliases, authentication, reasoning controls, provider model upgrades, and
+accounting limits. It adds no live inference during configuration preflight.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

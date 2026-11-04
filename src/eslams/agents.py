@@ -402,6 +402,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        from eslams.providers.iflytek import canonical_provider
+        self.provider = canonical_provider(self.provider)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +628,9 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "iflytek":
+            from eslams.providers.iflytek import call
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1156,6 +1161,7 @@ def _post_json(
     payload: dict[str, Any],
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    handle_http_errors: bool = True,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
     check_cancelled()
@@ -1207,7 +1213,7 @@ def _post_json(
                 provider=provider,
                 model=model,
             ) from exc
-    if response.status_code >= 400:
+    if response.status_code >= 400 and handle_http_errors:
         kind = _provider_error_kind(response.status_code)
         retry_after = _retry_after_seconds(response)
         receipt = _failure_receipt(
@@ -1970,6 +1976,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "iflytek": "iflytek_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,10 +1988,14 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "iflytek": "iflytek-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "iflytek":
+        from eslams.providers.iflytek import normalize_usage
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []
