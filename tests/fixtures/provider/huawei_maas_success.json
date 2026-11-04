@@ -1,0 +1,25 @@
+{
+  "id": "784f6f4091a7430b993c561bc4f1d216",
+  "object": "chat.completion",
+  "created": 1782268057,
+  "model": "openpangu-2.0-flash",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1, \"confidence\": 0.7, \"public_explanation\": \"Selected a legal action.\"}",
+        "reasoning_content": "Private fixture reasoning must never become public."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 21,
+    "total_tokens": 24,
+    "completion_tokens": 3,
+    "prompt_tokens_details": {"cached_tokens": 0},
+    "completion_tokens_details": {"reasoning_tokens": 1}
+  },
+  "service_tier": "default"
+}

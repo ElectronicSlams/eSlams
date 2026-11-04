@@ -11,6 +11,7 @@ from typing import Any, cast
 
 from eslams.hashing import sha256_json
 from eslams.providers.capabilities import ModelCapabilities
+from eslams.providers.huawei import model_records as huawei_model_records
 
 REQUESTED_PROVIDER_ORGANIZATIONS: tuple[tuple[str, str], ...] = (
     ("qwen", "Alibaba / Qwen"),
@@ -238,7 +239,9 @@ class ProviderRegistry:
 def load_provider_registry() -> ProviderRegistry:
     generated = _load_package_json("models.generated.json")
     overrides = _load_package_json("overrides.json")
-    return _registry_from_payloads(generated, overrides)
+    return _registry_from_payloads(
+        generated, {**overrides, "models": [*overrides.get("models", []), *huawei_model_records()]},
+    )
 
 
 def load_provider_registry_from_paths(
