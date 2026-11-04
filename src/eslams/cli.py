@@ -1440,6 +1440,8 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    from eslams.providers.snowflake import canonical_provider
+
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
@@ -1447,12 +1449,15 @@ def _provider_agent(
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
+        "snowflake": ("", "SNOWFLAKE_TOKEN"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    provider = canonical_provider(provider)
+    if provider == "snowflake" and not model.strip():
+        raise ValueError("Snowflake requires an explicit native model ID: snowflake:<model>")
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

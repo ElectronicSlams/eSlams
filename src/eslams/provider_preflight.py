@@ -15,6 +15,7 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.snowflake import connection_settings as snowflake_connection_settings
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -23,6 +24,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "snowflake": "SNOWFLAKE_TOKEN",
 }
 
 _MODELS_ENDPOINTS = {
@@ -85,6 +87,14 @@ def provider_preflight(
         "response_parsing": False,
         "usage_extraction": False,
     }
+    connection_error = None
+    if record.provider == "snowflake":
+        try:
+            snowflake_connection_settings()
+            checks["account_endpoint_configured"] = True
+        except ValueError as exc:
+            checks["account_endpoint_configured"] = False
+            connection_error = str(exc)
     warnings = provider_registry.warnings_for(provider, model)
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
@@ -108,6 +118,8 @@ def provider_preflight(
         }
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
+    elif connection_error:
+        error = {"error_class": "provider_request_rejected", "message": connection_error}
     elif not live:
         warnings.append("This configuration preflight did not verify live provider availability.")
     elif not credential_environment or not credential_present:
@@ -211,7 +223,10 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (
+                checks["adapter_available"] is True and credential_error is None
+                and connection_error is None
+            ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — planned 0.7.1
+
+- Add a native Snowflake Cortex Chat Completions adapter with explicit account
+  configuration, exact native model IDs, and `cortex`/`snowflake-cortex` aliases.
+- Preserve full history, native defaults, explicit reasoning controls, sanitized
+  per-attempt receipts, unknown accounting, and zero default retries. Reject
+  refusals, truncated output, and responses without an explicit terminal stop.
+- Add deterministic Snowflake wire/CLI/preflight/privacy tests and official API
+  research notes in `docs/providers/SNOWFLAKE.md`. No package version change.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

@@ -1,7 +1,7 @@
 # Provider Guide
 
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Snowflake Cortex. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -14,6 +14,10 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` | Cortex Chat Completions | `choices[0].message.content` with `finish_reason=stop` | response `model` only |
+
+Snowflake requires an account origin as well. See [Snowflake Cortex](providers/SNOWFLAKE.md)
+for the verified wire contract, provider aliases, configuration, and limitations.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
