@@ -6,7 +6,9 @@ Import shared transport/receipt helpers only at call time to avoid a cycle.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, NoReturn
+from urllib.parse import quote, quote_plus
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -29,6 +31,51 @@ _ENABLE_THINKING_MODELS = frozenset({
 })
 _BUDGET_MODELS = frozenset({"ernie-5.1", "ernie-5.0-thinking-preview", "deepseek-v3.2-think"})
 _EFFORT_MODELS = frozenset({"deepseek-v4-pro", "deepseek-v4-flash"})
+
+
+def validate_model(model: str) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("Baidu Qianfan requires an explicit nonblank model API name")
+
+
+def credential_values(api_key: str, api_key_env: str = API_KEY_ENV) -> tuple[str, ...]:
+    """Protect the selected key and configured Qianfan credentials, never log them.
+
+    Legacy/secondary keys are redaction inputs only; this adapter authenticates
+    with exactly the caller-selected API key, without credential fallback.
+    """
+    values = {api_key}
+    for name in (api_key_env, API_KEY_ENV, "QIANFAN_SECRET_KEY", "QIANFAN_AK", "QIANFAN_SK",
+                 "BAIDU_API_KEY", "BAIDU_SECRET_KEY"):
+        value = os.getenv(name, "").strip()
+        if value:
+            values.add(value)
+    return tuple(sorted({variant for value in values if value for variant in (
+        value, quote(value, safe=""), quote_plus(value, safe=""),
+    )}, key=len, reverse=True))
+
+
+def contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
+    return isinstance(value, str) and any(secret in value for secret in credentials)
+
+
+def _redact_public(value: Any, credentials: tuple[str, ...]) -> Any:
+    if isinstance(value, str):
+        for secret in credentials:
+            value = value.replace(secret, "[REDACTED]")
+        return value
+    if isinstance(value, list):
+        return [_redact_public(item, credentials) for item in value]
+    if isinstance(value, dict):
+        result = {_redact_public(key, credentials): _redact_public(item, credentials)
+                  for key, item in value.items()}
+        for name in ("request_id", "gateway_request_id", "provider_response_id", "locked_model_id"):
+            if contains_credential(value.get(name), credentials):
+                result[name] = None
+        if "locked_model_id" in value and result.get("locked_model_id") is None:
+            result["model_identity_source"] = None
+        return result
+    return value
 
 
 def normalize_usage(usage: Any) -> dict[str, Any]:
@@ -90,6 +137,28 @@ def reasoning_controls(model: str, runtime: ProviderRuntimeConfig | None) -> dic
 
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    """Scrub all receipt paths, including transport and body-parser failures."""
+    from eslams.agents import ProviderCallError
+
+    credentials = credential_values(api_key, agent.api_key_env)
+    try:
+        text, receipt = _call(agent, api_key, prompt)
+    except ProviderCallError as exc:
+        if exc.receipt is not None:
+            exc.receipt = _redact_public(exc.receipt, credentials)
+        exc.args = tuple(_redact_public(item, credentials) for item in exc.args)
+        raise
+    receipt = _redact_public(receipt, credentials)
+    if contains_credential(text, credentials):
+        raise ProviderCallError(
+            "Qianfan returned credential material in final text; no action accepted",
+            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID, model=agent.model,
+            receipt=receipt,
+        )
+    return text, receipt
+
+
+def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     """Use Core's cancellation-aware transport and invocation-scoped receipts."""
     from eslams.agents import (
         _SYSTEM_INSTRUCTIONS,
@@ -105,8 +174,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     )
 
     runtime = agent.runtime_config
-    if not agent.model or not agent.model.strip():
-        _reject("Qianfan requires an explicit model API name", model=agent.model)
+    validate_model(agent.model)
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [

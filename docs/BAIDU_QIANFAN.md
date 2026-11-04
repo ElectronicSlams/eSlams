@@ -9,7 +9,8 @@ they establish parser behavior, not live model/account availability.
 Use `baidu:<exact-model-api-name>`, `qianfan:<exact-model-api-name>` or
 `baidu-qianfan:<exact-model-api-name>`. All three resolve to provider `baidu`.
 There is no default model, model-name rewrite or fallback. Additional colons in
-a service API name are preserved.
+a service API name are preserved. Missing, non-string and blank names are rejected
+at agent construction and preflight, including through all CLI aliases.
 
 Set `QIANFAN_API_KEY` in the process environment. Core does not load `.env` files.
 Use a Qianfan ModelBuilder API key with the correct application resource scope;
@@ -76,6 +77,10 @@ efforts. `reasoning_budget_tokens` maps to `thinking_budget` for `ernie-5.1`,
 Core-selected default. Provider maxima are enforced by Baidu. No arena changes
 these settings.
 
+Offline and live preflight validate the same reasoning controls as inference.
+Unsupported explicit budgets fail before discovery or transport; supported
+budgets are sent unchanged rather than replaced with an inferred default.
+
 The guide states output usage includes reasoning. Accordingly,
 `reasoning_included_in_output` is true. Documented reasoning detail is retained
 without adding it twice; private `reasoning_content` never becomes action text,
@@ -102,6 +107,15 @@ an optional retry allowance: documented string error codes and an `id` do not
 satisfy Core's narrow proof of a safe pre-generation rejection. `Retry-After`
 is parsed if supplied; no undocumented retry/reset header is required or invented.
 Each submitted attempt uses existing receipt custody and cancellation handling.
+
+Before receipt publication, provider echoes of the selected API key and configured
+Qianfan secondary/legacy credentials are removed across success, HTTP errors,
+malformed bodies and partial-reader failures. Tainted request, gateway, response
+and resolved-model identifiers become null; a removed model identifier also clears
+its identity source. Credential-bearing final text is rejected before action
+parsing, and discovery cannot publish credential-bearing model IDs. Normalized
+usage and observed status survive this redaction. Secondary/legacy credentials
+are redaction inputs only; they never become authentication fallbacks.
 
 ## Discovery and fixture provenance
 

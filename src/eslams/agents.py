@@ -404,6 +404,10 @@ class ModelProviderAgent:
         self.provider = self.provider.lower()
         if self.provider in {"qianfan", "baidu-qianfan"}:
             self.provider = "baidu"
+        if self.provider == "baidu":
+            from eslams.providers.baidu import validate_model
+
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

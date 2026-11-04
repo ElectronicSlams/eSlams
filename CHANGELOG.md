@@ -9,6 +9,9 @@
   truncated, malformed and tool-call responses before action parsing.
 - Add deterministic Qianfan wire, transport, discovery, CLI and artifact-privacy
   regressions, with official source provenance in `docs/BAIDU_QIANFAN.md`.
+- Reject blank Qianfan models at construction/preflight, validate explicit
+  reasoning budgets before discovery/transport, and remove primary/secondary
+  credential echoes from success and failure receipts, discovery and final text.
 
 ## v0.7.0 - 2026-11-04
 
