@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import os
 import re
 import time
@@ -174,6 +175,38 @@ def _exclude_credential_identifiers(
     return safe
 
 
+def _action_contains_credentials(text: str, credentials: tuple[str, ...]) -> bool:
+    from eslams.model_actions import extract_json
+
+    def contains(value: str) -> bool:
+        if any(credential in value for credential in credentials if credential):
+            return True
+        # Inspect JSON escapes even in frontmatter or malformed text that the
+        # action extractor could discard. Never modify the returned action text.
+        decoded = re.sub(
+            r'\\(?:u[0-9a-fA-F]{4}|["\\/bfnrt])',
+            lambda match: json.loads('"' + match.group() + '"'), value,
+        )
+        return any(credential in decoded for credential in credentials if credential)
+
+    if contains(text):
+        return True
+    try:
+        pending = [extract_json(text)]
+    except RecursionError:
+        return True  # A failed exclusion scan cannot authorize public action text.
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str) and contains(value):
+            return True
+        if isinstance(value, dict):
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return False
+
+
 def call(
     agent: ModelProviderAgent, secret_id: str, prompt: str, system: str,
 ) -> tuple[str, dict[str, Any]]:
@@ -318,4 +351,12 @@ def call(
             provider=PROVIDER_ID, model=agent.model, receipt=receipt,
         )
     assert isinstance(message, dict)
-    return str(message["Content"]), receipt
+    text = str(message["Content"])
+    if _action_contains_credentials(text, excluded):
+        receipt["outcome"] = "provider_response_schema_mismatch"
+        raise ProviderCallError(
+            "native Hunyuan action content failed credential exclusion",
+            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+            model=agent.model, receipt=receipt,
+        )
+    return text, receipt

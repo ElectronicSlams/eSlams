@@ -74,6 +74,8 @@ def provider_preflight(
                 from eslams.providers.tencent_hunyuan import credentials
 
                 credentials()
+                if not credential_present:
+                    raise ValueError("native Hunyuan requires a primary credential")
         except ValueError:
             credential_error = (
                 "API key must contain printable ASCII without internal whitespace"
@@ -236,7 +238,10 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (
+                checks["adapter_available"] is True
+                and credential_error is None and control_error is None
+            ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

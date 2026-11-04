@@ -597,3 +597,122 @@ def test_receipt_identifiers_exclude_credentials_on_every_response_path(
     serialized = json.dumps(public)
     for value in (*configured.values(), credential):
         assert value not in serialized
+
+
+@pytest.mark.parametrize("source", ["primary", "selected-primary", "secondary", "token"])
+@pytest.mark.parametrize("encoding", [
+    "raw", "unicode", "json-escapes", "fenced", "frontmatter", "nested", "key", "malformed",
+    "double-escaped",
+])
+def test_action_credentials_are_rejected_before_parsing_or_repair(monkeypatch, source, encoding):
+    values = {
+        "primary": "synthetic-private-primary",
+        "selected-primary": "synthetic-private-selected",
+        "secondary": "synthetic-private-secondary",
+        "token": "synthetic-private-temporary",
+    }
+    if encoding == "json-escapes":
+        values = {key: value + '/"\\edge' for key, value in values.items()}
+    for name, value in zip((
+        "TENCENTCLOUD_SECRET_ID", "HUNYUAN_TEST_PRIMARY", "TENCENTCLOUD_SECRET_KEY",
+        "TENCENTCLOUD_TOKEN",
+    ), values.values()):
+        monkeypatch.setenv(name, value)
+    # The selected primary is the credential actually used by this invocation.
+    selected = source == "selected-primary"
+    if selected:
+        values["primary"] = values["selected-primary"]
+    credential = values[source]
+    escaped = "".join(f"\\u{ord(char):04x}" for char in credential)
+    text = json.dumps({"action": 1, "public_explanation": credential})
+    if encoding == "json-escapes":
+        text = text.replace("/", "\\/")
+    elif encoding in {"unicode", "fenced"}:
+        text = '{"action":1,"public_explanation":"' + escaped + '"}'
+        if encoding == "fenced":
+            text = "```json\n" + text + "\n```"
+    elif encoding == "frontmatter":
+        text = escaped + '\n{"action":1,"public_explanation":"safe"}'
+    elif encoding == "nested":
+        text = '{"action":1,"metadata":{"debug":"' + escaped + '"}}'
+    elif encoding == "key":
+        text = '{"action":1,"' + escaped + '":0}'
+    elif encoding == "malformed":
+        text = "malformed: " + escaped
+    elif encoding == "double-escaped":
+        text = json.dumps({"action": 1, "public_explanation": escaped})
+    data = fixture()
+    data["Response"]["Choices"][0]["Message"]["Content"] = text
+    calls = wire(monkeypatch, data)
+    monkeypatch.setattr("eslams.agents._parse_model_action",
+                        lambda *a, **k: pytest.fail("credential output reached action parsing"))
+    monkeypatch.setattr("eslams.agents._retry_prompt",
+                        lambda *a, **k: pytest.fail("credential output reached action repair"))
+    current = ModelProviderAgent(
+        "hunyuan", "hunyuan-a13b", "HUNYUAN_TEST_PRIMARY" if selected
+        else "TENCENTCLOUD_SECRET_ID", runtime_config=ProviderRuntimeConfig(
+            max_retries=3, action_repair_attempts=3, retry_backoff_ms=0,
+        ),
+    )
+    with pytest.raises(ProviderCallError) as error:
+        current.act(_request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert calls and len(calls) == 1
+    assert current.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert current.last_receipt["usage"]["total_tokens"] == 113
+    assert current._receipt_batch is not None
+    serialized = json.dumps([
+        str(error.value), error.value.receipt, current.last_receipt, current.attempt_receipts,
+        current._receipt_snapshot(current._receipt_batch[0]),
+    ])
+    assert credential not in serialized
+    assert escaped not in serialized
+    assert text not in serialized
+
+
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("failure", [
+    "missing-primary", "missing-secondary", "invalid-token", "invalid-region",
+    "output-cap", "reasoning-control", "blank-model",
+])
+def test_native_preflight_configuration_readiness_matches_local_rejections(
+    monkeypatch, live, failure,
+):
+    calls = wire(monkeypatch)
+    kwargs = {}
+    model = "hunyuan-a13b"
+    if failure == "missing-primary":
+        monkeypatch.delenv("TENCENTCLOUD_SECRET_ID")
+    elif failure == "missing-secondary":
+        monkeypatch.delenv("TENCENTCLOUD_SECRET_KEY")
+    elif failure == "invalid-token":
+        monkeypatch.setenv("TENCENTCLOUD_TOKEN", "synthetic invalid token")
+    elif failure == "invalid-region":
+        monkeypatch.setenv("TENCENTCLOUD_REGION", "bad/region")
+    elif failure == "output-cap":
+        kwargs["max_output_tokens"] = 12
+    elif failure == "reasoning-control":
+        kwargs["runtime_config"] = ProviderRuntimeConfig(reasoning_effort="high")
+    elif failure == "blank-model":
+        model = " \t"
+    result = provider_preflight("hunyuan", model, "tic-tac-toe", live=live, **kwargs)
+    assert not result["ok"]
+    assert not result["readiness"]["configuration_ready"]
+    assert result["readiness"]["inference"] == "not_attempted"
+    assert result["checks"]["minimal_inference"] is False
+    assert "error" in result
+    assert calls == []
+
+
+@pytest.mark.parametrize("live", [False, True])
+def test_native_preflight_valid_configuration_is_ready_without_inventing_availability(
+    monkeypatch, live,
+):
+    calls = wire(monkeypatch)
+    result = provider_preflight("hunyuan", "hunyuan-a13b", "tic-tac-toe", live=live)
+    assert result["ok"]
+    assert result["readiness"]["configuration_ready"]
+    assert result["checks"]["api_key_configured"]
+    assert result["checks"]["account_model_visible"] is None
+    assert result["readiness"]["inference"] == ("succeeded" if live else "not_attempted")
+    assert len(calls) == int(live)

@@ -9,6 +9,8 @@
   Plan remain separate, unsupported inference routes.
 - Require explicit nonblank Hunyuan model IDs for every alias and exclude
   reflected credential values from success and failure receipt identifiers.
+- Reject raw or decoded/escaped Hunyuan credential echoes in action content
+  before parsing or repair; report local configuration rejection consistently.
 
 ## v0.7.0 - 2026-11-04
 

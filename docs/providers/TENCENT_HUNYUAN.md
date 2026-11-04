@@ -43,6 +43,9 @@ signed destination is fixed. Keys, tokens and Authorization never enter receipts
 Receipt identifiers matching configured primary/secondary credentials, embedded
 credential values or recognizable credential shapes are discarded on success,
 HTTP errors, malformed responses and partial-body failures before publication.
+Raw and JSON-decoded/escaped action content is also checked for the selected
+primary, secondary and temporary credentials before action parsing or repair.
+Matching output is rejected without retry; sanitized usage evidence is retained.
 
 Configuration preflight makes no network request:
 
@@ -56,6 +59,9 @@ The second command performs paid inference with configured credentials; it was
 and requires separate operator authorization. No documented Models API is
 assumed; account visibility remains unknown. Native model admission follows
 0.7.0 advisory policy; no catalogue availability or official eligibility is invented.
+Configuration readiness requires the primary/secondary credential pair, valid
+optional settings, an explicit model and supported controls. Local rejection
+reports `configuration_ready: false` without attempting inference.
 
 ## Controls, parsing and accounting
 
