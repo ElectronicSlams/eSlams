@@ -1453,6 +1453,11 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = provider.lower()
+    from eslams.providers.ibm_rhai import API_KEY_ENV, normalize_alias, validate_model
+    provider = normalize_alias(provider)
+    if provider == "ibm-rhai":
+        validate_model(model)
+        defaults[provider] = (model, API_KEY_ENV)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
