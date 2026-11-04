@@ -7,6 +7,8 @@
   credential-safe receipts. Preserve missing identity/accounting as unknown;
   reject unsupported reasoning controls. See `docs/providers/CONTEXTUAL_AI.md`
   for pinned API evidence and limitations. Package version remains 0.7.0.
+- Harden Contextual AI preflight validation across provider spellings and prevent
+  echoes of secondary configured credentials without adding authentication fallback.
 
 ## v0.7.0 - 2026-11-04
 

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import math
+import os
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote, quote_plus
+from urllib.parse import parse_qsl, quote, quote_plus, unquote, unquote_plus, urlsplit
 
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.model_actions import extract_json
@@ -45,23 +46,50 @@ def validate_configuration(
         raise ValueError("Contextual AI temperature must be from 0 to 1")
 
 
-def _contains_credential(value: str, api_key: str) -> bool:
-    return any(secret in value for secret in (
-        api_key, quote(api_key, safe=""), quote_plus(api_key),
-    ))
+def _credential_markers(agent: ModelProviderAgent, api_key: str) -> tuple[str, ...]:
+    from eslams.agents import _sensitive_receipt_key
+
+    secrets = {api_key}
+    # Snapshot all configured Contextual credentials, not only the one sent.
+    # The LangChain spelling is redaction-only: never an authentication fallback.
+    for name in (agent.api_key_env, API_KEY_ENV, "CONTEXTUAL_AI_API_KEY"):
+        value = os.getenv(name)
+        if value:
+            secrets.update((value, value.strip()))
+    gateway = agent.runtime_config.gateway_base_url if agent.runtime_config else None
+    if gateway:
+        try:
+            parts = urlsplit(gateway)
+            for value in (parts.username, parts.password):
+                if value:
+                    secrets.update((value, unquote(value)))
+            for name, value in parse_qsl(parts.query) + parse_qsl(parts.fragment):
+                if _sensitive_receipt_key(name):
+                    secrets.add(value)
+        except ValueError:
+            pass  # Transport rejects invalid URLs; never echo them in diagnostics.
+    return tuple({marker for secret in secrets if secret for marker in (
+        secret, quote(secret, safe=""), quote_plus(secret),
+    )})
 
 
-def _action_contains_credential(text: str, api_key: str) -> bool:
+def _contains_credential(value: str, credentials: tuple[str, ...]) -> bool:
+    return any(secret in candidate for candidate in (
+        value, unquote(value), unquote_plus(value),
+    ) for secret in credentials)
+
+
+def _action_contains_credential(text: str, credentials: tuple[str, ...]) -> bool:
     def contains(value: Any) -> bool:
         if isinstance(value, str):
-            return _contains_credential(value, api_key)
+            return _contains_credential(value, credentials)
         if isinstance(value, list):
             return any(contains(item) for item in value)
         if isinstance(value, dict):
             return any(contains(key) or contains(item) for key, item in value.items())
         return False
 
-    if _contains_credential(text, api_key):
+    if _contains_credential(text, credentials):
         return True
     try:
         # Inspect the same JSON projection as action parsing, including fenced
@@ -86,6 +114,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
 
     maximum = agent._effective_max_output_tokens()
     validate_configuration(agent.model, agent.runtime_config, maximum, agent.temperature)
+    credentials = _credential_markers(agent, api_key)
     try:
         response = _post_json(
             _provider_endpoint(GENERATE_ENDPOINT, agent.runtime_config),
@@ -114,13 +143,13 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         )
         for name in ("request_id", "gateway_request_id"):
             value = receipt.get(name)
-            if isinstance(value, str) and _contains_credential(value, api_key):
+            if isinstance(value, str) and _contains_credential(value, credentials):
                 receipt[name] = None
         # Only the documented envelope is accepted. There is no published
         # model, usage, cost, finish or reasoning attestation to normalize.
         text = data.get("response")
         if (set(data) != {"response"} or not isinstance(text, str) or not text.strip()
-                or _action_contains_credential(text, api_key)):
+                or _action_contains_credential(text, credentials)):
             raise ProviderCallError(
                 "Contextual AI returned an unsupported Generate response",
                 error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
@@ -140,7 +169,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         )
         for name in ("request_id", "gateway_request_id"):
             value = observed.get(name)
-            if isinstance(value, str) and not _contains_credential(value, api_key):
+            if isinstance(value, str) and not _contains_credential(value, credentials):
                 receipt[name] = value
         exc.receipt = receipt
         # SDK retry defaults are not evidence that paid work was rejected.

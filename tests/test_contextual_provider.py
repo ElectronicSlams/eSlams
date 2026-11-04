@@ -253,23 +253,26 @@ def test_mocked_live_preflight_has_unknown_usage_and_identity(monkeypatch):
 
 @pytest.mark.parametrize("status", [200, 429, 503])
 @pytest.mark.parametrize("partial", [False, True])
+@pytest.mark.parametrize("credential", ["primary", "secondary"])
 def test_actual_stream_reader_rejects_incomplete_bodies_without_credential_echo(
-    monkeypatch, status, partial,
+    monkeypatch, status, partial, credential,
 ):
     calls = []
     original = httpx.AsyncClient
+    echoed = SECRET if credential == "primary" else "unusedSecondaryContextualCredential12345"
+    monkeypatch.setenv("CONTEXTUAL_AI_API_KEY", "unusedSecondaryContextualCredential12345")
 
     class Stream(httpx.AsyncByteStream):
         async def __aiter__(self):
             if partial:
-                yield ('{"response":"' + SECRET).encode()
-            raise httpx.ReadError(SECRET)
+                yield ('{"response":"' + echoed).encode()
+            raise httpx.ReadError(echoed)
 
     def respond(request):
         assert request.url == GENERATE_ENDPOINT
         calls.append(1)
         return httpx.Response(status, stream=Stream(), headers={
-            "x-request-id": SECRET, "cf-aig-request-id": SECRET,
+            "x-request-id": echoed, "cf-aig-request-id": echoed,
         })
 
     class Client:
@@ -294,6 +297,7 @@ def test_actual_stream_reader_rejects_incomplete_bodies_without_credential_echo(
     assert calls == [1] and agent.last_receipt["status_code"] == status
     assert agent.last_receipt["usage"] == {} and not failure.value.retry_permitted
     assert SECRET not in json.dumps(agent.attempt_receipts)
+    assert echoed not in json.dumps(agent.attempt_receipts)
 
 
 def test_cli_run_writes_valid_unknown_accounting_artifact(monkeypatch, tmp_path, capsys):

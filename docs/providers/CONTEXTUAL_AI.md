@@ -34,7 +34,7 @@ and suitability for a competition's identity/accounting requirements are unverif
 | Usage/cost | Response has no token, cached-token, reasoning-token, reasoning-inclusion or cost fields. Usage stays empty, reasoning inclusion unknown, cost unavailable. Published token prices cannot establish per-request accounting. No billing API calls are made. |
 | Completion | No published finish, refusal or truncation indicator is present in the success envelope. Core cannot attest that an otherwise valid `response` string was not truncated upstream. Unsupported envelopes and unparseable actions fail; no undocumented completion contract is assumed. |
 | Discovery | No public Models API is established. Live model discovery returns unknown without network traffic; configuration-only readiness and mocked inference do not prove account visibility. |
-| Privacy | Credential echoes in returned action text are rejected. Credential-bearing request IDs are removed on success, HTTP errors, malformed JSON and partial-body transport failures. Unknown response/error fields are not copied into receipts or action metadata. |
+| Privacy | Credential echoes in returned action text are rejected, including JSON escapes and URL encoding. Credential-bearing request/gateway IDs are removed on success, HTTP errors, malformed JSON and partial-body transport failures. Protection covers the selected credential, configured `CONTEXTUAL_API_KEY` and `CONTEXTUAL_AI_API_KEY` values, and configured gateway URL userinfo/sensitive query values. Secondary credentials are used only for redaction, never for authentication fallback. Unknown response/error fields are not copied into receipts or action metadata. |
 
 Primary sources:
 
@@ -63,6 +63,9 @@ synthetic legal action. It is not a captured paid response. Fault injections
 exercise HTTP errors, malformed/duplicate/extended JSON, missing accounting,
 credential echoes, unknown identity, safe transport and partial bodies. CLI
 dispatch and offline/mock-live preflight are tested without provider traffic.
+Preflight validates the canonical registry provider, including aliases and
+normalized spellings, so blank IDs and unsupported explicit reasoning budgets
+fail before credential checks, discovery or inference.
 
 Competitions requiring resolved identity, complete billing/usage or verified
 completion need additional authoritative provider evidence. This adapter does

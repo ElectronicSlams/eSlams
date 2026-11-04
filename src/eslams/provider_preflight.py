@@ -55,10 +55,10 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
-    if PROVIDER_ALIASES.get(provider, provider) == contextual.PROVIDER_ID:
-        contextual.validate_configuration(model, runtime_config, max_output_tokens)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
+    if record.provider == contextual.PROVIDER_ID:
+        contextual.validate_configuration(model, runtime_config, max_output_tokens)
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
