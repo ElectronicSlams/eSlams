@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add an Apodex direct Core text adapter candidate for 0.7.1, with explicit model
+  selection, native reasoning, sanitized receipts, CLI/preflight wiring and
+  deterministic offline wire/privacy tests. Deep Research SKUs are rejected.
+  See `docs/providers/APODEX.md`; no package version change or live inference claim.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
