@@ -284,7 +284,8 @@ def test_cli_preflight_discovery_and_mocked_live_dispatch(monkeypatch, capsys):
                         lambda *a, **k: httpx.Response(200, json=data))
     assert main([*args, "--live"]) == 0
     result = json.loads(capsys.readouterr().out)
-    assert result["checks"]["minimal_inference"] and result["checks"]["usage_extraction"]
+    assert result["checks"]["minimal_inference"]
+    assert not result["checks"]["usage_extraction"]  # Reasoning inclusion is not attested.
     assert result["model"] == MODEL
     assert _provider_agent(f"perplexity:{MODEL}").model == MODEL
 

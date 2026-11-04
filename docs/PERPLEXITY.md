@@ -106,6 +106,8 @@ quarantined under shared receipt policy rather than trusted pricing or identity.
 
 Both the selected key and canonical `PERPLEXITY_API_KEY` (when a custom credential
 environment is used) are checked across retained receipt strings and keys.
+Checks include mixed JSON Unicode escapes, URL escapes, and the parsed action
+object before shared action parsing can expose decoded explanation text.
 Contaminated fields become null or are dropped; credential-containing action
 text is rejected before parsing or `raw_action_text` emission. This covers
 success, errors, malformed and partial responses. Raw bodies, headers, provider
@@ -113,10 +115,17 @@ error prose and private reasoning are not copied wholesale into receipts.
 
 `GET /v1/models` is the [public Agent catalogue](https://docs.perplexity.ai/docs/agent-api/openai-compatibility),
 which does not require authentication. The existing live discovery command still
-requires a configured key. Its list represents catalogue visibility, not account
+requires a configured key for the adapter, but the public GET does not send it.
+The provider-specific discovery parser rejects credential-containing IDs,
+malformed or duplicate-key JSON, and unexpected pagination. It returns no partial
+list on failure. Its list represents catalogue visibility, not account
 entitlement. Configuration preflight does not prove availability. `--live` sends
 billable gameplay inference and must only be used deliberately; this contribution
-did not run it against Perplexity.
+did not run it against Perplexity. Perplexity preflight now uses the canonical
+usage aggregator for completeness: inconsistent counts, cache counts above input,
+invalid counts, and unverified reasoning inclusion remain incomplete even when a
+legal action succeeds. It does not equate three present integer fields with
+verified accounting.
 
 ## Cloud verification
 
@@ -138,8 +147,12 @@ rerun (0.50 seconds for the test). No failure was suppressed or replaced.
 Provider tests, Ruff, Mypy, schema export (45 schemas), all 50 arena fingerprints,
 all 50 initial-state budgets and configuration-only CLI preflight passed.
 
-Draft PR publication is blocked: automatic approval review denied GitHub
-`create_tree` for `ElectronicSlams/eSlams`, first for missing upload authorization,
-then after recovering the user's provider-PR instruction because that instruction
-did not explicitly name the destination. No remote tree, commit, branch or PR
-was confirmed created. The local handoff preserves the code and exact revision.
+The adapter is proposed in [draft PR #301](https://github.com/ElectronicSlams/eSlams/pull/301).
+The independent hardening review added regression coverage for decoded credential
+echoes, public discovery, preflight accounting, post-construction reasoning config
+replacement, and reflected tool/fallback configurations. Tests use synthetic keys
+and mocked HTTP only. Final review checks: 137 Perplexity tests passed, 142 tests
+passed with shared discovery regressions included, and Ruff/Mypy passed. The full
+review run had 1,395 passing tests and only the two baseline failures listed above;
+the earlier intermittent arena timing test passed in that run. No inherited test
+was modified or replaced. Updated validation results are recorded in the PR.

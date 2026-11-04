@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote_plus
 
+import httpx
+
 from eslams.contracts.provider import ProviderRuntimeConfig
+from eslams.model_actions import extract_json
+from eslams.protocol import MAX_RESPONSE_BYTES, validate_json_payload
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -22,6 +27,7 @@ PARSER_VERSION = "perplexity-agent-raw-v1"
 _EFFORTS = {
     "perplexity/kimi-k3": {"minimal", "low", "medium", "high", "xhigh", "max"},
 }
+_UNICODE_ESCAPE = re.compile(r"\\u([0-9a-fA-F]{4})")
 
 
 def validate_config(model: str, config: ProviderRuntimeConfig | None) -> None:
@@ -52,8 +58,17 @@ def _credentials(api_key: str) -> tuple[str, ...]:
 
 
 def _contains_credential(value: str, credentials: tuple[str, ...]) -> bool:
+    # Text inside an Agent output_text block is another JSON layer. Decode
+    # mixed literal/Unicode escapes before shared action parsing can expose it.
+    def decode(text: str) -> str:
+        return _UNICODE_ESCAPE.sub(lambda match: chr(int(match[1], 16)), text).replace(
+            r"\/", "/",
+        ).replace(r"\\", "\\")
+
+    unquoted = unquote_plus(value)
     return any(secret in candidate for secret in credentials
-               for candidate in (value, unquote_plus(value)))
+               for candidate in (value, unquoted, decode(value), decode(unquoted),
+                                 unquote_plus(decode(value))))
 
 
 def _clean(value: Any, credentials: tuple[str, ...]) -> Any:
@@ -66,6 +81,54 @@ def _clean(value: Any, credentials: tuple[str, ...]) -> Any:
     if isinstance(value, list):
         return [_clean(item, credentials) for item in value]
     return value
+
+
+def discover_models(api_key: str) -> list[str]:
+    """Read the public catalogue without forwarding auth or exposing echoed keys."""
+    from eslams.agents import ProviderCallError, _strict_provider_json
+
+    credentials = _credentials(api_key)
+    try:
+        response = httpx.get(MODELS_ENDPOINT, headers={"Accept": "application/json"},
+                             params={}, timeout=20.0)
+    except httpx.TimeoutException:
+        raise ProviderCallError("Perplexity model discovery timed out",
+                                error_kind="provider_timeout", provider=PROVIDER_ID) from None
+    except httpx.HTTPError:
+        raise ProviderCallError("Perplexity model discovery transport failed",
+                                error_kind="provider_transport_error",
+                                provider=PROVIDER_ID) from None
+    if response.is_error:
+        code = response.status_code
+        kind = ("provider_auth_failed" if code == 401 else
+                "provider_permission_failed" if code == 403 else
+                "provider_rate_limited" if code == 429 else
+                "provider_unavailable" if code >= 500 else "provider_request_rejected")
+        raise ProviderCallError(f"Perplexity model discovery returned HTTP {code}",
+                                status_code=code, error_kind=kind, provider=PROVIDER_ID)
+    try:
+        if len(response.content) > MAX_RESPONSE_BYTES:
+            raise ValueError("oversized catalogue")
+        payload = _strict_provider_json(response)
+        validate_json_payload(payload)
+        if (not isinstance(payload, dict) or not isinstance(payload.get("data"), list)
+                or payload.get("has_more") or payload.get("nextPageToken")):
+            raise ValueError("invalid catalogue")
+        models = []
+        for row in payload["data"]:
+            model = row.get("id") if isinstance(row, dict) else None
+            if not isinstance(model, str):
+                raise ValueError("invalid model ID")
+            validate_config(model, None)
+            if _contains_credential(model, credentials):
+                raise ValueError("credential in catalogue")
+            models.append(model)
+        return sorted(set(models))
+    except (ValueError, UnicodeError, RecursionError):
+        # Never return a partial list, raw row, header or parser exception.
+        raise ProviderCallError("Perplexity model discovery returned unsafe or malformed data",
+                                error_kind="provider_response_schema_mismatch",
+                                provider=PROVIDER_ID) from None
 
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
@@ -159,6 +222,9 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         cost = raw_usage.get("cost") if isinstance(raw_usage, dict) else None
         tool_cost = _optional_float(cost.get("tool_calls_cost")) if isinstance(cost, dict) else None
         if (data.get("effort") is not None or data.get("preset") is not None
+                or data.get("profile") is not None or data.get("models") is not None
+                or data.get("skills") or data.get("previous_response_id")
+                or data.get("tool_choice") not in (None, "none")
                 or data.get("tools") or tool_usage or (tool_cost is not None and tool_cost > 0)):
             raise ProviderCallError("Perplexity returned an unexpected tool or preset run",
                                     error_kind="provider_response_schema_mismatch")
@@ -180,7 +246,9 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
                                             error_kind="provider_response_schema_mismatch")
                 chunks.append(part["text"])
         text = "".join(chunks)
-        if not text.strip() or _contains_credential(text, credentials):
+        parsed_action = extract_json(text)
+        if (not text.strip() or _contains_credential(text, credentials)
+                or _clean(parsed_action, credentials) != parsed_action):
             raise ProviderCallError("Perplexity action text is empty or contains credentials",
                                     error_kind="provider_response_schema_mismatch")
         return text, _clean(receipt, credentials)
