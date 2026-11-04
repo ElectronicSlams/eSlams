@@ -707,7 +707,7 @@ Core has direct first-party HTTP adapters for the provider routes below:
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 | `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` |
 
-The proposed 0.7.1 [BytePlus ModelArk adapter](docs/providers/BYTEPLUS.md) targets
+The proposed 0.7.1 [BytePlus ModelArk adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BYTEPLUS.md) targets
 the direct ap-southeast-1 service. Supply an explicit model or deployment ID;
 Volcengine Ark and Coding Plan use different services.
 
