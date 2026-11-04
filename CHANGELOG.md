@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Mistral AI Chat Completions adapter (`mistral-ai`, alias `mistral`)
+  with account model discovery, sanitized receipts and offline wire regressions.
+  See `docs/providers/MISTRAL.md` for supported behavior and limitations.
+- Require explicit Mistral model IDs and matching returned identity, reject
+  unsupported reasoning token budgets, and scrub configured primary/secondary
+  credential echoes from provider results.
+- Reject credential-contaminated Mistral actions before parsing or repair,
+  including mixed/full JSON Unicode escapes, without rewriting model actions.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
