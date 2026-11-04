@@ -24,10 +24,13 @@
     "reject disabled-plus-explicit reasoning contradiction"
   ],
   "not_resolved": [
-    "PR226 top-level score.json board fields and error-forfeit documentation",
     "real transport/late callback integration and supported-runtime acceptance",
     "strict endpoint pinning/attestation for hosted official consumers"
   ],
   "publication_authorized_conditionally": true,
-  "publication_performed": false
+  "publication_performed": false,
+  "accepted_product_decision": {
+    "PR226": "retain raw diagnostic top-level score fields; invalid public/official scored fields remain null; schema unchanged",
+    "error_forfeit_and_fallback_exit": "preserve existing behaviour; documentation distinguishes diagnostic board outcome from competitive result"
+  }
 }

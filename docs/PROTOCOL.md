@@ -41,8 +41,10 @@ eslams run --on-agent-error fallback --on-illegal-action fallback
 `invalid-match` is the CLI default for both agent and illegal-action failures.
 `fallback` is an explicit smoke/demo opt-in that chooses the arena's
 deterministic failure action and still records the run as invalid for scoring.
-`forfeit` ends the match with the other player as winner and also records the
-run as not valid for scoring.
+The error-policy `forfeit` ends the diagnostic board state with the other player
+as board winner and records the run as not valid for scoring. Its raw outcome is
+retained in `score.json`; invalid public/official summaries expose no competitive
+winner or scored values. This does not change a game's own valid terminal rules.
 
 ## Provider-Backed Agents
 

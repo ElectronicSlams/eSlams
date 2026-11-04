@@ -31,8 +31,12 @@
 - CLI `summary.winner` and the replay viewer's Winner row follow the public
   result summary. Excluded runs show `scoring_status`/`board_winner` in the CLI
   and an "excluded from scoring" label in the viewer.
-- Unchanged pending review: top-level `score.json` `winner`/`primary_score`/
-  `scores_by_player`, forfeit winner semantics, and the fallback exit code.
+- Compatibility retained for 0.7.0: top-level `score.json` `winner`,
+  `primary_score` and `scores_by_player` remain raw diagnostic board fields.
+  Consumers must check scoring validity; invalid public/official summaries keep
+  those scored fields null. Error-forfeit remains invalid for scoring, with its
+  raw board outcome retained. Fallback exits remain unchanged unless
+  `--require-scoring-valid` is used. No nullable top-level score schema is introduced.
 
 ## v0.6.2 - 2026-10-11
 

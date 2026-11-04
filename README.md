@@ -326,7 +326,9 @@ changes require a newly pinned evaluation cohort, not relabelling old results.
 
 Invalid-run public summaries, CLI and replay do not present a competitive winner
 or score. Raw top-level diagnostic board fields in `score.json` remain labelled by
-scoring validity; #226's pending score-schema/forfeit decisions are recorded in the
+scoring validity. 0.7.0 deliberately retains these diagnostic fields and the
+existing error-forfeit/fallback-exit behaviour; no nullable top-level score schema
+is introduced. Compatibility and remaining integration gates are recorded in the
 [release checklist](https://github.com/ElectronicSlams/eSlams/blob/main/docs/internal/release-0.7.0.md).
 Package publication does not deploy the new Core into Arena/Battlefield.
 
