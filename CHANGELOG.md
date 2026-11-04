@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Bound shared model-action JSON nesting before decoding/scanning, retain typed
+  sanitized errors and observed usage receipts, and stop action repair on
+  depth/decoder resource exhaustion.
 - Align private Core-lite/contracts package identity and step-response version
   identifiers with existing Core 0.7.0 and prompt v3 (#243). Gate server checks
   on compiled Python/TypeScript parity.

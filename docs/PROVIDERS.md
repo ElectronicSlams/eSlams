@@ -234,6 +234,17 @@ observed status and request IDs. This distinction preserves receipt custody;
 it does not permit replay, infer usage/cost or extend the elapsed deadline.
 Runner treats both forms as a provider timeout and applies no fallback action.
 
+Model action JSON permits at most 128 nested objects/arrays, checked iteratively
+before decoding. Quoted brackets and escapes do not count as structure. The
+shared `extract_json` helper returns `None` for malformed or resource-limited
+input so adapters can safely inspect extracted output before returning a receipt.
+The action parser reports a sanitized `InvalidModelAction` protocol failure;
+provider calls surface `action_response_unparseable` while retaining observed
+receipt identity, usage and cost. Depth/decoder resource failures do not trigger
+automatic retries or action repair, even when those options are configured.
+Adapters with independent decoders/scanners must apply equivalent bounds or
+use the shared helper; this does not make arbitrary recursive scanners safe.
+
 Core uses a shared bounded asynchronous HTTP loop behind its synchronous adapter
 API. Expired requests are cancelled and their network streams are closed; it
 also works when the caller already has an asyncio loop or is a worker thread.

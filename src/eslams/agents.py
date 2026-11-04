@@ -33,6 +33,7 @@ from eslams.deadlines import (
 from eslams.hashing import sha256_json
 from eslams.http_io import TotalTimeout, bounded_post, response_observation
 from eslams.model_actions import (
+    InvalidModelAction,
     coerce_action,
     extract_json,
     find_legal_action,
@@ -579,6 +580,8 @@ class ModelProviderAgent:
                         "parse_error": str(exc),
                     }
                 )
+                if isinstance(exc, InvalidModelAction) and not exc.repair_permitted:
+                    break
                 continue
             return ActResponse(
                 action=action,
@@ -597,6 +600,7 @@ class ModelProviderAgent:
             error_kind="action_response_unparseable",
             provider=self.provider,
             model=self.model,
+            receipt=self.last_receipt,
         )
 
     def _receipt_snapshot(self, invocation: object) -> list[dict[str, Any]]:
