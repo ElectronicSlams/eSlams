@@ -80,7 +80,9 @@ def test_retry_after_beyond_explicit_deadline_preserves_receipt_without_sleeping
 
         def response(*args, calls=calls, value=value, **kwargs):
             calls.append(1)
-            return httpx.Response(429, text="rate limit", headers={"Retry-After": value})
+            return httpx.Response(
+                429, json={"error": {"code": 429}}, headers={"Retry-After": value},
+            )
 
         monkeypatch.setattr("eslams.agents.bounded_post", response)
         agent = ModelProviderAgent(

@@ -39,3 +39,15 @@ Missing-file and overwrite failures now have actionable CLI messages. Plain `esl
 ## Remaining release gates
 
 Independent review of this broader checkpoint, supported Python/Windows matrix, real deployed transport and cancellation/late-custody acceptance, cross-host durability, final Platform policy propagation and private independent-language parity are open. Session CAS/idempotency and transactional booking/outbox remain separate design work. The numerical replay profile is a separately versioned proposal, not activated in these game equations. No historical goldens are replaced. No model-paid validation or production change is part of this candidate.
+
+
+## Review successor: complete error-body custody
+
+A complete non-2xx body is parsed as bounded finite JSON with duplicate fields rejected. Safe generation IDs and normalized token observations are retained; arbitrary error prose, model attestations and remote pricing references are excluded. Reported native cost is retained only as `pricing_provenance.observed_cost_usd` under the proposed `eslams.native-error-provenance.v1` shape; it is an unverified quote, never a measured canonical cost or trusted price card. Canonical cost remains unknown. Malformed/conflicting observations veto retry without becoming authenticated billing evidence. This additive diagnostic shape needs paired review before promotion.
+
+Optional retry now requires a narrow structured rate-rejection envelope plus no observed/ambiguous work. Plaintext, invalid/duplicate JSON, unknown envelope extensions, contradictory codes, generation/usage/cost fields and incomplete bodies do not establish safe rejection. The private exception `retry_permitted` flag is not a serialized receipt field. Existing HTTP200 complete-error checks use the same veto. This corrects independent review of d109bff and does not change frozen selected9e6 or the separate custom model transport.
+
+
+## Classifier-consensus successor
+
+Safe optional retry requires every supplied `error.code` and `error.type` to independently map to429. Missing both, unknown, malformed, null or contradictory classifier values withhold retry. This agreement test is separate from diagnostic precedence: HTTP/body failure classification is unchanged. A336case HTTP200/429 matrix covers absent/code-only/type-only/consistent positive controls and malformed/unknown/conflicting pairs; existing observation, privacy, body-interruption and5xx vetoes remain.

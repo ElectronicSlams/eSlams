@@ -28,6 +28,7 @@ from eslams.contracts.versions import (
     CORE_OBSERVABILITY_SCHEMA_VERSION,
     CORE_PACKAGE_VERSION,
     CORE_PROMPT_PACKAGE_SCHEMA_VERSION,
+    CORE_PROMPT_VERSION,
     CORE_REPLAY_EVENT_SCHEMA_VERSION,
     CORE_RUNNER_SESSION_SCHEMA_VERSION,
     CORE_STEP_REQUEST_SCHEMA_VERSION,
@@ -318,7 +319,7 @@ def no_secret_examples() -> dict[str, dict[str, Any]]:
         CORE_PROMPT_PACKAGE_SCHEMA_VERSION: {
             "gameId": "tic-tac-toe",
             "rulesetVersion": "standard",
-            "promptVersion": "eslams.core.prompt.v2",
+            "promptVersion": CORE_PROMPT_VERSION,
             "stablePrefix": [],
             "dynamicTurn": {
                 "moveHistory": "[]",

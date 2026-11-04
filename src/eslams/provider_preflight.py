@@ -1,4 +1,4 @@
-"""Registry-only and live provider readiness checks."""
+"""Configuration and explicitly requested live checks; catalogue policy is opt-in."""
 
 from __future__ import annotations
 
@@ -43,7 +43,10 @@ def provider_preflight(
     time_budget_ms: int | None = None,
     max_output_tokens: int | None = None,
     runtime_config: ProviderRuntimeConfig | None = None,
+    strict_catalogue: bool = False,
 ) -> dict[str, Any]:
+    if not isinstance(strict_catalogue, bool):
+        raise ValueError("strict_catalogue must be boolean")
     for name, value in (("time_budget_ms", time_budget_ms),
                         ("max_output_tokens", max_output_tokens)):
         if value is not None and (
@@ -85,18 +88,20 @@ def provider_preflight(
     warnings = provider_registry.warnings_for(provider, model)
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
+    discovery_error: dict[str, Any] | None = None
+    inference_invoked = False
 
     if credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
-    elif not checks["model_lifecycle_available"]:
+    elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
             "message": f"model {model!r} is retired or marked unavailable in the registry",
         }
-    elif not record.allows_text_game_agent():
+    elif strict_catalogue and (not record.known or not record.allows_text_game_agent()):
         error = {
             "error_class": "provider_request_rejected",
             "message": f"model {model!r} is not registered for text game actions",
@@ -104,7 +109,7 @@ def provider_preflight(
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
     elif not live:
-        warnings.append("This registry-only preflight did not verify live provider availability.")
+        warnings.append("This configuration preflight did not verify live provider availability.")
     elif not credential_environment or not credential_present:
         error = {
             "error_class": "provider_auth_failed",
@@ -115,14 +120,20 @@ def provider_preflight(
             visible_models = provider_models_live(record.provider)
         except ProviderCallError as exc:
             visible_models = None
-            error = _public_error(exc, provider=provider, model=model)
+            discovery_error = _public_error(exc, provider=provider, model=model)
+            if strict_catalogue:
+                error = discovery_error
+            else:
+                warnings.append(
+                    "Model discovery failed; explicitly requested inference is decisive."
+                )
         if visible_models is None and error is None:
             warnings.append(
                 "This adapter has no Models API; account visibility remains unverified."
             )
         if visible_models is not None:
             checks["account_model_visible"] = model in visible_models
-            if checks["account_model_visible"] is False:
+            if checks["account_model_visible"] is False and strict_catalogue:
                 alternatives = [item for item in visible_models if _same_model_family(model, item)][
                     :5
                 ]
@@ -131,6 +142,8 @@ def provider_preflight(
                     "message": f"model {model!r} is not visible to this provider account",
                     "available_alternatives": alternatives,
                 }
+            elif checks["account_model_visible"] is False:
+                warnings.append("Requested model was not listed; account discovery is advisory.")
         if error is None:
             request = make_act_request(
                 run_id="preflight_live",
@@ -158,6 +171,7 @@ def provider_preflight(
                 runtime_config=runtime_config or ProviderRuntimeConfig(),
             )
             try:
+                inference_invoked = True
                 response = agent.act(request)
                 checks["minimal_inference"] = True
                 checks["response_parsing"] = response.action in legal_actions
@@ -171,10 +185,10 @@ def provider_preflight(
                 error = _public_error(exc, provider=provider, model=model)
 
     required = (
-        checks["registry_entry"] is True
-        and checks["adapter_available"] is True
-        and checks["game_agent_supported"] is True
-        and checks["model_lifecycle_available"] is True
+        checks["adapter_available"] is True
+        and (not strict_catalogue or all(checks[key] is True for key in (
+            "registry_entry", "game_agent_supported", "model_lifecycle_available",
+        )))
         and error is None
         and checks["arena_available"] is True
         and checks["legal_action_available"] is True
@@ -182,16 +196,29 @@ def provider_preflight(
             not live
             or all(
                 checks[key] is True
-                for key in ("minimal_inference", "response_parsing", "usage_extraction")
+                for key in ("minimal_inference", "response_parsing")
             )
         )
-        and (not live or checks["account_model_visible"] is not False)
+        and (not strict_catalogue or not live or checks["account_model_visible"] is not False)
     )
     payload: dict[str, Any] = {
         "provider": provider,
         "model": model,
         "arena_id": arena_id,
-        "preflight_mode": "live" if live else "registry_only",
+        "preflight_mode": "live" if live else "configuration_only",
+        "strict_catalogue": strict_catalogue,
+        "model_availability": (
+            "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
+        ),
+        "readiness": {
+            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "inference": ("succeeded" if checks["minimal_inference"] is True else
+                          "failed" if inference_invoked else "not_attempted"),
+            "legal_action_observed": checks["response_parsing"] is True,
+            "usage_complete": checks["usage_extraction"] is True,
+            "cost_and_official_eligibility": "not_assessed",
+            "meaning_of_ok": "configuration ready, and if live, one legal action observed",
+        },
         "model_execution_policy": model_execution_policy(time_budget_ms, max_output_tokens),
         "ok": required,
         "checks": checks,
@@ -208,6 +235,8 @@ def provider_preflight(
     }
     if error is not None:
         payload["error"] = error
+    if discovery_error is not None:
+        payload["discovery_error"] = discovery_error
     return payload
 
 

@@ -19,6 +19,7 @@ from eslams.contracts.versions import (
     CORE_PACKAGE_VERSION,
     CORE_PROMPT_VERSION,
     CORE_REPLAY_EVENT_SCHEMA_VERSION,
+    LEGACY_CORE_PROMPT_VERSION,
 )
 from eslams.hashing import (
     action_hash,
@@ -382,7 +383,25 @@ def prompt_package(
     actor_id: str,
     history: list[dict[str, Any]] | None = None,
     provider_family: str = "generic",
+    prompt_version: str = CORE_PROMPT_VERSION,
 ) -> dict[str, Any]:
+    """Build an actor-authorized prompt from supplied public history.
+
+    v3 preserves every supplied record. v2 is an explicit historical treatment
+    with its original24-record projection and byte/hash semantics. The caller
+    remains responsible for supplying only history authorized for this actor.
+    """
+    if not isinstance(prompt_version, str) or prompt_version not in {
+        CORE_PROMPT_VERSION, LEGACY_CORE_PROMPT_VERSION,
+    }:
+        raise ValueError("unsupported prompt version")
+    if prompt_version == CORE_PROMPT_VERSION:
+        supplied = [] if history is None else history
+        if not isinstance(supplied, list) or any(not isinstance(row, dict) for row in supplied):
+            raise ValueError("history must be a list of public JSON records")
+        history_json = canonical_json(supplied)
+    else:
+        history_json = canonical_json(list(history or [])[-24:])
     actions = arena.legal_actions_for(state, actor_id)
     observation = observation_for_view(
         arena=arena,
@@ -400,7 +419,7 @@ def prompt_package(
     package = {
         "gameId": arena.id,
         "rulesetVersion": DEFAULT_RULESET_VERSION,
-        "promptVersion": CORE_PROMPT_VERSION,
+        "promptVersion": prompt_version,
         "stablePrefix": [
             {
                 "role": "developer",
@@ -423,7 +442,7 @@ def prompt_package(
             },
         ],
         "dynamicTurn": {
-            "moveHistory": canonical_json(list(history or [])[-24:]),
+            "moveHistory": history_json,
             "currentObservation": canonical_json(observation),
             "legalActions": canonical_json(legal_rows),
         },
@@ -508,6 +527,8 @@ def engine_capabilities(game_id: str) -> dict[str, Any]:
     core_lite_games = {"tic-tac-toe", "connect-four"}
     return {
         "gameId": game_id,
+        "promptVersion": CORE_PROMPT_VERSION,
+        "supportedPromptVersions": [CORE_PROMPT_VERSION, LEGACY_CORE_PROMPT_VERSION],
         "engines": {
             "python_core": {"official": True, "arenaInteractive": True},
             "core_lite_ts": {

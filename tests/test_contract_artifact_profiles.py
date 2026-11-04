@@ -246,7 +246,7 @@ def test_runner_persists_each_provider_retry_receipt(tmp_path: Path, monkeypatch
     ) -> httpx.Response:
         calls["count"] += 1
         if calls["count"] == 1:
-            return httpx.Response(500, text="temporary provider failure")
+            return httpx.Response(429, json={"error": {"code": 429}})
         return httpx.Response(
             200,
             json={
@@ -294,7 +294,7 @@ def test_runner_persists_each_provider_retry_receipt(tmp_path: Path, monkeypatch
     assert calls["count"] == 2
     assert [receipt["attempt"] for receipt in receipts] == [1, 2]
     assert [receipt["outcome"] for receipt in receipts] == [
-        "provider_unavailable",
+        "provider_rate_limited",
         "ok",
     ]
 

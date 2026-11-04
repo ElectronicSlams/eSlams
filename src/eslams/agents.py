@@ -64,7 +64,9 @@ class ProviderCallError(AgentError):
         provider: str | None = None,
         model: str | None = None,
         receipt: dict[str, Any] | None = None,
+        retry_permitted: bool = False,
     ) -> None:
+        self.retry_permitted = retry_permitted
         self.status_code = status_code
         self.error_kind = error_kind
         self.retry_after_seconds = retry_after_seconds
@@ -652,15 +654,8 @@ class ModelProviderAgent:
         }
         effort = self.runtime_config.reasoning_effort if self.runtime_config else None
         reasoning = {"effort": effort} if effort is not None else None
-        if effort is not None and (
-            not self.capabilities.supports_reasoning
-            or (self.capabilities.reasoning_efforts
-                and effort not in self.capabilities.reasoning_efforts)
-        ):
-            raise ProviderCallError(
-                "requested reasoning effort is unsupported by the verified endpoint capability",
-                error_kind="provider_request_rejected", provider=self.provider, model=self.model,
-            )
+        # An explicit endpoint control is not a claim about catalogue membership.
+        # Forward it unchanged; authoritative endpoint rejection retains its receipt.
         if self.temperature is not None and self.capabilities.supports_temperature:
             payload["temperature"] = self.temperature
         if reasoning:
@@ -784,7 +779,7 @@ class ModelProviderAgent:
         generation_config: dict[str, Any] = {"maxOutputTokens": self._effective_max_output_tokens()}
         if self.temperature is not None and self.capabilities.supports_temperature:
             generation_config["temperature"] = self.temperature
-        if self._reasoning_enabled and self.capabilities.supports_google_thinking_config:
+        if self._reasoning_enabled:
             thinking_budget = self._gemini_thinking_budget()
             if thinking_budget is not None:
                 generation_config["thinkingConfig"] = {"thinkingBudget": thinking_budget}
@@ -850,11 +845,11 @@ class ModelProviderAgent:
         if self.temperature is not None and self.capabilities.supports_temperature:
             payload["temperature"] = self.temperature
         runtime = self.runtime_config
+        # Emit even without an order: upstream defaults must not silently turn
+        # forbidden fallback on. An absent route order is not a verified pin.
+        payload["provider"] = {"allow_fallbacks": False}
         if runtime and runtime.openrouter_provider_order:
-            payload["provider"] = {
-                "order": list(runtime.openrouter_provider_order),
-                "allow_fallbacks": runtime.openrouter_allow_fallbacks,
-            }
+            payload["provider"]["order"] = list(runtime.openrouter_provider_order)
         response = _post_json(
             _provider_endpoint(CHAT_COMPLETIONS_ENDPOINT, runtime),
             headers={
@@ -1114,12 +1109,10 @@ def _reasoning_enabled_for_request(
     capabilities: ModelCapabilities,
     request: ActRequest,
 ) -> bool:
-    if not capabilities.supports_reasoning:
-        return False
     mode = runtime_config.reasoning if runtime_config is not None else "auto"
     if mode == "disabled":
         return False
-    if mode == "enabled":
+    if mode == "enabled" and capabilities.supports_reasoning:
         return True
     # Native defaults belong to the provider; neither arena labels nor a
     # catalogue's recommended effort should silently select reasoning policy.
@@ -1223,6 +1216,9 @@ def _post_json(
             runtime_config=runtime_config, status_code=response.status_code,
             retry_after_seconds=retry_after,
         )
+        body_retry_permitted = _capture_error_body_observations(
+            response, provider=provider, receipt=receipt,
+        )
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-amzn-requestid"),
@@ -1235,8 +1231,114 @@ def _post_json(
             f"provider returned HTTP {response.status_code}",
             status_code=response.status_code, error_kind=kind,
             retry_after_seconds=retry_after, provider=provider, model=model, receipt=receipt,
+            retry_permitted=body_retry_permitted,
         )
     return response
+
+
+def _strict_provider_json(response: httpx.Response) -> Any:
+    def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate provider JSON field")
+            result[key] = value
+        return result
+    return json.loads(response.content, object_pairs_hook=unique_pairs)
+
+
+def _safe_rate_rejection(data: Any, status: int) -> bool:
+    # Deliberately narrow: unknown extensions, malformed observations and an
+    # incomplete/unparseable body cannot establish a safe rejection to replay.
+    if status not in {200, 429} or not isinstance(data, dict):
+        return False
+    error = data.get("error")
+    if not isinstance(error, dict):
+        return False
+    supplied = [
+        _body_error_status({key: error[key]}) for key in ("code", "type") if key in error
+    ]
+    # Display classification may have precedence; safe replay requires every
+    # supplied classifier to independently establish the same rejection.
+    return bool(supplied) and all(value == 429 for value in supplied) and not (
+        set(data) - {"error", "type", "status"}
+        or data.get("status") not in (None, "failed")
+        or data.get("type") not in (None, "error")
+        or set(error) - {"code", "type", "message", "param"}
+        or any(error.get(key) is not None and not isinstance(error[key], str)
+               for key in ("type", "message", "param"))
+    )
+
+
+def _capture_error_body_observations(
+    response: httpx.Response, *, provider: str, receipt: dict[str, Any],
+) -> bool:
+    provenance: dict[str, Any] = {
+        "schema_version": "eslams.native-error-provenance.v1",
+        "source": "unverified_provider_error_body", "accounting_status": "quarantined",
+        "model_identity_status": "unverified", "body_status": "unparseable",
+    }
+    receipt["pricing_provenance"] = provenance
+    try:
+        data = _strict_provider_json(response)
+        validate_json_payload(data)
+        if not isinstance(data, dict):
+            return False
+    except (ValueError, UnicodeError, RecursionError):
+        return False
+    provenance["body_status"] = "bounded_json_object"
+    usages: list[Any] = []
+    identities: list[Any] = []
+    costs: list[Any] = []
+    # Only documented envelope positions are custody sources. Never descend
+    # through prompt/response/content/message payloads to harvest telemetry.
+    nodes: list[dict[str, Any]] = [data]
+    error = data.get("error")
+    if isinstance(error, dict):
+        nodes.append(error)
+        if isinstance(error.get("metadata"), dict):
+            nodes.append(error["metadata"])
+    choices = data.get("choices")
+    if isinstance(choices, list):
+        nodes.extend(choice["error"] for choice in choices
+                     if isinstance(choice, dict) and isinstance(choice.get("error"), dict))
+    for node in nodes:
+        for key in ("id", "responseId", "provider_response_id", "generation_id"):
+            if key in node:
+                identities.append(node[key])
+        for key in ("usage", "usageMetadata"):
+            if key in node:
+                usages.append(node[key])
+        for key in ("cost", "cost_usd", "total_cost", "total_cost_usd"):
+            if key in node:
+                costs.append(node[key])
+    for usage in usages:
+        if isinstance(usage, dict):
+            for key in ("cost", "cost_usd", "total_cost", "total_cost_usd"):
+                if key in usage:
+                    costs.append(usage[key])
+    provenance["work_observation_present"] = bool(identities or usages or costs)
+    safe_ids = [_http_error_identifier(value) for value in identities]
+    if safe_ids and all(value is not None and value == safe_ids[0] for value in safe_ids):
+        receipt["provider_response_id"] = safe_ids[0]
+    if usages:
+        provenance["usage_observation_status"] = "conflicting_or_malformed"
+        if len(usages) == 1 and isinstance(usages[0], dict):
+            usage = _normalize_usage(provider, usages[0])
+            if not usage.get("usage_validation_errors") and _normalized_usage_has_tokens(usage):
+                receipt["usage"] = usage
+                receipt["usage_unavailable_reason"] = None
+                provenance["usage_observation_status"] = "normalized_unverified"
+    if costs:
+        provenance["cost_observation_status"] = "conflicting_or_malformed"
+        values = [_optional_float(value) for value in costs]
+        if values and all(value is not None and value == values[0] for value in values):
+            provenance["observed_cost_usd"] = values[0]
+            provenance["cost_observation_status"] = "reported_unverified"
+    # Error-body pricing never supplies a trusted rate card or a measured cost.
+    # Quoted observations remain diagnostic; canonical cost stays unknown.
+    return (_safe_rate_rejection(data, response.status_code)
+            and not provenance["work_observation_present"])
 
 
 def _raise_observed_transport_failure(
@@ -1284,7 +1386,8 @@ def _provider_error_kind(status_code: int | None) -> str:
 def _provider_error_is_retryable(exc: ProviderCallError) -> bool:
     # max_retries is a maximum for definitive rejection, not permission to
     # replay an ambiguous timeout, gateway5xx or accepted generation.
-    if exc.status_code != 429 or exc.error_kind != "provider_rate_limited":
+    if (not exc.retry_permitted or exc.status_code != 429
+            or exc.error_kind != "provider_rate_limited"):
         return False
     receipt = exc.receipt or {}
     if receipt.get("provider_response_id") or receipt.get("usage"):
@@ -1488,12 +1591,13 @@ def _receipt(
         "schema_version": PROVIDER_RECEIPT_SCHEMA_VERSION,
         "provider": provider,
         "model": model,
-        "locked_model_id": resolved_model if isinstance(resolved_model, str) else None,
+        "locked_model_id": _http_error_identifier(resolved_model),
         "model_identity_source": (
             model_identity_source
-            if isinstance(resolved_model, str) and model_identity_source is not None
+            if (_http_error_identifier(resolved_model) is not None
+                and model_identity_source is not None)
             else "provider_response"
-            if isinstance(resolved_model, str)
+            if _http_error_identifier(resolved_model) is not None
             else None
         ),
         "endpoint_kind": _endpoint_kind(provider),
@@ -1502,14 +1606,14 @@ def _receipt(
         "model_capability_known": capabilities.known,
         "game_agent_supported": capabilities.game_agent_supported,
         "capability_sources": list(capabilities.sources),
-        "provider_response_id": provider_response_id,
+        "provider_response_id": _http_error_identifier(provider_response_id),
         "status_code": response.status_code,
-        "request_id": response.headers.get("x-request-id")
+        "request_id": _http_error_identifier(response.headers.get("x-request-id")
         or response.headers.get("request-id")
-        or response.headers.get("x-cloud-trace-context"),
+        or response.headers.get("x-cloud-trace-context")),
         "gateway_mode": runtime_config.gateway_mode if runtime_config else "disabled",
-        "gateway_request_id": response.headers.get("cf-aig-request-id")
-        or response.headers.get("x-gateway-request-id"),
+        "gateway_request_id": _http_error_identifier(response.headers.get("cf-aig-request-id")
+        or response.headers.get("x-gateway-request-id")),
         "usage": normalized_usage if has_usage else {},
         "usage_unavailable_reason": None if has_usage else "provider_usage_absent",
         "pricing": pricing,
@@ -2312,7 +2416,10 @@ def _optional_float(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        numeric = float(value)
+        try:
+            numeric = float(value)
+        except OverflowError:
+            return None
         return numeric if math.isfinite(numeric) and numeric >= 0 else None
     return None
 
@@ -2457,6 +2564,7 @@ def _check_provider_completion(
             "provider reported an error inside the response body",
             status_code=code, error_kind=kind, provider=provider, model=model,
             retry_after_seconds=_retry_after_seconds(response),
+            retry_permitted=_safe_rate_rejection(data, response.status_code),
         )
     if refused:
         receipt["finish_status"] = "refused"
@@ -2648,12 +2756,13 @@ def _response_json_with_receipt(
         )
         receipt.update(
             {
-                "request_id": response.headers.get("x-request-id")
+                "request_id": _http_error_identifier(response.headers.get("x-request-id")
                 or response.headers.get("request-id")
                 or response.headers.get("x-cloud-trace-context")
-                or response.headers.get("x-amzn-requestid"),
-                "gateway_request_id": response.headers.get("cf-aig-request-id")
-                or response.headers.get("x-gateway-request-id"),
+                or response.headers.get("x-amzn-requestid")),
+                "gateway_request_id": _http_error_identifier(
+                    response.headers.get("cf-aig-request-id")
+                    or response.headers.get("x-gateway-request-id")),
                 "model_capability_known": capabilities.known,
                 "capability_sources": list(capabilities.sources),
             }
@@ -2669,9 +2778,9 @@ def _response_json(
     model: str,
 ) -> dict[str, Any]:
     try:
-        payload = response.json()
+        payload = _strict_provider_json(response)
         validate_json_payload(payload)
-    except (json.JSONDecodeError, ValueError, UnicodeError) as exc:
+    except (json.JSONDecodeError, ValueError, UnicodeError, RecursionError) as exc:
         raise ProviderCallError(
             "provider response body is not valid JSON",
             status_code=response.status_code,

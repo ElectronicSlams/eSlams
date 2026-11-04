@@ -35,7 +35,7 @@ def test_optional_retry_after_definitive_rate_rejection_retains_both_attempts(mo
     def post(url, **kwargs):
         calls.append(1)
         if len(calls) == 1:
-            return httpx.Response(429, json={"error": "rate rejected"},
+            return httpx.Response(429, json={"error": {"code": 429}},
                                   request=httpx.Request("POST", url))
         return httpx.Response(200, json={"id": "accepted-generation",
             "choices": [{"finish_reason": "stop", "message": {"content": '{"action":0}'}}]},

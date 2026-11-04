@@ -28,7 +28,12 @@ from eslams.catalogue import availability_rows, game_catalogue_rows, model_catal
 from eslams.contracts.json_schema import export_schemas
 from eslams.contracts.pricing import PriceCardReference
 from eslams.contracts.provider import ProviderRuntimeConfig
-from eslams.contracts.versions import CORE_PACKAGE_VERSION, RUNNER_VERSION
+from eslams.contracts.versions import (
+    CORE_PACKAGE_VERSION,
+    CORE_PROMPT_VERSION,
+    LEGACY_CORE_PROMPT_VERSION,
+    RUNNER_VERSION,
+)
 from eslams.core_contract import core_step, engine_capabilities, prompt_package
 from eslams.eval_runtime import (
     ResumeInvariant,
@@ -209,6 +214,15 @@ def _main(argv: list[str] | None = None) -> int:
     )
     core_prompt.add_argument(
         "--actor-id", help="Seat whose observation and legal actions should populate the prompt."
+    )
+    core_prompt.add_argument(
+        "--prompt-version", choices=[CORE_PROMPT_VERSION, LEGACY_CORE_PROMPT_VERSION],
+        default=CORE_PROMPT_VERSION,
+        help="Prompt content version; legacyv2 retains its historical24-record window.",
+    )
+    core_prompt.add_argument(
+        "--history", type=Path,
+        help='Actor-authorized public history JSON object: {"history": [...]}.',
     )
     core_capabilities = core_sub.add_parser(
         "capabilities",
@@ -551,6 +565,10 @@ def _main(argv: list[str] | None = None) -> int:
     providers_preflight.add_argument(
         "--max-output-tokens", type=int,
         help="Optional explicit preflight output maximum; provider defaults otherwise apply.",
+    )
+    providers_preflight.add_argument(
+        "--strict-catalogue", action="store_true",
+        help="Require catalogue eligibility and Models-list visibility; default is advisory.",
     )
     providers_models = providers_sub.add_parser(
         "models",
@@ -1054,10 +1072,19 @@ def _core_command(args: argparse.Namespace) -> int:
     if args.core_command == "prompt":
         arena = registry.create(args.game)
         state = deserialize_state(_read_json_file(args.state))
+        history = None
+        if args.history is not None:
+            envelope = _read_json_file(args.history)
+            history = envelope.get("history")
+            if (set(envelope) != {"history"} or not isinstance(history, list)
+                    or any(not isinstance(row, dict) for row in history)):
+                raise ValueError("history file must contain only a history list of public records")
         prompt_payload = prompt_package(
             arena=arena,
             state=state,
             actor_id=args.actor_id or state.active_player,
+            history=history,
+            prompt_version=args.prompt_version,
         )
         print(json.dumps(prompt_payload, indent=2))
         return 0
@@ -1310,6 +1337,7 @@ def _providers_command(args: argparse.Namespace) -> int:
         payload = provider_preflight(
             args.provider, args.model, args.arena, live=args.live,
             time_budget_ms=args.time_budget_ms, max_output_tokens=args.max_output_tokens,
+            strict_catalogue=args.strict_catalogue,
         )
         print(json.dumps(payload, indent=2))
         return 0 if payload["ok"] is True else 1

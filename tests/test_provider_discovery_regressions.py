@@ -54,7 +54,8 @@ def test_live_discovery_diagnoses_failures_and_preserves_a_real_empty_result(mon
             "eslams.agents.bounded_post",
             lambda *a, **k: pytest.fail("discovery failure must stop inference"),
         )
-        preflight = provider_preflight("openai", "gpt-5-mini", "tic-tac-toe", live=True)
+        preflight = provider_preflight("openai", "gpt-5-mini", "tic-tac-toe", live=True,
+                                      strict_catalogue=True)
         assert not preflight["ok"] and preflight["checks"]["account_model_visible"] is None
         assert preflight["error"]["error_class"] == kind
     monkeypatch.setattr(
@@ -136,21 +137,23 @@ def test_broken_pagination_never_turns_partial_results_into_false_invisibility(m
 
         monkeypatch.setattr("eslams.provider_preflight.httpx.get", get)
         result = provider_preflight(
-            "anthropic", "claude-haiku-4-5-20251001", "tic-tac-toe", live=True
+            "anthropic", "claude-haiku-4-5-20251001", "tic-tac-toe", live=True,
+            strict_catalogue=True,
         )
         assert not result["ok"] and result["checks"]["account_model_visible"] is None
         assert result["error"]["error_class"] == "provider_response_schema_mismatch"
         assert len(calls) <= 2
 
 
-def test_retired_models_fail_offline_and_live_without_network_and_default_is_active(monkeypatch):
+def test_strict_catalogue_retired_models_fail_before_network_and_default_is_active(monkeypatch):
     monkeypatch.setattr(
         "eslams.provider_preflight.httpx.get", lambda *a, **k: pytest.fail("must not discover")
     )
     monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("must not infer"))
     for live in (False, True):
         result = provider_preflight(
-            "anthropic", "claude-sonnet-4-20250514", "tic-tac-toe", live=live
+            "anthropic", "claude-sonnet-4-20250514", "tic-tac-toe", live=live,
+            strict_catalogue=True,
         )
         assert not result["ok"] and result["lifecycle"] == "retired"
         assert not result["checks"]["model_lifecycle_available"]

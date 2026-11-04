@@ -1,0 +1,3759 @@
+{
+  "schema_version": "eslams.rejection-consensus-vectors.v1",
+  "status": "PROPOSED_PAIRED_REVIEW; PYTHON_EXECUTED",
+  "provider": "openrouter",
+  "operator_options": {
+    "max_retries": 1,
+    "retry_backoff_ms": 0
+  },
+  "default_policy": "zero optional retries; vectors explicitly opt into one safe retry",
+  "scope": "All supplied classifier agreement for safe rejection; display classification precedence remains separate",
+  "vectors": [
+    {
+      "id": "http200-code0-type0",
+      "http_status": 200,
+      "body": {
+        "error": {}
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http200-code0-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http200-code0-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code0-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code1-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": null,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code2-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": false,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http200-code3-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http200-code3-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http200-code3-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code3-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code4-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code5-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code6-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http200-code7-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http200-code7-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http200-code7-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code7-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code8-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code9-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code10-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type0",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          }
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type1",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type2",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type3",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type4",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type5",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type6",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type7",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type8",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type9",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type10",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type11",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type12",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http200-code11-type13",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type0",
+      "http_status": 429,
+      "body": {
+        "error": {}
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http429-code0-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http429-code0-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code0-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code1-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": null,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code2-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": false,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http429-code3-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http429-code3-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http429-code3-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code3-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code4-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 503,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code5-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 401,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code6-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 504,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http429-code7-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http429-code7-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 2
+    },
+    {
+      "id": "http429-code7-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code7-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "rate_limit_exceeded",
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code8-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "timeout_error",
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code9-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": "unknown",
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code10-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429.0,
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type0",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          }
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type1",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": null
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type2",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": true
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type3",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "rate_limit_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type4",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "rate_limit_exceeded"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type5",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "timeout_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type6",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "server_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type7",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "authentication_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type8",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "permission_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type9",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "invalid_request_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type10",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "overloaded_error"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type11",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": "unknown"
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type12",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": 429
+        }
+      },
+      "expected_attempts": 1
+    },
+    {
+      "id": "http429-code11-type13",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": {
+            "x": "unknown"
+          },
+          "type": [
+            "rate_limit_error"
+          ]
+        }
+      },
+      "expected_attempts": 1
+    }
+  ]
+}

@@ -531,7 +531,7 @@ def test_provider_agent_retries_and_records_every_attempt(monkeypatch):
     ) -> httpx.Response:
         calls["count"] += 1
         if calls["count"] == 1:
-            return httpx.Response(429, text="definitive rate rejection")
+            return httpx.Response(429, json={"error": {"code": 429}})
         return httpx.Response(
             200,
             json=_openai_wire(
@@ -606,7 +606,7 @@ def test_provider_agent_retries_429_and_honors_retry_after(monkeypatch):
     ) -> httpx.Response:
         calls["count"] += 1
         if calls["count"] == 1:
-            return httpx.Response(429, text="slow down", headers={"Retry-After": "2"})
+            return httpx.Response(429, json={"error": {"code": 429}}, headers={"Retry-After": "2"})
         return httpx.Response(
             200,
             json=_openai_wire('{"action": 1}', response_id="resp_429"),
@@ -787,20 +787,22 @@ def test_provider_preflight_skips_api_check_without_key(monkeypatch):
     payload = provider_preflight("openai", "gpt-5-mini", "tic-tac-toe")
 
     assert payload["ok"] is True
-    assert payload["preflight_mode"] == "registry_only"
+    assert payload["preflight_mode"] == "configuration_only"
     assert payload["checks"]["arena_available"] is True
     assert payload["checks"]["api_key_configured"] is False
     assert payload["receipt_shape"]["schema_version"] == "eslams.provider.receipt.v2"
 
 
-def test_registry_only_preflight_does_not_claim_unknown_model_is_ready(monkeypatch):
+def test_configuration_preflight_does_not_claim_unknown_model_availability(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
     payload = provider_preflight("openai", "not-in-registry", "tic-tac-toe")
 
-    assert payload["preflight_mode"] == "registry_only"
+    assert payload["preflight_mode"] == "configuration_only"
     assert payload["checks"]["registry_entry"] is False
-    assert payload["ok"] is False
+    assert payload["ok"] is True
+    assert payload["model_availability"] == "unverified"
+    assert payload["readiness"]["inference"] == "not_attempted"
 
 
 def test_mock_provider_scenarios_emit_safe_receipts():

@@ -222,7 +222,7 @@ def test_benchmark_budgets_golden_schemas_and_generated_contracts(tmp_path: Path
 
     package = prompt_package(arena=arena, state=state, actor_id=state.active_player)
 
-    assert package["promptVersion"] == "eslams.core.prompt.v2"
+    assert package["promptVersion"] == "eslams.core.prompt.v3"
     assert package["stablePrefix"][0]["cacheRecommended"] is True
     assert package["dynamicTurn"]["currentObservation"]
     assert package["outputSchema"]["properties"]["action"]["required"] == ["action_id"]

@@ -49,4 +49,4 @@ __all__ = [
     "write_artifact",
 ]
 
-__version__ = "0.7.0.dev2+corebacklog.1"
+__version__ = "0.7.0rc1"

@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased (planned v0.6.3)
+## Unreleased (0.7.0 candidate; not published)
+
+- Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
+- Preserve full supplied history with explicit legacy prompt compatibility.
+- Separate advisory preflight readiness from catalogue/accounting policy; retain strict opt-in checks.
+- Enforce no OpenRouter provider fallback on wire even without a route order.
+- Preserve invocation-scoped receipts and reject unsafe/ambiguous automatic retry.
+- Improve output recovery, request/nonce/cursor safety and actionable CLI diagnostics.
+- See `docs/internal/release-0.7.0.md` for compatibility, unresolved decisions and release gates.
+- CS252A/numeric-profile/optimization changes and new provider adapters are excluded.
 
 - Invalid runs are no longer published as a win (#225, reported by pm25coder).
   When a run is not valid for scoring, `public_result_summary.json` and

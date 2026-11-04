@@ -158,6 +158,10 @@ class ProviderRuntimeConfig:
             raise ValueError("history_window_turns must be a positive operator choice or null")
         if self.reasoning not in {"disabled", "enabled", "auto"}:
             raise ValueError(f"unsupported reasoning mode {self.reasoning!r}")
+        if self.reasoning == "disabled" and any(value is not None for value in (
+            self.reasoning_effort, self.reasoning_budget_tokens, self.gemini_thinking_budget,
+        )):
+            raise ValueError("reasoning is disabled but an explicit reasoning control was supplied")
         if self.reasoning_budget_tokens is not None and (
             isinstance(self.reasoning_budget_tokens, bool)
             or not isinstance(self.reasoning_budget_tokens, int) or self.reasoning_budget_tokens < 0
@@ -172,6 +176,8 @@ class ProviderRuntimeConfig:
             raise ValueError("openrouter_provider_order entries must be non-empty")
         if len(set(self.openrouter_provider_order)) != len(self.openrouter_provider_order):
             raise ValueError("openrouter_provider_order entries must be unique")
+        if not isinstance(self.openrouter_allow_fallbacks, bool):
+            raise ValueError("openrouter_allow_fallbacks must be boolean")
         if self.openrouter_allow_fallbacks:
             raise ValueError("OpenRouter provider fallback is unsupported; pin one route order")
         if not re.fullmatch(r"[a-z0-9-]+", self.bedrock_region):

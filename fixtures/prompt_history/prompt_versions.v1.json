@@ -1,0 +1,1409 @@
+{
+  "schema_version": "eslams.prompt-history-vectors.v1",
+  "status": "VERSIONED_SUCCESSOR_PROPOSAL_NOT_RESEARCH_ADMITTED",
+  "baseline_commit": "21c3ebc3a4a23b530a33d3bec804aa85c90bbbf1",
+  "arena_id": "connect-four",
+  "seed": 1,
+  "legacy_prompt_version": "eslams.core.prompt.v2",
+  "full_history_prompt_version": "eslams.core.prompt.v3",
+  "envelope_schema_version": "eslams.core.prompt_package.v2",
+  "scope": "Synthetic supplied public-history formatting, not an actual replay or paid cohort. Preserve v2 exact packages; v3 keeps all supplied history.",
+  "cases": [
+    {
+      "id": "synthetic-public-history-0",
+      "history": [],
+      "legacy_v2_package": {
+        "gameId": "connect-four",
+        "rulesetVersion": "standard",
+        "promptVersion": "eslams.core.prompt.v2",
+        "stablePrefix": [
+          {
+            "role": "developer",
+            "content": "Choose exactly one legal eSlams Core action. Return JSON with the action field first and no hidden information.",
+            "cacheRecommended": true
+          },
+          {
+            "role": "developer",
+            "content": "{\"actionSchemaVersion\":\"eslams.core.action_schema.v2\",\"arena\":{\"id\":\"connect-four\",\"version\":\"1.0.0\"},\"outputSchema\":{\"additionalProperties\":false,\"properties\":{\"action\":{\"additionalProperties\":false,\"properties\":{\"action_id\":{\"enum\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"type\":\"string\"}},\"required\":[\"action_id\"],\"type\":\"object\"},\"public_explanation\":{\"maxLength\":500,\"type\":\"string\"}},\"required\":[\"action\",\"public_explanation\"],\"type\":\"object\"}}",
+            "cacheRecommended": true
+          }
+        ],
+        "dynamicTurn": {
+          "moveHistory": "[]",
+          "currentObservation": "{\"activePlayer\":\"player_1\",\"actorId\":\"player_1\",\"legalActionIds\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"observationHash\":\"sha256:f1498a5b1f09fe32d6269fbd95cfee7c90c6fa394f9ab01e0c0d8714b2d1b49c\",\"outcome\":null,\"publicState\":{\"board\":[[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]],\"cols\":7,\"rows\":6},\"scores\":{\"player_1\":0.0,\"player_2\":0.0},\"stateHash\":\"sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9\",\"terminal\":false,\"turn\":0,\"view\":\"public_compact\"}",
+          "legalActions": "{\"actions\":[{\"actionId\":\"0\",\"compact\":\"0\",\"label\":\"Drop in column 1\"},{\"actionId\":\"1\",\"compact\":\"1\",\"label\":\"Drop in column 2\"},{\"actionId\":\"2\",\"compact\":\"2\",\"label\":\"Drop in column 3\"},{\"actionId\":\"3\",\"compact\":\"3\",\"label\":\"Drop in column 4\"},{\"actionId\":\"4\",\"compact\":\"4\",\"label\":\"Drop in column 5\"},{\"actionId\":\"5\",\"compact\":\"5\",\"label\":\"Drop in column 6\"},{\"actionId\":\"6\",\"compact\":\"6\",\"label\":\"Drop in column 7\"}],\"count\":7,\"hash\":\"sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7\",\"include\":\"compact\"}"
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "public_explanation"
+          ],
+          "properties": {
+            "action": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_id"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6"
+                  ]
+                }
+              }
+            },
+            "public_explanation": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "parserVersion": "eslams.model_actions.v1",
+        "promptHash": "sha256:1a07c518ea66538dea72975be6c458274e6dd8178a7dd63c6bab8fddc217ee94",
+        "tokenEstimate": 659
+      },
+      "expected_v3_history": [],
+      "v3_package": {
+        "gameId": "connect-four",
+        "rulesetVersion": "standard",
+        "promptVersion": "eslams.core.prompt.v3",
+        "stablePrefix": [
+          {
+            "role": "developer",
+            "content": "Choose exactly one legal eSlams Core action. Return JSON with the action field first and no hidden information.",
+            "cacheRecommended": true
+          },
+          {
+            "role": "developer",
+            "content": "{\"actionSchemaVersion\":\"eslams.core.action_schema.v2\",\"arena\":{\"id\":\"connect-four\",\"version\":\"1.0.0\"},\"outputSchema\":{\"additionalProperties\":false,\"properties\":{\"action\":{\"additionalProperties\":false,\"properties\":{\"action_id\":{\"enum\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"type\":\"string\"}},\"required\":[\"action_id\"],\"type\":\"object\"},\"public_explanation\":{\"maxLength\":500,\"type\":\"string\"}},\"required\":[\"action\",\"public_explanation\"],\"type\":\"object\"}}",
+            "cacheRecommended": true
+          }
+        ],
+        "dynamicTurn": {
+          "moveHistory": "[]",
+          "currentObservation": "{\"activePlayer\":\"player_1\",\"actorId\":\"player_1\",\"legalActionIds\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"observationHash\":\"sha256:f1498a5b1f09fe32d6269fbd95cfee7c90c6fa394f9ab01e0c0d8714b2d1b49c\",\"outcome\":null,\"publicState\":{\"board\":[[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]],\"cols\":7,\"rows\":6},\"scores\":{\"player_1\":0.0,\"player_2\":0.0},\"stateHash\":\"sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9\",\"terminal\":false,\"turn\":0,\"view\":\"public_compact\"}",
+          "legalActions": "{\"actions\":[{\"actionId\":\"0\",\"compact\":\"0\",\"label\":\"Drop in column 1\"},{\"actionId\":\"1\",\"compact\":\"1\",\"label\":\"Drop in column 2\"},{\"actionId\":\"2\",\"compact\":\"2\",\"label\":\"Drop in column 3\"},{\"actionId\":\"3\",\"compact\":\"3\",\"label\":\"Drop in column 4\"},{\"actionId\":\"4\",\"compact\":\"4\",\"label\":\"Drop in column 5\"},{\"actionId\":\"5\",\"compact\":\"5\",\"label\":\"Drop in column 6\"},{\"actionId\":\"6\",\"compact\":\"6\",\"label\":\"Drop in column 7\"}],\"count\":7,\"hash\":\"sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7\",\"include\":\"compact\"}"
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "public_explanation"
+          ],
+          "properties": {
+            "action": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_id"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6"
+                  ]
+                }
+              }
+            },
+            "public_explanation": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "parserVersion": "eslams.model_actions.v1",
+        "promptHash": "sha256:6425a243ca3ad96d286d938877b99cfdc2acb473f4c41360c19674c27b3373a3",
+        "tokenEstimate": 659
+      }
+    },
+    {
+      "id": "synthetic-public-history-24",
+      "history": [
+        {
+          "turn": 0,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 1,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 2,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 3,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 4,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 5,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 6,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 7,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 8,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 9,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 10,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 11,
+          "actor": "player_2",
+          "action": 4
+        },
+        {
+          "turn": 12,
+          "actor": "player_1",
+          "action": 5
+        },
+        {
+          "turn": 13,
+          "actor": "player_2",
+          "action": 6
+        },
+        {
+          "turn": 14,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 15,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 16,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 17,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 18,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 19,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 20,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 21,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 22,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 23,
+          "actor": "player_2",
+          "action": 2
+        }
+      ],
+      "legacy_v2_package": {
+        "gameId": "connect-four",
+        "rulesetVersion": "standard",
+        "promptVersion": "eslams.core.prompt.v2",
+        "stablePrefix": [
+          {
+            "role": "developer",
+            "content": "Choose exactly one legal eSlams Core action. Return JSON with the action field first and no hidden information.",
+            "cacheRecommended": true
+          },
+          {
+            "role": "developer",
+            "content": "{\"actionSchemaVersion\":\"eslams.core.action_schema.v2\",\"arena\":{\"id\":\"connect-four\",\"version\":\"1.0.0\"},\"outputSchema\":{\"additionalProperties\":false,\"properties\":{\"action\":{\"additionalProperties\":false,\"properties\":{\"action_id\":{\"enum\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"type\":\"string\"}},\"required\":[\"action_id\"],\"type\":\"object\"},\"public_explanation\":{\"maxLength\":500,\"type\":\"string\"}},\"required\":[\"action\",\"public_explanation\"],\"type\":\"object\"}}",
+            "cacheRecommended": true
+          }
+        ],
+        "dynamicTurn": {
+          "moveHistory": "[{\"action\":0,\"actor\":\"player_1\",\"turn\":0},{\"action\":1,\"actor\":\"player_2\",\"turn\":1},{\"action\":2,\"actor\":\"player_1\",\"turn\":2},{\"action\":3,\"actor\":\"player_2\",\"turn\":3},{\"action\":4,\"actor\":\"player_1\",\"turn\":4},{\"action\":5,\"actor\":\"player_2\",\"turn\":5},{\"action\":6,\"actor\":\"player_1\",\"turn\":6},{\"action\":0,\"actor\":\"player_2\",\"turn\":7},{\"action\":1,\"actor\":\"player_1\",\"turn\":8},{\"action\":2,\"actor\":\"player_2\",\"turn\":9},{\"action\":3,\"actor\":\"player_1\",\"turn\":10},{\"action\":4,\"actor\":\"player_2\",\"turn\":11},{\"action\":5,\"actor\":\"player_1\",\"turn\":12},{\"action\":6,\"actor\":\"player_2\",\"turn\":13},{\"action\":0,\"actor\":\"player_1\",\"turn\":14},{\"action\":1,\"actor\":\"player_2\",\"turn\":15},{\"action\":2,\"actor\":\"player_1\",\"turn\":16},{\"action\":3,\"actor\":\"player_2\",\"turn\":17},{\"action\":4,\"actor\":\"player_1\",\"turn\":18},{\"action\":5,\"actor\":\"player_2\",\"turn\":19},{\"action\":6,\"actor\":\"player_1\",\"turn\":20},{\"action\":0,\"actor\":\"player_2\",\"turn\":21},{\"action\":1,\"actor\":\"player_1\",\"turn\":22},{\"action\":2,\"actor\":\"player_2\",\"turn\":23}]",
+          "currentObservation": "{\"activePlayer\":\"player_1\",\"actorId\":\"player_1\",\"legalActionIds\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"observationHash\":\"sha256:f1498a5b1f09fe32d6269fbd95cfee7c90c6fa394f9ab01e0c0d8714b2d1b49c\",\"outcome\":null,\"publicState\":{\"board\":[[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]],\"cols\":7,\"rows\":6},\"scores\":{\"player_1\":0.0,\"player_2\":0.0},\"stateHash\":\"sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9\",\"terminal\":false,\"turn\":0,\"view\":\"public_compact\"}",
+          "legalActions": "{\"actions\":[{\"actionId\":\"0\",\"compact\":\"0\",\"label\":\"Drop in column 1\"},{\"actionId\":\"1\",\"compact\":\"1\",\"label\":\"Drop in column 2\"},{\"actionId\":\"2\",\"compact\":\"2\",\"label\":\"Drop in column 3\"},{\"actionId\":\"3\",\"compact\":\"3\",\"label\":\"Drop in column 4\"},{\"actionId\":\"4\",\"compact\":\"4\",\"label\":\"Drop in column 5\"},{\"actionId\":\"5\",\"compact\":\"5\",\"label\":\"Drop in column 6\"},{\"actionId\":\"6\",\"compact\":\"6\",\"label\":\"Drop in column 7\"}],\"count\":7,\"hash\":\"sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7\",\"include\":\"compact\"}"
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "public_explanation"
+          ],
+          "properties": {
+            "action": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_id"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6"
+                  ]
+                }
+              }
+            },
+            "public_explanation": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "parserVersion": "eslams.model_actions.v1",
+        "promptHash": "sha256:4361b4f033edca8d4b79131fe8c6c1a88a164fe52b169f61de4380d8c11e1b1b",
+        "tokenEstimate": 956
+      },
+      "expected_v3_history": [
+        {
+          "turn": 0,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 1,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 2,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 3,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 4,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 5,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 6,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 7,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 8,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 9,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 10,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 11,
+          "actor": "player_2",
+          "action": 4
+        },
+        {
+          "turn": 12,
+          "actor": "player_1",
+          "action": 5
+        },
+        {
+          "turn": 13,
+          "actor": "player_2",
+          "action": 6
+        },
+        {
+          "turn": 14,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 15,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 16,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 17,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 18,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 19,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 20,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 21,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 22,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 23,
+          "actor": "player_2",
+          "action": 2
+        }
+      ],
+      "v3_package": {
+        "gameId": "connect-four",
+        "rulesetVersion": "standard",
+        "promptVersion": "eslams.core.prompt.v3",
+        "stablePrefix": [
+          {
+            "role": "developer",
+            "content": "Choose exactly one legal eSlams Core action. Return JSON with the action field first and no hidden information.",
+            "cacheRecommended": true
+          },
+          {
+            "role": "developer",
+            "content": "{\"actionSchemaVersion\":\"eslams.core.action_schema.v2\",\"arena\":{\"id\":\"connect-four\",\"version\":\"1.0.0\"},\"outputSchema\":{\"additionalProperties\":false,\"properties\":{\"action\":{\"additionalProperties\":false,\"properties\":{\"action_id\":{\"enum\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"type\":\"string\"}},\"required\":[\"action_id\"],\"type\":\"object\"},\"public_explanation\":{\"maxLength\":500,\"type\":\"string\"}},\"required\":[\"action\",\"public_explanation\"],\"type\":\"object\"}}",
+            "cacheRecommended": true
+          }
+        ],
+        "dynamicTurn": {
+          "moveHistory": "[{\"action\":0,\"actor\":\"player_1\",\"turn\":0},{\"action\":1,\"actor\":\"player_2\",\"turn\":1},{\"action\":2,\"actor\":\"player_1\",\"turn\":2},{\"action\":3,\"actor\":\"player_2\",\"turn\":3},{\"action\":4,\"actor\":\"player_1\",\"turn\":4},{\"action\":5,\"actor\":\"player_2\",\"turn\":5},{\"action\":6,\"actor\":\"player_1\",\"turn\":6},{\"action\":0,\"actor\":\"player_2\",\"turn\":7},{\"action\":1,\"actor\":\"player_1\",\"turn\":8},{\"action\":2,\"actor\":\"player_2\",\"turn\":9},{\"action\":3,\"actor\":\"player_1\",\"turn\":10},{\"action\":4,\"actor\":\"player_2\",\"turn\":11},{\"action\":5,\"actor\":\"player_1\",\"turn\":12},{\"action\":6,\"actor\":\"player_2\",\"turn\":13},{\"action\":0,\"actor\":\"player_1\",\"turn\":14},{\"action\":1,\"actor\":\"player_2\",\"turn\":15},{\"action\":2,\"actor\":\"player_1\",\"turn\":16},{\"action\":3,\"actor\":\"player_2\",\"turn\":17},{\"action\":4,\"actor\":\"player_1\",\"turn\":18},{\"action\":5,\"actor\":\"player_2\",\"turn\":19},{\"action\":6,\"actor\":\"player_1\",\"turn\":20},{\"action\":0,\"actor\":\"player_2\",\"turn\":21},{\"action\":1,\"actor\":\"player_1\",\"turn\":22},{\"action\":2,\"actor\":\"player_2\",\"turn\":23}]",
+          "currentObservation": "{\"activePlayer\":\"player_1\",\"actorId\":\"player_1\",\"legalActionIds\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"observationHash\":\"sha256:f1498a5b1f09fe32d6269fbd95cfee7c90c6fa394f9ab01e0c0d8714b2d1b49c\",\"outcome\":null,\"publicState\":{\"board\":[[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]],\"cols\":7,\"rows\":6},\"scores\":{\"player_1\":0.0,\"player_2\":0.0},\"stateHash\":\"sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9\",\"terminal\":false,\"turn\":0,\"view\":\"public_compact\"}",
+          "legalActions": "{\"actions\":[{\"actionId\":\"0\",\"compact\":\"0\",\"label\":\"Drop in column 1\"},{\"actionId\":\"1\",\"compact\":\"1\",\"label\":\"Drop in column 2\"},{\"actionId\":\"2\",\"compact\":\"2\",\"label\":\"Drop in column 3\"},{\"actionId\":\"3\",\"compact\":\"3\",\"label\":\"Drop in column 4\"},{\"actionId\":\"4\",\"compact\":\"4\",\"label\":\"Drop in column 5\"},{\"actionId\":\"5\",\"compact\":\"5\",\"label\":\"Drop in column 6\"},{\"actionId\":\"6\",\"compact\":\"6\",\"label\":\"Drop in column 7\"}],\"count\":7,\"hash\":\"sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7\",\"include\":\"compact\"}"
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "public_explanation"
+          ],
+          "properties": {
+            "action": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_id"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6"
+                  ]
+                }
+              }
+            },
+            "public_explanation": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "parserVersion": "eslams.model_actions.v1",
+        "promptHash": "sha256:35739213b62da4c8f907c9fa4582f87ead215ba2efb478e8890f386faad075e4",
+        "tokenEstimate": 956
+      }
+    },
+    {
+      "id": "synthetic-public-history-25",
+      "history": [
+        {
+          "turn": 0,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 1,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 2,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 3,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 4,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 5,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 6,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 7,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 8,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 9,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 10,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 11,
+          "actor": "player_2",
+          "action": 4
+        },
+        {
+          "turn": 12,
+          "actor": "player_1",
+          "action": 5
+        },
+        {
+          "turn": 13,
+          "actor": "player_2",
+          "action": 6
+        },
+        {
+          "turn": 14,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 15,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 16,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 17,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 18,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 19,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 20,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 21,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 22,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 23,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 24,
+          "actor": "player_1",
+          "action": 3
+        }
+      ],
+      "legacy_v2_package": {
+        "gameId": "connect-four",
+        "rulesetVersion": "standard",
+        "promptVersion": "eslams.core.prompt.v2",
+        "stablePrefix": [
+          {
+            "role": "developer",
+            "content": "Choose exactly one legal eSlams Core action. Return JSON with the action field first and no hidden information.",
+            "cacheRecommended": true
+          },
+          {
+            "role": "developer",
+            "content": "{\"actionSchemaVersion\":\"eslams.core.action_schema.v2\",\"arena\":{\"id\":\"connect-four\",\"version\":\"1.0.0\"},\"outputSchema\":{\"additionalProperties\":false,\"properties\":{\"action\":{\"additionalProperties\":false,\"properties\":{\"action_id\":{\"enum\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"type\":\"string\"}},\"required\":[\"action_id\"],\"type\":\"object\"},\"public_explanation\":{\"maxLength\":500,\"type\":\"string\"}},\"required\":[\"action\",\"public_explanation\"],\"type\":\"object\"}}",
+            "cacheRecommended": true
+          }
+        ],
+        "dynamicTurn": {
+          "moveHistory": "[{\"action\":1,\"actor\":\"player_2\",\"turn\":1},{\"action\":2,\"actor\":\"player_1\",\"turn\":2},{\"action\":3,\"actor\":\"player_2\",\"turn\":3},{\"action\":4,\"actor\":\"player_1\",\"turn\":4},{\"action\":5,\"actor\":\"player_2\",\"turn\":5},{\"action\":6,\"actor\":\"player_1\",\"turn\":6},{\"action\":0,\"actor\":\"player_2\",\"turn\":7},{\"action\":1,\"actor\":\"player_1\",\"turn\":8},{\"action\":2,\"actor\":\"player_2\",\"turn\":9},{\"action\":3,\"actor\":\"player_1\",\"turn\":10},{\"action\":4,\"actor\":\"player_2\",\"turn\":11},{\"action\":5,\"actor\":\"player_1\",\"turn\":12},{\"action\":6,\"actor\":\"player_2\",\"turn\":13},{\"action\":0,\"actor\":\"player_1\",\"turn\":14},{\"action\":1,\"actor\":\"player_2\",\"turn\":15},{\"action\":2,\"actor\":\"player_1\",\"turn\":16},{\"action\":3,\"actor\":\"player_2\",\"turn\":17},{\"action\":4,\"actor\":\"player_1\",\"turn\":18},{\"action\":5,\"actor\":\"player_2\",\"turn\":19},{\"action\":6,\"actor\":\"player_1\",\"turn\":20},{\"action\":0,\"actor\":\"player_2\",\"turn\":21},{\"action\":1,\"actor\":\"player_1\",\"turn\":22},{\"action\":2,\"actor\":\"player_2\",\"turn\":23},{\"action\":3,\"actor\":\"player_1\",\"turn\":24}]",
+          "currentObservation": "{\"activePlayer\":\"player_1\",\"actorId\":\"player_1\",\"legalActionIds\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"observationHash\":\"sha256:f1498a5b1f09fe32d6269fbd95cfee7c90c6fa394f9ab01e0c0d8714b2d1b49c\",\"outcome\":null,\"publicState\":{\"board\":[[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]],\"cols\":7,\"rows\":6},\"scores\":{\"player_1\":0.0,\"player_2\":0.0},\"stateHash\":\"sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9\",\"terminal\":false,\"turn\":0,\"view\":\"public_compact\"}",
+          "legalActions": "{\"actions\":[{\"actionId\":\"0\",\"compact\":\"0\",\"label\":\"Drop in column 1\"},{\"actionId\":\"1\",\"compact\":\"1\",\"label\":\"Drop in column 2\"},{\"actionId\":\"2\",\"compact\":\"2\",\"label\":\"Drop in column 3\"},{\"actionId\":\"3\",\"compact\":\"3\",\"label\":\"Drop in column 4\"},{\"actionId\":\"4\",\"compact\":\"4\",\"label\":\"Drop in column 5\"},{\"actionId\":\"5\",\"compact\":\"5\",\"label\":\"Drop in column 6\"},{\"actionId\":\"6\",\"compact\":\"6\",\"label\":\"Drop in column 7\"}],\"count\":7,\"hash\":\"sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7\",\"include\":\"compact\"}"
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "public_explanation"
+          ],
+          "properties": {
+            "action": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_id"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6"
+                  ]
+                }
+              }
+            },
+            "public_explanation": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "parserVersion": "eslams.model_actions.v1",
+        "promptHash": "sha256:860af2432133b41d26b9439253028db871c42d429e468998c55f0716540c71a2",
+        "tokenEstimate": 956
+      },
+      "expected_v3_history": [
+        {
+          "turn": 0,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 1,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 2,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 3,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 4,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 5,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 6,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 7,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 8,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 9,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 10,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 11,
+          "actor": "player_2",
+          "action": 4
+        },
+        {
+          "turn": 12,
+          "actor": "player_1",
+          "action": 5
+        },
+        {
+          "turn": 13,
+          "actor": "player_2",
+          "action": 6
+        },
+        {
+          "turn": 14,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 15,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 16,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 17,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 18,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 19,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 20,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 21,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 22,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 23,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 24,
+          "actor": "player_1",
+          "action": 3
+        }
+      ],
+      "v3_package": {
+        "gameId": "connect-four",
+        "rulesetVersion": "standard",
+        "promptVersion": "eslams.core.prompt.v3",
+        "stablePrefix": [
+          {
+            "role": "developer",
+            "content": "Choose exactly one legal eSlams Core action. Return JSON with the action field first and no hidden information.",
+            "cacheRecommended": true
+          },
+          {
+            "role": "developer",
+            "content": "{\"actionSchemaVersion\":\"eslams.core.action_schema.v2\",\"arena\":{\"id\":\"connect-four\",\"version\":\"1.0.0\"},\"outputSchema\":{\"additionalProperties\":false,\"properties\":{\"action\":{\"additionalProperties\":false,\"properties\":{\"action_id\":{\"enum\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"type\":\"string\"}},\"required\":[\"action_id\"],\"type\":\"object\"},\"public_explanation\":{\"maxLength\":500,\"type\":\"string\"}},\"required\":[\"action\",\"public_explanation\"],\"type\":\"object\"}}",
+            "cacheRecommended": true
+          }
+        ],
+        "dynamicTurn": {
+          "moveHistory": "[{\"action\":0,\"actor\":\"player_1\",\"turn\":0},{\"action\":1,\"actor\":\"player_2\",\"turn\":1},{\"action\":2,\"actor\":\"player_1\",\"turn\":2},{\"action\":3,\"actor\":\"player_2\",\"turn\":3},{\"action\":4,\"actor\":\"player_1\",\"turn\":4},{\"action\":5,\"actor\":\"player_2\",\"turn\":5},{\"action\":6,\"actor\":\"player_1\",\"turn\":6},{\"action\":0,\"actor\":\"player_2\",\"turn\":7},{\"action\":1,\"actor\":\"player_1\",\"turn\":8},{\"action\":2,\"actor\":\"player_2\",\"turn\":9},{\"action\":3,\"actor\":\"player_1\",\"turn\":10},{\"action\":4,\"actor\":\"player_2\",\"turn\":11},{\"action\":5,\"actor\":\"player_1\",\"turn\":12},{\"action\":6,\"actor\":\"player_2\",\"turn\":13},{\"action\":0,\"actor\":\"player_1\",\"turn\":14},{\"action\":1,\"actor\":\"player_2\",\"turn\":15},{\"action\":2,\"actor\":\"player_1\",\"turn\":16},{\"action\":3,\"actor\":\"player_2\",\"turn\":17},{\"action\":4,\"actor\":\"player_1\",\"turn\":18},{\"action\":5,\"actor\":\"player_2\",\"turn\":19},{\"action\":6,\"actor\":\"player_1\",\"turn\":20},{\"action\":0,\"actor\":\"player_2\",\"turn\":21},{\"action\":1,\"actor\":\"player_1\",\"turn\":22},{\"action\":2,\"actor\":\"player_2\",\"turn\":23},{\"action\":3,\"actor\":\"player_1\",\"turn\":24}]",
+          "currentObservation": "{\"activePlayer\":\"player_1\",\"actorId\":\"player_1\",\"legalActionIds\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"observationHash\":\"sha256:f1498a5b1f09fe32d6269fbd95cfee7c90c6fa394f9ab01e0c0d8714b2d1b49c\",\"outcome\":null,\"publicState\":{\"board\":[[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]],\"cols\":7,\"rows\":6},\"scores\":{\"player_1\":0.0,\"player_2\":0.0},\"stateHash\":\"sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9\",\"terminal\":false,\"turn\":0,\"view\":\"public_compact\"}",
+          "legalActions": "{\"actions\":[{\"actionId\":\"0\",\"compact\":\"0\",\"label\":\"Drop in column 1\"},{\"actionId\":\"1\",\"compact\":\"1\",\"label\":\"Drop in column 2\"},{\"actionId\":\"2\",\"compact\":\"2\",\"label\":\"Drop in column 3\"},{\"actionId\":\"3\",\"compact\":\"3\",\"label\":\"Drop in column 4\"},{\"actionId\":\"4\",\"compact\":\"4\",\"label\":\"Drop in column 5\"},{\"actionId\":\"5\",\"compact\":\"5\",\"label\":\"Drop in column 6\"},{\"actionId\":\"6\",\"compact\":\"6\",\"label\":\"Drop in column 7\"}],\"count\":7,\"hash\":\"sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7\",\"include\":\"compact\"}"
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "public_explanation"
+          ],
+          "properties": {
+            "action": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_id"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6"
+                  ]
+                }
+              }
+            },
+            "public_explanation": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "parserVersion": "eslams.model_actions.v1",
+        "promptHash": "sha256:16f20cf6a6b4a934423c686262a3a1ef12775eb755d32fd7bb8d68728328cbd1",
+        "tokenEstimate": 968
+      }
+    },
+    {
+      "id": "synthetic-public-history-40",
+      "history": [
+        {
+          "turn": 0,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 1,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 2,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 3,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 4,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 5,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 6,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 7,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 8,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 9,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 10,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 11,
+          "actor": "player_2",
+          "action": 4
+        },
+        {
+          "turn": 12,
+          "actor": "player_1",
+          "action": 5
+        },
+        {
+          "turn": 13,
+          "actor": "player_2",
+          "action": 6
+        },
+        {
+          "turn": 14,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 15,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 16,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 17,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 18,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 19,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 20,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 21,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 22,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 23,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 24,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 25,
+          "actor": "player_2",
+          "action": 4
+        },
+        {
+          "turn": 26,
+          "actor": "player_1",
+          "action": 5
+        },
+        {
+          "turn": 27,
+          "actor": "player_2",
+          "action": 6
+        },
+        {
+          "turn": 28,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 29,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 30,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 31,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 32,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 33,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 34,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 35,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 36,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 37,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 38,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 39,
+          "actor": "player_2",
+          "action": 4
+        }
+      ],
+      "legacy_v2_package": {
+        "gameId": "connect-four",
+        "rulesetVersion": "standard",
+        "promptVersion": "eslams.core.prompt.v2",
+        "stablePrefix": [
+          {
+            "role": "developer",
+            "content": "Choose exactly one legal eSlams Core action. Return JSON with the action field first and no hidden information.",
+            "cacheRecommended": true
+          },
+          {
+            "role": "developer",
+            "content": "{\"actionSchemaVersion\":\"eslams.core.action_schema.v2\",\"arena\":{\"id\":\"connect-four\",\"version\":\"1.0.0\"},\"outputSchema\":{\"additionalProperties\":false,\"properties\":{\"action\":{\"additionalProperties\":false,\"properties\":{\"action_id\":{\"enum\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"type\":\"string\"}},\"required\":[\"action_id\"],\"type\":\"object\"},\"public_explanation\":{\"maxLength\":500,\"type\":\"string\"}},\"required\":[\"action\",\"public_explanation\"],\"type\":\"object\"}}",
+            "cacheRecommended": true
+          }
+        ],
+        "dynamicTurn": {
+          "moveHistory": "[{\"action\":2,\"actor\":\"player_1\",\"turn\":16},{\"action\":3,\"actor\":\"player_2\",\"turn\":17},{\"action\":4,\"actor\":\"player_1\",\"turn\":18},{\"action\":5,\"actor\":\"player_2\",\"turn\":19},{\"action\":6,\"actor\":\"player_1\",\"turn\":20},{\"action\":0,\"actor\":\"player_2\",\"turn\":21},{\"action\":1,\"actor\":\"player_1\",\"turn\":22},{\"action\":2,\"actor\":\"player_2\",\"turn\":23},{\"action\":3,\"actor\":\"player_1\",\"turn\":24},{\"action\":4,\"actor\":\"player_2\",\"turn\":25},{\"action\":5,\"actor\":\"player_1\",\"turn\":26},{\"action\":6,\"actor\":\"player_2\",\"turn\":27},{\"action\":0,\"actor\":\"player_1\",\"turn\":28},{\"action\":1,\"actor\":\"player_2\",\"turn\":29},{\"action\":2,\"actor\":\"player_1\",\"turn\":30},{\"action\":3,\"actor\":\"player_2\",\"turn\":31},{\"action\":4,\"actor\":\"player_1\",\"turn\":32},{\"action\":5,\"actor\":\"player_2\",\"turn\":33},{\"action\":6,\"actor\":\"player_1\",\"turn\":34},{\"action\":0,\"actor\":\"player_2\",\"turn\":35},{\"action\":1,\"actor\":\"player_1\",\"turn\":36},{\"action\":2,\"actor\":\"player_2\",\"turn\":37},{\"action\":3,\"actor\":\"player_1\",\"turn\":38},{\"action\":4,\"actor\":\"player_2\",\"turn\":39}]",
+          "currentObservation": "{\"activePlayer\":\"player_1\",\"actorId\":\"player_1\",\"legalActionIds\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"observationHash\":\"sha256:f1498a5b1f09fe32d6269fbd95cfee7c90c6fa394f9ab01e0c0d8714b2d1b49c\",\"outcome\":null,\"publicState\":{\"board\":[[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]],\"cols\":7,\"rows\":6},\"scores\":{\"player_1\":0.0,\"player_2\":0.0},\"stateHash\":\"sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9\",\"terminal\":false,\"turn\":0,\"view\":\"public_compact\"}",
+          "legalActions": "{\"actions\":[{\"actionId\":\"0\",\"compact\":\"0\",\"label\":\"Drop in column 1\"},{\"actionId\":\"1\",\"compact\":\"1\",\"label\":\"Drop in column 2\"},{\"actionId\":\"2\",\"compact\":\"2\",\"label\":\"Drop in column 3\"},{\"actionId\":\"3\",\"compact\":\"3\",\"label\":\"Drop in column 4\"},{\"actionId\":\"4\",\"compact\":\"4\",\"label\":\"Drop in column 5\"},{\"actionId\":\"5\",\"compact\":\"5\",\"label\":\"Drop in column 6\"},{\"actionId\":\"6\",\"compact\":\"6\",\"label\":\"Drop in column 7\"}],\"count\":7,\"hash\":\"sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7\",\"include\":\"compact\"}"
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "public_explanation"
+          ],
+          "properties": {
+            "action": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_id"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6"
+                  ]
+                }
+              }
+            },
+            "public_explanation": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "parserVersion": "eslams.model_actions.v1",
+        "promptHash": "sha256:60b070cb27b96e80cbbedfb8441bee175ed3a4519c5a286571429782e860e858",
+        "tokenEstimate": 958
+      },
+      "expected_v3_history": [
+        {
+          "turn": 0,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 1,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 2,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 3,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 4,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 5,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 6,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 7,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 8,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 9,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 10,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 11,
+          "actor": "player_2",
+          "action": 4
+        },
+        {
+          "turn": 12,
+          "actor": "player_1",
+          "action": 5
+        },
+        {
+          "turn": 13,
+          "actor": "player_2",
+          "action": 6
+        },
+        {
+          "turn": 14,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 15,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 16,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 17,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 18,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 19,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 20,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 21,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 22,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 23,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 24,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 25,
+          "actor": "player_2",
+          "action": 4
+        },
+        {
+          "turn": 26,
+          "actor": "player_1",
+          "action": 5
+        },
+        {
+          "turn": 27,
+          "actor": "player_2",
+          "action": 6
+        },
+        {
+          "turn": 28,
+          "actor": "player_1",
+          "action": 0
+        },
+        {
+          "turn": 29,
+          "actor": "player_2",
+          "action": 1
+        },
+        {
+          "turn": 30,
+          "actor": "player_1",
+          "action": 2
+        },
+        {
+          "turn": 31,
+          "actor": "player_2",
+          "action": 3
+        },
+        {
+          "turn": 32,
+          "actor": "player_1",
+          "action": 4
+        },
+        {
+          "turn": 33,
+          "actor": "player_2",
+          "action": 5
+        },
+        {
+          "turn": 34,
+          "actor": "player_1",
+          "action": 6
+        },
+        {
+          "turn": 35,
+          "actor": "player_2",
+          "action": 0
+        },
+        {
+          "turn": 36,
+          "actor": "player_1",
+          "action": 1
+        },
+        {
+          "turn": 37,
+          "actor": "player_2",
+          "action": 2
+        },
+        {
+          "turn": 38,
+          "actor": "player_1",
+          "action": 3
+        },
+        {
+          "turn": 39,
+          "actor": "player_2",
+          "action": 4
+        }
+      ],
+      "v3_package": {
+        "gameId": "connect-four",
+        "rulesetVersion": "standard",
+        "promptVersion": "eslams.core.prompt.v3",
+        "stablePrefix": [
+          {
+            "role": "developer",
+            "content": "Choose exactly one legal eSlams Core action. Return JSON with the action field first and no hidden information.",
+            "cacheRecommended": true
+          },
+          {
+            "role": "developer",
+            "content": "{\"actionSchemaVersion\":\"eslams.core.action_schema.v2\",\"arena\":{\"id\":\"connect-four\",\"version\":\"1.0.0\"},\"outputSchema\":{\"additionalProperties\":false,\"properties\":{\"action\":{\"additionalProperties\":false,\"properties\":{\"action_id\":{\"enum\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"type\":\"string\"}},\"required\":[\"action_id\"],\"type\":\"object\"},\"public_explanation\":{\"maxLength\":500,\"type\":\"string\"}},\"required\":[\"action\",\"public_explanation\"],\"type\":\"object\"}}",
+            "cacheRecommended": true
+          }
+        ],
+        "dynamicTurn": {
+          "moveHistory": "[{\"action\":0,\"actor\":\"player_1\",\"turn\":0},{\"action\":1,\"actor\":\"player_2\",\"turn\":1},{\"action\":2,\"actor\":\"player_1\",\"turn\":2},{\"action\":3,\"actor\":\"player_2\",\"turn\":3},{\"action\":4,\"actor\":\"player_1\",\"turn\":4},{\"action\":5,\"actor\":\"player_2\",\"turn\":5},{\"action\":6,\"actor\":\"player_1\",\"turn\":6},{\"action\":0,\"actor\":\"player_2\",\"turn\":7},{\"action\":1,\"actor\":\"player_1\",\"turn\":8},{\"action\":2,\"actor\":\"player_2\",\"turn\":9},{\"action\":3,\"actor\":\"player_1\",\"turn\":10},{\"action\":4,\"actor\":\"player_2\",\"turn\":11},{\"action\":5,\"actor\":\"player_1\",\"turn\":12},{\"action\":6,\"actor\":\"player_2\",\"turn\":13},{\"action\":0,\"actor\":\"player_1\",\"turn\":14},{\"action\":1,\"actor\":\"player_2\",\"turn\":15},{\"action\":2,\"actor\":\"player_1\",\"turn\":16},{\"action\":3,\"actor\":\"player_2\",\"turn\":17},{\"action\":4,\"actor\":\"player_1\",\"turn\":18},{\"action\":5,\"actor\":\"player_2\",\"turn\":19},{\"action\":6,\"actor\":\"player_1\",\"turn\":20},{\"action\":0,\"actor\":\"player_2\",\"turn\":21},{\"action\":1,\"actor\":\"player_1\",\"turn\":22},{\"action\":2,\"actor\":\"player_2\",\"turn\":23},{\"action\":3,\"actor\":\"player_1\",\"turn\":24},{\"action\":4,\"actor\":\"player_2\",\"turn\":25},{\"action\":5,\"actor\":\"player_1\",\"turn\":26},{\"action\":6,\"actor\":\"player_2\",\"turn\":27},{\"action\":0,\"actor\":\"player_1\",\"turn\":28},{\"action\":1,\"actor\":\"player_2\",\"turn\":29},{\"action\":2,\"actor\":\"player_1\",\"turn\":30},{\"action\":3,\"actor\":\"player_2\",\"turn\":31},{\"action\":4,\"actor\":\"player_1\",\"turn\":32},{\"action\":5,\"actor\":\"player_2\",\"turn\":33},{\"action\":6,\"actor\":\"player_1\",\"turn\":34},{\"action\":0,\"actor\":\"player_2\",\"turn\":35},{\"action\":1,\"actor\":\"player_1\",\"turn\":36},{\"action\":2,\"actor\":\"player_2\",\"turn\":37},{\"action\":3,\"actor\":\"player_1\",\"turn\":38},{\"action\":4,\"actor\":\"player_2\",\"turn\":39}]",
+          "currentObservation": "{\"activePlayer\":\"player_1\",\"actorId\":\"player_1\",\"legalActionIds\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"],\"observationHash\":\"sha256:f1498a5b1f09fe32d6269fbd95cfee7c90c6fa394f9ab01e0c0d8714b2d1b49c\",\"outcome\":null,\"publicState\":{\"board\":[[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]],\"cols\":7,\"rows\":6},\"scores\":{\"player_1\":0.0,\"player_2\":0.0},\"stateHash\":\"sha256:bda4509bada2327538d397c2a82eb932a62fc3163d3a443d7d83739c5f75e6f9\",\"terminal\":false,\"turn\":0,\"view\":\"public_compact\"}",
+          "legalActions": "{\"actions\":[{\"actionId\":\"0\",\"compact\":\"0\",\"label\":\"Drop in column 1\"},{\"actionId\":\"1\",\"compact\":\"1\",\"label\":\"Drop in column 2\"},{\"actionId\":\"2\",\"compact\":\"2\",\"label\":\"Drop in column 3\"},{\"actionId\":\"3\",\"compact\":\"3\",\"label\":\"Drop in column 4\"},{\"actionId\":\"4\",\"compact\":\"4\",\"label\":\"Drop in column 5\"},{\"actionId\":\"5\",\"compact\":\"5\",\"label\":\"Drop in column 6\"},{\"actionId\":\"6\",\"compact\":\"6\",\"label\":\"Drop in column 7\"}],\"count\":7,\"hash\":\"sha256:565d5f6862984a862550eb5427d2d41aeff3c8c8c6d7b512fcd8f313dcf46de7\",\"include\":\"compact\"}"
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "public_explanation"
+          ],
+          "properties": {
+            "action": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_id"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6"
+                  ]
+                }
+              }
+            },
+            "public_explanation": {
+              "type": "string",
+              "maxLength": 500
+            }
+          }
+        },
+        "parserVersion": "eslams.model_actions.v1",
+        "promptHash": "sha256:b6250bb80be4f2d7078b9c8f0ed94517e02b1cf3b7bd157dbe9ed94d58fff2dc",
+        "tokenEstimate": 1156
+      }
+    }
+  ]
+}

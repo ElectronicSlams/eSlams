@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-CORE_PACKAGE_VERSION = "0.7.0.dev2+corebacklog.1"
+CORE_PACKAGE_VERSION = "0.7.0rc1"
 RUNNER_VERSION = f"eslams-runner:{CORE_PACKAGE_VERSION}"
 PROTOCOL_VERSION = "eslams-act-v1"
 SCHEMA_BUNDLE_VERSION = "eslams-schema-bundle-v6"
 CORE_CONTRACT_VERSION = "2.0"
-CORE_PROMPT_VERSION = "eslams.core.prompt.v2"
+CORE_PROMPT_VERSION = "eslams.core.prompt.v3"
+LEGACY_CORE_PROMPT_VERSION = "eslams.core.prompt.v2"
 CORE_ACTION_SCHEMA_VERSION = "eslams.core.action_schema.v2"
 
 ARTIFACT_MANIFEST_SCHEMA_VERSION = "eslams.artifact.manifest.v1"

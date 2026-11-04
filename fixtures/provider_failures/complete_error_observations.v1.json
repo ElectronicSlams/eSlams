@@ -1,0 +1,524 @@
+{
+  "schema_version": "eslams.complete-error-observation-vectors.v1",
+  "status": "PROPOSED_PAIRED_REVIEW; PYTHON_SUCCESSOR_EXECUTED",
+  "receipt_extension": "Existing pricing_provenance object: eslams.native-error-provenance.v1; observed_cost_usd is an unverified quote, not canonical cost",
+  "retry_gate": "Strict finite JSON/no duplicate fields; narrow structured rate rejection; no observations, malformed data, unknown extensions or contradictory codes",
+  "vectors": [
+    {
+      "id": "http200-generation",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "id": "synthetic-observed-generation"
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": "synthetic-observed-generation",
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-usage",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": 10,
+          "completion_tokens": 5,
+          "total_tokens": 15
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-cost",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 0.001
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-overflow_cost",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-zero_cost",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 0.0
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-malformed_id",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "id": {
+          "prompt": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-malformed_usage",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-conflicting_usage",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": 10,
+          "total_tokens": 2
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-malformed_cost",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http200-conflicting_cost",
+      "http_status": 200,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "cost": 0.001,
+        "usage": {
+          "cost": 0.002
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-generation",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "id": "synthetic-observed-generation"
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": "synthetic-observed-generation",
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-usage",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": 10,
+          "completion_tokens": 5,
+          "total_tokens": 15
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-cost",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 0.001
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-overflow_cost",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-zero_cost",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 0.0
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-malformed_id",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "id": {
+          "prompt": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-malformed_usage",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-conflicting_usage",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": 10,
+          "total_tokens": 2
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-malformed_cost",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http429-conflicting_cost",
+      "http_status": 429,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "cost": 0.001,
+        "usage": {
+          "cost": 0.002
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-generation",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "id": "synthetic-observed-generation"
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": "synthetic-observed-generation",
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-usage",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": 10,
+          "completion_tokens": 5,
+          "total_tokens": 15
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-cost",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 0.001
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-overflow_cost",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-zero_cost",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": 0.0
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-malformed_id",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "id": {
+          "prompt": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-malformed_usage",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-conflicting_usage",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "prompt_tokens": 10,
+          "total_tokens": 2
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-malformed_cost",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "usage": {
+          "cost": "synthetic-private-prose"
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    },
+    {
+      "id": "http503-conflicting_cost",
+      "http_status": 503,
+      "body": {
+        "error": {
+          "code": 429
+        },
+        "cost": 0.001,
+        "usage": {
+          "cost": 0.002
+        }
+      },
+      "physical_attempts": 1,
+      "action_applied": false,
+      "expected_generation": null,
+      "non2xx_canonical_cost": "unknown",
+      "non2xx_cost_observation": "quarantined; finite scalar quote only"
+    }
+  ]
+}

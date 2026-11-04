@@ -1,0 +1,33 @@
+{
+  "schema_version": "eslams.release-selection.v1",
+  "version": "0.7.0rc1",
+  "baseline": "a935245c96555c5c50a5fd8d48b778a50ad8290e",
+  "base": "ea786e392dfa13f143e9f8d4f2907183f22c0f53",
+  "pr226_head_included": "6df70125b2ef9406c0ad609b16d5ef7182c23fa1",
+  "selected_deltas": [
+    "d109bff (fixture correction)",
+    "16a10fe (non-2xx custody)",
+    "e68c813 (content privacy)",
+    "817055a (classifier consensus)",
+    "8349500 (prompt-history logic; non-numeric CLI dispatch preserved)"
+  ],
+  "excluded": [
+    "numeric policy/trig/game versions and reference corpora",
+    "CS252A optimizations/benchmarks",
+    "additional provider adapters (0.7.1)",
+    "OpenRouter fallback opt-in (superseded by explicit no-fallback decision)"
+  ],
+  "new_changes": [
+    "advisory/strict preflight with separate readiness/accounting",
+    "always send OpenRouter allow_fallbacks false",
+    "forward existing OpenAI/Gemini explicit controls without stale-name gate",
+    "reject disabled-plus-explicit reasoning contradiction"
+  ],
+  "not_resolved": [
+    "PR226 top-level score.json board fields and error-forfeit documentation",
+    "real transport/late callback integration and supported-runtime acceptance",
+    "strict endpoint pinning/attestation for hosted official consumers"
+  ],
+  "publication_authorized_conditionally": true,
+  "publication_performed": false
+}

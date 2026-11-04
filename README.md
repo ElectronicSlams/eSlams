@@ -20,6 +20,14 @@ secret seeds, private scenario sets, and hidden eval variants so agents cannot
 overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
+The 0.7.0 candidate focuses on model-execution policy and reliability: no implicit
+Core thinking/output budget, no game-specific reasoning choice, full supplied
+history, clearer preflight, safer receipt/retry handling, artifact recovery and
+the invalid-run scoring fixes in #226. Strict model/provider routing remains;
+OpenRouter fallback is disabled. This checkout is a release candidate until its
+release gates close. Numeric-profile/performance experiments and additional
+provider adapters are outside 0.7.0.
+
 ## Contents
 
 - [Local lab quickstart](https://github.com/ElectronicSlams/eSlams/blob/main/docs/LABS.md)
@@ -36,6 +44,7 @@ catalogue listed below.
 - [Upload to eslams.com](#upload-to-eslamscom)
 - [Full Arena Catalogue](#full-arena-catalogue)
 - [Provider Support](#provider-support)
+- [0.7.0 compatibility](#070-compatibility)
 - [Release v0.6.2](#release-v062)
 - [Release v0.6.1](#release-v061)
 - [Release v0.6.0](#release-v060)
@@ -95,7 +104,8 @@ python3 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-Core 0.6.2 requires Python 3.10+ and tests Python 3.10 through 3.12.
+Core 0.7.0 requires Python 3.10+. Supported-version release checks must accompany
+the final package; local candidate results are not a promise that every OS was tested.
 Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
 configuration names; Core does not load `.env` automatically. Export selected
 settings explicitly and keep secrets in ignored local files or service
@@ -196,7 +206,7 @@ identity rules, reasoning behavior, usage semantics, and rate-card contract.
 Use the verified provider workflow before spending on a run:
 
 ```bash
-# Safe and offline: registry metadata only. This is not an availability claim.
+# Offline configuration and advisory catalogue checks; no availability claim.
 eslams providers preflight \
   --provider openai --model gpt-5-mini --arena tic-tac-toe
 
@@ -218,15 +228,22 @@ Provider keys may include pasted leading/trailing whitespace; Core trims it.
 Internal whitespace and non-ASCII credentials fail before a network call, with
 a redacted `provider_auth_failed` diagnostic. A provider namespace in the
 catalogue does not imply a Core inference adapter; preflight checks both.
-Inline retry waits are limited to five seconds: larger provider hints or
-configured backoffs abort with the failed receipt retained. Core does not retry
-earlier than a provider's requested wait. Retry hint receipts are bounded at
-24 hours for safe serialization. Official execution still disallows adapter
-retries and leaves whole-case retries to its orchestrator.
+There is no arbitrary five-second retry-wait cutoff. Explicitly enabled retries
+honour a complete definitive rate rejection's requested wait, subject to caller
+deadlines and cancellation. Ambiguous/accepted work, incomplete bodies and
+generation/usage/cost evidence prevent automatic replay. Default retries are zero.
+Retry-hint receipt serialization remains bounded; it is not permission to retry.
+Official execution still disallows adapter retries.
 
-`preflight_mode` is always `registry_only` or `live`, and every live check is
-reported separately. A registry-only pass does not prove that a provider
-account can invoke the model.
+`preflight_mode` is `configuration_only` or `live`. Default catalogue and Models-list
+checks are advisory; use `--strict-catalogue` for conservative catalogue/list
+eligibility. An unknown/unlisted model can be tried with its exact requested ID.
+Offline `ok` means locally configured, with availability explicitly `unverified`.
+Live `ok` additionally requires a legal action; it does not require optional usage
+counters or establish build identity, cost completeness or official eligibility.
+`readiness`, individual `checks`, `warnings`, inference `error` and separate
+`discovery_error` explain these distinctions. `--live` explicitly opts into a
+provider request using your credentials and may incur charges.
 
 A completed diagnostic run exits 0 even if `summary.match_valid_for_scoring`
 is false. For scoring automation, add `--require-scoring-valid`: it preserves
@@ -280,10 +297,36 @@ official orchestrator owns whole-case retries. Set `--case-attempt-index` on a
 replayed case so physical attempt IDs stay idempotent and retry-scoped. Each run normally has a unique ID. Use `--run-id NAME` to select a fixed
 artifact path; existing output is refused unless `--overwrite` is explicit.
 
-Reasoning is controlled with `--reasoning disabled|enabled|auto`. Core sends
-only model-supported controls. Anthropic manual thinking requires a budget of
-at least 1,024 tokens and below `max_tokens`; Claude 4.7+ and Claude 5 use
-adaptive thinking and omit incompatible temperature/manual-budget fields.
+Native provider reasoning defaults are used unless the caller explicitly selects
+an adapter-supported control. Core does not infer reasoning settings from the game.
+`--reasoning disabled` suppresses Core control injection; it cannot turn off a
+provider's intrinsic reasoning. Contradictory disabled-plus-explicit controls fail.
+OpenAI effort and Gemini thinking-budget mappings do not reject solely because
+a model name is missing from the packaged catalogue. Genuine endpoint constraints
+still apply: Anthropic Messages requires a real output maximum, and manual thinking
+requires its documented budget relationship. Omitted optional output parameters
+retain provider defaults, whose ceiling may be unknown.
+
+## 0.7.0 compatibility
+
+Core turn/provider total/read deadlines and optional output maxima default to
+`None`; operators may still choose explicit budgets and cancel work. Connect/write
+failure detection, bounded untrusted input/output, legal-action checks, game rules,
+identity, privacy and spending controls remain. There is no promise of infinite
+upstream capacity or host lifetime.
+
+Act-v2/job-v2 represent no Core deadline with explicit null and a matching closed
+execution-policy object; legacy finite requests remain readable. Rebuild consumers
+against the bundled schemas. Prompt package v3 includes all supplied history;
+explicit v2 retains its historical 24-record projection and hashes. Provider-agent
+history is also full by default. Supply only actor-authorized history. These prompt
+changes require a newly pinned evaluation cohort, not relabelling old results.
+
+Invalid-run public summaries, CLI and replay do not present a competitive winner
+or score. Raw top-level diagnostic board fields in `score.json` remain labelled by
+scoring validity; #226's pending score-schema/forfeit decisions are recorded in the
+[release checklist](https://github.com/ElectronicSlams/eSlams/blob/main/docs/internal/release-0.7.0.md).
+Package publication does not deploy the new Core into Arena/Battlefield.
 
 ## Build an HTTP Agent
 
@@ -663,7 +706,10 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
 `usage.cost`, and Bedrock uses Converse. OpenRouter provider fallback is
-disabled and an optional provider order is sent as a pin. Bedrock model IDs
+disabled explicitly on every request, including without an order. A supplied
+provider order is preserved but is not an authenticated endpoint/build attestation.
+Strict evaluations must require their actual provider/model identity policy;
+Core never substitutes a fallback model. Bedrock model IDs
 retain their literal version separator such as `:0`.
 
 The model capability registry covers a broader provider landscape so Core can
@@ -1057,3 +1103,15 @@ recipient and must be privately routed to that person. Model-seat lists stay
 inside the trusted runner, obtainable from the server-side state. Public views
 omit legal action lists. Pending sealed actions and their explanations remain
 hidden until the arena reveal phase.
+
+
+### Prompt history versions
+
+The internal prompt-history successor defaults `prompt_package(..., history=records)`
+to `eslams.core.prompt.v3`, preserving every supplied actor-authorized public record.
+Use `prompt_version="eslams.core.prompt.v2"` for the historical last-24 treatment.
+The CLI supports `eslams core prompt --history history.json --prompt-version eslams.core.prompt.v3`
+with the usual game/state arguments; `history.json` contains only `{"history": [...]}`.
+Pin the same content version in every comparison arm. Provider context limits and
+host resource quotas still apply; no automatic truncation or unlimited provider
+capacity is implied. Existing frozen research versions and results remain unchanged.
