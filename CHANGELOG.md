@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Liquid AI direct text adapter (`liquid-ai`, alias `liquid`) with
+  explicit model selection, full history, native-default reasoning, sanitized
+  attempt receipts and deterministic raw-wire tests. See `docs/LIQUID_AI.md`.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

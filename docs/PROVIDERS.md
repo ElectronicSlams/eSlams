@@ -13,6 +13,7 @@ convenience properties.
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `liquid-ai:<exact-model>` (alias `liquid`) | `LIQUID_API_KEY` | Liquid direct Chat Completions | `choices[0].message.content` | response `model`, if present |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 
 An absent provider model identity remains `null`. Core never copies the
@@ -22,6 +23,10 @@ Converse endpoint and is recorded with `model_identity_source:
 pinned_endpoint`.
 
 ## Setup and Preflight
+
+See [Liquid AI](LIQUID_AI.md) for its direct endpoint, verified sources and
+limitations. Liquid requires an explicit model ID and supports native-default
+reasoning only. It does not reuse third-party catalog IDs or hosted routes.
 
 Set only the credential needed by the selected provider:
 
