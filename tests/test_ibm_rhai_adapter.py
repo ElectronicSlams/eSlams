@@ -24,6 +24,7 @@ from eslams.runner import RunConfig, Runner
 
 MODEL = "granite-4-0-h-small"
 SECRET = "IbmCredentialEcho0123456789"
+ROTATED_SECRET = "IbmRotatedCredential9876543210"
 PRIVATE = "private-response-never-persisted"
 ALIASES_WITH_UNDERSCORES = sorted(ALIASES | {x.replace("-", "_") for x in ALIASES})
 
@@ -59,6 +60,7 @@ def install(monkeypatch, payload=None, *, status=200, headers=None, content=None
 def assert_private(value):
     serialized = json.dumps(value, default=str)
     assert SECRET not in serialized
+    assert ROTATED_SECRET not in serialized
     assert PRIVATE not in serialized
     assert "Authorization" not in serialized
 
@@ -457,3 +459,116 @@ def test_raw_http_bytes_through_real_bounded_transport(monkeypatch, partial):
         assert selected.act(_request()).action == 1
     assert len(calls) == 1
     assert_private(selected.attempt_receipts)
+
+
+@pytest.mark.parametrize("spec", [PROVIDER, PROVIDER + ":", PROVIDER + ": ",
+                                 "rhai:\t", "ibm_rhai: padded"])
+def test_cli_rejects_missing_or_blank_model_before_transport(spec, tmp_path, capsys):
+    assert main(["run", "--arena", "tic-tac-toe", "--agent", spec,
+                 "--opponent", "first-legal", "--out", str(tmp_path / "run")]) == 1
+    assert "exact explicit model ID" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("alias", ALIASES_WITH_UNDERSCORES)
+def test_explicit_budget_rejected_without_credentials_before_discovery_or_transport(
+    monkeypatch, alias,
+):
+    monkeypatch.delenv(API_KEY_ENV)
+    monkeypatch.setattr("eslams.provider_preflight.provider_models_live",
+                        lambda *a: pytest.fail("discovery before budget validation"))
+    for settings in ({"reasoning_budget_tokens": 0}, {"reasoning_budget_tokens": 1024},
+                     {"gemini_thinking_budget": -1}, {"gemini_thinking_budget": 0}):
+        runtime = ProviderRuntimeConfig(**settings)
+        for live in (False, True):
+            result = provider_preflight(alias, MODEL, "tic-tac-toe",
+                                        runtime_config=runtime, live=live)
+            assert result["error"]["error_class"] == "provider_request_rejected"
+            assert result["readiness"]["inference"] == "not_attempted"
+        # Call dispatch directly to verify validation even outside act/preflight.
+        selected = ModelProviderAgent(alias, MODEL, API_KEY_ENV, runtime_config=runtime)
+        with pytest.raises(ProviderCallError, match="native reasoning defaults"):
+            selected._call_provider(SECRET, "synthetic-prompt")
+
+
+@pytest.mark.parametrize("alias", ALIASES_WITH_UNDERSCORES)
+def test_discovery_remains_offline_and_excludes_credentials(monkeypatch, alias, capsys):
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: pytest.fail("unimplemented discovery GET"))
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: pytest.fail("discovery auth POST"))
+    assert provider_models_live(alias) is None
+    assert main(["providers", "models", "--provider", alias, "--live"]) == 1
+    output = capsys.readouterr().out
+    assert "Model discovery is not implemented" in output
+    assert_private(output)
+
+
+@pytest.mark.parametrize("credential", [SECRET, ROTATED_SECRET])
+@pytest.mark.parametrize("scenario", ["identifiers", "action", "http_error", "malformed",
+                                      "partial", "unobserved_transport", "nested_error"])
+def test_active_and_rotated_credentials_are_private_on_all_return_paths(
+    monkeypatch, credential, scenario,
+):
+    monkeypatch.setenv(API_KEY_ENV, credential)
+    headers = {"x-request-id": credential, "x-gateway-request-id": "echo-" + credential}
+    data = wire()
+    data["id"] = "echo-" + credential
+    if scenario == "action":
+        data["choices"][0]["message"]["content"] = json.dumps(
+            {"action": 1, "public_explanation": credential})
+    if scenario == "http_error":
+        data["error"] = {"message": credential}
+        calls = install(monkeypatch, data, status=401, headers=headers)
+    elif scenario == "malformed":
+        calls = install(monkeypatch, content=b'{"id":"' + credential.encode(), headers=headers)
+    elif scenario in {"partial", "unobserved_transport", "nested_error"}:
+        calls = []
+        def post(*args, **kwargs):
+            calls.append(1)
+            if scenario == "nested_error":
+                raise ProviderCallError("upstream " + credential,
+                    error_kind="provider_transport_error", receipt={
+                        "request_id": credential, "provider_response_id": credential,
+                        "extension": {credential: ["echo-" + credential]},
+                    })
+            error = ProtocolError("diagnostic " + credential)
+            if scenario == "partial":
+                error._eslams_response_observation = ResponseObservation(
+                    200, tuple(headers.items()))
+            raise error
+        monkeypatch.setattr("eslams.agents.bounded_post", post)
+    else:
+        calls = install(monkeypatch, data, headers=headers)
+    selected = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=2))
+    if scenario == "identifiers":
+        response = selected.act(_request())
+        assert_private(response.to_dict())
+        assert selected.last_receipt["provider_response_id"] is None
+        assert selected.last_receipt["request_id"] is None
+        assert selected.last_receipt["gateway_request_id"] is None
+    else:
+        with pytest.raises(ProviderCallError) as caught:
+            selected.act(_request())
+        assert_private([str(caught.value), caught.value.receipt])
+    assert len(calls) == 1
+    assert_private(selected.attempt_receipts)
+
+
+@pytest.mark.parametrize("credential", [SECRET, ROTATED_SECRET])
+@pytest.mark.parametrize("scenario", ["http_error", "malformed", "action"])
+def test_live_preflight_does_not_publish_credential_echoes(monkeypatch, credential, scenario):
+    monkeypatch.setenv(API_KEY_ENV, credential)
+    data = wire()
+    data["id"] = credential
+    if scenario == "action":
+        data["choices"][0]["message"]["content"] = json.dumps(
+            {"action": 1, "public_explanation": credential})
+        calls = install(monkeypatch, data)
+    elif scenario == "malformed":
+        calls = install(monkeypatch, content=credential.encode(),
+                        headers={"x-request-id": credential})
+    else:
+        calls = install(monkeypatch, {"error": {"message": credential}}, status=401,
+                        headers={"x-request-id": credential})
+    result = provider_preflight(PROVIDER, MODEL, "tic-tac-toe", live=True)
+    assert result["ok"] is False
+    assert len(calls) == 1
+    assert_private(result)

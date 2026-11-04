@@ -362,7 +362,10 @@ def provider_models_result(provider: str) -> dict[str, Any]:
     try:
         models = provider_models_live(provider)
         if models is None:
+            from eslams.providers.ibm_rhai import normalize_alias
             raise ProviderCallError(
+                "Model discovery is not implemented; account visibility remains unverified"
+                if normalize_alias(provider.lower()) == "ibm-rhai" else
                 "This adapter has no Models API; account visibility remains unverified",
                 error_kind="provider_discovery_unavailable", provider=provider,
             )

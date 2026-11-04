@@ -39,6 +39,13 @@ getting-started example. There is no IAM exchange, token refresh or auth replay.
 IAM bearer authentication is a separate documented option and is not configured
 here. This differs from watsonx's API-key-to-IAM-token contract.
 
+This adapter has one authentication credential: the active API key. It does not
+create, fetch or send a secondary IAM token, refresh token or gateway secret.
+Credential-echo tests cover both original and rotated active keys through
+dispatch and preflight. Model discovery is an offline, unimplemented path and
+does not authenticate. The project ID selects a resource; it is not a second
+authentication credential.
+
 Explicit `IBM_RHAI_REGION=us-east` selects:
 
 ```text
