@@ -1,0 +1,266 @@
+{
+  "models": [
+    {
+      "provider": "ant-group",
+      "model": "Ling-3.1-flash",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "thinking.type"
+      ],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_native",
+      "max_output_tokens": null,
+      "context_window": null,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/api-reference/chat/openai/",
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ],
+      "lifecycle": "active",
+      "pricing": {}
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ling-3.0-flash",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "thinking.type"
+      ],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_native",
+      "max_output_tokens": null,
+      "context_window": null,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/api-reference/chat/openai/",
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ],
+      "lifecycle": "active",
+      "pricing": {}
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ling-3.0-flash-VL",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "thinking.type"
+      ],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_native",
+      "max_output_tokens": null,
+      "context_window": null,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/api-reference/chat/openai/",
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ],
+      "lifecycle": "active",
+      "pricing": {}
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ling-3.0-tiny",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "thinking.type"
+      ],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_native",
+      "max_output_tokens": null,
+      "context_window": null,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/api-reference/chat/openai/",
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ],
+      "lifecycle": "active",
+      "pricing": {}
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ling-1T",
+      "available_from_api": false,
+      "game_agent_supported": false,
+      "lifecycle": "retired",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ]
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ring-1T",
+      "available_from_api": false,
+      "game_agent_supported": false,
+      "lifecycle": "retired",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ]
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ling-2.5-1T",
+      "available_from_api": false,
+      "game_agent_supported": false,
+      "lifecycle": "retired",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ]
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ring-2.5-1T",
+      "available_from_api": false,
+      "game_agent_supported": false,
+      "lifecycle": "retired",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ]
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ling-2.6-1T",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "lifecycle": "deprecated",
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ]
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ring-2.6-1T",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "lifecycle": "deprecated",
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ]
+    },
+    {
+      "provider": "ant-group",
+      "model": "Ling-2.6-flash",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "lifecycle": "deprecated",
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://developer.ant-ling.com/en/docs/models/deprecation/"
+      ]
+    }
+  ]
+}
