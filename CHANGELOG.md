@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 0.7.1 adapter work
+
+- Add the direct Krutrim Cloud text adapter with explicit model IDs, native CLI
+  dispatch/preflight, full history, conservative raw-wire receipts and keyless
+  fixture tests. Unsupported reasoning/routing controls fail locally; unknown
+  accounting and model identity remain unknown. Package version is unchanged.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
