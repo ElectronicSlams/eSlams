@@ -16,6 +16,8 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
 from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
+from eslams.providers.qwen import validate_controls as qwen_validate_controls
+from eslams.providers.qwen import validate_model as qwen_validate_model
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -57,6 +59,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = canonicalize_qwen_provider(provider)
+    if provider == "qwen":
+        qwen_validate_model(model)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -97,6 +101,7 @@ def provider_preflight(
 
     if record.provider == "qwen":
         try:
+            qwen_validate_controls(runtime_config)
             qwen_generation_endpoint()
         except ValueError as exc:
             configuration_error = str(exc)

@@ -8,16 +8,21 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, NoReturn
 
 import httpx
 
+from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.protocol import validate_json_payload
 from eslams.providers.registry import PROVIDER_ALIASES
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
+    from eslams.protocol import ActRequest, ActResponse
 
 PROVIDER_ID = "qwen"
 API_KEY_ENV = "DASHSCOPE_API_KEY"
@@ -33,7 +38,72 @@ _LEGACY_HOSTS = {
     "cn-beijing": "dashscope.aliyuncs.com",
     "cn-hongkong": "cn-hongkong.dashscope.aliyuncs.com",
 }
+_CREDENTIALS: ContextVar[tuple[str, ...]] = ContextVar("qwen_receipt_credentials", default=())
 
+
+def validate_model(model: Any) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("Qwen requires an explicit nonblank model ID")
+
+
+def validate_controls(runtime: ProviderRuntimeConfig | None) -> None:
+    if runtime is None:
+        return
+    if runtime.gemini_thinking_budget is not None:
+        raise ValueError("Qwen does not support gemini_thinking_budget")
+    if runtime.reasoning_effort is not None and runtime.reasoning_budget_tokens is not None:
+        raise ValueError("Qwen accepts one of reasoning_effort and reasoning_budget_tokens")
+    if runtime.reasoning_budget_tokens == 0:
+        raise ValueError("Qwen thinking_budget must be positive")
+
+
+@contextmanager
+def credential_scope(environment_name: str) -> Iterator[None]:
+    # Capture values privately before transport; no environment values enter a
+    # receipt. Include configured secondary credentials, even without sk- syntax.
+    credentials = set(_CREDENTIALS.get())
+    for name, value in os.environ.items():
+        if (name == environment_name or re.search(
+            r"API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|ACCESS_KEY|PRIVATE_KEY", name.upper(),
+        )) and value.strip():
+            credentials.add(value.strip())
+    token = _CREDENTIALS.set(tuple(sorted(credentials, key=len, reverse=True)))
+    try:
+        yield
+    finally:
+        _CREDENTIALS.reset(token)
+
+
+def contains_credential(value: str) -> bool:
+    return any(secret in value for secret in _CREDENTIALS.get())
+
+
+def redact(value: Any) -> Any:
+    if isinstance(value, str):
+        for secret in _CREDENTIALS.get():
+            value = value.replace(secret, "[REDACTED]")
+        return value
+    if isinstance(value, list):
+        return [redact(item) for item in value]
+    if isinstance(value, dict):
+        return {key: redact(item) for key, item in value.items()
+                if not isinstance(key, str) or not contains_credential(key)}
+    return value
+
+
+def act(agent: ModelProviderAgent, request: ActRequest) -> ActResponse:
+    from eslams.agents import ProviderCallError
+
+    with credential_scope(agent.api_key_env):
+        try:
+            response = agent._act(request)
+        except ProviderCallError as exc:
+            if exc.receipt is not None:
+                exc.receipt = redact(exc.receipt)
+            exc.args = (redact(str(exc)),)
+            raise exc from None
+        return replace(response, public_explanation=redact(response.public_explanation),
+                       metadata=redact(response.metadata))
 
 def canonicalize_provider(value: str) -> str:
     """Normalize Qwen aliases without changing other adapters' legacy naming."""
@@ -125,6 +195,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
 
     runtime = agent.runtime_config
     try:
+        validate_model(agent.model)
+        validate_controls(runtime)
         endpoint = generation_endpoint()
     except ValueError as exc:
         raise core.ProviderCallError(
@@ -138,13 +210,6 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     if agent.temperature is not None:
         parameters["temperature"] = agent.temperature
     if runtime is not None:
-        if runtime.gemini_thinking_budget is not None or (
-            runtime.reasoning_effort is not None and runtime.reasoning_budget_tokens is not None
-        ):
-            raise core.ProviderCallError(
-                "DashScope requires one native reasoning control; Gemini controls are unsupported",
-                error_kind="provider_request_rejected", provider=PROVIDER_ID, model=agent.model,
-            )
         if runtime.reasoning != "auto":
             parameters["enable_thinking"] = runtime.reasoning == "enabled"
         if runtime.reasoning_budget_tokens is not None:

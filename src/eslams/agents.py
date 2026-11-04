@@ -326,6 +326,8 @@ def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
+    if qwen.contains_credential(value):
+        return None
     sanitized = _sanitize_receipt_value(value)
     return sanitized if isinstance(sanitized, str) else None
 
@@ -402,6 +404,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = qwen.canonicalize_provider(self.provider)
+        if self.provider == "qwen":
+            qwen.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -422,6 +426,8 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "qwen":
+                return qwen.act(self, request)
             return self._act(request)
 
     def _act(self, request: ActRequest) -> ActResponse:
@@ -614,12 +620,16 @@ class ModelProviderAgent:
         self._receipt_batch = (batch[0], tuple(copy.deepcopy(receipts)))
 
     def _remember_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "qwen":
+            receipt = qwen.redact(receipt)
         receipts = [*self.attempt_receipts, receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
         self.last_receipt = receipt
 
     def _replace_last_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "qwen":
+            receipt = qwen.redact(receipt)
         receipts = [*self.attempt_receipts[:-1], receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts

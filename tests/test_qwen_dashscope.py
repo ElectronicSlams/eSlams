@@ -136,7 +136,8 @@ def test_cli_preflight_is_keyless_and_canonical(monkeypatch, capsys):
     result = json.loads(capsys.readouterr().out)
     assert result["provider"] == "qwen" and result["ok"]
     assert result["readiness"]["inference"] == "not_attempted"
-    assert _provider_agent("dashscope").model == "qwen-plus"
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _provider_agent("dashscope")
 
 
 def test_cli_run_dispatches_alias_to_native_provider(monkeypatch, tmp_path, capsys):
@@ -249,6 +250,44 @@ def test_unrepresentable_reasoning_controls_fail_closed(runtime):
         wrapped.act(request())
     assert failure.value.error_kind == "provider_request_rejected"
     assert wrapped.last_receipt["outcome"] == "provider_request_rejected"
+
+
+@pytest.mark.parametrize("alias", ["qwen", "alibaba", "dashscope", "alibaba-cn"])
+@pytest.mark.parametrize("suffix", ["", ":", ":   ", ":\t"])
+def test_cli_missing_or_blank_model_cannot_select_a_default(alias, suffix, tmp_path, capsys):
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _provider_agent(alias + suffix)
+    assert main(["run", "--agent", alias + suffix, "--output-dir", str(tmp_path)]) == 1
+    assert "explicit nonblank model" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("model", [None, "", "   ", "\t\n"])
+def test_direct_execution_and_preflight_reject_blank_model(model):
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        ModelProviderAgent("dashscope", model, "DASHSCOPE_API_KEY")
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        provider_preflight("alibaba", model, "tic-tac-toe", live=True)
+
+
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("runtime", [
+    ProviderRuntimeConfig(gemini_thinking_budget=-1),
+    ProviderRuntimeConfig(gemini_thinking_budget=0),
+    ProviderRuntimeConfig(gemini_thinking_budget=512),
+    ProviderRuntimeConfig(reasoning_budget_tokens=0),
+    ProviderRuntimeConfig(reasoning_effort="low", reasoning_budget_tokens=512),
+])
+def test_preflight_and_transport_reject_unrepresentable_budgets(runtime, live):
+    result = provider_preflight("dashscope", REQUESTED, "tic-tac-toe", live=live,
+                                runtime_config=runtime)
+    assert not result["ok"] and not result["readiness"]["configuration_ready"]
+    assert result["readiness"]["inference"] == "not_attempted"
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    wrapped = agent(runtime_config=runtime)
+    with pytest.raises(ProviderCallError) as failure:
+        wrapped.act(request())
+    assert failure.value.error_kind == "provider_request_rejected"
+    assert wrapped.last_receipt["status_code"] is None
 
 
 @pytest.mark.parametrize("status,code,kind", [
@@ -507,11 +546,14 @@ def test_native_receipts_survive_runner_without_claiming_complete_cost(monkeypat
     (429, "reset", "provider_transport_error"),
     (503, "resource", "provider_response_schema_mismatch"),
 ])
+@pytest.mark.parametrize("echo_index", [None, 0, 1])
 def test_actual_bounded_reader_keeps_header_custody_after_partial_body(
-    monkeypatch, tmp_path, status, failure, kind,
+    monkeypatch, tmp_path, status, failure, kind, echo_index,
 ):
     calls = []
     original_client = httpx.AsyncClient
+    secrets = echo_credentials(monkeypatch) if echo_index is not None else ()
+    request_id = secrets[echo_index] if echo_index is not None else "safe-native-header-id"
 
     class Stream(httpx.AsyncByteStream):
         async def __aiter__(self):
@@ -525,7 +567,7 @@ def test_actual_bounded_reader_keeps_header_custody_after_partial_body(
     def respond(request):
         calls.append(1)
         return httpx.Response(status, stream=Stream(), request=request,
-                              headers={"x-request-id": "safe-native-header-id"})
+                              headers={"x-request-id": request_id, "cf-aig-request-id": request_id})
 
     class Client:
         async def __aenter__(self):
@@ -544,7 +586,11 @@ def test_actual_bounded_reader_keeps_header_custody_after_partial_body(
 
     monkeypatch.setattr(http_io.httpx, "AsyncClient", lambda **kwargs: Client())
     monkeypatch.setattr("eslams.agents.bounded_post", http_io.bounded_post)
-    wrapped = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    wrapped = ModelProviderAgent(
+        "qwen", REQUESTED,
+        "QWEN_CUSTOM_AUTH" if echo_index is not None else "DASHSCOPE_API_KEY",
+        runtime_config=ProviderRuntimeConfig(max_retries=2),
+    )
     result = Runner().run(RunConfig(
         "tic-tac-toe", agent_1=wrapped, on_agent_error="forfeit", output_dir=tmp_path,
     ))
@@ -553,7 +599,8 @@ def test_actual_bounded_reader_keeps_header_custody_after_partial_body(
     assert calls == [1] and len(receipts) == 1
     receipt = receipts[0]
     assert receipt["outcome"] == kind and receipt["status_code"] == status
-    assert receipt["request_id"] == "safe-native-header-id"
+    expected_id = None if echo_index is not None else "safe-native-header-id"
+    assert receipt["request_id"] == expected_id and receipt["gateway_request_id"] == expected_id
     assert not receipt["usage"] and not receipt["action_applied"]
     assert result.score.winner is None and not result.score.match_valid_for_scoring
     assert ArtifactValidator().validate(result.expanded_path) == []
@@ -561,3 +608,108 @@ def test_actual_bounded_reader_keeps_header_custody_after_partial_body(
         if path.is_file():
             assert b"PRIVATE-" not in path.read_bytes()
             assert SECRET.encode() not in path.read_bytes()
+            assert all(secret.encode() not in path.read_bytes() for secret in secrets)
+
+
+def echo_credentials(monkeypatch):
+    # Neither credential matches pattern-based sk-/token-/key- redaction.
+    primary, secondary = "OpaquePrimaryCredential123", "OpaqueSecondaryCredential456"
+    monkeypatch.setenv("QWEN_CUSTOM_AUTH", primary)
+    monkeypatch.setenv("AWS_BEARER_TOKEN_BEDROCK", secondary)
+    return primary, secondary
+
+
+@pytest.mark.parametrize("echo_index", [0, 1])
+def test_credential_echoes_are_removed_from_success_and_receipt_snapshots(monkeypatch, echo_index):
+    secrets = echo_credentials(monkeypatch)
+    echo = secrets[echo_index]
+    payload = fixture()
+    payload["request_id"] = f"native-{echo}-response"
+    payload["model"] = echo
+    payload["output"]["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": " ".join(secrets),
+    })
+    wire(monkeypatch, payload, **{
+        "x-request-id": f"header-{echo}", "cf-aig-request-id": f"gateway-{echo}",
+    })
+    wrapped = ModelProviderAgent("qwen", REQUESTED, "QWEN_CUSTOM_AUTH")
+    result = wrapped.act(request())
+    receipt = wrapped.last_receipt
+    assert result.action == 1
+    assert receipt["provider_response_id"] is None
+    assert receipt["request_id"] is None and receipt["gateway_request_id"] is None
+    assert receipt["locked_model_id"] is None
+    assert receipt["usage"]["total_tokens"] == 16
+    snapshot = wrapped._receipt_snapshot(wrapped._receipt_batch[0])
+    exported = json.dumps([result.to_dict(), receipt, wrapped.attempt_receipts, snapshot])
+    assert all(secret not in exported for secret in secrets)
+    # Context cleanup does not change other providers' identifier semantics.
+    from eslams.agents import _http_error_identifier
+    assert _http_error_identifier(echo) == echo
+
+
+@pytest.mark.parametrize("echo_index", [0, 1])
+@pytest.mark.parametrize("status,body_kind", [
+    (429, "native_error"), (500, "native_error"), (200, "native_error"),
+    (200, "malformed"), (401, "malformed"),
+])
+def test_credential_echoes_are_removed_from_failure_receipts(
+    monkeypatch, echo_index, status, body_kind,
+):
+    secrets = echo_credentials(monkeypatch)
+    echo = secrets[echo_index]
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        headers = {"x-request-id": f"header-{echo}", "cf-aig-request-id": echo}
+        if body_kind == "malformed":
+            return httpx.Response(status, content=b'{"private":"' + echo.encode(), headers=headers)
+        payload = fixture("error")
+        payload.update(request_id=echo, id=echo, message=" ".join(secrets),
+                       usage=fixture()["usage"])
+        return httpx.Response(status, json=payload, headers=headers)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    wrapped = ModelProviderAgent("dashscope", REQUESTED, "QWEN_CUSTOM_AUTH",
+                                 runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as failure:
+        wrapped.act(request())
+    assert calls == [1] and len(wrapped.attempt_receipts) == 1
+    assert wrapped.last_receipt["request_id"] is None
+    assert wrapped.last_receipt["gateway_request_id"] is None
+    assert wrapped.last_receipt.get("provider_response_id") is None
+    exported = json.dumps([wrapped.last_receipt, wrapped.attempt_receipts, failure.value.receipt])
+    assert all(secret not in exported + str(failure.value) for secret in secrets)
+
+
+@pytest.mark.parametrize("echo_index", [0, 1])
+@pytest.mark.parametrize("kind", ["provider_timeout", "provider_transport_error"])
+def test_credential_echoes_are_removed_from_partial_response_custody(
+    monkeypatch, echo_index, kind,
+):
+    secrets = echo_credentials(monkeypatch)
+    echo = secrets[echo_index]
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        exc = (httpx.ReadTimeout(echo) if kind == "provider_timeout" else httpx.ReadError(echo))
+        # Match the bounded reader's actual partial-response observation object.
+        exc.__dict__["_eslams_response_observation"] = http_io.ResponseObservation(
+            status_code=200,
+            headers=(("x-request-id", echo), ("cf-aig-request-id", f"prefix-{echo}")),
+        )
+        raise exc
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    wrapped = ModelProviderAgent("qwen", REQUESTED, "QWEN_CUSTOM_AUTH",
+                                 runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as failure:
+        wrapped.act(request())
+    assert calls == [1] and wrapped.last_receipt["outcome"] == kind
+    assert wrapped.last_receipt["request_id"] is None
+    assert wrapped.last_receipt["gateway_request_id"] is None
+    assert not wrapped.last_receipt["usage"]
+    exported = json.dumps([wrapped.last_receipt, wrapped.attempt_receipts, failure.value.receipt])
+    assert all(secret not in exported + str(failure.value) for secret in secrets)

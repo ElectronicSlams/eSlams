@@ -24,9 +24,10 @@ eslams run --arena tic-tac-toe --agent qwen:qwen-plus
 `qwen` is canonical. `alibaba`, `alibaba-cn` and `dashscope` resolve to it in the
 registry, CLI, preflight and execution receipts. Provider aliases are case
 insensitive and accept surrounding whitespace and underscores. An alias does
-not select a region: even `alibaba-cn` uses the configured region. A bare
-`qwen`/`dashscope` agent defaults to `qwen-plus`; an explicit model is sent
-unchanged, including case and snapshot suffix. Catalogue membership is advisory
+not select a region: even `alibaba-cn` uses the configured region. Every Qwen
+agent requires an explicit nonblank model ID; bare aliases, trailing colons and
+whitespace-only models fail before submission. Explicit IDs are sent unchanged,
+including case and snapshot suffix. Catalogue membership is advisory
 unless `--strict-catalogue` is selected. Account visibility stays unverified:
 this adapter does not implement a Models API. A live preflight must be explicitly
 requested with `--live` and needs a key.
@@ -78,7 +79,10 @@ Explicit temperature is forwarded. Explicit runtime `reasoning` maps
 enabled/disabled to `enable_thinking`; auto omits it. `reasoning_budget_tokens`
 maps to `thinking_budget`, and `reasoning_effort` is forwarded unchanged. Neither
 is inferred from an arena or catalogue recommendation. Effort and budget cannot
-be combined; Gemini controls are rejected before submission. Support and valid
+be combined; Gemini controls and a zero thinking budget are rejected in both
+configuration/live preflight and before transport. Native positive budgets are
+forwarded unchanged, so unsupported foreign controls cannot be silently dropped.
+Support and valid
 ranges depend on the requested model, and provider rejection remains a failed
 attempt. Synchronous inference cannot serve streaming-only thinking modes; the
 adapter never disables thinking automatically to make one work. See
@@ -138,7 +142,14 @@ unparseable action, retaining each attempt and its usage.
 HTTP status drives normal error classification. Documented moderation codes
 classify refusals; known flat codes also classify HTTP-200 failures defensively.
 Unknown body codes fail closed without copying their text. Request IDs and
-Retry-After are sanitized through existing Core helpers. Follow the official
+Retry-After use Core helpers. Qwen execution privately captures the selected key
+and configured secondary credential values from credential-named environment
+settings for request-scoped redaction. An identifier containing such a value
+becomes null, including HTTP-error, malformed-body and partial-response header
+evidence. Other receipt strings and public response metadata/explanations redact
+literal credential echoes before receipt snapshots are published. The private
+redaction context is reset after success or failure and stores no credentials in
+the agent or artifacts. Follow the official
 [error guide](https://www.alibabacloud.com/help/en/model-studio/error-code) to fix
 region/key/permission/parameter problems and resolve uncertain execution before
 resubmitting; [rate limits](https://www.alibabacloud.com/help/en/model-studio/rate-limit)
