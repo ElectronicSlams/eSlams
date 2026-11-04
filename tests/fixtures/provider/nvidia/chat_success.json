@@ -1,0 +1,17 @@
+{
+  "id": "chatcmpl-nvidia-synthetic",
+  "object": "chat.completion",
+  "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\":0,\"confidence\":0.8,\"public_explanation\":\"A legal choice.\"}",
+        "reasoning_content": "synthetic-private-reasoning: {\"action\":2}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {"prompt_tokens": 100, "completion_tokens": 40, "total_tokens": 140}
+}
