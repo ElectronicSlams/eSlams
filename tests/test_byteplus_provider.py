@@ -506,15 +506,21 @@ def test_review_mutated_blank_model_and_protocol_diagnostic_fail_closed(monkeypa
     assert calls == [1]
 
 
-@pytest.mark.parametrize("encoding", ["json", "url"])
+@pytest.mark.parametrize("encoding", ["json", "url", "unicode", "fenced-unicode"])
 def test_review_encoded_credential_in_action_text_is_rejected(monkeypatch, encoding):
     secret = 'opaqueCred"slash/plus+back\\key'
     calls = wire(monkeypatch)
     monkeypatch.setenv("BYTEPLUS_API_KEY", secret)
     data = fixture()
-    data["choices"][0]["message"]["content"] = json.dumps({
+    content = json.dumps({
         "action": 1, "public_explanation": secret if encoding == "json" else quote(secret, safe=""),
     })
+    if encoding in {"unicode", "fenced-unicode"}:
+        escaped = "".join(f"\\u{ord(character):04x}" for character in secret)
+        content = '{"action":1,"public_explanation":"' + escaped + '"}'
+    if encoding == "fenced-unicode":
+        content = "```json\n" + content + "\n```"
+    data["choices"][0]["message"]["content"] = content
 
     def post(*args, **kwargs):
         calls.append(1)

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 from urllib.parse import quote, quote_plus
 
 from eslams.contracts.provider import ProviderRuntimeConfig
+from eslams.model_actions import extract_json
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -140,7 +141,13 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             exc.args = ("BytePlus returned a private diagnostic; details withheld",)
         raise exc from None
     receipt = _private_receipt(receipt, credentials) or {}
-    if any(secret in text for secret in credentials):
+    # Use the same JSON extraction as action parsing: Unicode escapes must not
+    # turn an apparently clean raw string into a credential-bearing explanation.
+    try:
+        decoded_text = json.dumps(extract_json(text), ensure_ascii=False)
+    except (ValueError, RecursionError):
+        decoded_text = ""
+    if any(secret in text or secret in decoded_text for secret in credentials):
         receipt["outcome"] = "provider_response_schema_mismatch"
         raise ProviderCallError(
             "BytePlus echoed a credential in action text; no action accepted",

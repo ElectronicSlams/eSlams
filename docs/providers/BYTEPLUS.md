@@ -92,6 +92,8 @@ invocation-local snapshot, including JSON/URL-escaped forms. `ARK_API_KEY` is
 used only for redaction and still cannot authenticate a request. Action text
 containing a credential is rejected before it can enter an explanation or raw
 action metadata. No secret values are retained on the agent for redaction.
+The same JSON extraction used for actions also checks decoded explanations,
+including Unicode escapes and fenced JSON, before accepting the response.
 
 Default retries and action repairs are zero. This adapter disables automatic
 transport retries even if `max_retries` is configured: quota/burst errors alone
