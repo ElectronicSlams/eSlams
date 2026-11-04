@@ -763,3 +763,35 @@ def test_timeout_exception_chain_cannot_print_echoed_credentials(monkeypatch):
     assert calls == [1] and wrapped.last_receipt["outcome"] == "provider_timeout"
     printed = "".join(traceback.format_exception(failure.value))
     assert all(secret not in printed + json.dumps(wrapped.last_receipt) for secret in secrets)
+
+
+@pytest.mark.parametrize("name,value", [
+    ("TOKENIZERS_PARALLELISM", "false"), ("HF_HUB_DISABLE_IMPLICIT_TOKEN", "1"),
+    ("ESLAMS_MAX_TOKENS", "1"), ("DASHSCOPE_TOKEN_MODE", "stop"),
+    ("ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET", "1"),
+])
+def test_nonsecret_token_and_secret_configuration_flags_do_not_corrupt_actions(
+    monkeypatch, name, value,
+):
+    monkeypatch.setenv(name, value)
+    payload = fixture()
+    payload["output"]["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "confidence": 1.0, "public_explanation": "false stop",
+    })
+    wire(monkeypatch, payload)
+    result = agent().act(request())
+    assert result.action == 1 and result.public_explanation == "false stop"
+    assert result.metadata["provider_receipt"]["finish_reason"] == "stop"
+
+
+@pytest.mark.parametrize("name", ["QWEN_SECONDARY_KEY", "QWEN_MAX_API_KEY"])
+def test_secondary_key_settings_are_still_private(monkeypatch, name):
+    secret = "OpaqueBackupCredential789"
+    monkeypatch.setenv(name, secret)
+    payload = fixture()
+    payload["request_id"] = secret
+    wire(monkeypatch, payload)
+    result = agent().act(request())
+    assert result.metadata["provider_receipt"]["request_id"] is None
+    assert result.metadata["provider_receipt"]["provider_response_id"] is None
+    assert secret not in json.dumps(result.to_dict())

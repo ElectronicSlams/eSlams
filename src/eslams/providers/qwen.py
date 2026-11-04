@@ -59,15 +59,35 @@ def validate_controls(runtime: ProviderRuntimeConfig | None) -> None:
         raise ValueError("Qwen thinking_budget must be positive")
 
 
+def _credential_setting(name: str) -> bool:
+    normalized = name.upper()
+    if normalized == "AWS_ACCESS_KEY_ID":
+        return True
+    # Feature flags and token limits are not secrets. Treating values such as
+    # '1'/'false' as credentials would corrupt legitimate action JSON.
+    parts = set(normalized.split("_"))
+    if parts & {"ALLOW", "DISABLE", "ENABLE", "REQUIRE", "MODE", "PATH", "FILE",
+                "ENV", "NAME", "ID"}:
+        return False
+    if re.search(
+        r"(?:^|_)(?:API_?KEY|PASSWORD|CREDENTIALS?|PRIVATE_KEY|SIGNING_KEY|SECRET_ACCESS_KEY)"
+        r"(?:_(?:PRIMARY|SECONDARY|BACKUP))?$", normalized,
+    ):
+        return True
+    if parts & {"LIMIT", "BUDGET", "COUNT", "MAX", "MIN"}:
+        return False
+    return re.search(
+        r"(?:^|_)(?:API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?|KEY)(?:_|$)", normalized,
+    ) is not None
+
+
 @contextmanager
 def credential_scope(environment_name: str) -> Iterator[None]:
     # Capture values privately before transport; no environment values enter a
     # receipt. Include configured secondary credentials, even without sk- syntax.
     credentials = set(_CREDENTIALS.get())
     for name, value in os.environ.items():
-        if (name == environment_name or re.search(
-            r"API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|ACCESS_KEY|PRIVATE_KEY", name.upper(),
-        )) and value.strip():
+        if (name == environment_name or _credential_setting(name)) and value.strip():
             secret = value.strip()
             credentials.update((secret, json.dumps(secret)[1:-1],
                                 quote(secret, safe=""), quote_plus(secret)))
