@@ -75,3 +75,33 @@ Current direct-contract limitations and exact official evidence are in
 server-selected deployment identity beyond response `model`, reasoning-token
 inclusion, and complete pricing remain unverified. Non-streaming calls retain
 the provider's documented 90-second upstream limit.
+
+## Cross-cutting review of draft #275
+
+Reviewed the existing draft at
+`b8aeb738c0b0227c9aaa1c70ed497f214b51c2b5`. Initial new regressions reproduced
+56 failures across 94 cases: normalized preflight aliases bypassed explicit
+model/reasoning validation, and only the active bearer was recognized during
+credential-echo scrubbing. Both gaps were fixed with provider-specific changes
+and two lines of shared preflight normalization.
+
+The completed review adds 100 regression cases, bringing Ant Ling coverage to
+183 cases. All 232 Ant Ling/provider integration checks pass, including:
+
+- Missing/blank models and unsupported explicit reasoning budgets in live and
+  offline preflight, including case, whitespace, and underscore variants.
+- Revalidation immediately before transport after model/runtime mutation.
+- Primary and additional configured credentials in response/request/gateway
+  IDs, HTTP and HTTP-200 body errors, malformed and partial responses, raw and
+  JSON-escaped action fields, and percent-encoded text.
+- Real bounded partial-body transport with both credential values present.
+- No fallback authentication from configured compatibility environment names.
+- Keyless, network-free discovery (no documented direct Models API).
+- Unbounded default engine read/total timeouts, omitted output caps, preserved
+  history, and a documented provider-enforced 90-second synchronous constraint.
+
+The complete suite finished with 1,441 passed, the same two inherited failures
+listed above, and the same two warnings. Ruff, mypy, wheel/sdist builds, and
+Twine checks passed again. These checks use
+synthetic credentials and mocked provider transport only. No live provider
+credentials, paid inference, hosted CI, merge, or release were used.

@@ -104,6 +104,14 @@ headers never become public receipts. Known credential echoes are removed from
 receipt values, including request IDs and malformed/partial response paths;
 credential-bearing action content is rejected before parsing.
 
+The active bearer and configured `ANT_LING_API_KEY`, `BAILING_API_KEY`, and
+`OPENAI_API_KEY` values are all covered by credential-echo checks, including
+JSON-escaped and percent-encoded action text. Additional configured values are
+used only for redaction; they never supply fallback authentication. The native
+API uses one selected bearer and has no secondary authentication header.
+Preflight applies the same validation after provider alias normalization, so
+`ant_group` and surrounding whitespace cannot bypass model or reasoning checks.
+
 [Billing migration](https://developer.ant-ling.com/en/docs/getting-started/changelog/billing-upgrade/)
 describes a switch to the Ling wallet by 2026-10-31 and monthly vouchers instead
 of the older daily token quota. The FAQ still describes the old daily quota.

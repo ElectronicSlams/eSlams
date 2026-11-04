@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 from typing import TYPE_CHECKING, Any, NoReturn
 from urllib.parse import quote, quote_plus
 
@@ -47,36 +48,47 @@ def validate_config(
         raise ValueError("Ant Ling temperature must be finite and between 0 and 1")
 
 
-def _contains_key(value: str, api_key: str) -> bool:
-    forms = {api_key, quote(api_key, safe=""), quote_plus(api_key)}
-    return any(secret in value for secret in forms)
+def _credential_forms(api_key: str) -> tuple[str, ...]:
+    # Additional configured values are redaction-only. The selected bearer is
+    # still the sole authentication source; no alias enables key fallback.
+    configured = [api_key, *(os.getenv(name, "").strip() for name in (
+        API_KEY_ENV, "BAILING_API_KEY", "OPENAI_API_KEY",
+    ))]
+    return tuple(dict.fromkeys(
+        form for secret in configured if secret
+        for form in (secret, quote(secret, safe=""), quote_plus(secret))
+    ))
 
 
-def _echoes_key(value: Any, api_key: str) -> bool:
+def _contains_key(value: str, credentials: tuple[str, ...]) -> bool:
+    return any(secret in value for secret in credentials)
+
+
+def _echoes_key(value: Any, credentials: tuple[str, ...]) -> bool:
     if isinstance(value, str):
-        return _contains_key(value, api_key)
+        return _contains_key(value, credentials)
     if isinstance(value, list):
-        return any(_echoes_key(item, api_key) for item in value)
+        return any(_echoes_key(item, credentials) for item in value)
     if isinstance(value, dict):
-        return any(_contains_key(key, api_key) or _echoes_key(item, api_key)
+        return any(_contains_key(key, credentials) or _echoes_key(item, credentials)
                    for key, item in value.items())
     return False
 
 
-def _clean_receipt(value: Any, api_key: str) -> Any:
+def _clean_receipt(value: Any, credentials: tuple[str, ...]) -> Any:
     """Drop credential-bearing metadata, including otherwise valid identifier strings.
 
     A redaction marker is not model identity evidence. Do not persist the key in
     the agent or in a receipt sanitizer closure after the call finishes.
     """
     if isinstance(value, str):
-        return None if _contains_key(value, api_key) else value
+        return None if _contains_key(value, credentials) else value
     if isinstance(value, list):
-        return [_clean_receipt(item, api_key) for item in value]
+        return [_clean_receipt(item, credentials) for item in value]
     if isinstance(value, dict):
         cleaned = {
-            key: _clean_receipt(item, api_key) for key, item in value.items()
-            if not _contains_key(key, api_key)
+            key: _clean_receipt(item, credentials) for key, item in value.items()
+            if not _contains_key(key, credentials)
         }
         if str(cleaned.get("total_tokens_source", "")).startswith("derived_"):
             cleaned["total_tokens"] = None
@@ -89,12 +101,13 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     # Lazy import keeps provider metadata/validation usable without an agents cycle.
     from eslams.agents import ProviderCallError
 
+    credentials = _credential_forms(api_key)
     try:
-        return _call(agent, api_key, prompt)
+        return _call(agent, api_key, prompt, credentials=credentials)
     except TimeoutError:
         raise TimeoutError("Ant Ling provider timed out") from None
     except ProviderCallError as exc:
-        receipt = _clean_receipt(exc.receipt, api_key)
+        receipt = _clean_receipt(exc.receipt, credentials)
         kind = ("provider_refused" if exc.status_code == 428 else
                 "provider_timeout" if exc.status_code == 504 else exc.error_kind)
         if isinstance(receipt, dict):
@@ -111,7 +124,9 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         ) from None
 
 
-def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+def _call(
+    agent: ModelProviderAgent, api_key: str, prompt: str, *, credentials: tuple[str, ...],
+) -> tuple[str, dict[str, Any]]:
     from eslams.agents import (
         _SYSTEM_INSTRUCTIONS,
         ProviderCallError,
@@ -172,7 +187,7 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
     if normalized.get("usage_validation_errors"):
         receipt["usage"] = normalized
         receipt["usage_unavailable_reason"] = "provider_usage_invalid"
-    receipt = _clean_receipt(receipt, api_key)
+    receipt = _clean_receipt(receipt, credentials)
     if receipt.get("locked_model_id") is None:
         receipt["model_identity_source"] = None
 
@@ -213,12 +228,12 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
             or message.get("tool_calls") or message.get("function_call")):
         reject("provider_response_schema_mismatch")
     text = message.get("content")
-    if not isinstance(text, str) or not text.strip() or _contains_key(text, api_key):
+    if not isinstance(text, str) or not text.strip() or _contains_key(text, credentials):
         reject("provider_response_schema_mismatch")
     # A JSON string can hide a credential behind Unicode escapes until the
     # action parser decodes it. Inspect that decoded form before returning text.
     parsed = extract_json(text)
-    if _echoes_key(parsed, api_key):
+    if _echoes_key(parsed, credentials):
         reject("provider_response_schema_mismatch")
     receipt["finish_status"] = "completed"
     return text, receipt

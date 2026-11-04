@@ -56,7 +56,8 @@ def provider_preflight(
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
     provider_registry = load_provider_registry()
-    if PROVIDER_ALIASES.get(provider, provider) == "ant-group":
+    normalized_provider = provider.strip().replace("_", "-")
+    if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "ant-group":
         from eslams.providers.ant_ling import validate_config
 
         validate_config(model, runtime_config or ProviderRuntimeConfig())
