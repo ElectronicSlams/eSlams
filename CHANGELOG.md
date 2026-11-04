@@ -8,6 +8,9 @@
   Keep full supplied history, exact model IDs, zero default retries and native
   output/reasoning defaults. Step Plan and regional aliases are not inferred.
   No package version, protocol or arena behavior changes.
+- Require explicit nonblank StepFun model IDs, reject unsupported explicit
+  reasoning budgets before transport, and remove literal primary/secondary
+  credential echoes from receipts without changing safe retry admission.
 
 ## v0.7.0 - 2026-11-04
 

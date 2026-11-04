@@ -14,6 +14,8 @@ from eslams.artifacts import ArtifactValidator
 from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
+from eslams.http_io import ResponseObservation
+from eslams.protocol import ProtocolError
 from eslams.provider_preflight import provider_models_live, provider_preflight
 from eslams.providers import load_provider_registry
 from eslams.runner import RunConfig, Runner
@@ -121,9 +123,7 @@ def test_regional_plan_and_router_names_are_not_aliased(provider):
     assert result["checks"]["adapter_available"] is False
 
 
-def test_cli_defaults_case_and_model_identity(monkeypatch, capsys):
-    default = _provider_agent("stepfun")
-    assert default.model == MODEL and default.api_key_env == "STEPFUN_API_KEY"
+def test_cli_case_and_model_identity(monkeypatch, capsys):
     exact = _provider_agent("StepFun:Future/Model:Version")
     assert exact.provider == "stepfun" and exact.model == "Future/Model:Version"
     assert main(["providers", "preflight", "--provider", "StepFun", "--model", MODEL,
@@ -133,6 +133,209 @@ def test_cli_defaults_case_and_model_identity(monkeypatch, capsys):
     assert result["checks"]["minimal_inference"] is False
     assert main(["providers", "models", "--provider", "stepfun"]) == 0
     assert MODEL in json.dumps(json.loads(capsys.readouterr().out))
+
+
+@pytest.mark.parametrize("selection", ["stepfun", "stepfun:", "stepfun: ", "StepFun:\t\n"])
+def test_cli_rejects_missing_and_blank_models_without_transport(monkeypatch, tmp_path,
+                                                               capsys, selection):
+    calls = install(monkeypatch)
+    with pytest.raises(ValueError, match="explicit nonblank model ID"):
+        _provider_agent(selection)
+    assert main(["run", "--agent", selection, "--output-dir", str(tmp_path)]) == 1
+    assert "explicit nonblank model ID" in capsys.readouterr().err
+    assert calls == []
+
+
+@pytest.mark.parametrize("model", [None, "", " ", "\t\n"])
+def test_direct_and_preflight_reject_missing_model(monkeypatch, model):
+    calls = install(monkeypatch)
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("invalid configuration must not discover"))
+    with pytest.raises(ValueError, match="explicit nonblank model ID"):
+        ModelProviderAgent("stepfun", model, "STEPFUN_API_KEY")
+    for provider in ("stepfun", " StepFun "):
+        for live in (False, True):
+            with pytest.raises(ValueError, match="explicit nonblank model ID"):
+                provider_preflight(provider, model, "tic-tac-toe", live=live)
+    assert calls == []
+
+
+@pytest.mark.parametrize("field", ["reasoning_budget_tokens", "gemini_thinking_budget"])
+def test_unsupported_budgets_fail_configuration_preflight_and_transport(monkeypatch, field):
+    calls = install(monkeypatch)
+    runtime = ProviderRuntimeConfig(**{field: 2048})
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("invalid controls must not discover"))
+    with pytest.raises(ValueError, match="StepFun does not support"):
+        agent(runtime_config=runtime)
+    for provider in ("stepfun", " StepFun "):
+        for live in (False, True):
+            result = provider_preflight(provider, MODEL, "tic-tac-toe", live=live,
+                                        runtime_config=runtime)
+            assert not result["ok"] and not result["readiness"]["configuration_ready"]
+            assert result["error"]["error_class"] == "provider_request_rejected"
+            assert field in result["error"]["message"]
+            assert not result["checks"]["minimal_inference"]
+    native = agent()
+    native.runtime_config = runtime
+    with pytest.raises(ProviderCallError, match="StepFun does not support"):
+        native.act(_request())
+    assert calls == []
+    assert native.last_receipt["outcome"] == "provider_request_rejected"
+
+
+@pytest.mark.parametrize("secret_kind", ["primary", "secondary"])
+@pytest.mark.parametrize("field", ["id", "model", "request_id", "gateway_request_id",
+                                  "trace_id"])
+def test_success_receipts_drop_literal_credential_echoes(monkeypatch, secret_kind, field):
+    secondary = "secondaryPlainValue8642"
+    monkeypatch.setenv("SECONDARY_API_KEY", secondary)
+    secret = KEY if secret_kind == "primary" else secondary
+    echoed = "echo-prefix/" + secret + ":suffix"
+    data = wire()
+    headers = {}
+    if field in {"id", "model"}:
+        data[field] = echoed
+    else:
+        headers[{"request_id": "x-request-id", "gateway_request_id": "cf-aig-request-id",
+                 "trace_id": "x-cloud-trace-context"}[field]] = echoed
+    calls = install(monkeypatch, data, headers=headers)
+    native = agent()
+    response = native.act(_request())
+    receipt = response.metadata["provider_receipt"]
+    target = {"id": "provider_response_id", "model": "locked_model_id",
+              "trace_id": "request_id"}.get(field, field)
+    assert receipt[target] is None
+    if field == "model":
+        assert receipt["model_identity_source"] is None
+    assert receipt["usage"]["total_tokens"] == 16 and len(calls) == 1
+    for exposed in (response.to_dict(), native.last_receipt, native.attempt_receipts):
+        assert KEY not in json.dumps(exposed) and secondary not in json.dumps(exposed)
+
+
+@pytest.mark.parametrize("status", [400, 429, 451, 500])
+def test_error_receipts_redact_both_credentials_without_authorizing_retry(monkeypatch, status):
+    secondary = "secondaryPlainValue8642"
+    monkeypatch.setenv("SECONDARY_API_KEY", secondary)
+    data = {"error": {"code": status, "message": KEY + secondary},
+            "id": "echo-" + secondary,
+            "usage": {"prompt_tokens": 12, "completion_tokens": 4, "total_tokens": 16}}
+    calls = install(monkeypatch, data, status=status,
+                    headers={"x-request-id": "echo-" + KEY,
+                             "cf-aig-request-id": "echo-" + secondary})
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as err:
+        native.act(_request())
+    assert not err.value.retry_permitted
+    assert len(calls) == len(native.attempt_receipts) == 1
+    receipt = native.last_receipt
+    assert receipt["request_id"] is receipt["gateway_request_id"] is None
+    assert receipt["provider_response_id"] is None
+    assert receipt["pricing_provenance"]["work_observation_present"] is True
+    assert receipt["usage"]["total_tokens"] == 16
+    for exposed in (err.value.receipt, native.last_receipt, native.attempt_receipts):
+        assert KEY not in json.dumps(exposed) and secondary not in json.dumps(exposed)
+    assert KEY not in str(err.value) and secondary not in str(err.value)
+
+
+@pytest.mark.parametrize("status", [200, 429])
+def test_malformed_body_headers_do_not_echo_credentials(monkeypatch, status):
+    secondary = "secondaryPlainValue8642"
+    monkeypatch.setenv("SECONDARY_API_KEY", secondary)
+
+    def post(*args, **kwargs):
+        return httpx.Response(status, text="malformed " + KEY + secondary,
+                              headers={"x-request-id": "echo-" + KEY,
+                                       "cf-aig-request-id": "echo-" + secondary})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = agent()
+    with pytest.raises(ProviderCallError) as err:
+        native.act(_request())
+    assert native.last_receipt["request_id"] is native.last_receipt["gateway_request_id"] is None
+    assert native.last_receipt["usage"] == {}
+    assert KEY not in json.dumps(err.value.receipt) + str(err.value)
+    assert secondary not in json.dumps(native.attempt_receipts) + str(err.value)
+
+
+@pytest.mark.parametrize("status", [200, 429, 503])
+@pytest.mark.parametrize("failure_type", [httpx.ReadTimeout, ProtocolError])
+def test_partial_response_observations_redact_credentials(monkeypatch, status, failure_type):
+    secondary = "secondaryPlainValue8642"
+    monkeypatch.setenv("SECONDARY_API_KEY", secondary)
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        failure = failure_type("partial " + KEY + secondary)
+        failure.__dict__["_eslams_response_observation"] = ResponseObservation(
+            status_code=status, headers=(("x-request-id", "echo-" + KEY),
+                                         ("cf-aig-request-id", "echo-" + secondary)))
+        raise failure
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as err:
+        native.act(_request())
+    assert len(calls) == 1 and not err.value.retry_permitted
+    assert native.last_receipt["status_code"] == status
+    assert native.last_receipt["request_id"] is native.last_receipt["gateway_request_id"] is None
+    assert native.last_receipt["locked_model_id"] is None and native.last_receipt["usage"] == {}
+    assert KEY not in json.dumps(err.value.receipt) + str(err.value)
+    assert secondary not in json.dumps(native.attempt_receipts) + str(err.value)
+
+
+@pytest.mark.parametrize("secret", [KEY, "secondaryPlainValue8642"])
+def test_action_explanations_cannot_echo_credentials(monkeypatch, secret):
+    monkeypatch.setenv("SECONDARY_API_KEY", "secondaryPlainValue8642")
+    data = wire()
+    data["choices"][0]["message"]["content"] = json.dumps(
+        {"action": 1, "public_explanation": "echo-" + secret})
+    calls = install(monkeypatch, data)
+    native = agent()
+    with pytest.raises(ProviderCallError, match="credential material"):
+        native.act(_request())
+    assert len(calls) == 1
+    assert native.last_receipt["usage"]["total_tokens"] == 16
+    assert secret not in json.dumps(native.attempt_receipts)
+
+
+def test_redacted_request_ids_keep_definitive_rejection_retry_custody(monkeypatch):
+    secondary = "secondaryPlainValue8642"
+    monkeypatch.setenv("SECONDARY_API_KEY", secondary)
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            return httpx.Response(429, json={"error": {"code": 429, "message": secondary}},
+                                  headers={"Retry-After": "0", "x-request-id": "echo-" + KEY})
+        return httpx.Response(200, json=wire())
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=1))
+    assert native.act(_request()).action == 1
+    assert len(calls) == 2
+    assert [r["attempt_index"] for r in native.attempt_receipts] == [1, 2]
+    assert native.attempt_receipts[0]["request_id"] is None
+    assert KEY not in json.dumps(native.attempt_receipts)
+    assert secondary not in json.dumps(native.attempt_receipts)
+
+
+def test_credential_echo_error_receipts_never_enter_runner_artifacts(monkeypatch, tmp_path):
+    secondary = "secondaryPlainValue8642"
+    monkeypatch.setenv("SECONDARY_API_KEY", secondary)
+    calls = install(monkeypatch, {"error": {"code": 429}, "id": "echo-" + secondary},
+                    status=429, headers={"x-request-id": "echo-" + KEY,
+                                         "cf-aig-request-id": "echo-" + secondary})
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    result = Runner().run(RunConfig("tic-tac-toe", agent_1=native, output_dir=tmp_path))
+    assert len(calls) == 1 and not result.score.match_valid_for_scoring
+    assert ArtifactValidator().validate(result.expanded_path) == []
+    for path in result.expanded_path.rglob("*"):
+        if path.is_file():
+            contents = path.read_bytes()
+            assert KEY.encode() not in contents and secondary.encode() not in contents
 
 
 @pytest.mark.parametrize(("status", "kind"), [

@@ -6,18 +6,72 @@ admission, action parsing and receipt custody remain owned by the shared agent.
 
 from __future__ import annotations
 
+import os
+import re
 from typing import TYPE_CHECKING, Any
+
+from eslams.contracts.provider import ProviderRuntimeConfig
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
 
 PROVIDER_ID = "stepfun"
 API_KEY_ENV = "STEPFUN_API_KEY"
-DEFAULT_MODEL = "step-3.7-flash"
 CHAT_COMPLETIONS_ENDPOINT = "https://api.stepfun.ai/v1/chat/completions"
 MODELS_ENDPOINT = "https://api.stepfun.ai/v1/models"
 ENDPOINT_KIND = "stepfun_chat_completions"
 PARSER_VERSION = "stepfun-chat-completions-raw-v1"
+
+
+def validate_model_id(model: str) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("StepFun requires an explicit nonblank model ID (stepfun:<model>)")
+
+
+def validate_configuration(model: str, runtime: ProviderRuntimeConfig | None) -> None:
+    validate_model_id(model)
+    if runtime is not None and any(value is not None for value in (
+        runtime.reasoning_budget_tokens, runtime.gemini_thinking_budget,
+    )):
+        raise ValueError(
+            "StepFun does not support reasoning_budget_tokens or gemini_thinking_budget; "
+            "use an explicit reasoning_effort or native defaults"
+        )
+
+
+def _credential_values(primary: str) -> frozenset[str]:
+    # Snapshot only for this physical attempt; no process-global secret cache.
+    # Secondary credentials are never sent to StepFun, but an untrusted echo
+    # must not publish them either. No key-format/prefix heuristic is sufficient.
+    values = {primary}
+    for name, value in os.environ.items():
+        if re.search(r"(?:^|_)(?:KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?|AUTHORIZATION)(?:_|$)",
+                     name.upper()):
+            values.update((value, value.strip()))
+    return frozenset(value for value in values if value)
+
+
+def _contains_credential(value: str, credentials: frozenset[str]) -> bool:
+    return any(secret in value for secret in credentials)
+
+
+def _clean_receipt(receipt: dict[str, Any], credentials: frozenset[str]) -> dict[str, Any]:
+    def clean(value: Any) -> Any:
+        if isinstance(value, str):
+            return None if _contains_credential(value, credentials) else value
+        if isinstance(value, dict):
+            return {key: clean(item) for key, item in value.items()
+                    if not _contains_credential(key, credentials)}
+        if isinstance(value, list):
+            return [clean(item) for item in value]
+        return value
+
+    cleaned: dict[str, Any] = clean(receipt)
+    if cleaned.get("locked_model_id") is None:
+        cleaned["model_identity_source"] = None
+    # Work-observation flags and retry admission were established before
+    # redaction. Removing an unsafe generation ID cannot authorize a replay.
+    return cleaned
 
 
 def usage_fields(usage: dict[str, Any]) -> dict[str, Any]:
@@ -45,6 +99,14 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     )
 
     runtime = agent.runtime_config
+    try:
+        validate_configuration(agent.model, runtime)
+    except ValueError as exc:
+        raise ProviderCallError(
+            str(exc), error_kind="provider_request_rejected", provider=PROVIDER_ID,
+            model=agent.model,
+        ) from None
+    credentials = _credential_values(api_key)
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [
@@ -83,8 +145,17 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         _check_provider_completion(
             data, provider=PROVIDER_ID, model=agent.model, response=response, receipt=receipt,
         )
-        return text(data, model=agent.model), receipt
+        action_text = text(data, model=agent.model)
+        if _contains_credential(action_text, credentials):
+            raise ProviderCallError(
+                "StepFun returned credential material in action text",
+                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+                model=agent.model,
+            )
+        return action_text, _clean_receipt(receipt, credentials)
     except ProviderCallError as exc:
+        if _contains_credential(str(exc), credentials):
+            exc.args = ("StepFun provider failure (credential material removed)",)
         # StepFun documents HTTP 451 for request/response safety review.
         if exc.status_code == 451:
             exc.error_kind = "provider_refused"
@@ -94,6 +165,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             exc.receipt = {**exc.receipt, "outcome": exc.error_kind}
         if exc.status_code == 451 and exc.receipt is not None:
             exc.receipt["finish_status"] = "refused"
+        if exc.receipt is not None:
+            exc.receipt = _clean_receipt(exc.receipt, credentials)
         raise
 
 

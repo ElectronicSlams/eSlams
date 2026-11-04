@@ -51,6 +51,7 @@ from eslams.providers.stepfun import ENDPOINT_KIND as STEPFUN_ENDPOINT_KIND
 from eslams.providers.stepfun import PARSER_VERSION as STEPFUN_PARSER_VERSION
 from eslams.providers.stepfun import call as call_stepfun
 from eslams.providers.stepfun import usage_fields as stepfun_usage_fields
+from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
 
 
 class AgentError(RuntimeError):
@@ -410,6 +411,8 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "stepfun":
+            validate_stepfun_configuration(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []

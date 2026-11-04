@@ -9,7 +9,8 @@ used to validate this adapter.
 `stepfun:<exact-model-id>` sends non-streaming JSON to
 `POST https://api.stepfun.ai/v1/chat/completions` with
 `Authorization: Bearer <STEPFUN_API_KEY>` and `Content-Type: application/json`.
-The offline CLI default for bare `stepfun` is `step-3.7-flash`.
+An explicit nonblank model ID is required; bare `stepfun` and `stepfun:` fail
+before transport rather than selecting a model.
 Account discovery uses `GET https://api.stepfun.ai/v1/models`, whose documented
 envelope is `{"object":"list","data":[{"id":"step-3.7-flash",...}]}`.
 Sources: [quickstart](https://platform.stepfun.ai/docs/en/quickstart/overview),
@@ -64,6 +65,11 @@ optional controls; it does not promise to disable native model reasoning.
 neither `reasoning` nor the alternate `reasoning_content` response field is
 used as action text or included in receipts.
 
+Explicit `reasoning_budget_tokens` and `gemini_thinking_budget` are unsupported
+and rejected during configuration/preflight and again before transport; they
+are never silently dropped. `reasoning_effort` remains the supported explicit
+control and is forwarded exactly.
+
 `max_tokens` is omitted unless the operator explicitly supplies an output
 maximum. The API documents an unlimited default subject to model constraints;
 Core adds no ceiling. Total/read/action deadlines also remain unset by
@@ -88,6 +94,14 @@ to request rejection, 401 to authentication failure, 403 to permission failure,
 Response `content_filter` is refused, `length` is truncated and `tool_calls`
 is incomplete. Embedded error bodies are inspected before action parsing.
 Raw error/refusal prose is excluded from receipts.
+
+Each physical attempt snapshots the primary credential and configured
+credential-named environment values for literal echo filtering. Credential-bearing receipt
+strings (including header IDs, response IDs and returned model IDs) become
+null on success, HTTP errors, malformed bodies and partial responses. Redaction
+does not erase evidence that remote work may have occurred or authorize a
+retry. Action text containing a credential is rejected before public action
+metadata or explanation parsing.
 
 Default retries and action repair are zero. Even when explicitly enabled,
 the shared retry policy admits only a definitive 429 rejection with no work
@@ -147,3 +161,15 @@ For separately authorized live use, set `STEPFUN_API_KEY` and run
 `eslams run --agent stepfun:step-3.7-flash --opponent first-legal`.
 Preflight with `--live` also makes an inference call and may incur charges.
 No live commands were run during this implementation.
+
+## Socket deadline regression investigation
+
+The existing slow-header socket test could reach its 250 ms deadline while
+HTTPX initialized its client/trust store, before the server accepted a request.
+Its subsequent server-disconnect assertion then had no observed request to
+attach to. A controlled delayed-client regression reproduces that condition,
+verifies the caller still times out, and verifies cleanup when setup resumes.
+The socket-closure test now prepares its trust context before timing the call
+and explicitly requires a server-observed request. Real HTTPX/TCP cancellation
+and the original elapsed limits are retained. Production transport and timeout
+semantics are unchanged.

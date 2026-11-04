@@ -709,7 +709,7 @@ Core has native HTTP adapters for the provider routes below:
 
 StepFun uses direct Chat Completions at `api.stepfun.ai`; see the
 [StepFun contract notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/STEPFUN.md) for region, model variants,
-reasoning and accounting limits. Bare `stepfun` selects `step-3.7-flash`.
+reasoning and accounting limits. StepFun requires an explicit nonblank model ID.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
