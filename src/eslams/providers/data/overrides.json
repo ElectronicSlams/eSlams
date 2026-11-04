@@ -1,5 +1,10 @@
 {
-  "organizations": [],
+  "organizations": [
+    {
+      "provider": "inception",
+      "name": "Inception Labs / Mercury"
+    }
+  ],
   "models": [
     {
       "provider": "openai",
@@ -227,6 +232,141 @@
       "sources": [
         "https://platform.claude.com/docs/en/about-claude/model-deprecations"
       ]
+    },
+    {
+      "provider": "inception",
+      "model": "mercury-2",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "instant",
+        "low",
+        "medium",
+        "high"
+      ],
+      "default_reasoning_effort": "medium",
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "supported_reasoning_modes": [
+        "instant",
+        "low",
+        "medium",
+        "high"
+      ],
+      "context_window": 128000,
+      "max_output_tokens": 50000,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.inceptionlabs.ai/get-started/models",
+        "https://docs.inceptionlabs.ai/capabilities/reasoning-efforts"
+      ],
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "launch_status": "not_evaluated"
+    },
+    {
+      "provider": "inception",
+      "model": "mercury-2.5",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "instant",
+        "low",
+        "medium",
+        "high"
+      ],
+      "default_reasoning_effort": "medium",
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "supported_reasoning_modes": [
+        "instant",
+        "low",
+        "medium",
+        "high"
+      ],
+      "context_window": 260000,
+      "max_output_tokens": 65536,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.inceptionlabs.ai/get-started/models",
+        "https://docs.inceptionlabs.ai/capabilities/reasoning-efforts"
+      ],
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "launch_status": "not_evaluated"
+    },
+    {
+      "provider": "inception",
+      "model": "mercury-3",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "instant",
+        "low",
+        "medium",
+        "high"
+      ],
+      "default_reasoning_effort": "low",
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "supported_reasoning_modes": [
+        "instant",
+        "low",
+        "medium",
+        "high"
+      ],
+      "context_window": 1000000,
+      "max_output_tokens": 131072,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.inceptionlabs.ai/get-started/models",
+        "https://docs.inceptionlabs.ai/capabilities/reasoning-efforts"
+      ],
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "launch_status": "not_evaluated"
     }
   ]
 }

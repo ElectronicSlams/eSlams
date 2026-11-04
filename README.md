@@ -696,7 +696,8 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+Core has direct HTTP adapters for the provider routes below. The Inception Labs
+Mercury adapter targets 0.7.1; see [its API notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/INCEPTION.md).
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -704,6 +705,7 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` |
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
+| `inception:<model>` | `INCEPTION_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
