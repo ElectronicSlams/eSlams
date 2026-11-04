@@ -402,8 +402,10 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
-        from eslams.providers.watsonx import normalize_alias
+        from eslams.providers.watsonx import normalize_alias, validate_model
         self.provider = normalize_alias(self.provider)
+        if self.provider == "watsonx":
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

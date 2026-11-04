@@ -35,6 +35,13 @@ def normalize_alias(provider: str) -> str:
     return "watsonx" if value in ALIASES else provider
 
 
+def validate_model(model: object) -> None:
+    if not isinstance(model, str) or not model.strip() or model != model.strip():
+        raise ValueError(
+            "watsonx requires an exact explicit model ID without surrounding whitespace"
+        )
+
+
 def configuration(runtime: ProviderRuntimeConfig | None) -> tuple[str, dict[str, str]]:
     """Validate before either authentication or inference; never guess a region/model."""
     if runtime and (runtime.gateway_base_url or runtime.gateway_mode not in {
@@ -140,8 +147,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str,
     runtime = agent.runtime_config
     try:
         endpoint, context = configuration(runtime)
-        if not agent.model or agent.model != agent.model.strip():
-            raise ValueError("watsonx requires an exact nonempty model ID")
+        validate_model(agent.model)
     except ValueError as exc:
         raise ProviderCallError(str(exc), error_kind="provider_request_rejected",
                                 provider="watsonx", model=agent.model) from None
@@ -173,6 +179,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str,
     except ProviderCallError as exc:
         if exc.receipt is not None:
             _exclude_credentials(exc.receipt, api_key, token)
+        exc.args = (_redact_credential_values(str(exc), (api_key, token)),)
         raise
     # Only IBM's model_id attests identity; never use an OpenAI-shaped model field
     # or substitute the request/deployment ID. Missing accounting remains unknown.
@@ -184,6 +191,11 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str,
     _exclude_credentials(receipt, api_key, token)
     try:
         text = _text(data, receipt)
+        if any(secret in text for secret in (api_key, token)):
+            raise ProviderCallError(
+                "watsonx response contains credential material; no action accepted",
+                error_kind="provider_response_schema_mismatch", provider="watsonx",
+            )
         reported = _http_error_identifier(data.get("model_id"))
         if reported is not None and reported != agent.model:
             raise ProviderCallError("watsonx returned a different model identity",
@@ -264,7 +276,24 @@ def _exclude_credentials(receipt: dict[str, Any], *secrets: str) -> None:
     """A provider can echo credentials even in otherwise safe identifier syntax."""
     for key in ("locked_model_id", "provider_response_id", "request_id", "gateway_request_id"):
         value = receipt.get(key)
-        if isinstance(value, str) and any(secret in value for secret in secrets):
+        if isinstance(value, str) and any(secret and secret in value for secret in secrets):
             receipt[key] = None
     if receipt.get("locked_model_id") is None:
         receipt["model_identity_source"] = None
+    sanitized = _redact_credential_values(receipt, secrets)
+    receipt.clear()
+    receipt.update(sanitized)
+
+
+def _redact_credential_values(value: Any, secrets: tuple[str, ...]) -> Any:
+    if isinstance(value, str):
+        for secret in secrets:
+            if secret:
+                value = value.replace(secret, "[REDACTED]")
+        return value
+    if isinstance(value, list):
+        return [_redact_credential_values(item, secrets) for item in value]
+    if isinstance(value, dict):
+        return {_redact_credential_values(key, secrets): _redact_credential_values(item, secrets)
+                for key, item in value.items()}
+    return value

@@ -55,6 +55,11 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    from eslams.providers.watsonx import configuration_error, normalize_alias, validate_model
+    watsonx_problem = None
+    if normalize_alias(provider) == "watsonx":
+        validate_model(model)
+        watsonx_problem = configuration_error(runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -97,6 +102,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif watsonx_problem:
+        error = {"error_class": "provider_request_rejected", "message": watsonx_problem}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -186,12 +193,6 @@ def provider_preflight(
                 )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
-
-    if record.provider == "watsonx" and not live:
-        from eslams.providers.watsonx import configuration_error
-        problem = configuration_error(runtime_config)
-        if problem:
-            error = {"error_class": "provider_request_rejected", "message": problem}
 
     required = (
         checks["adapter_available"] is True

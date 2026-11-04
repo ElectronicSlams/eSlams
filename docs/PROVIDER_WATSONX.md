@@ -4,8 +4,9 @@ This prospective 0.7.1 adapter runs in the unchanged 0.7.0 package. `watsonx`
 identifies IBM Cloud hosting; `ibm` and `ibm-granite` remain model-author catalogue
 namespaces. Neither author name silently selects this transport. Supported host
 aliases are `watsonx-ai`, `ibm-watsonx`, `ibm-watsonx-ai` and underscore spellings.
-Supply the exact IBM model ID, including its namespace. No model default,
-substitution, gateway routing or fallback is selected.
+Supply the exact IBM model ID, including its namespace. Missing, blank or
+whitespace-padded IDs fail in CLI resolution, agent construction and preflight.
+No model default, substitution, gateway routing or fallback is selected.
 
 ## Configuration
 
@@ -54,13 +55,19 @@ describes these controls and the project/space requirement.
 Reasoning `auto` leaves native defaults untouched. An explicit enabled/disabled
 choice sends `chat_template_kwargs.thinking`; explicit effort sends
 `reasoning_effort` (`low`, `medium`, `high`). Model support varies; IBM rejection
-is retained. Unsupported token-budget controls fail before authentication.
+is retained. Unsupported token-budget controls (including explicit zero or dynamic budgets)
+fail in both configuration/live preflight before discovery and before authentication.
 `include_reasoning=false` would suppress returned reasoning, not disable
 thinking, and is not used as a substitute. References: IBM's [parameter schema](https://ibm.github.io/watsonx-ai-python-sdk/v1.9.0/fm_schema.html)
 and [SDK changelog](https://ibm.github.io/watsonx-ai-python-sdk/changelog.html).
 
 Only `choices[0].message.content` is parsed. `reasoning_content` is never parsed
-as an action or copied into receipts. The [response schema](https://ibm.github.io/watsonx-ai-node-sdk/interfaces/1_7_x.WatsonXAI.TextChatResponse.html)
+as an action or copied into receipts. Known API-key and IAM-token echoes are
+removed from request/response/model identifiers and recursively redacted from
+other receipt strings, including nested extensions and malformed/partial-response
+receipts. Transport diagnostics are filtered even when no response headers were
+observed. Generated action text containing either credential is rejected before
+action parsing, publication or action repair. The [response schema](https://ibm.github.io/watsonx-ai-node-sdk/interfaces/1_7_x.WatsonXAI.TextChatResponse.html)
 attests identity with `model_id`; an OpenAI-shaped `model` field does not.
 Missing identity stays null. A different reported model fails while retaining
 its evidence. The exact requested model remains unchanged in every receipt.

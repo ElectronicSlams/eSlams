@@ -454,6 +454,171 @@ def test_even_identifiers_cannot_echo_known_credentials(monkeypatch, status):
     public = json.dumps(native.last_receipt)
     assert "fixture-secret-never-persisted" not in public
     assert "private-IAM-token" not in public
-    assert native.last_receipt["provider_response_id"] is None
+    assert native.last_receipt.get("provider_response_id") is None
     assert native.last_receipt["request_id"] is None
     assert native.last_receipt["locked_model_id"] is None
+
+
+@pytest.mark.parametrize("alias", sorted(ALIASES) + ["watsonx_ai"])
+@pytest.mark.parametrize("model", [None, "", " ", "\t", " model", "model "])
+def test_missing_or_blank_models_rejected_in_cli_preflight_and_agent(monkeypatch, alias, model):
+    calls = stub(monkeypatch)
+    value = alias if model is None else f"{alias}:{model}"
+    with pytest.raises(ValueError, match="explicit model ID"):
+        _provider_agent(value)
+    with pytest.raises(ValueError, match="explicit model ID"):
+        ModelProviderAgent(alias, model, "WATSONX_API_KEY")
+    for live in (False, True):
+        with pytest.raises(ValueError, match="explicit model ID"):
+            provider_preflight(alias, model, "tic-tac-toe", live=live)
+    assert calls == []
+
+
+@pytest.mark.parametrize("field,value", [
+    ("reasoning_budget_tokens", 0), ("reasoning_budget_tokens", 1000),
+    ("gemini_thinking_budget", -1), ("gemini_thinking_budget", 0),
+    ("gemini_thinking_budget", 1000),
+])
+def test_unsupported_budgets_rejected_in_all_preflight_modes_before_discovery(
+    monkeypatch, field, value,
+):
+    calls = stub(monkeypatch)
+    discoveries = []
+    monkeypatch.setattr("eslams.provider_preflight.provider_models_live",
+                        lambda provider: discoveries.append(provider))
+    runtime = ProviderRuntimeConfig(**{field: value})
+    for live in (False, True):
+        for strict in (False, True):
+            result = provider_preflight("watsonx_ai", MODEL, "tic-tac-toe", live=live,
+                                        strict_catalogue=strict, runtime_config=runtime)
+            assert not result["ok"]
+            assert result["error"]["error_class"] == "provider_request_rejected"
+            assert "budget" in result["error"]["message"]
+            assert not result["readiness"]["configuration_ready"]
+            assert result["readiness"]["inference"] == "not_attempted"
+    with pytest.raises(ProviderCallError, match="budget"):
+        agent(runtime_config=runtime).act(request())
+    assert calls == [] and discoveries == []
+
+
+@pytest.mark.parametrize("secret", ["fixture-secret-never-persisted", "private-IAM-token"])
+@pytest.mark.parametrize("scenario", ["success", "http400", "http429", "malformed",
+                                      "partial_timeout", "partial_protocol",
+                                      "refused", "truncated"])
+def test_primary_and_secondary_credential_echoes_scrubbed_on_every_response_path(
+    monkeypatch, secret, scenario,
+):
+    from eslams.http_io import ResponseObservation
+    from eslams.protocol import ProtocolError
+
+    calls = stub(monkeypatch)
+    headers = {"x-global-transaction-id": f"{secret}-request",
+               "x-request-id": f"{secret}-upstream", "cf-aig-request-id": f"{secret}-gateway"}
+    payload = wire()
+    payload["id"] = f"{secret}-response"
+    payload["system"] = {"diagnostic": secret}  # Unused private extensions stay out of receipts.
+    payload["choices"][0]["message"]["reasoning_content"] = secret
+    if scenario == "refused":
+        payload["choices"][0]["finish_reason"] = "content_filter"
+    elif scenario == "truncated":
+        payload["choices"][0]["finish_reason"] = "length"
+    status = 400 if scenario == "http400" else 429 if scenario == "http429" else 200
+    if status >= 400:
+        payload["errors"] = [{"code": "failed", "message": secret}]
+
+    def post(url, **kwargs):
+        calls.append((url, kwargs))
+        if scenario.startswith("partial_"):
+            exc = (httpx.ReadTimeout(secret) if scenario == "partial_timeout" else
+                   ProtocolError(secret))
+            exc.__dict__["_eslams_response_observation"] = ResponseObservation(
+                status_code=429, headers=tuple(headers.items()))
+            raise exc
+        return httpx.Response(status, headers=headers,
+                              content=secret.encode() if scenario == "malformed" else
+                              json.dumps(payload).encode(), request=httpx.Request("POST", url))
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    if scenario == "success":
+        response = native.act(request())
+        assert response.action == 0
+        assert secret not in json.dumps(response.metadata)
+    else:
+        with pytest.raises(ProviderCallError) as error:
+            native.act(request())
+        assert secret not in str(error.value) + json.dumps(error.value.receipt)
+    assert len(calls) == 2 and len(native.attempt_receipts) == 1
+    assert secret not in json.dumps(native.attempt_receipts)
+    assert native.last_receipt["request_id"] is None
+    assert native.last_receipt["gateway_request_id"] is None
+    assert native.last_receipt.get("provider_response_id") is None
+    assert native.last_receipt["model"] == MODEL
+    assert native.last_receipt.get("locked_model_id") == (MODEL if scenario in {
+        "success", "refused", "truncated",
+    } else None)
+
+
+@pytest.mark.parametrize("secret", ["fixture-secret-never-persisted", "private-IAM-token"])
+def test_generated_action_text_cannot_publish_credentials_or_trigger_action_repair(
+    monkeypatch, secret,
+):
+    payload = wire()
+    payload["choices"][0]["message"]["content"] = json.dumps({
+        "action": 0, "public_explanation": f"echo {secret}",
+    })
+    calls = stub(monkeypatch, payload)
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=2))
+    with pytest.raises(ProviderCallError) as error:
+        native.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert len(calls) == 2 and len(native.attempt_receipts) == 1
+    assert secret not in str(error.value) + json.dumps(native.attempt_receipts)
+    assert native.last_receipt["usage"]["total_tokens"] == 37
+
+
+def test_nested_receipt_extensions_cannot_publish_either_credential(monkeypatch):
+    import eslams.agents as shared
+
+    stub(monkeypatch)
+    original = shared._receipt
+
+    def extended(**kwargs):
+        result = original(**kwargs)
+        # Fault injection at the shared receipt boundary: no future diagnostic
+        # extension may bypass the provider's final credential filter.
+        result["diagnostic_extension"] = {
+            "fixture-secret-never-persisted": ["prefix-private-IAM-token-suffix",
+                                                {"detail": "fixture-secret-never-persisted"}],
+        }
+        return result
+
+    monkeypatch.setattr(shared, "_receipt", extended)
+    native = agent()
+    response = native.act(request())
+    encoded = json.dumps(response.metadata)
+    assert "fixture-secret-never-persisted" not in encoded
+    assert "private-IAM-token" not in encoded
+    assert native.last_receipt["usage"]["total_tokens"] == 37
+    assert native.last_receipt["locked_model_id"] == MODEL
+
+
+@pytest.mark.parametrize("secret", ["fixture-secret-never-persisted", "private-IAM-token"])
+def test_protocol_diagnostic_without_observed_headers_cannot_leak_credentials(monkeypatch, secret):
+    from eslams.protocol import ProtocolError
+
+    calls = stub(monkeypatch)
+
+    def broken(url, **kwargs):
+        calls.append((url, kwargs))
+        raise ProtocolError(f"untrusted transport diagnostic: {secret}")
+
+    monkeypatch.setattr("eslams.agents.bounded_post", broken)
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as error:
+        native.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert secret not in str(error.value) + json.dumps(native.attempt_receipts)
+    result = provider_preflight("watsonx", MODEL, "tic-tac-toe", live=True)
+    assert not result["ok"] and secret not in json.dumps(result)
+    assert len(calls) == 4  # One IAM exchange and inference attempt per explicit invocation.
