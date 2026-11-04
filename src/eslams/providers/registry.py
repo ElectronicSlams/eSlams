@@ -156,6 +156,7 @@ PROVIDER_ALIASES = {
     "inflection": "inflection-ai",
     "liquid": "liquid-ai",
     "mistral": "mistral-ai",
+    "kimi": "moonshot-ai",
     "moonshot": "moonshot-ai",
     "moonshotai": "moonshot-ai",
     "moonshotai-cn": "moonshot-ai",

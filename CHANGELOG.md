@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 0.7.1 target
+
+- Add a native Moonshot/Kimi Chat Completions adapter with explicit global/China
+  routing, model-specific reasoning controls, sanitized receipts, offline wire
+  regressions, and CLI/preflight aliases. Keep the 0.7.0 package version and
+  frozen registry unchanged. See `docs/PROVIDER_MOONSHOT.md`.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
