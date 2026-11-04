@@ -406,6 +406,10 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "huawei":
+            from eslams.providers.huawei import validate_config
+
+            validate_config(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -626,6 +630,10 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "huawei":
+            from eslams.providers.huawei import call
+
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1970,6 +1978,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "huawei": "huawei_maas_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,10 +1990,15 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "huawei": "huawei-maas-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "huawei":
+        from eslams.providers.huawei import normalize_usage
+
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []

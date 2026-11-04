@@ -14,6 +14,9 @@ from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
+from eslams.providers.huawei import API_KEY_ENV as HUAWEI_API_KEY_ENV
+from eslams.providers.huawei import MODELS_ENDPOINT as HUAWEI_MODELS_ENDPOINT
+from eslams.providers.huawei import validate_config as validate_huawei_config
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -23,9 +26,11 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "huawei": HUAWEI_API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
+    "huawei": HUAWEI_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -54,6 +59,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider == "huawei":
+        validate_huawei_config(model, runtime_config or ProviderRuntimeConfig())
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -319,6 +326,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == "huawei" and api_key in raw:
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
