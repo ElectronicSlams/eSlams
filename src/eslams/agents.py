@@ -404,6 +404,8 @@ class ModelProviderAgent:
         self.provider = self.provider.lower()
         if self.provider in baichuan.ALIASES:
             self.provider = baichuan.PROVIDER_ID
+        if self.provider == baichuan.PROVIDER_ID and not isinstance(self.model, str):
+            raise ValueError("Baichuan requires an exact provider-native model ID")
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

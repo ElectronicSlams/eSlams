@@ -66,12 +66,23 @@ stable SHA-256 fingerprints of opaque request/gateway/generation identifiers,
 status and documented token observations; reasoning, grounding, unknown extensions
 and raw provider error prose are excluded. Fingerprints preserve correlation without
 publishing an unrelated credential echoed as an opaque identifier. Actual API-key
-echoes are removed from receipt fields; an answer containing that key is rejected.
+echoes are removed from receipt fields; an answer containing that key, including
+JSON-escaped forms, is rejected before action parsing or artifact recording.
+Bearer values, recognizable key formats and credential-labeled fields/prose are
+also rejected in answer text, including escaped values. Ordinary public explanation
+text is preserved. Arbitrary unrelated opaque values in unlabeled prose cannot be
+identified as secrets without their value or a credential marker; the adapter does
+not read unused environment secrets to guess those values.
+Sanitized transport errors suppress raw exception chains, including timeouts.
 Unexpected returned model strings are omitted from mismatch receipts. This adapter
 transmits one Bearer key and has no secondary-credential setting.
 
 Missing counters remain null, including total tokens; the adapter never derives
-missing accounting. Cache/reasoning counters, reasoning inclusion and cost remain
+missing accounting. Invalid or inconsistent counters are quarantined with static
+validation evidence and omitted from canonical usage, keeping artifact generation
+valid and accounting incomplete. Preflight distinguishes counter extraction from
+complete usage and does not claim completeness while reasoning inclusion is unknown.
+Cache/reasoning counters, reasoning inclusion and cost remain
 unknown. Even a complete three-counter response cannot establish complete usage
 for Official scoring without verified reasoning inclusion. No price card, USD
 conversion, service-availability claim or Official eligibility is invented.

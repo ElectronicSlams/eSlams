@@ -7,6 +7,7 @@ reasoning, grounding, provider error prose and unknown extensions out of receipt
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -59,7 +60,7 @@ def validate_controls(model: str, runtime: ProviderRuntimeConfig | None) -> None
         or (runtime.reasoning == "enabled" and budget is None)
         or (budget is not None and model not in {"Baichuan-M2", "Baichuan-M3"})
     )
-    if unsupported or not model.strip():
+    if unsupported or not isinstance(model, str) or not model.strip():
         raise ProviderCallError(
             "Baichuan requires an exact model and supported native reasoning controls; "
             "use auto defaults, or an explicit thinking budget for Baichuan-M2/M3",
@@ -111,14 +112,89 @@ def call(
     except ProviderCallError as exc:
         if exc.receipt is not None:
             exc.receipt = _redact_credential(exc.receipt, api_key)
-        raise
-    if api_key in text:
+        # Shared transport may chain an exception containing an echoed secret.
+        # Keep its sanitized observations, not its raw exception traceback.
+        raise exc from None
+    except TimeoutError:
+        raise TimeoutError("Baichuan provider timed out") from None
+    try:
+        private_answer = _has_private_answer(text, api_key)
+    except (ValueError, RecursionError):
+        raise ProviderCallError(
+            "Baichuan answer could not be inspected safely",
+            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+            model=agent.model, receipt=_redact_credential(receipt, api_key),
+        ) from None
+    if private_answer:
         raise ProviderCallError(
             "Baichuan returned credential material in answer text",
             error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
             model=agent.model, receipt=_redact_credential(receipt, api_key),
         )
     return text, _redact_credential(receipt, api_key)
+
+
+_JSON_ESCAPE = re.compile(r'\\(?:u([0-9a-fA-F]{4})|(["\\/bfnrt]))')
+_CREDENTIAL_LABEL = re.compile(
+    r"(?i)\b(?:credential|password|client[_-]?secret|access[_-]?token)\s*[:=]\s*\S+"
+)
+
+
+def _has_private_answer(text: str, credential: str) -> bool:
+    """Inspect raw and JSON-escaped answer text before parsing or recording it.
+
+    Decoding is for inspection only; it never changes the model's action. A
+    stack reduces escapes as characters arrive, without repeated full scans.
+    Unrelated opaque values cannot be recognized without their value or a
+    credential marker; no unused environment credentials are read here.
+    """
+    from eslams.agents import _SECRET_TEXT_PATTERNS
+    from eslams.contracts.provider import _BEARER_VALUE_RE, _sensitive_public_key
+    from eslams.model_actions import extract_json
+
+    def private_string(value: str) -> bool:
+        escapes = {'"': '"', "\\": "\\", "/": "/", "b": "\b", "f": "\f",
+                   "n": "\n", "r": "\r", "t": "\t"}
+
+        def decode(match: re.Match[str]) -> str:
+            return chr(int(match[1], 16)) if match[1] is not None else escapes[match[2]]
+
+        def marked(candidate: str) -> bool:
+            return bool(
+                credential in candidate or _CREDENTIAL_LABEL.search(candidate)
+                or any(match[1] != "[REDACTED]" for match in _BEARER_VALUE_RE.finditer(candidate))
+                or any(pattern.search(candidate) for pattern in _SECRET_TEXT_PATTERNS)
+            )
+
+        if marked(value):
+            return True
+        decoded: list[str] = []
+        for char in value:
+            decoded.append(char)
+            while True:
+                match = (_JSON_ESCAPE.fullmatch("".join(decoded[-6:]))
+                         if len(decoded) >= 6 and decoded[-6] == "\\" else None)
+                if match is None and len(decoded) >= 2 and decoded[-2] == "\\":
+                    match = _JSON_ESCAPE.fullmatch("".join(decoded[-2:]))
+                if match is None:
+                    break
+                del decoded[-len(match[0]):]
+                decoded.append(decode(match))
+        return marked("".join(decoded))
+
+    pending: list[Any] = [text, extract_json(text)]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str) and private_string(value):
+            return True
+        if isinstance(value, dict):
+            if any(_sensitive_public_key(str(key)) for key in value):
+                return True
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return False
 
 
 def _redact_credential(receipt: dict[str, Any], credential: str) -> dict[str, Any]:
@@ -132,6 +208,18 @@ def _redact_credential(receipt: dict[str, Any], credential: str) -> dict[str, An
         return value
 
     result: dict[str, Any] = scrub(receipt)
+    usage = result.get("usage")
+    if isinstance(usage, dict) and usage.get("usage_validation_errors"):
+        # Incoherent counters cannot enter the canonical aggregate or make the
+        # Runner reject its own ledger. Retain only static validation evidence.
+        result["pricing_provenance"] = {
+            **(result.get("pricing_provenance") or {}),
+            "source": "unverified_provider_usage", "accounting_status": "quarantined",
+            "usage_observation_status": "malformed",
+            "usage_validation_errors": usage["usage_validation_errors"],
+        }
+        result["usage"] = {}
+        result["usage_unavailable_reason"] = "provider_usage_malformed"
     provenance = result.get("pricing_provenance")
     if isinstance(provenance, dict) and "observed_cost_usd" in provenance:
         # Shared error custody is untrusted. Baichuan has no verified USD cost

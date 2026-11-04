@@ -56,6 +56,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider in baichuan.ALIASES and not isinstance(model, str):
+        raise ValueError("Baichuan requires an exact provider-native model ID")
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -191,6 +193,11 @@ def provider_preflight(
                     _is_int(usage.get(key))
                     for key in ("input_tokens", "output_tokens", "total_tokens")
                 )
+                if record.provider == baichuan.PROVIDER_ID and isinstance(usage, dict):
+                    checks["usage_extraction"] = (
+                        checks["usage_extraction"] is True
+                        and not usage.get("usage_validation_errors")
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -211,6 +218,11 @@ def provider_preflight(
         )
         and (not strict_catalogue or not live or checks["account_model_visible"] is not False)
     )
+    usage_complete = checks["usage_extraction"] is True
+    if record.provider == baichuan.PROVIDER_ID:
+        usage = receipt.get("usage") if isinstance(receipt, dict) else None
+        usage_complete = (usage_complete and isinstance(usage, dict)
+                          and isinstance(usage.get("reasoning_included_in_output"), bool))
     payload: dict[str, Any] = {
         "provider": provider,
         "model": model,
@@ -226,7 +238,7 @@ def provider_preflight(
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
             "cost_and_official_eligibility": "not_assessed",
             "meaning_of_ok": "configuration ready, and if live, one legal action observed",
         },
@@ -241,7 +253,7 @@ def provider_preflight(
             "schema_version": "eslams.provider.receipt.v2",
             "outcome": receipt.get("outcome") if isinstance(receipt, dict) else "not_called",
             "redaction_version": "provider-receipt-redaction-v1",
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
         },
     }
     if error is not None:

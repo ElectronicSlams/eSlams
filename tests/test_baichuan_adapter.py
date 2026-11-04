@@ -3,6 +3,8 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import sys
+import traceback
 from pathlib import Path
 
 import httpx
@@ -14,8 +16,16 @@ from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
-from eslams.provider_preflight import provider_models_live, provider_preflight
-from eslams.providers.baichuan import CHAT_COMPLETIONS_ENDPOINT, normalize_usage
+from eslams.provider_preflight import (
+    provider_models_live,
+    provider_models_result,
+    provider_preflight,
+)
+from eslams.providers.baichuan import (
+    CHAT_COMPLETIONS_ENDPOINT,
+    normalize_usage,
+    request_payload,
+)
 from eslams.runner import RunConfig, Runner
 
 FIXTURE = Path(__file__).parent / "fixtures/provider/baichuan_chat_completions_success.json"
@@ -88,6 +98,8 @@ def test_alias_cli_preflight_and_dispatch(monkeypatch, capsys, alias):
     assert live["ok"] is True
     assert live["checks"]["account_model_visible"] is None
     assert live["checks"]["usage_extraction"] is True
+    assert live["readiness"]["usage_complete"] is False
+    assert live["receipt_shape"]["usage_complete"] is False
 
 
 @pytest.mark.parametrize("alias", ["baichuan", "baichuan-ai", "baichuan_ai"])
@@ -476,3 +488,266 @@ def test_cli_run_routes_alias_to_native_transport(monkeypatch, capsys, tmp_path,
     receipt = json.loads(receipt_path.read_text().splitlines()[0])
     assert receipt["provider"] == "baichuan-ai"
     assert receipt["model"] == "Baichuan4-Turbo"
+
+
+def unicode_escaped(value):
+    return "".join(f"\\u{ord(char):04x}" for char in value)
+
+
+@pytest.mark.parametrize("wrapping", ["plain", "fenced", "embedded", "nested-escape"])
+@pytest.mark.parametrize("secret", [KEY, "sk-secondary-private-123456", "Bearer opaque-secondary"])
+def test_escaped_credentials_in_action_text_fail_before_recording(monkeypatch, wrapping, secret):
+    encoded = unicode_escaped(secret)
+    text = '{"action":1,"public_explanation":"' + encoded + '"}'
+    if wrapping == "fenced":
+        text = "```json\n" + text + "\n```"
+    elif wrapping == "embedded":
+        text = "Here is the action: " + text
+    elif wrapping == "nested-escape":
+        text = text.replace("\\u", "\\\\u")
+    assert secret not in text
+    body = payload()
+    body["choices"][0]["message"]["content"] = text
+    calls = stub(monkeypatch, body)
+    chosen = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=2))
+    with pytest.raises(ProviderCallError) as caught:
+        chosen.act(request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert len(calls) == 1
+    recorded = json.dumps(chosen.attempt_receipts) + str(caught.value)
+    assert all(value not in recorded for value in (secret, encoded, text))
+    assert chosen.last_receipt["usage"]["total_tokens"] == 16
+
+
+@pytest.mark.parametrize("secret", [KEY, "opaque-secondary"])
+def test_credential_fields_in_action_extensions_fail_closed(monkeypatch, secret):
+    body = payload()
+    text = json.dumps({"action": 1, "metadata": {"secondary_api_key": secret}})
+    body["choices"][0]["message"]["content"] = text
+    calls = stub(monkeypatch, body)
+    chosen = agent()
+    with pytest.raises(ProviderCallError):
+        chosen.act(request())
+    assert len(calls) == 1
+    assert secret not in json.dumps(chosen.attempt_receipts)
+
+
+@pytest.mark.parametrize("path", ["success", "http-error", "malformed", "partial"])
+@pytest.mark.parametrize("secret", [KEY, "opaque-secondary"])
+def test_json_escaped_identifier_echoes_do_not_escape_receipts(monkeypatch, path, secret):
+    from eslams.http_io import ResponseObservation
+
+    encoded = unicode_escaped(secret)
+
+    def post(*args, **kwargs):
+        headers = {"X-BC-Request-Id": encoded, "X-Gateway-Request-Id": encoded}
+        if path == "partial":
+            exc = httpx.ReadError(secret)
+            exc.__dict__["_eslams_response_observation"] = ResponseObservation(
+                status_code=200, headers=tuple((k.lower(), v) for k, v in headers.items()),
+            )
+            raise exc
+        if path == "malformed":
+            return httpx.Response(200, content=b"{bad", headers=headers)
+        body = ({"error": {"code": 429, "message": secret}, "id": secret}
+                if path == "http-error" else {**payload(), "id": secret})
+        wire = json.dumps(body).replace(secret, encoded)
+        assert secret not in wire
+        return httpx.Response(429 if path == "http-error" else 200,
+                              content=wire.encode(), headers=headers)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    chosen = agent()
+    if path == "success":
+        response = chosen.act(request())
+        public = response.to_dict()
+    else:
+        with pytest.raises(ProviderCallError) as caught:
+            chosen.act(request())
+        public = {"error": str(caught.value), "receipt": caught.value.receipt}
+    serialized = json.dumps({"public": public, "attempts": chosen.attempt_receipts})
+    assert secret not in serialized
+    assert encoded not in serialized
+
+
+@pytest.mark.parametrize("usage", [
+    {"prompt_tokens": 12, "completion_tokens": 4, "total_tokens": 99},
+    {"prompt_tokens": True, "completion_tokens": 4, "total_tokens": 16},
+    {"prompt_tokens": 12, "completion_tokens": -1, "total_tokens": 16},
+    {"prompt_tokens": 12, "completion_tokens": 4},
+])
+def test_incoherent_usage_is_incomplete_in_preflight_and_artifacts(monkeypatch, tmp_path, usage):
+    body = {**payload(), "usage": usage}
+    stub(monkeypatch, body)
+    preflight = provider_preflight("baichuan", "Baichuan4-Turbo", "tic-tac-toe", live=True)
+    assert preflight["ok"] is True  # one legal action remains distinct from accounting
+    assert preflight["readiness"]["usage_complete"] is False
+    assert preflight["receipt_shape"]["usage_complete"] is False
+    assert preflight["checks"]["usage_extraction"] is False
+    result = Runner().run(RunConfig(
+        arena_id="tic-tac-toe", agents={"player_1": agent()}, max_turns=1, output_dir=tmp_path,
+    ))
+    assert result.score.usage_complete is False
+    receipt = json.loads((result.artifact_path / "receipts/provider_receipts.jsonl").read_text())
+    assert receipt["usage_complete"] is False
+    assert receipt["cost_complete"] is False
+
+
+def test_no_discovery_endpoint_means_no_credential_or_wire_echo(monkeypatch):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Baichuan discovery must not read credentials or call HTTP")
+
+    monkeypatch.setattr("eslams.provider_preflight.provider_key", forbidden)
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", forbidden)
+    for alias in ("baichuan", "baichuan-ai", "baichuan_ai"):
+        assert provider_models_live(alias) is None
+        result = provider_models_result(alias)
+        assert result["error"]["error_class"] == "provider_discovery_unavailable"
+        assert KEY not in json.dumps(result)
+
+
+@pytest.mark.parametrize("missing", [None, "", " ", "\t"])
+def test_payload_admission_rejects_missing_models(missing):
+    with pytest.raises(ProviderCallError) as caught:
+        request_payload(missing, "prompt", instructions="instructions", temperature=None,
+                        max_tokens=None, runtime=None)
+    assert caught.value.error_kind == "provider_request_rejected"
+
+
+@pytest.mark.parametrize("alias", ["baichuan", "baichuan-ai", "baichuan_ai"])
+def test_cli_preflight_requires_model_argument(capsys, alias):
+    with pytest.raises(SystemExit) as caught:
+        main(["providers", "preflight", "--provider", alias])
+    assert caught.value.code == 2
+    capsys.readouterr()
+
+
+@pytest.mark.parametrize("alias", ["baichuan", "baichuan-ai", "baichuan_ai"])
+def test_null_model_rejected_before_registry_or_transport(monkeypatch, alias):
+    calls = stub(monkeypatch)
+    with pytest.raises(ValueError, match="exact provider-native model"):
+        agent(provider=alias, model=None)
+    with pytest.raises(ValueError, match="exact provider-native model"):
+        provider_preflight(alias, None, "tic-tac-toe", live=True)
+    assert not calls
+
+
+@pytest.mark.parametrize("secret", [KEY, "Bearer opaque-secondary", "sk-secondary-private-123456"])
+def test_escaped_action_credentials_never_reach_artifact_files(monkeypatch, tmp_path, secret):
+    body = payload()
+    encoded = unicode_escaped(secret)
+    body["choices"][0]["message"]["content"] = (
+        '{"action":1,"public_explanation":"' + encoded + '"}'
+    )
+    calls = stub(monkeypatch, body)
+    result = Runner().run(RunConfig(
+        arena_id="tic-tac-toe", agents={"player_1": agent()}, max_turns=1, output_dir=tmp_path,
+    ))
+    assert len(calls) == 1
+    assert result.score.match_valid_for_scoring is False
+    assert "provider_response_schema_mismatch" in result.score.invalid_reason_codes
+    checked = []
+    for path in result.artifact_path.rglob("*"):
+        if path.suffix in {".json", ".jsonl"}:
+            checked.append(path)
+            contents = path.read_text()
+            assert secret not in contents
+            assert encoded not in contents
+    assert checked
+
+
+def test_ordinary_public_explanation_is_preserved(monkeypatch):
+    body = payload()
+    text = "This legal move keeps the center occupied."
+    body["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": text,
+    })
+    stub(monkeypatch, body)
+    response = agent().act(request())
+    assert response.action == 1
+    assert response.public_explanation == text
+
+
+def test_deep_non_action_json_is_rejected_with_a_receipt(monkeypatch):
+    body = payload()
+    depth = sys.getrecursionlimit() * 2
+    body["choices"][0]["message"]["content"] = "[" * depth + "0" + "]" * depth
+    calls = stub(monkeypatch, body)
+    chosen = agent()
+    with pytest.raises(ProviderCallError) as caught:
+        chosen.act(request())
+    assert caught.value.error_kind in {
+        "provider_response_schema_mismatch", "action_response_unparseable",
+    }
+    assert len(calls) == 1
+    assert chosen.last_receipt["usage"]["total_tokens"] == 16
+
+
+@pytest.mark.parametrize("budget", [0, 1, 2000])
+@pytest.mark.parametrize("model", ["Baichuan4-Turbo", "Unregistered-model", "Baichuan-M3-Plus"])
+def test_explicit_unsupported_budgets_fail_before_discovery_and_transport(
+    monkeypatch, budget, model,
+):
+    calls = stub(monkeypatch)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("unsupported reasoning must fail before model discovery")
+
+    monkeypatch.setattr("eslams.provider_preflight.provider_models_live", forbidden)
+    runtime = ProviderRuntimeConfig(reasoning_budget_tokens=budget)
+    for live in (False, True):
+        result = provider_preflight("baichuan", model, "tic-tac-toe", live=live,
+                                    runtime_config=runtime)
+        assert result["ok"] is False
+        assert result["error"]["error_class"] == "provider_request_rejected"
+    with pytest.raises(ProviderCallError):
+        agent(model=model, runtime_config=runtime).act(request())
+    assert not calls
+
+
+def test_json_quote_backslash_and_slash_credential_escapes_fail_closed(monkeypatch):
+    secret = 'opaque"quote\\slash/private-key'
+    monkeypatch.setenv("BAICHUAN_API_KEY", secret)
+    body = payload()
+    text = json.dumps({"action": 1, "public_explanation": secret}).replace("/", "\\/")
+    assert secret not in text
+    body["choices"][0]["message"]["content"] = text
+    calls = stub(monkeypatch, body)
+    chosen = agent()
+    with pytest.raises(ProviderCallError):
+        chosen.act(request())
+    assert len(calls) == 1
+    assert secret not in json.dumps(chosen.attempt_receipts)
+
+
+@pytest.mark.parametrize("secret", [KEY, "opaque-secondary"])
+@pytest.mark.parametrize("failure", [httpx.ReadError, httpx.ConnectError, httpx.ReadTimeout])
+def test_transport_exception_tracebacks_do_not_echo_credentials(monkeypatch, secret, failure):
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(kwargs)
+        raise failure(secret)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    chosen = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises((ProviderCallError, TimeoutError)) as caught:
+        chosen.act(request())
+    assert len(calls) == 1
+    assert secret not in "".join(traceback.format_exception(caught.value))
+    assert secret not in json.dumps(chosen.attempt_receipts)
+
+
+def test_long_nested_escape_chain_is_inspected_before_action_parsing(monkeypatch):
+    body = payload()
+    encoded = "\\u005c" + "u005c" * 4000 + "u0066" + KEY[1:]
+    text = '{"action":1,"public_explanation":"' + encoded + '"}'
+    assert KEY not in text
+    body["choices"][0]["message"]["content"] = text
+    calls = stub(monkeypatch, body)
+    chosen = agent()
+    with pytest.raises(ProviderCallError) as caught:
+        chosen.act(request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert len(calls) == 1
+    assert encoded not in json.dumps(chosen.attempt_receipts)
