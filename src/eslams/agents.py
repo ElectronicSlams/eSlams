@@ -47,6 +47,8 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.snowflake import call as call_snowflake
+from eslams.providers.snowflake import canonical_provider
 
 
 class AgentError(RuntimeError):
@@ -401,7 +403,7 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = canonical_provider(self.provider)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -636,6 +638,8 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == "snowflake":
+            return call_snowflake(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1970,6 +1974,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "snowflake": "snowflake_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,6 +1986,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "snowflake": "snowflake-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
@@ -2144,7 +2150,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "snowflake"}
+            else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2516,7 +2523,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider == "openrouter":
+    elif provider in {"openrouter", "snowflake"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

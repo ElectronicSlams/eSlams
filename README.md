@@ -696,7 +696,7 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+Core has direct HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -705,6 +705,12 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
+| `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` |
+
+Snowflake also requires `SNOWFLAKE_ACCOUNT_URL`. See the
+[Snowflake guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/SNOWFLAKE.md) for authentication, exact model IDs,
+region policy, and completion/accounting limitations. `cortex` and `snowflake-cortex`
+are provider aliases; a model is always required.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
