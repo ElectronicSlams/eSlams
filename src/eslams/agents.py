@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, load_provider_registry, morph
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -406,6 +406,8 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "morph":
+            morph.validate_configuration(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -422,6 +424,8 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "morph":
+                return morph.act(self, request)
             return self._act(request)
 
     def _act(self, request: ActRequest) -> ActResponse:
@@ -614,18 +618,24 @@ class ModelProviderAgent:
         self._receipt_batch = (batch[0], tuple(copy.deepcopy(receipts)))
 
     def _remember_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "morph":
+            receipt = morph.sanitize_receipt(receipt, self.api_key_env)
         receipts = [*self.attempt_receipts, receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
         self.last_receipt = receipt
 
     def _replace_last_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "morph":
+            receipt = morph.sanitize_receipt(receipt, self.api_key_env)
         receipts = [*self.attempt_receipts[:-1], receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "morph":
+            return morph.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1969,6 +1979,7 @@ def _endpoint_kind(provider: str) -> str:
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
+        "morph": "morph_chat_completions",
         "bedrock": "bedrock_converse",
     }.get(provider, "unknown")
 
@@ -1980,11 +1991,14 @@ def _parser_version(provider: str) -> str:
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
+        "morph": "morph-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "morph":
+        usage = morph.usage_fields(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []
@@ -2144,7 +2158,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "morph"} else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 

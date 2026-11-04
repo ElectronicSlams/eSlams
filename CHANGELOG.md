@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — 0.7.1 adapter workstream
+
+- Add native Morph general text Chat Completions with explicit model selection,
+  verified reasoning controls, full history and existing safe transport/receipts.
+  Exclude specialized Morph products from text-game eligibility; retain unknown
+  identity/accounting and prevent credential echoes in action and receipt fields.
+  Protect secondary configured credentials and reject credential echoes in model
+  discovery; revalidate explicit budgets before transport on reconfigured agents.
+  Add raw-wire, CLI, preflight and interrupted-response regressions. No package
+  version change or live inference verification.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

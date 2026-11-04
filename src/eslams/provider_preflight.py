@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import load_provider_registry, morph
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -23,6 +23,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "morph": morph.API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
@@ -31,6 +32,7 @@ _MODELS_ENDPOINTS = {
     "openrouter": "https://openrouter.ai/api/v1/models",
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
+    "morph": morph.MODELS_ENDPOINT,
 }
 
 
@@ -54,6 +56,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider == "morph":
+        morph.validate_configuration(model, runtime_config or ProviderRuntimeConfig())
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -268,6 +272,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             f"missing API key environment variable {api_key_env}",
             error_kind="provider_auth_failed", provider=provider,
         )
+    discovery_credentials = morph.credential_values(api_key_env) if provider == "morph" else ()
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -305,8 +310,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 error_kind=kind, provider=provider,
             )
         try:
-            payload = response.json()
-        except ValueError:
+            payload = morph.discovery_payload(response) if provider == "morph" else response.json()
+        except (ValueError, UnicodeError, RecursionError):
             raise _discovery_schema_error(provider) from None
         if not isinstance(payload, dict):
             raise _discovery_schema_error(provider)
@@ -319,6 +324,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == "morph" and morph.contains_credentials(raw, discovery_credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
