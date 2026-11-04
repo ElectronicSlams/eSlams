@@ -383,7 +383,7 @@ def test_reasoning_cache_subsets_and_total_validation(monkeypatch):
     payload = fixture()
     payload["usage"].update(
         output_tokens_details={"reasoning_tokens": 2},
-        prompt_tokens_details={"cached_tokens": 3}, cache_creation_input_tokens=2,
+        prompt_tokens_details={"cached_tokens": 3, "cache_creation_input_tokens": 2},
     )
     wire(monkeypatch, payload)
     wrapped = agent()
@@ -396,6 +396,15 @@ def test_reasoning_cache_subsets_and_total_validation(monkeypatch):
     wire(monkeypatch, payload)
     wrapped.act(request())
     assert wrapped.last_receipt["usage"]["usage_validation_errors"]
+
+
+def test_undocumented_top_level_cache_creation_is_not_native_accounting(monkeypatch):
+    payload = fixture()
+    payload["usage"]["cache_creation_input_tokens"] = 7
+    wire(monkeypatch, payload)
+    wrapped = agent()
+    wrapped.act(request())
+    assert wrapped.last_receipt["usage"]["cache_write_input_tokens"] is None
 
 
 @pytest.mark.parametrize("error,kind", [

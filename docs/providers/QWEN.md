@@ -108,6 +108,8 @@ null, even if an undocumented extension echoes `model`.
 Input/output/total token counts and optional reasoning/cache counts pass through
 Core's integer and total-consistency validation. Output includes reasoning;
 reasoning is not added twice. Cache reads/creation are input subsets. Missing
+cache counters remain unknown; the documented native fields live under
+`usage.prompt_tokens_details` (see [context cache](https://www.alibabacloud.com/help/en/model-studio/context-cache)). Missing
 usage stays missing; partial usage is incomplete, and invalid counts are not
 coerced to zero. Non-2xx observations stay quarantined. Native usage does not
 provide a USD charge. Catalogue prices are deliberately excluded from this

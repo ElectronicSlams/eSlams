@@ -71,7 +71,9 @@ def usage_fields(usage: dict[str, Any]) -> dict[str, Any]:
         "total_tokens": usage.get("total_tokens"),
         "input_tokens_details": {
             "cached_tokens": details.get("cached_tokens") if isinstance(details, dict) else None,
-            "cache_creation_input_tokens": usage.get("cache_creation_input_tokens"),
+            "cache_creation_input_tokens": (
+                details.get("cache_creation_input_tokens") if isinstance(details, dict) else None
+            ),
         },
         "output_tokens_details": usage.get("output_tokens_details"),
         "reasoning_included_in_output": True,
