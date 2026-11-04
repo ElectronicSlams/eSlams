@@ -1,0 +1,16 @@
+{
+  "id": "synthetic-krutrim-completion",
+  "object": "chat.completion",
+  "created": 1735689600,
+  "model": "Krutrim-spectre-v2",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\":1,\"public_explanation\":\"A legal move.\"}"
+      }
+    }
+  ]
+}
