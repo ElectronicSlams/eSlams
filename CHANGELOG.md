@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Fireworks Chat Completions adapter for the 0.7.1 review: explicit
+  model resources, CLI/preflight aliases, native reasoning controls, sanitized
+  attempt receipts, validated usage and zero default retries. Include documented
+  raw-wire fixtures and deterministic error, privacy and artifact regressions.
+  Package/contract versions remain unchanged; live availability is unverified.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

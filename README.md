@@ -696,7 +696,7 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+Core has direct HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -705,6 +705,11 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
+| `fireworks:<model-resource>` | `FIREWORKS_API_KEY` |
+
+Fireworks uses direct Chat Completions with an explicit `accounts/.../models/...`
+resource. See the [Fireworks guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/FIREWORKS.md) for aliases, native reasoning,
+keyless checks, usage and discovery limits. No default model is selected.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
