@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — 0.7.1 adapter work
+
+- Add the Xiaomi MiMo direct Chat Completions adapter (`xiaomi`, `mimo`,
+  `xiaomi-mimo`), `MIMO_API_KEY`, and Models discovery. Preserve exact model IDs,
+  provider defaults and full supplied history. Retain unknown identity/accounting
+  and sanitized failure receipts; reject filtered, truncated and tool-call output.
+  See [the MiMo guide](docs/providers/XIAOMI_MIMO.md) for sources and scope.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

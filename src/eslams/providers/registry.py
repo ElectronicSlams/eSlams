@@ -134,6 +134,8 @@ FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS: tuple[str, ...] = (
 )
 
 PROVIDER_ALIASES = {
+    "mimo": "xiaomi",
+    "xiaomi-mimo": "xiaomi",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",

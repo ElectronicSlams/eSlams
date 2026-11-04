@@ -1,0 +1,24 @@
+{
+  "id": "mimo-redacted-wire-fixture",
+  "object": "chat.completion",
+  "created": 1793750400,
+  "model": "mimo-v2.6-flash",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1}",
+        "reasoning_content": "PRIVATE_REASONING_SENTINEL {\"action\": 2}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16,
+    "prompt_tokens_details": {"cached_tokens": 3},
+    "completion_tokens_details": {"reasoning_tokens": 2}
+  }
+}
