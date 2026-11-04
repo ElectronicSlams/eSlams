@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased (0.7.1 candidate)
+
+- Add an Arcee Platform direct Chat Completions adapter, exact-model CLI aliases,
+  preflight/discovery wiring, sanitized receipts and deterministic raw-wire tests.
+  Native reasoning defaults apply; unsupported explicit controls fail before
+  submission. Missing identity/accounting stays unknown. See `docs/providers/ARCEE.md`.
+  Reject blank model IDs and unsupported controls in preflight, and discard
+  credential echoes from receipt identifiers on success and failure paths.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

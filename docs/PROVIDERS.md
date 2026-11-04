@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
+
+The 0.7.1 candidate [Arcee adapter notes](providers/ARCEE.md) document direct
+endpoint provenance, model discovery, native reasoning defaults, accounting
+limits and deterministic fixture coverage. Arcee requires an explicit model ID.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

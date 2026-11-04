@@ -1453,6 +1453,15 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = provider.lower()
+    if provider.replace("_", "-") in {"arcee", "arcee-ai"}:
+        if not model.strip():
+            raise ValueError("Arcee requires an explicit exact model ID: arcee-ai:<model>")
+        from eslams.providers.arcee import API_KEY_ENV
+
+        return ModelProviderAgent(
+            provider="arcee-ai", model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
