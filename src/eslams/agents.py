@@ -47,6 +47,7 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.inception import call as call_inception
 from eslams.providers.inception import normalize_provider as normalize_inception_provider
+from eslams.providers.inception import validate_model_id as validate_inception_model_id
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 
@@ -404,6 +405,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = normalize_inception_provider(self.provider)
+        if self.provider == "inception":
+            validate_inception_model_id(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

@@ -16,6 +16,7 @@ from eslams.artifacts import ArtifactValidator
 from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
+from eslams.http_io import ResponseObservation
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
 from eslams.provider_preflight import provider_models_live, provider_preflight
 from eslams.providers import load_provider_registry
@@ -97,12 +98,27 @@ def test_core42_stays_separate_and_unknown_model_is_exact(monkeypatch):
     assert a.last_receipt["locked_model_id"] == "mercury-2.5"
 
 
-def test_registry_update_aliases_and_cli_default():
+def test_registry_update_aliases_and_cli_requires_explicit_model():
     updater = runpy.run_path(str(Path(__file__).parents[1] / "scripts/update_provider_registry.py"))
     aliases = updater["PROVIDER_ALIASES"]
     assert aliases.get("inception", "inception") == "inception"
     assert aliases["inception-labs"] == aliases["inceptionlabs"] == "inception"
-    assert _provider_agent("inception").model == "mercury-3"
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _provider_agent("inception")
+
+
+@pytest.mark.parametrize("alias", ALIASES)
+@pytest.mark.parametrize("model", ["", " ", "\t\n", None])
+def test_model_id_is_required_across_entrypoints(monkeypatch, alias, model):
+    calls = install_wire(monkeypatch)
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        ModelProviderAgent(alias, model, "INCEPTION_API_KEY")
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        provider_preflight(alias, model, "tic-tac-toe", live=True)
+    if model is not None:
+        with pytest.raises(ValueError, match="explicit nonblank model"):
+            _provider_agent(f"{alias}:{model}")
+    assert calls == []
 
 
 @pytest.mark.parametrize("key", [None, "", "bad key\nvalue"])
@@ -126,6 +142,23 @@ def test_foreign_thinking_budget_is_rejected_before_submission(monkeypatch, cont
     with pytest.raises(ProviderCallError, match="reasoning_effort"):
         a.act(request())
     assert calls == []
+
+
+@pytest.mark.parametrize("alias", ALIASES)
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("control", ["reasoning_budget_tokens", "gemini_thinking_budget"])
+def test_preflight_rejects_explicit_foreign_budget_before_discovery(
+    monkeypatch, alias, live, control,
+):
+    calls = install_wire(monkeypatch)
+    gets = []
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, **k: gets.append(1))
+    result = provider_preflight(alias, "mercury-2", "tic-tac-toe", live=live,
+        runtime_config=ProviderRuntimeConfig(**{control: 0}))
+    assert not result["ok"] and not result["readiness"]["configuration_ready"]
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    assert "reasoning_effort" in result["error"]["message"]
+    assert not result["checks"]["minimal_inference"] and calls == gets == []
 
 
 def test_defaults_full_history_transport_identity_usage_and_privacy(monkeypatch):
@@ -384,3 +417,135 @@ def test_refusal_artifact_never_applies_action_or_leaks_private_body(tmp_path, m
         if path.is_file():
             data = path.read_bytes()
             assert PRIVATE.encode() not in data and b"synthetic-mercury-key" not in data
+
+
+PRIMARY = "opaquePrimaryValue8675309"
+SECONDARY = "opaqueSecondaryValue2468135"
+
+
+@pytest.mark.parametrize("mode", ["success", "http_error", "malformed", "partial_timeout",
+    "partial_protocol", "refusal", "truncation", "http200_error"])
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY])
+def test_credential_echoes_never_enter_receipts(monkeypatch, mode, credential):
+    from eslams.protocol import ProtocolError
+
+    monkeypatch.setenv("INCEPTION_API_KEY", PRIMARY)
+    monkeypatch.setenv("SECONDARY_PROVIDER_API_KEY", SECONDARY)
+    calls = []
+
+    def post(url, **kwargs):
+        calls.append(1)
+        headers = {"x-request-id": f"req-{credential}",
+                   "cf-aig-request-id": f"gateway-{credential}"}
+        body = wire()
+        body.update(id=f"generation-{credential}", model=f"model-{credential}",
+                    warning=credential, reasoning_summary={"summary": credential})
+        if mode in {"http_error", "http200_error"}:
+            body["error"] = {"type": "rate_limit_error", "code": "rate_limit_reached",
+                             "message": credential}
+        elif mode == "refusal":
+            body["choices"][0]["message"]["refusal"] = credential
+        elif mode == "truncation":
+            body["choices"][0]["finish_reason"] = "length"
+        elif mode in {"partial_timeout", "partial_protocol"}:
+            exc = (httpx.ReadTimeout(credential) if mode == "partial_timeout"
+                   else ProtocolError("incomplete response"))
+            exc.__dict__["_eslams_response_observation"] = ResponseObservation(
+                429, tuple(headers.items()),
+            )
+            raise exc
+        return httpx.Response(429 if mode == "http_error" else 200,
+            **({"content": credential.encode()} if mode == "malformed" else {"json": body}),
+            headers=headers, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    a = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, retry_backoff_ms=0))
+    if mode == "success":
+        assert a.act(request()).action == 0
+    else:
+        with pytest.raises(ProviderCallError) as caught:
+            a.act(request())
+        assert credential not in str(caught.value) + json.dumps(caught.value.receipt)
+    assert calls == [1]  # Observed work remains unsafe to replay after redaction.
+    receipt = a.last_receipt
+    assert receipt["request_id"] is None and receipt["gateway_request_id"] is None
+    assert receipt.get("provider_response_id") is None
+    assert receipt["locked_model_id"] is None and receipt["model_identity_source"] is None
+    assert PRIMARY not in json.dumps(a.attempt_receipts)
+    assert SECONDARY not in json.dumps(a.attempt_receipts)
+    if mode not in {"partial_timeout", "partial_protocol", "malformed"}:
+        assert receipt["usage"]["total_tokens"] == 20
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY, 'opaque"quoted\\credential'])
+@pytest.mark.parametrize("encoded", [False, True])
+def test_credential_in_assistant_text_is_rejected_without_action_or_artifact_leak(
+    tmp_path, monkeypatch, credential, encoded,
+):
+    monkeypatch.setenv("INCEPTION_API_KEY", PRIMARY)
+    monkeypatch.setenv("SECONDARY_GATEWAY_TOKEN", credential)
+    body = wire()
+    body["choices"][0]["message"]["content"] = json.dumps(
+        {"action": 0, "public_explanation": credential},
+    )
+    if encoded:
+        body["choices"][0]["message"]["content"] = (
+            body["choices"][0]["message"]["content"].replace("opaque", "\\u006fpaque")
+        )
+    calls = install_wire(monkeypatch, body)
+    result = Runner().run(RunConfig("tic-tac-toe", output_dir=tmp_path,
+        on_agent_error="forfeit", agent_1=agent()))
+    assert len(calls) == 1 and not result.score.match_valid_for_scoring
+    for path in result.expanded_path.rglob("*"):
+        if path.is_file():
+            data = path.read_bytes()
+            assert PRIMARY.encode() not in data and SECONDARY.encode() not in data
+            assert credential.encode() not in data
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY])
+def test_discovery_does_not_return_echoed_credentials(monkeypatch, credential):
+    monkeypatch.setenv("INCEPTION_API_KEY", PRIMARY)
+    monkeypatch.setenv("ANOTHER_PROVIDER_KEY", SECONDARY)
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, **k:
+        httpx.Response(200, json={"data": [{"id": f"model-{credential}"}]}))
+    with pytest.raises(ProviderCallError) as caught:
+        provider_models_live("inception")
+    assert credential not in str(caught.value)
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY])
+def test_protocol_failure_message_does_not_echo_credentials(monkeypatch, credential):
+    from eslams.protocol import ProtocolError
+
+    monkeypatch.setenv("INCEPTION_API_KEY", PRIMARY)
+    monkeypatch.setenv("SECONDARY_PROVIDER_API_KEY", SECONDARY)
+
+    def post(*args, **kwargs):
+        raise ProtocolError(f"provider detail {credential}")
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    with pytest.raises(ProviderCallError) as caught:
+        agent().act(request())
+    assert credential not in str(caught.value) + json.dumps(caught.value.receipt)
+
+
+@pytest.mark.parametrize("credential", [PRIMARY, SECONDARY])
+def test_private_error_message_does_not_disable_definitive_429_retry(monkeypatch, credential):
+    monkeypatch.setenv("INCEPTION_API_KEY", PRIMARY)
+    monkeypatch.setenv("SECONDARY_PROVIDER_API_KEY", SECONDARY)
+    calls = install_wire(monkeypatch, {"error": {"type": "rate_limit_error",
+        "code": "rate_limit_reached", "message": credential}}, 429)
+    a = agent(runtime_config=ProviderRuntimeConfig(max_retries=1, retry_backoff_ms=0))
+    with pytest.raises(ProviderCallError):
+        a.act(request())
+    assert len(calls) == len(a.attempt_receipts) == 2
+    assert credential not in json.dumps(a.attempt_receipts)
+
+
+def test_development_secret_flag_is_not_treated_as_a_credential(monkeypatch):
+    monkeypatch.setenv("ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET", "1")
+    body = wire()
+    body["choices"][0]["message"]["content"] = '{"action": 1}'
+    install_wire(monkeypatch, body)
+    assert agent().act(request()).action == 1

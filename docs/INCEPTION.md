@@ -8,7 +8,9 @@ or inference was performed. This change keeps the package version at 0.7.0.
 `inception:<exact-model-id>` selects Inception Labs' direct API. Provider aliases
 `inception-labs` and `inceptionlabs` select the same adapter; underscores and case
 are normalized. The model string is passed unchanged, including unlisted IDs.
-The CLI default is `mercury-3`. There is no alternate provider or model fallback.
+An explicit nonblank model ID is required in CLI, Python and preflight; missing
+IDs are rejected without selecting a default. There is no alternate provider or
+model fallback.
 
 ```bash
 export INCEPTION_API_KEY='<your-key>'
@@ -53,7 +55,8 @@ documents `instant`, `low`, `medium`, and `high`. Core forwards only an explicit
 `reasoning_effort`, leaving defaults to Inception. That page describes `low` for
 Mercury 3 and `medium` for Mercury 2/2.5; the chat schema advertises `medium`
 generically. Core does not resolve that documentation discrepancy by imposing a
-default. Other providers' thinking budgets are rejected before sending.
+default. Other providers' thinking budgets are rejected in configuration/live
+preflight before discovery and again before inference transport.
 
 The [usage FAQ](https://docs.inceptionlabs.ai/resources/faq) documents nested
 cached/reasoning counts; the chat reference also shows flat
@@ -74,6 +77,14 @@ including usage observed on semantic failures. Error/refusal prose, summaries,
 warnings, credentials, prompts and raw response bodies are excluded from public
 receipts. Legal-looking truncated, filtered, tool-call or unfinished text cannot
 be applied as a game action.
+
+Receipt values containing the primary key or a configured secondary credential
+are cleared, including opaque IDs with no recognizable token prefix. This also
+applies to malformed/error envelopes and headers from incomplete responses.
+An echoed model ID loses its identity source. Assistant text containing a known
+credential is rejected rather than rewritten into an action; discovery also
+rejects credential-bearing model IDs. Redaction follows classification of raw
+work evidence and never grants retry permission.
 
 The [FAQ](https://docs.inceptionlabs.ai/resources/faq) recommends backoff for 429
 and 503. Core retains its stricter attempt policy: **zero retries by default**;

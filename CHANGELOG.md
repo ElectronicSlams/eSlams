@@ -6,6 +6,9 @@
   wire tests, sanitized receipts and explicit-only controls. Separate Inception
   Labs aliases from Core42/G42. See `docs/INCEPTION.md` for API provenance,
   accounting limits and retry policy. Package version remains 0.7.0.
+- Require explicit Inception model IDs, reject foreign reasoning budgets during
+  preflight, and exclude primary/secondary credential echoes from Mercury
+  receipts, discovery results and action text, including partial/error responses.
 
 ## v0.7.0 - 2026-11-04
 

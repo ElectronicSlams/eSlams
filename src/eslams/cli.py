@@ -1441,7 +1441,6 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
-    from eslams.providers.inception import DEFAULT_MODEL as INCEPTION_DEFAULT_MODEL
     from eslams.providers.inception import normalize_provider as normalize_inception_provider
 
     defaults = {
@@ -1450,7 +1449,7 @@ def _provider_agent(
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
-        "inception": (INCEPTION_DEFAULT_MODEL, INCEPTION_API_KEY_ENV),
+        "inception": ("", INCEPTION_API_KEY_ENV),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
     }
     if ":" in value:

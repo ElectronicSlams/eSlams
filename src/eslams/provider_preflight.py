@@ -16,6 +16,10 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
 from eslams.providers.inception import MODELS_ENDPOINT as INCEPTION_MODELS_ENDPOINT
+from eslams.providers.inception import configuration_error as inception_configuration_error
+from eslams.providers.inception import credential_echo as inception_credential_echo
+from eslams.providers.inception import normalize_provider as normalize_inception_provider
+from eslams.providers.inception import validate_model_id as validate_inception_model_id
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -58,6 +62,10 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    configuration_error = None
+    if normalize_inception_provider(provider) == "inception":
+        validate_inception_model_id(model)
+        configuration_error = inception_configuration_error(runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -100,6 +108,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -215,7 +225,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -323,6 +334,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == "inception" and inception_credential_echo(raw, api_key):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
