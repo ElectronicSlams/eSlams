@@ -648,6 +648,36 @@ def test_credential_echoes_are_removed_from_success_and_receipt_snapshots(monkey
     assert _http_error_identifier(echo) == echo
 
 
+def test_credential_redaction_precedes_diagnostic_snippet_truncation(monkeypatch):
+    primary, secondary = echo_credentials(monkeypatch)
+    payload = fixture()
+    payload["output"]["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": "x" * 440 + primary + secondary,
+    })
+    wire(monkeypatch, payload)
+    wrapped = ModelProviderAgent("qwen", REQUESTED, "QWEN_CUSTOM_AUTH")
+    result = wrapped.act(request())
+    assert result.action == 1
+    exported = json.dumps(result.to_dict())
+    assert primary[:12] not in exported and secondary[:12] not in exported
+
+
+def test_json_and_url_encoded_secondary_credential_echoes_are_redacted(monkeypatch):
+    from urllib.parse import quote
+
+    secondary = 'OpaqueSecondary/With+Special="Characters'
+    monkeypatch.setenv("OPENAI_API_KEY", secondary)
+    payload = fixture()
+    payload["output"]["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": secondary + " " + quote(secondary, safe=""),
+    })
+    wire(monkeypatch, payload)
+    result = agent().act(request())
+    assert result.action == 1
+    assert result.public_explanation == "[REDACTED] [REDACTED]"
+    assert "OpaqueSecondary" not in json.dumps(result.to_dict())
+
+
 @pytest.mark.parametrize("echo_index", [0, 1])
 @pytest.mark.parametrize("status,body_kind", [
     (429, "native_error"), (500, "native_error"), (200, "native_error"),

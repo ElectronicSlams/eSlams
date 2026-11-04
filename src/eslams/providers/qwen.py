@@ -6,6 +6,7 @@ Shared transport/accounting imports are deferred to avoid an agents import cycle
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from collections.abc import Iterator
@@ -13,6 +14,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, NoReturn
+from urllib.parse import quote, quote_plus
 
 import httpx
 
@@ -66,7 +68,9 @@ def credential_scope(environment_name: str) -> Iterator[None]:
         if (name == environment_name or re.search(
             r"API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|ACCESS_KEY|PRIVATE_KEY", name.upper(),
         )) and value.strip():
-            credentials.add(value.strip())
+            secret = value.strip()
+            credentials.update((secret, json.dumps(secret)[1:-1],
+                                quote(secret, safe=""), quote_plus(secret)))
     token = _CREDENTIALS.set(tuple(sorted(credentials, key=len, reverse=True)))
     try:
         yield
@@ -246,7 +250,9 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         core._http_error_identifier(data.get("request_id")) or receipt["request_id"]
     )
     try:
-        return _completed_text(data, receipt, agent.model), receipt
+        # Redact before Core truncates raw_action_text diagnostics, otherwise a
+        # credential cut at the snippet boundary could leave a private prefix.
+        return redact(_completed_text(data, receipt, agent.model)), receipt
     except core.ProviderCallError as exc:
         exc.receipt = {**receipt, "outcome": exc.error_kind}
         raise
