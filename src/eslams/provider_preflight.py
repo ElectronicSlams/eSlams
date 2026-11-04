@@ -23,6 +23,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "xiaomi": "MIMO_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -31,6 +32,7 @@ _MODELS_ENDPOINTS = {
     "openrouter": "https://openrouter.ai/api/v1/models",
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
+    "xiaomi": "https://api.xiaomimimo.com/v1/models",
 }
 
 
@@ -276,6 +278,8 @@ def provider_models_live(provider: str) -> list[str] | None:
     elif provider == "google":
         headers["x-goog-api-key"] = api_key
         params["pageSize"] = "1000"
+    elif provider == "xiaomi":
+        headers["api-key"] = api_key
     else:
         headers["Authorization"] = f"Bearer {api_key}"
     models: list[str] = []

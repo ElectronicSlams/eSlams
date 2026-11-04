@@ -47,6 +47,7 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.xiaomi import canonical_provider
 
 
 class AgentError(RuntimeError):
@@ -401,7 +402,7 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = canonical_provider(self.provider.lower())
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -636,6 +637,10 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == "xiaomi":
+            from eslams.providers.xiaomi import call_mimo
+
+            return call_mimo(self, api_key, prompt, system=_SYSTEM_INSTRUCTIONS)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1970,6 +1975,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "xiaomi": "xiaomi_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,10 +1987,15 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "xiaomi": "xiaomi-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "xiaomi":
+        from eslams.providers.xiaomi import normalize_usage
+
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []

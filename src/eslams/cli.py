@@ -51,6 +51,7 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
+from eslams.providers.xiaomi import canonical_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1447,12 +1448,14 @@ def _provider_agent(
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
+        "xiaomi": ("mimo-v2.6-flash", "MIMO_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
     provider = provider.lower()
+    provider = canonical_provider(provider)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

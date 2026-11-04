@@ -5,6 +5,10 @@ Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
+The unreleased 0.7.1 adapter work also adds native
+[Xiaomi MiMo](providers/XIAOMI_MIMO.md), with offline raw-wire regressions and
+explicit native thinking controls. The package version remains 0.7.0 until release.
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
@@ -14,6 +18,7 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `xiaomi:<model>` (`mimo`, `xiaomi-mimo`) | `MIMO_API_KEY` | MiMo direct Chat Completions | `choices[0].message.content` | response `model` |
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
