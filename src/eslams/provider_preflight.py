@@ -15,6 +15,7 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.shanghai_ai_lab import validate_configuration as validate_shanghai_ai_lab
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -23,6 +24,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "shanghai-ai-lab": "ATRIA_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -54,6 +56,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider.strip().replace("_", "-") == "shanghai-ai-lab":
+        validate_shanghai_ai_lab(model, runtime_config, max_output_tokens=max_output_tokens)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)

@@ -14,6 +14,12 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` | Atria Chat Completions | `choices[0].message.content` | reported model only; null when absent |
+
+The proposed 0.7.1 [Shanghai AI Lab adapter](SHANGHAI_AI_LAB.md) uses native
+reasoning defaults and requires an explicit model ID. Its reasoning accounting
+and total usage remain unknown. See that guide for verified service boundaries,
+rejected controls and fixture provenance; legacy InternLM controls do not apply.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

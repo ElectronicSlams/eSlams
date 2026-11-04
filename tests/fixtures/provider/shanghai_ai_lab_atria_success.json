@@ -1,0 +1,9 @@
+{
+  "choices": [
+    {
+      "message": {"content": "{\"action\": 1, \"public_explanation\": \"A legal move.\"}"},
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 4}
+}
