@@ -1,0 +1,22 @@
+{
+  "id": "as-qsp8w7ppnv",
+  "object": "chat.completion",
+  "created": 1755938117,
+  "model": "deepseek-v3.1-250821",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1}"
+      },
+      "finish_reason": "stop",
+      "flag": 0
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 11,
+    "completion_tokens": 15,
+    "total_tokens": 26
+  }
+}

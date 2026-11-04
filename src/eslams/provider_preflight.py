@@ -17,6 +17,7 @@ from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
+    "baidu": "QIANFAN_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -26,6 +27,7 @@ DEFAULT_PROVIDER_ENV = {
 }
 
 _MODELS_ENDPOINTS = {
+    "baidu": "https://qianfan.baidubce.com/v2/models",
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
