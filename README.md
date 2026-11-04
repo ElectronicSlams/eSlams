@@ -696,7 +696,7 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+Core has native HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -705,6 +705,11 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
+| `stepfun:<model>` | `STEPFUN_API_KEY` |
+
+StepFun uses direct Chat Completions at `api.stepfun.ai`; see the
+[StepFun contract notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/STEPFUN.md) for region, model variants,
+reasoning and accounting limits. StepFun requires an explicit nonblank model ID.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native

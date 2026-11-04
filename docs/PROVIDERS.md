@@ -1,7 +1,7 @@
 # Provider Guide
 
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and StepFun. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
+
+The [StepFun adapter notes](providers/STEPFUN.md) document endpoint/region scope,
+model variants, controls, error handling, usage and raw-wire fixture provenance.
+Step Plan and the Chinese `.com` endpoint are separate contracts, not aliases.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
