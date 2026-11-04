@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add the NAVER Cloud CLOVA Studio native Chat Completions v3 adapter with explicit
+  model IDs, documented HCX-007 reasoning controls, bounded transport and sanitized
+  receipts. See [NAVER setup and evidence](docs/providers/NAVER.md). No version bump.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

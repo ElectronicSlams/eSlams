@@ -14,12 +14,21 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `naver:<model-id>` | `CLOVASTUDIO_API_KEY` | native Chat Completions v3 | `result.message.content` | model pinned in direct endpoint |
+
+The NAVER adapter requires an explicit model ID and follows its own
+[setup, reasoning controls, regional access and wire evidence](providers/NAVER.md).
+Its defaults preserve full history, provider output limits and provider reasoning policy.
+It does not use the historical per-game reasoning behavior described below.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
 is the deliberate exception: the literal model ID is part of the signed
 Converse endpoint and is recorded with `model_identity_source:
-pinned_endpoint`.
+pinned_endpoint`. NAVER v3 similarly names the model in the endpoint path, with
+`pinned_endpoint` evidence on successful direct responses. A custom gateway does
+not establish NAVER model identity or region. Neither adapter claims an immutable
+backend revision from a model alias.
 
 ## Setup and Preflight
 
