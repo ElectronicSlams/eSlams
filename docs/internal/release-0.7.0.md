@@ -18,6 +18,8 @@ Anthropic Messages still requires a real output maximum. Without a caller maximu
 
 OpenRouter provider fallback remains forbidden. `allow_fallbacks: false` is now sent even when no provider order is supplied. Caller model identifiers and supplied route order are preserved, returned model identifiers remain verbatim, and no model fallback list or automatic alternate paid request is introduced. One local HTTP submission is not proof of one physical upstream attempt. An absent route order does not attest a pinned backend; strict experiments/official consumers must require their actual provider/endpoint identity policy. Privacy, identity and official-eligibility checks are not bypassed by generic Core admission.
 
+The user explicitly deferred the stronger OpenRouter backend enforcement/evidence change to 0.7.1 with individual provider adapters. 0.7.0 preserves the current no-fallback wire/configuration behaviour and does not claim a stable backend across calls. This deferral narrows the release claim; it is not proof that backend verification already exists.
+
 ## Preflight contract
 
 Default preflight checks configuration without making catalogue membership a universal admission rule. `ok` means supported local adapter/configuration and, only for explicitly requested live preflight, a legal action observed. `model_availability=unverified` and `readiness.inference=not_attempted` are explicit for offline checks. No credentials are inferred from readiness. Live inference still requires actual credentials.

@@ -6,6 +6,8 @@
 - Preserve full supplied history with explicit legacy prompt compatibility.
 - Separate advisory preflight readiness from catalogue/accounting policy; retain strict opt-in checks.
 - Enforce no OpenRouter provider fallback on wire even without a route order.
+- This does not guarantee a fixed backend across calls. Stronger OpenRouter
+  backend pinning/evidence and individual provider adapters are deferred to 0.7.1.
 - Preserve invocation-scoped receipts and reject unsafe/ambiguous automatic retry.
 - Improve output recovery, request/nonce/cursor safety and actionable CLI diagnostics.
 - See `docs/internal/release-0.7.0.md` for compatibility, unresolved decisions and release gates.

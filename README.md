@@ -23,8 +23,10 @@ catalogue listed below.
 The 0.7.0 candidate focuses on model-execution policy and reliability: no implicit
 Core thinking/output budget, no game-specific reasoning choice, full supplied
 history, clearer preflight, safer receipt/retry handling, artifact recovery and
-the invalid-run scoring fixes in #226. Strict model/provider routing remains;
-OpenRouter fallback is disabled. This checkout is a release candidate until its
+the invalid-run scoring fixes in #226. OpenRouter fallback is disabled. A supplied
+route order is honoured, but this does not guarantee or attest a single backend
+across calls; stronger OpenRouter backend enforcement and individual adapters are
+deferred to 0.7.1. This checkout is a release candidate until its
 release gates close. Numeric-profile/performance experiments and additional
 provider adapters are outside 0.7.0.
 
