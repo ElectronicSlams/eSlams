@@ -4,6 +4,7 @@ import json
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -15,10 +16,11 @@ from eslams.artifacts import ArtifactValidator
 from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
-from eslams.provider_preflight import provider_preflight
+from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers.registry import load_provider_registry
 
 KEY = "synthetic-Liquid-secret"
+SECONDARY_KEY = "synthetic-other-Liquid-secret"
 
 
 def wire():
@@ -29,6 +31,12 @@ def wire():
 def agent(monkeypatch, **kwargs):
     monkeypatch.setenv("LIQUID_API_KEY", KEY)
     return ModelProviderAgent("liquid", "lfm3-1.7b", "LIQUID_API_KEY", **kwargs)
+
+
+def custom_agent(monkeypatch, **kwargs):
+    monkeypatch.setenv("CUSTOM_LIQUID_KEY", KEY)
+    monkeypatch.setenv("LIQUID_API_KEY", SECONDARY_KEY)
+    return ModelProviderAgent("liquid-ai", "lfm3-1.7b", "CUSTOM_LIQUID_KEY", **kwargs)
 
 
 def respond(monkeypatch, body, status=200, headers=None):
@@ -75,6 +83,49 @@ def test_missing_model_rejected(model):
         ModelProviderAgent("liquid-ai", model, "LIQUID_API_KEY")
 
 
+@pytest.mark.parametrize("alias", ["liquid", "liquid-ai", " LIQUID_AI "])
+@pytest.mark.parametrize("model", [None, "", " ", "\t"])
+def test_preflight_missing_model_never_reaches_transport(monkeypatch, alias, model):
+    calls = respond(monkeypatch, wire())
+    with pytest.raises(ValueError, match="model ID"):
+        provider_preflight(alias, model, "tic-tac-toe", live=True)
+    assert calls == []
+
+
+@pytest.mark.parametrize("field", ["id", "model", "x-request-id", "cf-aig-request-id",
+                                   "action"])
+@pytest.mark.parametrize("credential", [KEY, SECONDARY_KEY])
+@pytest.mark.parametrize("encoding", ["plain", "url", "unicode"])
+def test_custom_and_standard_credentials_never_escape(monkeypatch, field, credential, encoding):
+    encoded = (credential if encoding == "plain" else
+               quote(credential).replace("s", "%73") if encoding == "url" else
+               credential.replace("s", "\\u0073"))
+    body = wire()
+    headers = {}
+    if field in {"id", "model"}:
+        body[field] = encoded
+    elif field == "action":
+        body["choices"][0]["message"]["content"] = json.dumps(
+            {"action": 0, "public_explanation": encoded})
+    else:
+        headers[field] = encoded
+    calls = respond(monkeypatch, body, headers=headers)
+    a = custom_agent(monkeypatch)
+    try:
+        result = a.act(_request())
+        assert field != "action", "credential-echoing action must be rejected"
+        assert credential not in json.dumps(result.to_dict())
+    except ProviderCallError as error:
+        assert credential not in str(error) + json.dumps(error.receipt)
+    assert credential not in json.dumps(a.last_receipt)
+    receipt_field = {"id": "provider_response_id", "model": "locked_model_id",
+                     "x-request-id": "request_id", "cf-aig-request-id": "gateway_request_id"}
+    if field in receipt_field:
+        assert a.last_receipt[receipt_field[field]] is None
+    assert len(calls) == 1
+    assert calls[0][1]["headers"]["Authorization"] == f"Bearer {KEY}"
+
+
 @pytest.mark.parametrize("value", ["liquid", "liquid:", "liquid-ai", "liquid-ai: "])
 def test_cli_requires_explicit_model(value):
     with pytest.raises(ValueError, match="model ID"):
@@ -87,14 +138,36 @@ def test_cli_requires_explicit_model(value):
     {"history_window_turns": 2}, {"gateway_base_url": "https://example.com"},
     {"openrouter_provider_order": ("other",)},
 ])
-def test_unsupported_controls_rejected_before_submission(monkeypatch, settings):
+@pytest.mark.parametrize("alias", ["liquid", "liquid-ai", " LIQUID_AI "])
+def test_unsupported_controls_rejected_before_submission(monkeypatch, settings, alias):
     calls = respond(monkeypatch, wire())
     runtime = ProviderRuntimeConfig(**settings)
     with pytest.raises(ValueError):
-        agent(monkeypatch, runtime_config=runtime)
+        ModelProviderAgent(alias, "lfm3-1.7b", "LIQUID_API_KEY", runtime_config=runtime)
     with pytest.raises(ValueError):
-        provider_preflight("liquid", "lfm3-1.7b", "tic-tac-toe", runtime_config=runtime)
+        provider_preflight(alias, "lfm3-1.7b", "tic-tac-toe", runtime_config=runtime)
     assert calls == []
+
+
+@pytest.mark.parametrize("budget", [0, 1, 1000])
+def test_explicit_budget_rechecked_if_runtime_changes(monkeypatch, budget):
+    calls = respond(monkeypatch, wire())
+    a = agent(monkeypatch)
+    a.runtime_config = ProviderRuntimeConfig(reasoning_budget_tokens=budget)
+    with pytest.raises(ValueError, match="reasoning"):
+        a.act(_request())
+    assert calls == []
+
+
+@pytest.mark.parametrize("alias", ["liquid", "liquid-ai", " LIQUID_AI "])
+def test_discovery_unavailable_without_transport_or_credential_output(monkeypatch, alias):
+    custom_agent(monkeypatch)
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("Liquid discovery is not implemented"))
+    result = provider_models_result(alias)
+    assert result["models"] == [] and result["ok"] is False
+    assert result["error"]["error_class"] == "provider_discovery_unavailable"
+    assert KEY not in json.dumps(result) and SECONDARY_KEY not in json.dumps(result)
 
 
 def test_explicit_output_and_temperature(monkeypatch):
@@ -144,17 +217,27 @@ def test_cli_run_writes_valid_sanitized_native_receipt(monkeypatch, tmp_path, ca
 
 
 @pytest.mark.parametrize("status", [400, 401, 402, 403, 404, 429, 500, 502, 503, 504])
-def test_http_errors_preserve_custody_without_default_retry_or_echo(monkeypatch, status):
+@pytest.mark.parametrize("credential", [KEY, SECONDARY_KEY])
+def test_http_errors_preserve_custody_without_default_retry_or_echo(
+    monkeypatch, status, credential,
+):
     body = {"error": {"type": "rate_limit_error", "code": "rate_limit_exceeded",
-                      "message": KEY, "param": None}}
-    calls = respond(monkeypatch, body, status, {"x-request-id": KEY, "Retry-After": "7"})
-    a = agent(monkeypatch)
+                      "message": credential, "param": None},
+            "id": credential, "model": credential}
+    calls = respond(monkeypatch, body, status, {
+        "x-request-id": credential, "cf-aig-request-id": credential, "Retry-After": "7",
+    })
+    a = custom_agent(monkeypatch)
     with pytest.raises(ProviderCallError) as error:
         a.act(_request())
     assert error.value.status_code == status and len(calls) == 1
     assert not a.last_receipt["usage"]
     assert a.last_receipt["locked_model_id"] is None
-    assert KEY not in json.dumps(a.last_receipt) + str(error.value)
+    assert credential not in json.dumps(a.last_receipt) + str(error.value)
+    assert credential not in json.dumps(error.value.receipt)
+    assert a.last_receipt["provider_response_id"] is None
+    assert a.last_receipt["request_id"] is None
+    assert a.last_receipt["gateway_request_id"] is None
 
 
 @pytest.mark.parametrize("work_evidence", [False, True])
@@ -256,13 +339,16 @@ def test_incomplete_or_unexpected_envelopes_never_apply_actions(monkeypatch, mut
 
 @pytest.mark.parametrize("body", [b'not JSON', b'{"id":"synthetic-Liquid-secret"',
                                   b'{"choices":[],"choices":[]}'])
-def test_malformed_body_and_echoed_headers(monkeypatch, body):
+@pytest.mark.parametrize("credential", [KEY, SECONDARY_KEY])
+def test_malformed_body_and_echoed_headers(monkeypatch, body, credential):
+    body = body.replace(KEY.encode(), credential.encode())
     monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k:
-                        httpx.Response(200, content=body, headers={"x-request-id": KEY}))
-    a = agent(monkeypatch)
+                        httpx.Response(200, content=body, headers={"x-request-id": credential}))
+    a = custom_agent(monkeypatch)
     with pytest.raises(ProviderCallError) as error:
         a.act(_request())
-    assert KEY not in str(error.value) + json.dumps(a.last_receipt)
+    assert credential not in str(error.value) + json.dumps(a.last_receipt)
+    assert credential not in json.dumps(error.value.receipt)
 
 
 def test_deeply_nested_action_retains_sanitized_receipt(monkeypatch):
@@ -278,21 +364,24 @@ def test_deeply_nested_action_retains_sanitized_receipt(monkeypatch):
 
 @pytest.mark.parametrize("failure", ["timeout", "reset", "oversize"])
 @pytest.mark.parametrize("status", [200, 429, 503])
-def test_actual_partial_reader_failure_scrubs_echoed_headers(monkeypatch, failure, status):
+@pytest.mark.parametrize("credential", [KEY, SECONDARY_KEY])
+def test_actual_partial_reader_failure_scrubs_echoed_headers(
+    monkeypatch, failure, status, credential,
+):
     original = httpx.AsyncClient
     calls = []
     class Stream(httpx.AsyncByteStream):
         async def __aiter__(self):
-            yield ('{"model":"' + KEY + '",').encode()
+            yield ('{"model":"' + credential + '",').encode()
             if failure == "timeout":
-                raise httpx.ReadTimeout(KEY)
+                raise httpx.ReadTimeout(credential)
             if failure == "reset":
-                raise httpx.ReadError(KEY)
+                raise httpx.ReadError(credential)
             yield b"x" * (1024 * 1024 + 1)
     def handler(request):
         calls.append(1)
         return httpx.Response(status, stream=Stream(), request=request,
-                              headers={"x-request-id": KEY, "cf-aig-request-id": KEY})
+                              headers={"x-request-id": credential, "cf-aig-request-id": credential})
     class Client:
         async def __aenter__(self):
             return self
@@ -304,9 +393,10 @@ def test_actual_partial_reader_failure_scrubs_echoed_headers(monkeypatch, failur
                         client.stream(method, url, **kwargs) as response):
                 yield response
     monkeypatch.setattr(http_io.httpx, "AsyncClient", lambda **kwargs: Client())
-    a = agent(monkeypatch, runtime_config=ProviderRuntimeConfig(max_retries=2))
-    with pytest.raises(ProviderCallError):
+    a = custom_agent(monkeypatch, runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as error:
         a.act(_request())
     assert calls == [1] and a.last_receipt["status_code"] == status
     assert not a.last_receipt["usage"] and a.last_receipt["locked_model_id"] is None
-    assert KEY not in json.dumps(a.last_receipt)
+    assert credential not in json.dumps(a.last_receipt) + str(error.value)
+    assert credential not in json.dumps(error.value.receipt)

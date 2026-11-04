@@ -69,7 +69,10 @@ general retry advice: zero default retries; an explicit retry requires a
 definitive rate rejection without work evidence and honors `Retry-After`.
 Timeout, interrupted body, ambiguous errors and observed work are not replayed.
 Credential echoes are removed from receipt values and rejected in action text,
-including escaped JSON explanations. No raw provider error prose is published.
+including URL-encoded and JSON-escaped values. This covers the credential selected
+by `api_key_env` and the standard `LIQUID_API_KEY` when both are configured.
+No raw provider error prose is published. Provider-name normalization is applied
+before validation, so `liquid_ai` cannot bypass preflight's model/reasoning checks.
 
 ## Use and validation
 

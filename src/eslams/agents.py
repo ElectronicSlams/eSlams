@@ -402,7 +402,7 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
-        if self.provider in {"liquid", "liquid-ai"}:
+        if self.provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
             from eslams.providers.liquid import validate_config
 
             self.provider = "liquid-ai"

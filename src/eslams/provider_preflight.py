@@ -55,9 +55,10 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
-    if provider in {"liquid", "liquid-ai"}:
+    if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
         from eslams.providers.liquid import validate_config
 
+        provider = "liquid-ai"
         validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
