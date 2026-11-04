@@ -40,7 +40,7 @@ from eslams.model_actions import (
     parse_model_action,
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
-from eslams.provider_credentials import provider_key
+from eslams.provider_credentials import contains_credentials, provider_key, redact_credentials
 from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
@@ -325,6 +325,8 @@ class HttpAgent:
 
 def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
+    if isinstance(value, str) and contains_credentials(value):
+        return None
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
     sanitized = _sanitize_receipt_value(value)
@@ -405,6 +407,10 @@ class ModelProviderAgent:
         self.provider = self.provider.lower()
         if self.provider in {"sarvam", "sarvam_ai"}:
             self.provider = "sarvam-ai"
+        if self.provider == "sarvam-ai":
+            from eslams.providers.sarvam import validate_model
+
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -2826,7 +2832,7 @@ _SECRET_TEXT_PATTERNS = (
 
 
 def _redact_sensitive_text(value: str) -> str:
-    redacted = value.replace("\r", " ").replace("\n", " ")
+    redacted = redact_credentials(value).replace("\r", " ").replace("\n", " ")
     for pattern in _SECRET_TEXT_PATTERNS:
         redacted = pattern.sub(
             lambda match: f"{match.group(1)}[REDACTED]" if match.lastindex else "[REDACTED]",

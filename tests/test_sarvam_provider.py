@@ -71,7 +71,8 @@ def test_aliases_cli_registry_preflight_and_dispatch(monkeypatch, prefix, model)
     assert checks["account_model_visible"] is None
     assert len(sent) == 1  # offline preflight never submits inference
     assert provider_models_live(prefix) is None
-    assert _provider_agent(prefix).model == "sarvam-105b"
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _provider_agent(prefix)
 
 
 def test_documented_success_native_defaults_full_history_and_privacy(monkeypatch):

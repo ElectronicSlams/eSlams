@@ -3,8 +3,8 @@
 Use `sarvam:sarvam-105b` or `sarvam-ai:sarvam-105b-conversations` with
 `SARVAM_API_KEY`. `sarvam_ai` is also accepted. The prefix selects the direct
 provider; the model string after the first colon is sent unchanged, including
-unknown or deprecated IDs. The default model for a bare Sarvam prefix is
-`sarvam-105b`. No model substitution, broker routing or provider fallback occurs.
+unknown or deprecated IDs. A bare prefix or blank model ID fails before transport.
+No model substitution, broker routing or provider fallback occurs.
 Package version remains 0.7.0 pending release review.
 
 ```sh
@@ -39,6 +39,7 @@ Reviewed 2026-11-04. Documentation availability does not prove account access.
   medium as its default. Explicit effort values are forwarded unchanged for
   endpoint validation. `enabled` preserves the native enabled default;
   `disabled` sends null. Foreign token-budget controls fail before submission.
+  Offline and live preflight reject those unsupported controls too.
 - [Response/finish contract](https://docs.sarvam.ai/api/token-factory/chat-completions):
   `reasoning_content` is private reasoning, never action text. `length` is
   truncation; `content_filter` is refusal. Tool/function calls, unknown/missing
@@ -78,3 +79,10 @@ keys, request headers, prompts, private reasoning, refusal prose or raw response
 bodies. The raw-wire fixture under `tests/fixtures/provider/` follows the V1
 reference envelope with redacted identifiers and deterministic action text;
 fault variants are synthetic. No live inference was used for validation.
+
+Exact credential redaction is scoped to each Sarvam call, including the selected
+credential and canonical `SARVAM_API_KEY` when a custom credential environment is
+selected. Credential-bearing provider identifiers are discarded, including
+HTTP errors and observed headers from partial responses. Credential echoes in
+action text (including JSON escapes) reject the response before action parsing.
+Transport and JSON exception causes do not appear in public error tracebacks.

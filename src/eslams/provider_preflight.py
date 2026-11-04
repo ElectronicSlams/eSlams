@@ -55,6 +55,16 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    configuration_error: dict[str, Any] | None = None
+    normalized_provider = provider.replace("_", "-")
+    if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "sarvam-ai":
+        from eslams.providers.sarvam import validate_configuration, validate_model
+
+        validate_model(model)
+        try:
+            validate_configuration(model, runtime_config)
+        except ProviderCallError as exc:
+            configuration_error = _public_error(exc, provider=provider, model=model)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -92,7 +102,9 @@ def provider_preflight(
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
 
-    if credential_environment is None:
+    if configuration_error is not None:
+        error = configuration_error
+    elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
@@ -212,7 +224,10 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (
+                checks["adapter_available"] is True and credential_error is None
+                and configuration_error is None
+            ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

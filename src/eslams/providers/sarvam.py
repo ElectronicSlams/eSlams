@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 
 import httpx
+
+from eslams.contracts.provider import ProviderRuntimeConfig
+from eslams.model_actions import extract_json
+from eslams.provider_credentials import contains_credentials, credential_redaction
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -12,7 +17,6 @@ if TYPE_CHECKING:
 PROVIDER_ID = "sarvam-ai"
 API_KEY_ENV = "SARVAM_API_KEY"
 CHAT_COMPLETIONS_ENDPOINT = "https://api.sarvam.ai/v1/chat/completions"
-DEFAULT_MODEL = "sarvam-105b"
 
 _ERROR_STATUS = {
     "invalid_api_key_error": 401,
@@ -78,13 +82,72 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     """Use Core's bounded transport, physical-attempt ledger and privacy controls."""
     from eslams import agents as core
 
-    runtime = agent.runtime_config
+    validate_configuration(agent.model, agent.runtime_config)
+    # A caller may select a custom credential environment. The canonical key
+    # remains private too, even when it is not the selected wire credential.
+    with credential_redaction(api_key, os.getenv(API_KEY_ENV, "").strip()):
+        try:
+            text, receipt = _call(agent, api_key, prompt)
+            try:
+                credential_echo = (
+                    contains_credentials(text) or _contains_decoded_credentials(extract_json(text))
+                )
+            except (ValueError, RecursionError):
+                raise core.ProviderCallError(
+                    "Sarvam action text could not be inspected safely",
+                    error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+                    model=agent.model, receipt=receipt,
+                ) from None
+            if credential_echo:
+                raise core.ProviderCallError(
+                    "Sarvam action text contains a configured credential; no action accepted",
+                    error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+                    model=agent.model, receipt=receipt,
+                )
+            return text, receipt
+        except core.ProviderCallError as exc:
+            # Suppress raw transport/JSON exception causes in public tracebacks.
+            raise core.ProviderCallError(
+                str(exc), status_code=exc.status_code, error_kind=exc.error_kind,
+                retry_after_seconds=exc.retry_after_seconds, provider=PROVIDER_ID,
+                model=agent.model, receipt=exc.receipt, retry_permitted=exc.retry_permitted,
+            ) from None
+        except TimeoutError:
+            raise TimeoutError("Sarvam provider timed out") from None
+
+
+def _contains_decoded_credentials(value: Any) -> bool:
+    if isinstance(value, str):
+        return contains_credentials(value)
+    if isinstance(value, list):
+        return any(_contains_decoded_credentials(item) for item in value)
+    if isinstance(value, dict):
+        return any(contains_credentials(key) or _contains_decoded_credentials(item)
+                   for key, item in value.items())
+    return False
+
+
+def validate_model(model: str) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("Sarvam requires an explicit nonblank model ID")
+
+
+def validate_configuration(model: str, runtime: ProviderRuntimeConfig | None) -> None:
+    from eslams import agents as core
+
+    validate_model(model)
     if runtime and (runtime.reasoning_budget_tokens is not None
                     or runtime.gemini_thinking_budget is not None):
         raise core.ProviderCallError(
             "Sarvam supports reasoning_effort, not a token thinking budget",
-            error_kind="provider_request_rejected", provider=PROVIDER_ID, model=agent.model,
+            error_kind="provider_request_rejected", provider=PROVIDER_ID, model=model,
         )
+
+
+def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    from eslams import agents as core
+
+    runtime = agent.runtime_config
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [
