@@ -204,6 +204,8 @@ def _shards(case_ids: list[str], shard_count: int) -> list[dict[str, Any]]:
 
 def _provider_env_names(providers: list[str]) -> list[str]:
     names = {
+        "xai": "XAI_API_KEY",
+        "x-ai": "XAI_API_KEY",
         "openai": "OPENAI_API_KEY",
         "anthropic": "ANTHROPIC_API_KEY",
         "google": "GEMINI_API_KEY",
