@@ -15,6 +15,8 @@ PROVIDER_ID = "deepseek"
 API_KEY_ENV = "DEEPSEEK_API_KEY"
 CHAT_COMPLETIONS_ENDPOINT = "https://api.deepseek.com/chat/completions"
 MODELS_ENDPOINT = "https://api.deepseek.com/models"
+# Structural safety for action JSON; this does not cap generated tokens or history.
+MAX_ACTION_JSON_DEPTH = 64
 
 
 def canonical_provider(value: str) -> str:
@@ -55,25 +57,48 @@ def credential_values(primary: str | None = None) -> tuple[str, ...]:
 
 
 def has_credential_echo(value: Any, secrets: tuple[str, ...]) -> bool:
-    if isinstance(value, str):
-        return any(secret in value for secret in secrets)
-    if isinstance(value, dict):
-        return any(has_credential_echo(key, secrets) or has_credential_echo(item, secrets)
-                   for key, item in value.items())
-    if isinstance(value, list):
-        return any(has_credential_echo(item, secrets) for item in value)
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str):
+            if any(secret in item for secret in secrets):
+                return True
+        elif isinstance(item, dict):
+            pending.extend(item)
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
     return False
 
 
+def _validate_action_json_depth(value: Any) -> None:
+    pending = [(value, 1)]
+    while pending:
+        item, depth = pending.pop()
+        if isinstance(item, (dict, list)):
+            if depth > MAX_ACTION_JSON_DEPTH:
+                raise ValueError("action JSON exceeds structural inspection limits")
+            children = item.values() if isinstance(item, dict) else item
+            pending.extend((child, depth + 1) for child in children)
+
+
 def _redact_echoes(value: Any, secrets: tuple[str, ...]) -> Any:
-    if isinstance(value, str):
-        return None if has_credential_echo(value, secrets) else value
-    if isinstance(value, dict):
-        return {key: _redact_echoes(item, secrets) for key, item in value.items()
-                if not has_credential_echo(key, secrets)}
-    if isinstance(value, list):
-        return [_redact_echoes(item, secrets) for item in value]
-    return value
+    result: dict[str, Any] = {}
+    pending: list[tuple[Any, Any, Any]] = [(value, result, "value")]
+    while pending:
+        item, parent, key = pending.pop()
+        if isinstance(item, dict):
+            mapping: dict[str, Any] = {}
+            parent[key] = mapping
+            pending.extend((child, mapping, name) for name, child in item.items()
+                           if not has_credential_echo(name, secrets))
+        elif isinstance(item, list):
+            sequence: list[Any] = [None] * len(item)
+            parent[key] = sequence
+            pending.extend((child, sequence, index) for index, child in enumerate(item))
+        else:
+            parent[key] = None if has_credential_echo(item, secrets) else item
+    return result["value"]
 
 
 def _redact_receipt(receipt: dict[str, Any], secrets: tuple[str, ...]) -> dict[str, Any]:
@@ -103,11 +128,22 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             exc.args = ("DeepSeek request failed; credential echo removed",)
         raise
     receipt = _redact_receipt(receipt, secrets)
-    if has_credential_echo(text, secrets) or has_credential_echo(extract_json(text), secrets):
+    try:
+        decoded = extract_json(text)
+        _validate_action_json_depth(decoded)
+    except (RecursionError, ValueError, OverflowError):
+        raise ProviderCallError(
+            "DeepSeek action JSON exceeds structural inspection limits; no action accepted",
+            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+            model=agent.model,
+            receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
+        ) from None
+    if has_credential_echo(text, secrets) or has_credential_echo(decoded, secrets):
         raise ProviderCallError(
             "DeepSeek output contained a credential echo; no action accepted",
             error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
-            model=agent.model, receipt=receipt,
+            model=agent.model,
+            receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
         )
     return text, receipt
 

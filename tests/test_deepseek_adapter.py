@@ -548,3 +548,66 @@ def test_discovery_never_returns_echoed_credentials_as_model_ids(monkeypatch):
             provider_models_live("deep-seek")
         assert caught.value.error_kind == "provider_response_schema_mismatch"
         assert echo not in str(caught.value)
+
+
+@pytest.mark.parametrize("depth", [64, 2_000, 20_000])
+def test_nested_action_json_rejection_retains_usage_and_attempt_receipt(monkeypatch, depth):
+    payload = fixture()
+    payload["choices"][0]["message"]["content"] = (
+        '{"action":1,"padding":' + '[' * depth + '0' + ']' * depth + '}'
+    )
+    calls = wire(monkeypatch, payload)
+    model = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=1))
+    with pytest.raises(ProviderCallError, match="structural inspection limits") as caught:
+        model.act(_request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert caught.value.receipt["usage"]["total_tokens"] == 16
+    assert caught.value.receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1 and len(model.attempt_receipts) == 1
+    receipt = model.last_receipt
+    assert receipt["status_code"] == 200 and receipt["request_id"] == "req-offline"
+    assert receipt["provider_response_id"] == "deepseek-offline-completion"
+    assert receipt["usage"]["input_tokens"] == 12
+    assert receipt["usage"]["output_tokens"] == 4
+    assert receipt["usage"]["total_tokens"] == 16
+    assert receipt["attempt_index"] == 1
+    assert receipt["outcome"] == "provider_response_schema_mismatch"
+
+
+@pytest.mark.parametrize("depth", [0, 1, 16, 63])
+def test_normal_action_json_including_structural_depth_boundary(monkeypatch, depth):
+    payload = fixture()
+    payload["choices"][0]["message"]["content"] = (
+        '{"action":1,"padding":' + '[' * depth + '0' + ']' * depth + '}'
+    )
+    calls = wire(monkeypatch, payload)
+    model = agent()
+    assert model.act(_request()).action == 1 and len(calls) == 1
+    assert model.last_receipt["usage"]["total_tokens"] == 16
+
+
+@pytest.mark.parametrize("leaf,expected", [("safe", False), (SECRET, True)])
+def test_credential_scanner_handles_twenty_thousand_arrays_iteratively(leaf, expected):
+    from eslams.providers.deepseek import has_credential_echo
+
+    value = leaf
+    for _ in range(20_000):
+        value = [value]
+    assert has_credential_echo(value, (SECRET,)) is expected
+
+
+def test_nested_action_rejection_preserves_artifact_usage(tmp_path, monkeypatch):
+    payload = fixture()
+    payload["choices"][0]["message"]["content"] = (
+        '{"action":1,"padding":' + '[' * 20_000 + '0' + ']' * 20_000 + '}'
+    )
+    calls = wire(monkeypatch, payload)
+    result = Runner().run(RunConfig(arena_id="tic-tac-toe", agents={"player_1": agent()},
+                                   max_turns=1, output_dir=tmp_path))
+    assert len(calls) == 1 and result.trace_events == []
+    assert not result.score.match_valid_for_scoring
+    assert "provider_response_schema_mismatch" in result.score.invalid_reason_codes
+    rows = [json.loads(line) for line in
+            (result.artifact_path / "receipts/provider_receipts.jsonl").read_text().splitlines()]
+    assert len(rows) == 1 and not rows[0]["action_applied"]
+    assert rows[0]["usage"]["total_tokens"] == 16

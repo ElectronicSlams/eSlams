@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve DeepSeek usage receipts when action JSON exceeds structural inspection
+  limits or exhausts parser depth; scan and redact credentials iteratively.
 - Reject missing DeepSeek model IDs and unsupported explicit reasoning budgets;
   remove primary/secondary credential echoes across native receipt paths.
 - Add a native DeepSeek Chat Completions adapter with conservative identity, usage,

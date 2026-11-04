@@ -175,7 +175,26 @@ rejects credential echoes masquerading as model IDs.
 
 Redaction happens after retry admission is determined from original evidence:
 removing an echoed accepted-work ID cannot make an ambiguous failure retryable.
-The expanded suite has 110 deterministic DeepSeek cases, retaining full-history,
+The credential-hardening update at `3066bb0` has 110 deterministic DeepSeek cases,
+retaining full-history,
 native-default, explicit-limit and existing safe-retry coverage. Validation of the
 updated head is reported in PR #251; the initial 68-case results above refer to
 commit `844b7c7559c2b86763b37c89c44d2b69ceaaf039`.
+
+
+### Nested action JSON safety
+
+Credential scanning and receipt redaction use iterative traversal. Before action
+text reaches shared action parsing, the adapter checks decoded JSON for at most
+64 nested containers (including the root object). This is a structural safety
+limit for action JSON; it does not cap generated tokens, inference time or supplied
+history. Parser recursion/depth exhaustion and structural-limit violations become
+`provider_response_schema_mismatch` with the already verified HTTP response,
+request/response identity and usage retained in the sanitized attempt receipt.
+They do not permit action repair, retry or action application.
+
+The current provider suite has 120 cases. Regressions include exactly 2,000 and
+20,000 nested arrays in an otherwise valid HTTP 200 completion, a 64/65-container
+boundary, ordinary shallow controls, an iterative 20,000-array credential scan,
+and persisted artifact usage after rejection. Final-head validation is reported
+in draft PR #251; previously documented baseline failures remain disclosed.
