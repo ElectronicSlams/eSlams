@@ -1,0 +1,23 @@
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1712345678,
+  "model": "apodex-1.1",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "reasoning_content": "Private fixture reasoning; never publish.",
+        "content": "{\"action\": 1, \"confidence\": 0.7, \"public_explanation\": \"Selected a legal move.\"}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 42,
+    "completion_tokens": 187,
+    "total_tokens": 229,
+    "prompt_tokens_details": {"cached_tokens": 32}
+  }
+}

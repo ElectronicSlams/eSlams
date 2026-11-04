@@ -402,6 +402,10 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider == "apodex":
+            from eslams.providers.apodex import validate_configuration
+
+            validate_configuration(self.model, self.runtime_config)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +630,10 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "apodex":
+            from eslams.providers.apodex import call
+
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1965,6 +1973,7 @@ def _provider_endpoint(
 def _endpoint_kind(provider: str) -> str:
     return {
         "openai": "openai_responses",
+        "apodex": "apodex_chat_completions",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
@@ -1976,6 +1985,7 @@ def _endpoint_kind(provider: str) -> str:
 def _parser_version(provider: str) -> str:
     return {
         "openai": "openai-responses-raw-v2",
+        "apodex": "apodex-chat-completions-raw-v1",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
@@ -2144,7 +2154,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "apodex"}
+            else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2617,7 +2628,7 @@ def _body_error_status(error: Any) -> int | None:
     )
     codes = {
         "authentication_error": 401, "invalid_api_key": 401, "permission_error": 403,
-        "rate_limit_error": 429, "rate_limit_exceeded": 429,
+        "rate_limit_error": 429, "rate_limit_exceeded": 429, "rate_limited": 429,
         "overloaded_error": 529, "api_error": 500, "server_error": 500, "server": 500,
         "internal_error": 500, "timeout_error": 504, "timeout": 504,
         "not_found_error": 404, "invalid_request_error": 400,
