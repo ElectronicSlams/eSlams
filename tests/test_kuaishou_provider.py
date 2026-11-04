@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -333,3 +334,121 @@ def test_cli_run_dispatches_native_adapter_and_persists_sanitized_receipts(
     assert len(calls) == len(rows) > 0
     assert all(row["provider"] == "kwaipilot" and row["model"] == MODEL for row in rows)
     assert SECRET not in output + receipts
+
+
+@pytest.mark.parametrize("provider", ["kuaishou", "kwaipilot"])
+@pytest.mark.parametrize("model", [None, "", " ", "\t\n"])
+@pytest.mark.parametrize("live", [False, True])
+def test_invalid_ids_fail_preflight_without_discovery_or_transport(
+    monkeypatch, provider, model, live,
+):
+    calls = []
+    monkeypatch.setattr("eslams.provider_preflight.provider_models_live",
+                        lambda *args: calls.append("discovery"))
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *args, **kw: calls.append("post"))
+    with pytest.raises(ValueError, match="explicit nonblank"):
+        provider_preflight(provider, model, "tic-tac-toe", live=live)
+    with pytest.raises(ValueError, match="explicit nonblank"):
+        _provider_agent(provider if model is None else provider + ":" + model)
+    native = agent(provider)
+    native.model = model
+    with pytest.raises(ValueError, match="explicit nonblank"):
+        native.act(_request())
+    assert not calls
+
+
+@pytest.mark.parametrize("provider", ["kuaishou", "kwaipilot"])
+@pytest.mark.parametrize("budget,thinking", [(0, None), (500, None), (None, -1),
+                                          (None, 0), (None, 500)])
+def test_reasoning_budgets_fail_live_preflight_and_reconfigured_agent_before_transport(
+    monkeypatch, provider, budget, thinking,
+):
+    calls = []
+    monkeypatch.setattr("eslams.provider_preflight.provider_models_live",
+                        lambda *args: calls.append("discovery"))
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *args, **kw: calls.append("post"))
+    runtime = ProviderRuntimeConfig(reasoning_budget_tokens=budget, gemini_thinking_budget=thinking)
+    for live in (False, True):
+        with pytest.raises(ValueError, match="native-default reasoning"):
+            provider_preflight(provider, MODEL, "tic-tac-toe", live=live, runtime_config=runtime)
+    native = agent(provider)
+    native.runtime_config = runtime
+    with pytest.raises(ValueError, match="native-default reasoning"):
+        native.act(_request())
+    assert not calls
+
+
+@pytest.mark.parametrize("secondary_env", ["STREAMLAKE_API_KEY", "WQ_API_KEY", "OPENAI_API_KEY",
+                                         "SECONDARY_API_KEY", "SECONDARY_KEY",
+                                         "SECONDARY_AUTH_TOKEN"])
+@pytest.mark.parametrize("mode", ["success", "error", "malformed", "partial", "action",
+                                "escaped-action", "encoded-action"])
+def test_active_and_secondary_credentials_never_enter_receipts_or_actions(
+    monkeypatch, secondary_env, mode,
+):
+    secondary = "OpaqueSecondary/WithoutPrefix+17"
+    monkeypatch.setenv("CUSTOM_ACTIVE_API_KEY", SECRET)
+    monkeypatch.setenv(secondary_env, secondary)
+    calls = []
+
+    def post(url, **kwargs):
+        calls.append(1)
+        assert kwargs["headers"]["Authorization"] == "Bearer " + SECRET
+        assert secondary not in json.dumps({"headers": kwargs["headers"], "json": kwargs["json"]})
+        headers = {"x-request-id": SECRET, "cf-aig-request-id": secondary}
+        if mode == "partial":
+            exc = httpx.ReadTimeout(SECRET + secondary)
+            exc._eslams_response_observation = ResponseObservation(200, tuple(headers.items()))
+            raise exc
+        if mode == "malformed":
+            return httpx.Response(200, content=('{"id":"' + secondary).encode(), headers=headers)
+        if mode == "error":
+            return httpx.Response(429, json={"id": SECRET, "ResponseMeta": {
+                "RequestId": secondary, "ErrorCode": "TooManyRequests",
+                "ErrorMessage": SECRET + secondary}}, headers=headers)
+        data = wire()
+        data.update(id=secondary, model=SECRET)
+        if "action" in mode:
+            explanation = SECRET + " " + secondary
+            if mode == "encoded-action":
+                explanation = quote(explanation, safe="").replace("%2F", "%2f")
+            text = json.dumps({"action": 0, "public_explanation": explanation})
+            if mode == "escaped-action":
+                text = "```json\n" + text.replace(secondary, "".join(
+                    f"\\u{ord(char):04x}" for char in secondary
+                )).replace(SECRET, "".join(f"\\u{ord(char):04x}" for char in SECRET)) + "\n```"
+            data["choices"][0]["message"]["content"] = text
+        return httpx.Response(200, json=data, headers=headers)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = ModelProviderAgent("kwaipilot", MODEL, "CUSTOM_ACTIVE_API_KEY",
+                                runtime_config=ProviderRuntimeConfig(max_retries=3))
+    if mode == "success":
+        response = native.act(_request())
+        public = json.dumps(response.to_dict())
+        assert native.last_receipt["locked_model_id"] is None
+        assert native.last_receipt["model_identity_source"] is None
+    else:
+        with pytest.raises(ProviderCallError) as failure:
+            native.act(_request())
+        public = str(failure.value) + json.dumps(failure.value.receipt)
+    public += json.dumps(native.attempt_receipts)
+    assert SECRET not in public and secondary not in public
+    assert len(calls) == 1 and len(native.attempt_receipts) == 1
+    assert native.last_receipt["request_id"] is None
+    assert native.last_receipt["gateway_request_id"] is None
+
+
+def test_discovery_has_no_response_or_credential_echo_path(monkeypatch):
+    monkeypatch.setenv("WQ_API_KEY", "OpaqueSecondary/WithoutPrefix+17")
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *args, **kw: pytest.fail("No StreamLake discovery contract exists"))
+    from eslams.provider_preflight import provider_models_result
+
+    for provider in ("kuaishou", "kwaipilot"):
+        assert provider_models_live(provider) is None
+        result = provider_models_result(provider)
+        assert not result["ok"]
+        assert result["error"]["error_class"] == "provider_discovery_unavailable"
+        assert SECRET not in json.dumps(result)
+        assert "OpaqueSecondary/WithoutPrefix+17" not in json.dumps(result)

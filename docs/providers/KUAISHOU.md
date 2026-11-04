@@ -107,6 +107,14 @@ discarded. Known credential echoes are removed from opaque identifiers and
 headers; credential-bearing action text (including escaped JSON) is rejected.
 Secrets, prompts, and raw private responses are not copied into receipts.
 
+Redaction snapshots the active credential and other configured credential
+variables ending in `_KEY`, `_TOKEN`, `_SECRET`, `_PASSWORD`, `_CREDENTIAL`, or
+`_CREDENTIALS`, plus the standard Bedrock bearer variable. This covers a custom
+active key alongside `STREAMLAKE_API_KEY`, `WQ_API_KEY`, and secondary provider
+keys. These values are used only to suppress echoes, never as extra request
+credentials. Plain, JSON-escaped, and URL-encoded credential echoes are checked;
+credential-bearing IDs become unknown rather than a replacement identity.
+
 Retries default to zero. No published non-billable rejection/replay guarantee
 was established, so this adapter never automatically replays a failed physical
 request, even when a generic retry maximum is set. `Retry-After` is diagnostic;
@@ -147,3 +155,14 @@ Cloud validation on Python 3.12.14, based on
 No paid inference, real provider credentials, merge, release, deployment,
 browser smoke, dependency audit, or isolated distribution-consumer run was
 performed. A passing fixture test does not establish live account availability.
+
+An independent follow-up audit confirmed the original redactor missed secondary
+configured keys and corrected that boundary. Follow-up checks: 125 adapter and
+environment-reference tests passed, plus 147 existing wire, completion,
+invocation-receipt, safe-retry, credential/wait, and unbounded-policy tests.
+Ruff and mypy (104 source files) passed again. New cases exercise both provider
+namespaces, missing/blank IDs, unsupported reasoning budgets in configuration
+and live preflight and reconfigured agents, and active/secondary credential
+echoes across success, errors, malformed/partial responses, discovery and action
+text. The full suite was not repeated; its two inherited failures above remain
+disclosed. Hosted CI, paid inference, merge and release remain unperformed.

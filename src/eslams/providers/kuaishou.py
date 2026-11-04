@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 import os
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote, quote_plus
+from urllib.parse import unquote, unquote_plus
 
 import httpx
 
@@ -85,16 +85,28 @@ def validate_configuration(
         raise ValueError("StreamLake adapter requires a direct provider route without fallback")
 
 
-def _redact(value: Any, api_key: str) -> Any:
+def _configured_credentials(api_key: str) -> tuple[str, ...]:
+    """Snapshot credentials for redaction only; secondary keys are never sent."""
+    values = {api_key}
+    for name, value in os.environ.items():
+        sensitive_name = name.endswith((
+            "_KEY", "_TOKEN", "_SECRET", "_PASSWORD", "_CREDENTIAL", "_CREDENTIALS",
+        )) or name == "AWS_BEARER_TOKEN_BEDROCK"
+        if sensitive_name and value.strip():
+            values.add(value.strip())
+    return tuple(values)
+
+
+def _redact(value: Any, credentials: tuple[str, ...]) -> Any:
     """Drop credential-bearing observations, including opaque IDs without key-like prefixes."""
-    secrets = (api_key, quote(api_key, safe=""), quote_plus(api_key, safe=""))
     if isinstance(value, str):
-        return None if any(secret in value for secret in secrets) else value
+        forms = (value, unquote(value), unquote_plus(value))
+        return None if any(secret in form for secret in credentials for form in forms) else value
     if isinstance(value, dict):
-        return {key: _redact(item, api_key) for key, item in value.items()
-                if _redact(str(key), api_key) is not None}
+        return {key: _redact(item, credentials) for key, item in value.items()
+                if _redact(str(key), credentials) is not None}
     if isinstance(value, list):
-        return [_redact(item, api_key) for item in value]
+        return [_redact(item, credentials) for item in value]
     return value
 
 
@@ -135,18 +147,18 @@ def normalize_usage(usage: Any) -> dict[str, Any]:
     return result
 
 
-def _credential_echo(text: str, api_key: str) -> bool:
-    if _redact(text, api_key) is None:
+def _credential_echo(text: str, credentials: tuple[str, ...]) -> bool:
+    if _redact(text, credentials) is None:
         return True
     try:
         decoded = extract_json(text)
     except (ValueError, RecursionError):
         return False
-    return bool(_redact(decoded, api_key) != decoded)
+    return bool(_redact(decoded, credentials) != decoded)
 
 
-def _safe_receipt(receipt: dict[str, Any], api_key: str) -> dict[str, Any]:
-    safe: dict[str, Any] = _redact(receipt, api_key)
+def _safe_receipt(receipt: dict[str, Any], credentials: tuple[str, ...]) -> dict[str, Any]:
+    safe: dict[str, Any] = _redact(receipt, credentials)
     if safe.get("locked_model_id") is None:
         safe["model_identity_source"] = None
     return safe
@@ -166,6 +178,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     )
 
     validate_configuration(agent.model, agent.runtime_config, agent.temperature)
+    credentials = _configured_credentials(api_key)
     url = endpoint()
     payload: dict[str, Any] = {
         "model": agent.model,
@@ -239,14 +252,14 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
               and isinstance(message, dict) and message.get("role") == "assistant"
               and not message.get("tool_calls") and not message.get("function_call")):
             text = message.get("content")
-            if isinstance(text, str) and text.strip() and not _credential_echo(text, api_key):
+            if isinstance(text, str) and text.strip() and not _credential_echo(text, credentials):
                 receipt.update(provider_endpoint=url, capability_sources=list(SOURCES))
-                return text, _safe_receipt(receipt, api_key)
+                return text, _safe_receipt(receipt, credentials)
         raise ProviderCallError("StreamLake response did not contain a complete text answer",
                                 error_kind=kind, receipt=receipt)
     except ProviderCallError as exc:
         observed = exc.receipt if exc.receipt is not None else receipt
-        safe = _safe_receipt(observed, api_key) if observed is not None else None
+        safe = _safe_receipt(observed, credentials) if observed is not None else None
         if safe is not None:
             safe.update(
                 provider_endpoint=url, capability_sources=list(SOURCES), outcome=exc.error_kind,
