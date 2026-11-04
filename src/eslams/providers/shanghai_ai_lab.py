@@ -7,6 +7,7 @@ Reasoning accounting, prices and unreported model identity remain unknown.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -53,25 +54,40 @@ def validate_configuration(
         raise ValueError("Shanghai AI Lab adapter does not support third-party routing controls")
 
 
-def _scrub(value: Any, secret: str) -> Any:
+def _credential_values(api_key: str, environment_name: str) -> tuple[str, ...]:
+    # Snapshot before transport: another configured key can be echoed even when
+    # it was not selected for this request. Never send these values to the model.
+    names = {"KEY", "APIKEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "CREDENTIALS",
+             "AUTHORIZATION"}
+    values = {api_key}
+    for name, value in os.environ.items():
+        if value.strip() and (
+            name in {API_KEY_ENV, environment_name} or names.intersection(name.upper().split("_"))
+        ):
+            values.add(value.strip())
+    return tuple(values)
+
+
+def _scrub(value: Any, secrets: tuple[str, ...]) -> Any:
     """Exact credential custody, including plain echoes that regexes cannot identify."""
     if isinstance(value, str):
-        return None if secret in value else value
+        return None if _contains_secret(value, secrets) else value
     if isinstance(value, dict):
-        return {_scrub(key, secret): _scrub(item, secret) for key, item in value.items()}
+        return {key: _scrub(item, secrets) for key, item in value.items()
+                if not _contains_secret(key, secrets)}
     if isinstance(value, list):
-        return [_scrub(item, secret) for item in value]
+        return [_scrub(item, secrets) for item in value]
     return value
 
 
-def _contains_secret(value: Any, secret: str) -> bool:
+def _contains_secret(value: Any, secrets: tuple[str, ...]) -> bool:
     if isinstance(value, str):
-        return secret in value
+        return any(secret in value for secret in secrets)
     if isinstance(value, dict):
-        return any(_contains_secret(key, secret) or _contains_secret(item, secret)
+        return any(_contains_secret(key, secrets) or _contains_secret(item, secrets)
                    for key, item in value.items())
     if isinstance(value, list):
-        return any(_contains_secret(item, secret) for item in value)
+        return any(_contains_secret(item, secrets) for item in value)
     return False
 
 
@@ -80,6 +96,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     from eslams import agents
 
     runtime = agent.runtime_config
+    secrets = _credential_values(api_key, agent.api_key_env)
     try:
         validate_configuration(
             agent.model, runtime, agent.temperature, agent._effective_max_output_tokens(),
@@ -119,7 +136,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             receipt["usage"].update(total_tokens=None, total_tokens_source="unavailable",
                                     reasoning_included_in_output=None)
         receipt.update(usage_complete=False, reasoning_included_in_output=None)
-        receipt = _scrub(receipt, api_key)
+        receipt = _scrub(receipt, secrets)
 
         def reject(kind: str, message: str) -> None:
             raise agents.ProviderCallError(
@@ -127,7 +144,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
                 status_code=response.status_code, receipt={**receipt, "outcome": kind},
             )
 
-        if _contains_secret(data, api_key):
+        if _contains_secret(data, secrets):
             # Reject before action parsing, so explanation/raw_action_text/action
             # cannot publish even an unlabelled or JSON-escaped credential echo.
             reject("provider_response_schema_mismatch", "provider response echoed a credential")
@@ -165,7 +182,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     except agents.ProviderCallError as exc:
         # Shared transport may have already observed partial headers/error bodies.
         # Redact the exact credential before the base agent publishes any receipt.
-        failure_receipt = _scrub(exc.receipt, api_key) if exc.receipt is not None else None
+        failure_receipt = _scrub(exc.receipt, secrets) if exc.receipt is not None else None
         if failure_receipt is not None:
             failure_receipt["usage_complete"] = False
             if failure_receipt.get("usage"):

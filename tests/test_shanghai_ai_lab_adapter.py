@@ -24,6 +24,7 @@ from eslams.provider_preflight import provider_models_live, provider_preflight
 from eslams.providers.shanghai_ai_lab import CHAT_COMPLETIONS_ENDPOINT
 
 SECRET = "atr_plain_credential_with_no_generic_secret_pattern"
+SECONDARY = "plain_secondary_credential_without_a_label"
 
 
 def wire():
@@ -346,3 +347,145 @@ def test_cli_run_missing_model_fails_without_fallback(monkeypatch, capsys, tmp_p
     monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("network"))
     assert main(["run", "--agent", "shanghai-ai-lab", "--output-dir", str(tmp_path)]) == 1
     assert "explicit nonblank model ID" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("environment", ["ATRIA_API_KEY_SECONDARY", "OPENAI_API_KEY"])
+@pytest.mark.parametrize("position", ["id", "model", "action", "explanation", "key"])
+def test_secondary_credential_echoes_fail_before_action_publication(
+    monkeypatch, environment, position,
+):
+    monkeypatch.setenv(environment, SECONDARY)
+    data = wire()
+    if position in {"id", "model"}:
+        data[position] = SECONDARY
+    elif position == "key":
+        data[SECONDARY] = "unused"
+    else:
+        data["choices"][0]["message"]["content"] = json.dumps({
+            "action": SECONDARY if position == "action" else 1,
+            "public_explanation": SECONDARY if position == "explanation" else "legal",
+        })
+    encoded = json.dumps(data).replace(
+        SECONDARY, "".join(f"\\u{ord(char):04x}" for char in SECONDARY),
+    )
+    calls = install(monkeypatch, httpx.Response(200, text=encoded))
+    target = agent()
+    with pytest.raises(ProviderCallError) as caught:
+        target.act(_request())
+    public = (str(caught.value) + json.dumps(caught.value.receipt)
+              + json.dumps(target.attempt_receipts))
+    assert SECRET not in public and SECONDARY not in public
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("body_kind", ["success", "error", "malformed", "partial"])
+@pytest.mark.parametrize("swap", [False, True])
+def test_both_credentials_are_scrubbed_from_all_observed_receipt_ids(monkeypatch, body_kind, swap):
+    monkeypatch.setenv("ATRIA_API_KEY_SECONDARY", SECONDARY)
+    first, second = (SECRET, SECONDARY) if swap else (SECONDARY, SECRET)
+    headers = {"x-request-id": f"request-{first}", "x-gateway-request-id": f"gateway-{second}"}
+    if body_kind == "partial":
+        response = httpx.ReadError(SECONDARY)
+        response._eslams_response_observation = ResponseObservation(200, tuple(headers.items()))
+    elif body_kind == "malformed":
+        response = httpx.Response(200, text='{"id": "' + SECONDARY, headers=headers)
+    elif body_kind == "error":
+        response = httpx.Response(503, json={"id": SECONDARY, "error": {
+            "message": f"private {SECRET} {SECONDARY}",
+        }}, headers=headers)
+    else:
+        response = httpx.Response(200, json=wire(), headers=headers)
+    calls = install(monkeypatch, response)
+    target = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    if body_kind == "success":
+        result = target.act(_request())
+        public = json.dumps(result.to_dict())
+    else:
+        with pytest.raises(ProviderCallError) as caught:
+            target.act(_request())
+        public = str(caught.value) + json.dumps(caught.value.receipt)
+    public += json.dumps(target.attempt_receipts)
+    assert SECRET not in public and SECONDARY not in public
+    assert target.last_receipt["request_id"] is None
+    assert target.last_receipt["gateway_request_id"] is None
+    assert target.last_receipt.get("provider_response_id") is None
+    assert len(calls) == 1
+
+
+def test_custom_active_key_also_protects_default_key_and_snapshots_before_transport(monkeypatch):
+    monkeypatch.setenv("ATRIA_API_KEY", SECONDARY)
+    monkeypatch.setenv("CUSTOM_ATRIA_AUTH", SECRET)
+
+    def post(*args, **kwargs):
+        assert kwargs["headers"]["Authorization"] == f"Bearer {SECRET}"
+        monkeypatch.delenv("ATRIA_API_KEY")
+        return httpx.Response(200, json=wire(), headers={"x-request-id": SECONDARY})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    target = ModelProviderAgent(provider="shanghai-ai-lab", model="Atria-Dawn",
+                                api_key_env="CUSTOM_ATRIA_AUTH")
+    result = target.act(_request())
+    assert result.metadata["provider_receipt"]["request_id"] is None
+    assert SECRET not in json.dumps(result.to_dict())
+    assert SECONDARY not in json.dumps(result.to_dict())
+
+
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("provider", ["shanghai-ai-lab", "shanghai_ai_lab", " Shanghai_AI_Lab "])
+@pytest.mark.parametrize("model", [None, "", " \t"])
+def test_normalized_preflight_spelling_cannot_bypass_model_validation(
+    monkeypatch, live, provider, model,
+):
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("network"))
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("discovery"))
+    with pytest.raises(ValueError, match="explicit nonblank"):
+        provider_preflight(provider, model, "tic-tac-toe", live=live)
+
+
+@pytest.mark.parametrize("setting", ["reasoning_budget_tokens", "gemini_thinking_budget"])
+@pytest.mark.parametrize("value", [0, 1000])
+def test_explicit_budgets_fail_in_normalized_preflight_and_at_transport_boundary(
+    monkeypatch, setting, value,
+):
+    monkeypatch.setenv("ATRIA_API_KEY", SECRET)
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("network"))
+    runtime = ProviderRuntimeConfig(**{setting: value})
+    with pytest.raises(ValueError, match="reasoning controls are not verified"):
+        provider_preflight("shanghai_ai_lab", "Atria-Dawn", "tic-tac-toe",
+                           runtime_config=runtime)
+    target = agent()
+    target.runtime_config = runtime
+    with pytest.raises(ProviderCallError) as caught:
+        target.act(_request())
+    assert caught.value.error_kind == "provider_request_rejected"
+
+
+@pytest.mark.parametrize("mode", ["success", "error"])
+def test_secondary_echoes_do_not_enter_live_preflight_or_discovery(monkeypatch, mode):
+    monkeypatch.setenv("ATRIA_API_KEY_SECONDARY", SECONDARY)
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("undocumented discovery"))
+    assert provider_models_live("shanghai-ai-lab") is None
+    response = (httpx.Response(200, json=wire(), headers={"x-request-id": SECONDARY})
+                if mode == "success" else httpx.Response(503, json={
+                    "id": SECONDARY, "error": {"message": f"private {SECONDARY} {SECRET}"},
+                }, headers={"x-request-id": SECONDARY}))
+    calls = install(monkeypatch, response)
+    result = provider_preflight("shanghai-ai-lab", "Atria-Dawn", "tic-tac-toe", live=True)
+    assert SECRET not in json.dumps(result) and SECONDARY not in json.dumps(result)
+    assert result["checks"]["account_model_visible"] is None
+    assert result["ok"] is (mode == "success")
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("model", [None, "", " \t"])
+def test_model_revalidated_at_transport_boundary(monkeypatch, model):
+    monkeypatch.setenv("ATRIA_API_KEY", SECRET)
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("network"))
+    target = agent()
+    target.model = model
+    with pytest.raises(ProviderCallError) as caught:
+        target.act(_request())
+    assert caught.value.error_kind == "provider_request_rejected"

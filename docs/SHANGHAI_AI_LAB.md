@@ -91,11 +91,19 @@ establishes safe replay: this adapter never marks a failure retry-permitted,
 including when the caller raises the default-zero retry maximum. Ambiguous
 timeouts, partial responses and malformed bodies are never replayed.
 
-Exact active-credential echoes in parsed response strings or keys cause rejection
-before action parsing. Success headers and every failure receipt, including
-partial header observations, receive exact credential scrubbing in addition to
-Core's standard projection/redaction. Echoed identifier fields become null.
+The active credential and configured credential-named environment values are
+snapshotted before transport, including the default key when a custom key is
+selected. Exact echoes of these primary or secondary credentials in parsed
+response strings or keys cause rejection before action parsing. Success headers
+and every failure receipt, including partial header observations, receive exact
+credential scrubbing in addition to Core's standard projection/redaction.
+Echoed identifier fields become null. The snapshot is never sent to the model.
 Raw error bodies and provider prose do not become public diagnostics.
+
+The same explicit model/reasoning validation applies to provider spellings that
+the registry normalizes (including underscores and surrounding whitespace).
+Configuration is revalidated before transport if a caller changes an agent after
+construction. The adapter has no model-discovery request that can expose keys.
 
 ## Fixture provenance and validation
 
@@ -118,7 +126,7 @@ No existing tests, historical fixtures or expected arena fingerprints are change
 to make the baseline green. No live inference, account creation, credentials,
 deployment, merge or release was used to validate this adapter.
 
-Cloud checks also cover 71 adapter cases, 133 combined provider/CLI cases,
+Cloud checks also cover 117 adapter cases, 179 combined provider/CLI cases,
 Ruff, mypy, both TypeScript packages, wheel/sdist build and Twine validation,
 two identical schema exports, and all 50 arena fingerprints. During a full-suite
 rerun, the existing slow-body deadline case
@@ -127,3 +135,9 @@ also failed intermittently. It passed in isolation; the complete deadline file
 on both an untouched baseline worktree and the adapter branch had five passes
 and only the already inherited runtime-deadline failure. This does not establish
 timing stability for that existing test.
+
+The follow-up full cloud suite passed 1,375 tests with the same two inherited
+failures listed above. The expanded credential/validation regressions cover
+secondary key echoes in body IDs, headers, malformed/partial responses, error
+diagnostics and action fields, custom active-key selection, and the lack of an
+undocumented discovery request. No network inference is needed for these tests.

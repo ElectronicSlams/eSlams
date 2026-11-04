@@ -6,6 +6,8 @@
   exact `Atria-Dawn` model ID and using `ATRIA_API_KEY`. Preserve full history,
   reject unverified controls, and keep missing identity/accounting unknown.
   Include deterministic raw-wire, CLI/preflight and credential-custody tests.
+  Protect secondary configured credentials and validate normalized preflight
+  spellings and configuration changed after construction before transport.
   See `docs/SHANGHAI_AI_LAB.md`; the package version is unchanged.
 
 ## v0.7.0 - 2026-11-04

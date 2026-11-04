@@ -56,7 +56,7 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
-    if provider == "shanghai-ai-lab":
+    if provider.strip().replace("_", "-") == "shanghai-ai-lab":
         validate_shanghai_ai_lab(model, runtime_config, max_output_tokens=max_output_tokens)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
