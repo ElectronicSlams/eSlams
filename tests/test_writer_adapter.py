@@ -270,7 +270,9 @@ def test_models_discovery_and_mock_live_preflight(monkeypatch, wire, alias):
 
 def test_cli_configuration_is_offline_and_default_is_documented(monkeypatch, capsys):
     monkeypatch.delenv(API_KEY_ENV)
-    assert _provider_agent("writer").model == "palmyra-x6"
+    with pytest.raises(ValueError, match="explicit nonempty model"):
+        _provider_agent("writer")
+    assert _provider_agent("writer:palmyra-x6").model == "palmyra-x6"
     assert main(["providers", "preflight", "--provider", "writer-ai", "--model", "palmyra-x5",
                  "--arena", "connect-four"]) == 0
     assert json.loads(capsys.readouterr().out)["checks"]["adapter_available"]
@@ -395,3 +397,197 @@ def test_private_or_undocumented_usage_fields_do_not_fabricate_accounting(monkey
     native.act(request())
     assert native.last_receipt["usage"] == {}
     assert native.last_receipt["estimated_cost"]["status"] == "cost_unavailable"
+
+
+@pytest.mark.parametrize("model", [None, "", " ", "\n\t"])
+@pytest.mark.parametrize("alias", ["writer", "writer-ai", "writerai"])
+def test_model_must_be_explicit_and_nonblank_at_every_entry(model, alias):
+    with pytest.raises(ValueError, match="explicit nonempty model"):
+        ModelProviderAgent(alias, model, API_KEY_ENV)
+    with pytest.raises(ValueError, match="explicit nonempty model"):
+        provider_preflight(alias, model, "connect-four", live=True)
+    if model is not None:
+        with pytest.raises(ValueError, match="explicit nonempty model"):
+            _provider_agent(f"{alias}:{model}")
+
+
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("alias", ["writer", "writer-ai", "writerai"])
+@pytest.mark.parametrize("runtime", [ProviderRuntimeConfig(reasoning_effort="high"),
+    ProviderRuntimeConfig(reasoning_budget_tokens=0),
+    ProviderRuntimeConfig(reasoning_budget_tokens=4000),
+    ProviderRuntimeConfig(gemini_thinking_budget=100),
+    ProviderRuntimeConfig(reasoning="enabled"), ProviderRuntimeConfig(reasoning="disabled")])
+def test_preflight_rejects_unsupported_controls_before_discovery(alias, live, runtime):
+    result = provider_preflight(alias, "palmyra-x5", "connect-four",
+                                live=live, runtime_config=runtime)
+    assert not result["ok"] and not result["readiness"]["configuration_ready"]
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    assert result["readiness"]["inference"] == "not_attempted"
+
+
+@pytest.fixture
+def configured_credentials(monkeypatch):
+    values = ("primaryPlainOpaque-123", "secondaryPlainOpaque-456", "customPlainOpaque-789")
+    monkeypatch.setenv(API_KEY_ENV, values[0])
+    monkeypatch.setenv("WRITER_API_KEY_SECONDARY", values[1])
+    monkeypatch.setenv("CUSTOM_INFERENCE_CREDENTIAL", values[2])
+    return values
+
+
+@pytest.mark.parametrize("credential_index", [0, 1, 2])
+def test_echoed_credentials_are_removed_from_ids_and_public_response(
+    monkeypatch, wire, configured_credentials, credential_index,
+):
+    secret = configured_credentials[credential_index]
+    wire.update(id=f"response-{secret}", model=f"model-{secret}")
+    respond(monkeypatch, wire, headers={"x-request-id": f"request-{secret}",
+                                       "cf-aig-request-id": f"gateway-{secret}"})
+    native = agent()
+    result = native.act(request())
+    receipt = native.last_receipt
+    for key in ("request_id", "gateway_request_id", "provider_response_id", "locked_model_id",
+                "model_identity_source"):
+        assert receipt[key] is None
+    serialized = json.dumps(result.to_dict()) + json.dumps(native.attempt_receipts)
+    assert all(value not in serialized for value in configured_credentials)
+
+
+@pytest.mark.parametrize("status", [200, 400, 401, 403, 404, 429, 503])
+@pytest.mark.parametrize("malformed", [False, True])
+def test_error_and_malformed_receipts_scrub_all_configured_credentials(
+    monkeypatch, configured_credentials, status, malformed,
+):
+    import traceback
+    first, second, custom = configured_credentials
+    body = ({"tpe":"BadRequest", "errors":[{"description": f"{first} {second} {custom}",
+            "key": "error", "extras": {}}], "extras": {}, "id": f"response-{second}"}
+            if not malformed else f'{{"private": "{custom}"'.encode())
+    respond(monkeypatch, body, status=status, headers={"x-request-id": f"request-{first}",
+                                                      "cf-aig-request-id": f"gateway-{custom}"})
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=3))
+    with pytest.raises(ProviderCallError) as exc:
+        native.act(request())
+    public = (str(exc.value) + repr(exc.value.model) + traceback.format_exception_only(exc.value)[0]
+              + json.dumps(native.attempt_receipts) + json.dumps(exc.value.receipt))
+    assert all(value not in public for value in configured_credentials)
+    assert len(native.attempt_receipts) == 1
+
+
+@pytest.mark.parametrize("encoded", [False, True])
+@pytest.mark.parametrize("credential_index", [0, 1, 2])
+def test_credential_in_action_text_is_rejected_before_parsing_or_publication(
+    monkeypatch, wire, configured_credentials, encoded, credential_index,
+):
+    secret = configured_credentials[credential_index]
+    text = json.dumps({"action": 0, "public_explanation": f"echo {secret}"})
+    if encoded:
+        text = text.replace(secret, "".join(f"\\u{ord(char):04x}" for char in secret))
+        assert secret not in text
+    wire["choices"][0]["message"]["content"] = text
+    respond(monkeypatch, wire)
+    native = agent()
+    with pytest.raises(ProviderCallError) as exc:
+        native.act(request())
+    assert exc.value.error_kind == "provider_response_schema_mismatch"
+    public = str(exc.value) + json.dumps(native.attempt_receipts)
+    assert all(value not in public for value in configured_credentials)
+    assert native.last_receipt["usage"]["total_tokens"] == 340
+
+
+@pytest.mark.parametrize("credential_index", [0, 1, 2])
+def test_discovery_rejects_credential_ids_without_exposing_partial_results(
+    monkeypatch, configured_credentials, credential_index,
+):
+    from eslams.provider_preflight import provider_models_result
+    secret = configured_credentials[credential_index]
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, **k:
+        httpx.Response(200, json={"models": [{"id":"safe-model"}, {"id": f"echo-{secret}"}]}))
+    result = provider_models_result("writer-ai")
+    assert not result["ok"] and result["models"] == []
+    assert all(value not in json.dumps(result) for value in configured_credentials)
+
+
+@pytest.mark.parametrize("case", ["malformed", "http-error", "timeout", "transport"])
+def test_discovery_failures_do_not_echo_primary_or_secondary_credentials(
+    monkeypatch, configured_credentials, case,
+):
+    from eslams.provider_preflight import provider_models_result
+    def get(*args, **kwargs):
+        private = " ".join(configured_credentials)
+        if case == "timeout":
+            raise httpx.ReadTimeout(private)
+        if case == "transport":
+            raise httpx.ReadError(private)
+        return httpx.Response(503 if case == "http-error" else 200, content=private.encode())
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", get)
+    result = provider_models_result("writer")
+    assert not result["ok"]
+    assert all(value not in json.dumps(result) for value in configured_credentials)
+
+
+@pytest.mark.parametrize("kind", ["timeout", "transport"])
+def test_partial_wire_failure_scrubs_ids_and_exception_chain(
+    monkeypatch, configured_credentials, kind,
+):
+    import traceback
+    first, second, custom = configured_credentials
+
+    class PartialStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield f'{{"private":"{custom}'.encode()
+            if kind == "timeout":
+                raise httpx.ReadTimeout(f"partial {first} {second} {custom}")
+            raise httpx.ReadError(f"partial {first} {second} {custom}")
+
+    def handler(req):
+        return httpx.Response(200, stream=PartialStream(), headers={
+            "x-request-id": f"request-{first}", "cf-aig-request-id": f"gateway-{second}"})
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr("eslams.http_io.httpx.AsyncClient", lambda **kwargs:
+        original(transport=httpx.MockTransport(handler), **kwargs))
+    monkeypatch.setattr("eslams.agents.bounded_post", bounded_post)
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=3))
+    with pytest.raises(ProviderCallError) as exc:
+        native.act(request())
+    public = "".join(traceback.format_exception(exc.value)) + json.dumps(native.attempt_receipts)
+    assert all(value not in public for value in configured_credentials)
+    assert len(native.attempt_receipts) == 1
+
+
+def test_custom_primary_key_and_standard_secondary_are_both_scrubbed(
+    monkeypatch, wire, configured_credentials,
+):
+    first, second, custom = configured_credentials
+    wire.update(id=f"response-{first}", model=f"model-{second}")
+    respond(monkeypatch, wire, headers={"x-request-id": f"request-{custom}"})
+    native = ModelProviderAgent("writer", "palmyra-x5", "CUSTOM_INFERENCE_CREDENTIAL")
+    result = native.act(request())
+    assert all(value not in json.dumps(result.to_dict()) for value in configured_credentials)
+
+
+@pytest.mark.parametrize("case", ["action", "http-error", "malformed"])
+def test_credentials_never_enter_persisted_artifacts(
+    monkeypatch, wire, configured_credentials, tmp_path, case,
+):
+    first, second, custom = configured_credentials
+    if case == "action":
+        wire["choices"][0]["message"]["content"] = json.dumps(
+            {"action": 0, "public_explanation": f"{first} {second} {custom}"})
+        body = wire
+    elif case == "http-error":
+        body = {"tpe": "BadRequest", "errors": [{"description": f"{first} {second} {custom}",
+                "key": "error", "extras": {}}], "extras": {}, "id": f"response-{second}"}
+    else:
+        body = f'{{"private":"{custom}"'.encode()
+    respond(monkeypatch, body, status=400 if case == "http-error" else 200,
+            headers={"x-request-id": f"request-{first}", "cf-aig-request-id": f"gateway-{second}"})
+    result = Runner().run(RunConfig("connect-four", agent_1=agent(), output_dir=tmp_path))
+    assert not result.score.match_valid_for_scoring
+    assert all(event.action is None for event in result.replay_events)
+    assert ArtifactValidator().validate(result.expanded_path) == []
+    for path in result.expanded_path.rglob("*"):
+        if path.is_file():
+            public = path.read_bytes()
+            assert all(value.encode() not in public for value in configured_credentials)

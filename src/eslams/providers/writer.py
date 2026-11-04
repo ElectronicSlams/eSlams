@@ -2,16 +2,136 @@
 
 from __future__ import annotations
 
+import os
+import re
 from typing import TYPE_CHECKING, Any, NoReturn
+
+import httpx
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
+    from eslams.contracts.provider import ProviderRuntimeConfig
 
 PROVIDER_ID = "writer"
 API_KEY_ENV = "WRITER_API_KEY"
 CHAT_ENDPOINT = "https://api.writer.com/v1/chat"
 MODELS_ENDPOINT = "https://api.writer.com/v1/models"
 ALIASES = {"writer", "writer-ai", "writerai"}
+
+
+def validate_model(model: Any) -> str:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("Writer requires an explicit nonempty model ID")
+    return model
+
+
+def configuration_error(runtime: ProviderRuntimeConfig | None) -> str | None:
+    if runtime and (runtime.reasoning != "auto" or any(value is not None for value in (
+        runtime.reasoning_effort, runtime.reasoning_budget_tokens, runtime.gemini_thinking_budget,
+    ))):
+        return "Writer Chat API has no documented reasoning control; use native auto defaults"
+    return None
+
+
+def _credential_values(
+    environment: str = API_KEY_ENV, primary: str | None = None,
+) -> tuple[str, ...]:
+    # Include a custom primary environment and other configured credentials:
+    # secondary/gateway keys can be echoed too. Never emit or send this snapshot.
+    values = {primary} if primary else set()
+    for name, value in os.environ.items():
+        if (name == environment or re.search(
+            r"API_?KEY|(?:ACCESS|BEARER|AUTH|SESSION|REFRESH)_TOKEN|SECRET|PASSWORD|CREDENTIAL",
+            name.upper(),
+        ) or name.upper().endswith(("_TOKEN", "_KEY"))) and value.strip():
+            values.update((value, value.strip()))
+    return tuple(sorted(values, key=len, reverse=True))
+
+
+def _contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
+    if isinstance(value, str):
+        return any(secret in value for secret in credentials)
+    if isinstance(value, dict):
+        return any(_contains_credential(key, credentials) or _contains_credential(item, credentials)
+                   for key, item in value.items())
+    if isinstance(value, (list, tuple)):
+        return any(_contains_credential(item, credentials) for item in value)
+    return False
+
+
+def _public_value(value: Any, credentials: tuple[str, ...]) -> Any:
+    if isinstance(value, str):
+        for secret in credentials:
+            value = value.replace(secret, "[REDACTED]")
+        return value
+    if isinstance(value, dict):
+        result: dict[str, Any] = {}
+        for key, item in value.items():
+            if _contains_credential(key, credentials):
+                continue
+            if key in {"request_id", "gateway_request_id", "provider_response_id",
+                       "locked_model_id"} and _contains_credential(item, credentials):
+                result[key] = None
+            else:
+                result[key] = _public_value(item, credentials)
+        if "locked_model_id" in result and result["locked_model_id"] is None:
+            result["model_identity_source"] = None
+        return result
+    if isinstance(value, (list, tuple)):
+        return [_public_value(item, credentials) for item in value]
+    return value
+
+
+def models_live() -> list[str]:
+    """Discover Writer model IDs without exposing echoed credentials or partial lists."""
+    from eslams.agents import ProviderCallError, _strict_provider_json
+    from eslams.provider_credentials import provider_key
+
+    try:
+        key = provider_key(API_KEY_ENV)
+    except ValueError:
+        raise ProviderCallError("invalid Writer API key", error_kind="provider_auth_failed",
+                                provider=PROVIDER_ID) from None
+    if key is None:
+        raise ProviderCallError("missing Writer API key", error_kind="provider_auth_failed",
+                                provider=PROVIDER_ID)
+    credentials = _credential_values(primary=key)
+    response: httpx.Response | None = None
+    failure_kind = "provider_transport_error"
+    try:
+        response = httpx.get(MODELS_ENDPOINT, headers={"Accept": "application/json",
+            "Authorization": f"Bearer {key}"}, params={}, timeout=20.0)
+    except httpx.TimeoutException:
+        failure_kind = "provider_timeout"
+    except httpx.HTTPError:
+        pass
+    if response is None:
+        raise ProviderCallError("Writer model discovery transport failed",
+            error_kind=failure_kind, provider=PROVIDER_ID)
+    if response.is_error:
+        status = response.status_code
+        kind = ("provider_auth_failed" if status in {401, 403} else
+                "provider_rate_limited" if status == 429 else
+                "provider_unavailable" if status >= 500 else "provider_request_rejected")
+        raise ProviderCallError(f"Writer model discovery returned HTTP {status}",
+                                status_code=status, error_kind=kind, provider=PROVIDER_ID)
+    models: list[str] = []
+    invalid = False
+    try:
+        payload = _strict_provider_json(response)
+        if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
+            raise ValueError
+        for row in payload["models"]:
+            model = validate_model(row.get("id") if isinstance(row, dict) else None)
+            if _contains_credential(model, credentials):
+                raise ValueError
+            models.append(model)
+    except (ValueError, UnicodeError, RecursionError):
+        invalid = True
+    if invalid:
+        raise ProviderCallError("Writer model discovery returned an invalid model list",
+            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID)
+    return sorted(set(models))
 
 
 def usage_fields(usage: dict[str, Any]) -> dict[str, Any]:
@@ -36,6 +156,36 @@ def usage_fields(usage: dict[str, Any]) -> dict[str, Any]:
 
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    from eslams.agents import ProviderCallError
+    from eslams.model_actions import extract_json
+
+    validate_model(agent.model)
+    credentials = _credential_values(agent.api_key_env, api_key)
+    try:
+        text, receipt = _call(agent, api_key, prompt)
+    except ProviderCallError as exc:
+        exc.args = (_public_value(str(exc), credentials),)
+        exc.model = _public_value(exc.model, credentials)
+        exc.receipt = _public_value(exc.receipt, credentials)
+        exc.retry_permitted = False
+        exc.__context__ = None
+        raise exc from None
+    except TimeoutError as exc:
+        exc.args = ("Writer request timed out",)
+        exc.__context__ = None
+        raise exc from None
+    receipt = _public_value(receipt, credentials)
+    if (_contains_credential(text, credentials)
+            or _contains_credential(extract_json(text), credentials)):
+        receipt["outcome"] = "provider_response_schema_mismatch"
+        raise ProviderCallError(
+            "Writer response contained a configured credential; no action accepted",
+            provider=PROVIDER_ID, model=agent.model, receipt=receipt,
+            error_kind="provider_response_schema_mismatch")
+    return text, receipt
+
+
+def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     # Lazy import reuses the existing transport/receipt custody without a cycle.
     from eslams.agents import (
         _SYSTEM_INSTRUCTIONS,
@@ -49,11 +199,10 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     )
 
     runtime = agent.runtime_config
-    if runtime and (runtime.reasoning != "auto" or any(value is not None for value in (
-        runtime.reasoning_effort, runtime.reasoning_budget_tokens, runtime.gemini_thinking_budget,
-    ))):
+    error = configuration_error(runtime)
+    if error:
         raise ProviderCallError(
-            "Writer Chat API has no documented reasoning control; use native auto defaults",
+            error,
             error_kind="provider_request_rejected", provider=PROVIDER_ID, model=agent.model,
         )
     payload: dict[str, Any] = {

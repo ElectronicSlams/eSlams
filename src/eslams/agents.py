@@ -404,6 +404,7 @@ class ModelProviderAgent:
         self.provider = self.provider.lower()
         if self.provider in writer.ALIASES:
             self.provider = "writer"
+            writer.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

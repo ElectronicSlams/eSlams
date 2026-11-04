@@ -1441,7 +1441,6 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
-        "writer": ("palmyra-x6", writer.API_KEY_ENV),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1456,6 +1455,8 @@ def _provider_agent(
     provider = provider.lower()
     if provider in writer.ALIASES:
         provider = "writer"
+        writer.validate_model(model)
+        defaults[provider] = (model, writer.API_KEY_ENV)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
