@@ -47,6 +47,7 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.tencent_hunyuan import ALIASES as HUNYUAN_ALIASES
 
 
 class AgentError(RuntimeError):
@@ -402,6 +403,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider.strip().replace("_", "-") in HUNYUAN_ALIASES:
+            self.provider = "tencent-hunyuan"
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +629,10 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "tencent-hunyuan":
+            from eslams.providers.tencent_hunyuan import call
+
+            return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1156,6 +1163,8 @@ def _post_json(
     payload: dict[str, Any],
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    header_factory: Callable[[dict[str, Any]], dict[str, str]] | None = None,
+    response_handler: Callable[[httpx.Response], None] | None = None,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
     check_cancelled()
@@ -1176,7 +1185,7 @@ def _post_json(
         try:
             response = bounded_post(
                 url,
-                headers=headers,
+                headers=header_factory(payload) if header_factory is not None else headers,
                 json=payload,
                 timeout=_httpx_timeout(runtime_config, deadline=deadline),
             )
@@ -1207,6 +1216,8 @@ def _post_json(
                 provider=provider,
                 model=model,
             ) from exc
+    if response_handler is not None:
+        response_handler(response)
     if response.status_code >= 400:
         kind = _provider_error_kind(response.status_code)
         retry_after = _retry_after_seconds(response)
@@ -1221,7 +1232,7 @@ def _post_json(
         )
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
-            or response.headers.get("x-amzn-requestid"),
+            or response.headers.get("x-amzn-requestid") or response.headers.get("x-tc-requestid"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
             response.headers.get("cf-aig-request-id")
@@ -1356,7 +1367,7 @@ def _raise_observed_transport_failure(
     )
     receipt["request_id"] = _http_error_identifier(
         headers.get("x-request-id") or headers.get("request-id")
-        or headers.get("x-amzn-requestid"),
+        or headers.get("x-amzn-requestid") or headers.get("x-tc-requestid"),
     )
     receipt["gateway_request_id"] = _http_error_identifier(
         headers.get("cf-aig-request-id") or headers.get("x-gateway-request-id"),
@@ -1970,6 +1981,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "tencent-hunyuan": "tencent_hunyuan_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,10 +1993,15 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "tencent-hunyuan": "tencent-hunyuan-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "tencent-hunyuan":
+        from eslams.providers.tencent_hunyuan import normalize_usage
+
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []
@@ -2759,7 +2776,8 @@ def _response_json_with_receipt(
                 "request_id": _http_error_identifier(response.headers.get("x-request-id")
                 or response.headers.get("request-id")
                 or response.headers.get("x-cloud-trace-context")
-                or response.headers.get("x-amzn-requestid")),
+                or response.headers.get("x-amzn-requestid")
+                or response.headers.get("x-tc-requestid")),
                 "gateway_request_id": _http_error_identifier(
                     response.headers.get("cf-aig-request-id")
                     or response.headers.get("x-gateway-request-id")),

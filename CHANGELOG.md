@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add the signed native Tencent Hunyuan ChatCompletions adapter under
+  `tencent-hunyuan` / `hunyuan`, with offline raw-wire tests and lifecycle docs.
+  Preserve unknown identity/accounting and reject unsupported controls. Tencent
+  announces retirement of this legacy API on 2026-12-21; TokenHub and Coding
+  Plan remain separate, unsupported inference routes.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

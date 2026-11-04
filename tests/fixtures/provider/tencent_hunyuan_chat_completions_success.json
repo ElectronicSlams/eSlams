@@ -1,0 +1,15 @@
+{
+  "Response": {
+    "RequestId": "5a112898-d802-4bca-8ba2-7ce2388b98e8",
+    "Note": "以上内容为AI生成，不代表开发者立场，请勿删除或修改本标记",
+    "Choices": [
+      {
+        "Message": {"Role": "assistant", "Content": "{\"action\": 1}"},
+        "FinishReason": "stop"
+      }
+    ],
+    "Created": 1719822322,
+    "Id": "5a112898-d802-4bca-8ba2-7ce2388b98e8",
+    "Usage": {"PromptTokens": 71, "CompletionTokens": 42, "TotalTokens": 113}
+  }
+}
