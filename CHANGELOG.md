@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Relace Open Models text-game adapter with an explicit model ID,
+  full history, native reasoning defaults, no fallback or default retries, and
+  sanitized attempt receipts. Include offline CLI/preflight wiring, explicit
+  model discovery, documented API evidence, and deterministic raw-wire tests.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

@@ -1,0 +1,19 @@
+{
+  "id": "relace-fixture-completion",
+  "object": "chat.completion",
+  "created": 1793750400,
+  "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
+  "choices": [
+    {
+      "index": 0,
+      "message": {"role": "assistant", "content": "{\"action\": 1, \"public_explanation\": \"Selected a legal action.\"}"},
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16,
+    "prompt_tokens_details": {"cached_tokens": 3}
+  }
+}
