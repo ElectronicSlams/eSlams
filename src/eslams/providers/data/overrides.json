@@ -2,6 +2,36 @@
   "organizations": [],
   "models": [
     {
+      "provider": "minimax",
+      "model": "MiniMax-M3.1-Flash",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": ["chat/completions"],
+      "modalities": {"input": ["text", "image", "video"], "output": ["text"]},
+      "supports_temperature": false,
+      "supports_reasoning": true,
+      "reasoning_efforts": ["low", "medium", "high", "xhigh", "max"],
+      "supported_reasoning_modes": ["native-default", "low", "medium", "high", "xhigh", "max"],
+      "accepted_control_fields": ["reasoning_effort"],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_native",
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": ["https://platform.minimax.io/docs/api-reference/text-openai-api"]
+    },
+    {
+      "provider": "minimax",
+      "model": "MiniMax-M3",
+      "supports_temperature": false,
+      "supports_reasoning": true,
+      "supported_reasoning_modes": ["native-default"],
+      "accepted_control_fields": [],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_native",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": ["https://platform.minimax.io/docs/api-reference/text-openai-api"]
+    },
+    {
       "provider": "openai",
       "model": "gpt-5-mini",
       "available_from_api": true,

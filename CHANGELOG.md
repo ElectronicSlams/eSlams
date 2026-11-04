@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add a native MiniMax direct Chat Completions adapter with CLI/preflight wiring,
+  separated reasoning retained privately for explicit action repairs, and
+  provider-specific error, refusal, truncation and accounting checks. Preserve
+  full supplied history and native defaults; never substitute a model or route.
+- Document the verified MiniMax API, regions and model lifecycle caveats; add
+  deterministic keyless wire and privacy regressions for the 0.7.1 adapter work.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
