@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (0.7.0 candidate; not published)
+## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
 - Preserve full supplied history with explicit legacy prompt compatibility.

@@ -20,14 +20,13 @@ secret seeds, private scenario sets, and hidden eval variants so agents cannot
 overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
-The 0.7.0 candidate focuses on model-execution policy and reliability: no implicit
+Core 0.7.0 focuses on model-execution policy and reliability: no implicit
 Core thinking/output budget, no game-specific reasoning choice, full supplied
 history, clearer preflight, safer receipt/retry handling, artifact recovery and
 the invalid-run scoring fixes in #226. OpenRouter fallback is disabled. A supplied
 route order is honoured, but this does not guarantee or attest a single backend
 across calls; stronger OpenRouter backend enforcement and individual adapters are
-deferred to 0.7.1. This checkout is a release candidate until its
-release gates close. Numeric-profile/performance experiments and additional
+deferred to 0.7.1. Numeric-profile/performance experiments and additional
 provider adapters are outside 0.7.0.
 
 ## Contents

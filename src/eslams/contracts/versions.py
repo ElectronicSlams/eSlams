@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-CORE_PACKAGE_VERSION = "0.7.0rc1"
+CORE_PACKAGE_VERSION = "0.7.0"
 RUNNER_VERSION = f"eslams-runner:{CORE_PACKAGE_VERSION}"
 PROTOCOL_VERSION = "eslams-act-v1"
 SCHEMA_BUNDLE_VERSION = "eslams-schema-bundle-v6"

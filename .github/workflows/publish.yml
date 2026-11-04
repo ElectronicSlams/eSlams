@@ -1,90 +1,83 @@
-name: Publish to PyPI
+name: Publish verified server distributions
 
+# One explicit publisher-only run. Publishing a GitHub Release cannot start it.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
-      ref:
-        description: "Git ref to publish, usually a version tag like v0.6.2"
+      release_id:
+        description: "Draft GitHub release ID containing the verified server bundle"
         required: true
-        default: "v0.6.2"
+      asset_id:
+        description: "ID of eslams-core-0.7.0-publish.zip on that draft release"
+        required: true
+      bundle_sha256:
+        description: "Independently verified SHA256 of the complete server handoff bundle"
+        required: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: pypi-eslams-core-0.7.0
+  cancel-in-progress: false
+
 jobs:
   pypi:
-    name: Build and publish eslams-core
+    name: Publish previously verified 0.7.0 files
+    if: github.repository == 'ElectronicSlams/eSlams' && github.ref == 'refs/tags/v0.7.0'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: pypi
     permissions:
       contents: read
       id-token: write
     steps:
-      - name: Resolve publish ref
-        id: publish-ref
-        shell: bash
-        env:
-          INPUT_REF: ${{ github.event.inputs.ref }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          python - <<'PYTHON'
-          import os
-
-          ref = os.environ.get("INPUT_REF") or os.environ.get("RELEASE_TAG") or os.environ["GITHUB_REF_NAME"]
-          if not ref or any(char in ref for char in "\r\n"):
-              raise SystemExit("publish ref must be a single line")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8", newline="\n") as handle:
-              handle.write(f"ref={ref}\n")
-          PYTHON
-
-      - name: Check out release source
+      - name: Read the exact reviewed verifier
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ steps.publish-ref.outputs.ref }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.12"
-
-      - name: Verify tag matches pyproject version
+      - name: Fetch and verify server artifacts without executing package code
         shell: bash
         env:
-          PUBLISH_REF: ${{ steps.publish-ref.outputs.ref }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          ASSET_ID: ${{ inputs.asset_id }}
+          BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
         run: |
-          python - <<'PY'
-          import os
-          import sys
-          import tomllib
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == ElectronicSlams/eSlams ]]
+          [[ "$GITHUB_REF" == refs/tags/v0.7.0 ]]
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$RELEASE_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$ASSET_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+          metadata="$RUNNER_TEMP/eslams-release.json"
+          bundle="$RUNNER_TEMP/eslams-server-bundle.zip"
+          remote_commit="$(gh api "repos/$GITHUB_REPOSITORY/commits/v0.7.0" --jq .sha)"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" > "$metadata"
+          common=(--release-json "$metadata" --release-id "$RELEASE_ID" --asset-id "$ASSET_ID"
+                  --tag v0.7.0 --commit "$GITHUB_SHA" --remote-commit "$remote_commit")
+          python3 -I scripts/verify_publish_bundle.py "${common[@]}"
+          gh api "repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID" \
+            --header 'Accept: application/octet-stream' > "$bundle"
+          python3 -I scripts/verify_publish_bundle.py "${common[@]}" \
+            --bundle "$bundle" --bundle-sha256 "$BUNDLE_SHA256" \
+            --out "$GITHUB_WORKSPACE/.publish-verified-dist"
+          status="$(curl --silent --show-error --max-time 30 \
+            --output "$RUNNER_TEMP/eslams-pypi-before.json" --write-out '%{http_code}' \
+            https://pypi.org/pypi/eslams-core/0.7.0/json)"
+          [[ "$status" == 404 ]] || {
+            echo 'PyPI version is present or its absence is unverified; stop for reconciliation.'
+            exit 1
+          }
 
-          ref = os.environ["PUBLISH_REF"]
-          tag = ref.removeprefix("refs/tags/").split("/")[-1]
-          with open("pyproject.toml", "rb") as project_file:
-              version = tomllib.load(project_file)["project"]["version"]
-
-          expected_tag = f"v{version}"
-          if tag != expected_tag:
-              print(
-                  f"Publish ref {ref!r} does not match pyproject.toml version "
-                  f"{version!r}; expected tag {expected_tag!r}.",
-                  file=sys.stderr,
-              )
-              sys.exit(1)
-          PY
-
-      - name: Install build tools
-        run: python -m pip install --upgrade build twine
-
-      - name: Build distributions
-        run: python -m build
-
-      - name: Check distributions
-        run: python -m twine check dist/*
-
-      - name: Publish distributions to PyPI
+      # No dependency install, package build, package import or test execution here.
+      # The pinned publisher authenticates through the existing PyPI OIDC trust.
+      - name: Publish exactly the verified distributions
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
-          packages-dir: dist/
+          packages-dir: .publish-verified-dist/
+          skip-existing: false
