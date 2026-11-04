@@ -94,7 +94,8 @@ diagnostic and never authorizes a replay.
 Receipts exclude prompts, answer/refusal prose, reasoning, request headers and
 raw provider bodies. Known credentials echoed in IDs/receipt fields are
 removed, including success, HTTP error, malformed-body and partial-body paths.
-The provider key is also redacted from parsed answer text. There are no
+The provider key is also redacted from parsed answer text, including keys
+represented with JSON character escapes inside the answer. There are no
 secondary Poolside credentials in this adapter. Credential-echo model discovery
 fails closed. This is a Core artifact privacy boundary, not a provider-side
 retention promise.

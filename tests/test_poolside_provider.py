@@ -17,7 +17,11 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.http_io import ResponseObservation
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
-from eslams.provider_preflight import provider_models_live, provider_preflight
+from eslams.provider_preflight import (
+    provider_models_live,
+    provider_models_result,
+    provider_preflight,
+)
 from eslams.providers import load_provider_registry
 from eslams.providers.poolside import CHAT_COMPLETIONS_ENDPOINT, MODELS_ENDPOINT
 from eslams.runner import RunConfig, Runner
@@ -350,10 +354,11 @@ def test_preflight_rejects_unsupported_configuration_without_network(alias, mode
         assert result["error"]["error_class"] == "provider_request_rejected"
 
 
+@pytest.mark.parametrize("key_env", ["POOLSIDE_API_KEY", "REVIEW_POOLSIDE_KEY"])
 @pytest.mark.parametrize("path", ["success", "http_error", "malformed", "partial", "transport"])
-def test_echoed_opaque_credential_is_scrubbed_from_every_receipt_path(monkeypatch, path):
+def test_echoed_opaque_credential_is_scrubbed_from_every_receipt_path(monkeypatch, path, key_env):
     secret = "opaquePoolsideCredential123"
-    monkeypatch.setenv("POOLSIDE_API_KEY", secret)
+    monkeypatch.setenv(key_env, secret)
 
     def post(*a, **k):
         headers = {"x-request-id": "req-" + secret, "x-gateway-request-id": "gw-" + secret}
@@ -373,7 +378,7 @@ def test_echoed_opaque_credential_is_scrubbed_from_every_receipt_path(monkeypatc
         return httpx.Response(429 if path == "http_error" else 200, json=payload, headers=headers)
 
     monkeypatch.setattr("eslams.agents.bounded_post", post)
-    selected = agent()
+    selected = ModelProviderAgent("poolside", MODEL, key_env)
     if path == "success":
         response = selected.act(request())
         assert secret not in json.dumps(response.to_dict())
@@ -394,6 +399,55 @@ def test_discovery_rejects_credential_echo(monkeypatch):
     with pytest.raises(ProviderCallError) as caught:
         provider_models_live("poolside")
     assert "fixture-secret-never-persisted" not in str(caught.value)
+
+
+@pytest.mark.parametrize("path", ["success", "http_error", "malformed", "transport", "timeout"])
+def test_discovery_errors_never_publish_echoed_key(monkeypatch, path):
+    secret = 'opaque"Poolside\\Discovery123'
+    monkeypatch.setenv("POOLSIDE_API_KEY", secret)
+
+    def get(*a, **k):
+        if path == "timeout":
+            raise httpx.ReadTimeout(secret)
+        if path == "transport":
+            raise httpx.ConnectError(secret)
+        if path == "malformed":
+            return httpx.Response(200, text="invalid-json " + secret)
+        if path == "http_error":
+            return httpx.Response(401, json={"error": {"message": secret}})
+        return httpx.Response(200, json={"data": [{"id": "model-" + secret}]})
+
+    monkeypatch.setattr(httpx, "get", get)
+    result = provider_models_result("poolside-ai")
+    assert not result["ok"] and result["models"] == []
+    assert secret not in json.dumps(result)
+    assert secret not in result["error"]["message"]
+
+
+@pytest.mark.parametrize("wrapper", ["plain", "fenced", "prose"])
+@pytest.mark.parametrize("encoding", ["json", "unicode"])
+def test_action_json_escaping_cannot_hide_echoed_credential(monkeypatch, encoding, wrapper):
+    secret = 'opaque"Poolside\\Credential/123'
+    monkeypatch.setenv("POOLSIDE_API_KEY", secret)
+    if encoding == "json":
+        content = json.dumps({"action": 1, "public_explanation": "echo " + secret})
+    else:
+        escaped = "".join(f"\\u{ord(char):04x}" for char in secret)
+        content = '{"action":1,"public_explanation":"' + escaped + '"}'
+    if wrapper == "fenced":
+        content = "```json\n" + content + "\n```"
+    elif wrapper == "prose":
+        content = "Answer follows: " + content
+    payload = fixture()
+    payload["choices"][0]["message"]["content"] = content
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: httpx.Response(
+        200, json=payload,
+    ))
+    response = agent().act(request())
+    assert response.action == 1
+    assert secret not in response.public_explanation
+    assert "[redacted]" in response.public_explanation
+    assert secret not in json.loads(response.metadata["raw_action_text"])["public_explanation"]
 
 
 def test_runner_preserves_receipts_and_never_applies_truncated_action(monkeypatch, tmp_path):

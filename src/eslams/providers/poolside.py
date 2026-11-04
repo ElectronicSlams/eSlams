@@ -6,6 +6,7 @@ the verified contract and the deliberately unknown accounting/retry semantics.
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
@@ -57,6 +58,20 @@ def _redact_receipt(receipt: dict[str, Any], api_key: str) -> dict[str, Any]:
     return result
 
 
+def _redact_action_text(text: str, api_key: str) -> str:
+    from eslams.model_actions import extract_json
+
+    # The answer itself is JSON inside the REST JSON envelope. Decode it with
+    # the action parser's own extraction rules before redacting string values;
+    # literal replacement alone misses escaped quotes, backslashes and Unicode.
+    payload = extract_json(text)
+    if isinstance(payload, dict):
+        redacted = _redact(payload, api_key)
+        if redacted != payload:
+            return json.dumps(redacted, ensure_ascii=False)
+    return text.replace(api_key, "[redacted]")
+
+
 def normalize_usage(usage: Any) -> dict[str, Any]:
     """Keep only documented counters; never infer cost, cache or thinking usage."""
     from eslams.agents import _empty_usage, _usage_int
@@ -86,7 +101,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
 
     try:
         text, receipt = _call(agent, api_key, prompt)
-        return text.replace(api_key, "[redacted]"), _redact_receipt(receipt, api_key)
+        return _redact_action_text(text, api_key), _redact_receipt(receipt, api_key)
     except ProviderCallError as exc:
         exc.retry_permitted = False
         if exc.receipt is not None:
