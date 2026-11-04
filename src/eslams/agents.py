@@ -10,7 +10,7 @@ import re
 import threading
 import time
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -44,6 +44,7 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
+from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
@@ -401,7 +402,12 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = byteplus_provider(self.provider) or self.provider.lower()
+        if self.provider == "byteplus":
+            from eslams.providers.byteplus import model_error
+
+            if error := model_error(self.model):
+                raise ValueError(error)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +632,10 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "byteplus":
+            from eslams.providers.byteplus import call
+
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1219,6 +1229,14 @@ def _post_json(
         body_retry_permitted = _capture_error_body_observations(
             response, provider=provider, receipt=receipt,
         )
+        if provider == "byteplus":
+            from eslams.providers.byteplus import error_kind
+
+            # Ark quota/burst errors do not attest that replay is safe. Retain
+            # shared custody, but never opt this adapter into automatic retry.
+            body_retry_permitted = False
+            with suppress(ValueError, UnicodeError, RecursionError):
+                kind = error_kind(_strict_provider_json(response), response.status_code)
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-amzn-requestid"),
@@ -1964,6 +1982,7 @@ def _provider_endpoint(
 
 def _endpoint_kind(provider: str) -> str:
     return {
+        "byteplus": "byteplus_modelark_chat_completions",
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -1975,6 +1994,7 @@ def _endpoint_kind(provider: str) -> str:
 
 def _parser_version(provider: str) -> str:
     return {
+        "byteplus": "byteplus-modelark-chat-raw-v1",
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -1985,6 +2005,10 @@ def _parser_version(provider: str) -> str:
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "byteplus":
+        from eslams.providers.byteplus import normalize_usage
+
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []

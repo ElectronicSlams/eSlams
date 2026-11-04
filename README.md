@@ -696,7 +696,7 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+Core has direct first-party HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -705,6 +705,11 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
+| `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` |
+
+The proposed 0.7.1 [BytePlus ModelArk adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BYTEPLUS.md) targets
+the direct ap-southeast-1 service. Supply an explicit model or deployment ID;
+Volcengine Ark and Coding Plan use different services.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native

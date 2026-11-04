@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — proposed 0.7.1
+
+- Add a native BytePlus ModelArk direct Chat adapter with explicit model selection,
+  BytePlus aliases, configuration preflight, sanitized receipts, inclusive reasoning
+  usage, fallback rejection and deterministic offline raw-wire tests. See
+  `docs/providers/BYTEPLUS.md` for service boundaries and verification limits.
+- Reject missing/blank BytePlus model IDs and unsupported reasoning budgets in
+  preflight; remove primary/secondary credential echoes from all receipt paths
+  and reject credential-bearing action text before parsing.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
