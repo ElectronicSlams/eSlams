@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -35,29 +36,48 @@ def validate_config(model: str, config: ProviderRuntimeConfig) -> None:
         raise ValueError("Sakana requires full supplied history")
 
 
-def _contains_secret(value: Any, secret: str) -> bool:
-    if isinstance(value, str):
-        return secret in value
-    if isinstance(value, dict):
-        return any(_contains_secret(key, secret) or _contains_secret(item, secret)
-                   for key, item in value.items())
-    if isinstance(value, list):
-        return any(_contains_secret(item, secret) for item in value)
+def credential_values(api_key: str) -> tuple[str, ...]:
+    """Snapshot redaction values; only the explicitly selected key authenticates.
+
+    Secondary Sakana/Fugu credential variables never become headers or fallback
+    keys. They are read solely to keep provider echoes out of public fields.
+    A custom ModelProviderAgent.api_key_env is covered by the active api_key.
+    """
+    values = {api_key}
+    markers = {"KEY", "APIKEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "CREDENTIALS"}
+    for name, value in os.environ.items():
+        parts = name.upper().split("_")
+        if parts[0] in {"SAKANA", "FUGU"} and markers.intersection(parts[1:]):
+            values.add(value.strip())
+    return tuple(sorted(value for value in values if value))
+
+
+def contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str) and any(secret in item for secret in credentials):
+            return True
+        if isinstance(item, dict):
+            pending.extend(item.keys())
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
     return False
 
 
-def _safe_receipt(value: Any, secret: str) -> Any:
+def _safe_receipt(value: Any, credentials: tuple[str, ...]) -> Any:
     """Exact credential suppression also covers otherwise valid public IDs."""
     if isinstance(value, str):
-        return None if secret in value else value
+        return None if contains_credential(value, credentials) else value
     if isinstance(value, dict):
-        result = {key: _safe_receipt(item, secret) for key, item in value.items()
-                  if secret not in key}
+        result = {key: _safe_receipt(item, credentials) for key, item in value.items()
+                  if not contains_credential(key, credentials)}
         if result.get("locked_model_id") is None and "model_identity_source" in result:
             result["model_identity_source"] = None
         return result
     if isinstance(value, list):
-        return [_safe_receipt(item, secret) for item in value]
+        return [_safe_receipt(item, credentials) for item in value]
     return value
 
 
@@ -76,6 +96,7 @@ def call_sakana(
 
     config = agent.runtime_config or ProviderRuntimeConfig()
     validate_config(agent.model, config)
+    credentials = credential_values(api_key)
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [
@@ -110,7 +131,7 @@ def call_sakana(
             usage=_usage(data.get("usage")), capabilities=agent.capabilities,
             runtime_config=config,
         )
-        receipt = _safe_receipt(receipt, api_key)
+        receipt = _safe_receipt(receipt, credentials)
         text = _text(data, receipt, agent.model)
         # Reject secret-bearing output before action parsing; replacing text
         # could change a legal action. Internal thinking is never returned.
@@ -122,7 +143,7 @@ def call_sakana(
                 error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
                 model=agent.model,
             ) from None
-        if _contains_secret(text, api_key) or _contains_secret(decoded, api_key):
+        if contains_credential(text, credentials) or contains_credential(decoded, credentials):
             raise ProviderCallError(
                 "Sakana response contains credential material; no action accepted",
                 error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
@@ -134,8 +155,8 @@ def call_sakana(
         # Scrub before ModelProviderAgent publishes an immutable receipt batch.
         observed = exc.receipt if exc.receipt is not None else receipt
         if observed is not None:
-            exc.receipt = _safe_receipt({**observed, "outcome": exc.error_kind}, api_key)
-        if _contains_secret(str(exc), api_key):
+            exc.receipt = _safe_receipt({**observed, "outcome": exc.error_kind}, credentials)
+        if contains_credential(str(exc), credentials):
             exc.args = ("Sakana provider request failed",)
         # Sakana has no published replay-safety guarantee for rate-limit errors.
         exc.retry_permitted = False

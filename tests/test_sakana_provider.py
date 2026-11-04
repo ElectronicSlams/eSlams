@@ -24,6 +24,7 @@ from eslams.runner import RunConfig, Runner
 
 FIXTURE = Path(__file__).parent / "fixtures/provider/sakana_namazu_chat_success.json"
 SECRET = "fixture-secret-with-no-standard-key-prefix"
+SECONDARY = "alternate-credential-with-an-unrecognized-prefix"
 
 
 def wire():
@@ -372,3 +373,138 @@ def test_receipts_sanitized_before_invocation_publication_and_runner_artifacts(
     assert ArtifactValidator().validate(result.expanded_path) == []
     for path in result.expanded_path.rglob("*.json*"):
         assert SECRET not in path.read_text()
+
+
+@pytest.mark.parametrize("echo", [SECRET, SECONDARY])
+@pytest.mark.parametrize("path", ["ids", "http_error", "malformed", "partial", "action"])
+def test_primary_and_secondary_credentials_never_enter_published_fields(monkeypatch, echo, path):
+    monkeypatch.setenv("SAKANA_API_KEY", SECRET)
+    monkeypatch.setenv("SAKANA_SECONDARY_API_KEY", f"  {SECONDARY}\r\n")
+    published = []
+
+    class ObservedAgent(ModelProviderAgent):
+        def _publish_receipts(self, rows):
+            published.append(copy.deepcopy(rows))
+            super()._publish_receipts(rows)
+
+    def post(url, **kwargs):
+        assert kwargs["headers"]["Authorization"] == f"Bearer {SECRET}"
+        assert SECONDARY not in str(kwargs)
+        headers = {"x-request-id": f"prefix-{echo}", "x-gateway-request-id": echo}
+        data = wire()
+        data["id"] = echo
+        if path == "http_error":
+            return httpx.Response(500, json={"error": {"id": echo, "message": echo}},
+                                  headers=headers)
+        if path == "malformed":
+            return httpx.Response(200, text=f"{{invalid {echo}", headers=headers)
+        if path == "partial":
+            failure = ProtocolError(echo)
+            failure._eslams_response_observation = ResponseObservation(200, tuple(headers.items()))
+            raise failure
+        if path == "action":
+            escaped = "".join(f"\\u{ord(char):04x}" for char in echo)
+            data["choices"][0]["message"]["content"] = (
+                '{"action":1,"public_explanation":"' + escaped + '"}'
+            )
+        return httpx.Response(200, json=data, headers=headers)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = ObservedAgent("sakana", "sakana-namazu-v1.0", "SAKANA_API_KEY")
+    if path == "ids":
+        result = native.act(_request())
+        assert SECRET not in str(result.to_dict()) and SECONDARY not in str(result.to_dict())
+        assert native.last_receipt["provider_response_id"] is None
+    else:
+        with pytest.raises(ProviderCallError) as failure:
+            native.act(_request())
+        public = str(failure.value) + str(failure.value.receipt)
+        assert SECRET not in public and SECONDARY not in public
+    assert len(native.attempt_receipts) == 1
+    assert SECRET not in str(published) and SECONDARY not in str(published)
+
+
+@pytest.mark.parametrize("echo", [SECRET, SECONDARY])
+def test_discovery_rejects_both_configured_credentials(monkeypatch, echo):
+    monkeypatch.setenv("SAKANA_API_KEY", SECRET)
+    monkeypatch.setenv("SAKANA_SECONDARY_API_KEY", SECONDARY)
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, **k: httpx.Response(
+        200, json={"data": [{"id": f"prefix-{echo}"}]},
+    ))
+    with pytest.raises(ProviderCallError) as failure:
+        provider_models_live("sakana")
+    assert SECRET not in str(failure.value) and SECONDARY not in str(failure.value)
+
+
+@pytest.mark.parametrize("model", [None, "", " \t\n"])
+@pytest.mark.parametrize("live", [False, True])
+def test_missing_and_blank_models_fail_before_preflight_network(monkeypatch, model, live):
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("inference"))
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("discovery"))
+    with pytest.raises(ValueError, match="explicit nonblank model ID"):
+        provider_preflight("sakana", model, "tic-tac-toe", live=live)
+
+
+@pytest.mark.parametrize("field,budget", [
+    ("reasoning_budget_tokens", 0), ("reasoning_budget_tokens", 1),
+    ("gemini_thinking_budget", -1), ("gemini_thinking_budget", 0),
+])
+def test_explicit_unsupported_budgets_fail_preflight_and_before_transport(
+    monkeypatch, field, budget,
+):
+    monkeypatch.setenv("SAKANA_API_KEY", SECRET)
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("inference"))
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("discovery"))
+    config = ProviderRuntimeConfig(**{field: budget})
+    for live in (False, True):
+        with pytest.raises(ValueError, match="without effort or budget"):
+            provider_preflight("sakana", "sakana-namazu", "tic-tac-toe",
+                               live=live, runtime_config=config)
+    with pytest.raises(ValueError, match="without effort or budget"):
+        agent(runtime_config=config)
+    native = agent()
+    native.runtime_config = config
+    with pytest.raises(ValueError, match="without effort or budget"):
+        native.act(_request())
+    assert native.attempt_receipts == []
+
+
+@pytest.mark.parametrize("echo", [SECRET, SECONDARY])
+def test_custom_active_key_and_standard_key_both_scrubbed(monkeypatch, echo):
+    monkeypatch.setenv("CUSTOM_SELECTED_KEY", SECRET)
+    monkeypatch.setenv("SAKANA_API_KEY", SECONDARY)
+
+    def post(url, **kwargs):
+        assert kwargs["headers"]["Authorization"] == f"Bearer {SECRET}"
+        data = wire()
+        data["id"] = echo
+        # Redaction uses values snapshotted before transport, even if rotated.
+        monkeypatch.delenv("SAKANA_API_KEY")
+        return httpx.Response(200, json=data, headers={"x-request-id": echo})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = ModelProviderAgent("sakana", "sakana-namazu-v1.0", "CUSTOM_SELECTED_KEY")
+    result = native.act(_request()).to_dict()
+    assert SECRET not in str(result) and SECONDARY not in str(result)
+
+
+@pytest.mark.parametrize("path", ["error", "malformed", "transport"])
+@pytest.mark.parametrize("echo", [SECRET, SECONDARY])
+def test_discovery_failures_never_expose_either_configured_credential(monkeypatch, echo, path):
+    monkeypatch.setenv("SAKANA_API_KEY", SECRET)
+    monkeypatch.setenv("SAKANA_SECONDARY_API_KEY", SECONDARY)
+
+    def get(*args, **kwargs):
+        if path == "transport":
+            raise httpx.ReadError(echo)
+        if path == "malformed":
+            return httpx.Response(200, text=f"{{invalid {echo}")
+        return httpx.Response(500, json={"error": {"message": echo}},
+                              headers={"x-request-id": echo})
+
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", get)
+    with pytest.raises(ProviderCallError) as failure:
+        provider_models_live("sakana")
+    assert SECRET not in str(failure.value) and SECONDARY not in str(failure.value)

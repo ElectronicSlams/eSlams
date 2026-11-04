@@ -15,7 +15,13 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
-from eslams.providers.sakana import API_KEY_ENV, MODELS_ENDPOINT, validate_config
+from eslams.providers.sakana import (
+    API_KEY_ENV,
+    MODELS_ENDPOINT,
+    contains_credential,
+    credential_values,
+    validate_config,
+)
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -273,6 +279,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             f"missing API key environment variable {api_key_env}",
             error_kind="provider_auth_failed", provider=provider,
         )
+    credentials = credential_values(api_key) if provider == "sakana" else ()
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -325,7 +332,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             )
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
-            if provider == "sakana" and api_key in raw:
+            if provider == "sakana" and contains_credential(raw, credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

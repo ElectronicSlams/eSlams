@@ -75,7 +75,11 @@ when an operator requests retries. Default retries and action repair remain zero
 Timeouts, transport interruptions and partial bodies are never replayed.
 
 Exact credentials are removed from receipt IDs, including malformed/error/partial
-paths. Credential-bearing action text is rejected before parsing, including JSON
+paths. The active key and nonempty Sakana/Fugu credential environment values are
+snapshotted before transport solely for redaction; secondary values never
+authenticate or become fallback keys. Custom active-key environment names are
+covered too. Discovery rejects model IDs containing any of these values.
+Credential-bearing action text is rejected before parsing, including JSON
 escaped values. Reasoning, prompts, headers and raw private envelopes are not
 copied into receipts. Deterministic tests cover these boundaries, CLI dispatch,
 configuration/live-preflight stubs and native request controls. Live availability,
@@ -83,8 +87,12 @@ actual identity, latency, regional access and account billing remain unverified.
 
 ## Cloud validation
 
-- Python 3.12: 63 Sakana cases passed. Full candidate suite: 1,321 passed,
-  two inherited failures. Untouched base: 1,258 passed, the same two failures.
+- Python 3.12: the initial 63 Sakana cases passed. A follow-up review added 30
+  cases for primary/secondary credentials, custom selected keys, key rotation,
+  discovery failures, blank models and unsupported explicit reasoning budgets.
+  All 93 cases pass; six secondary-credential cases failed before the fix.
+  Full candidate suite: 1,351 passed, two inherited failures. Untouched base:
+  1,258 passed, the same two failures.
 - Inherited failures: `test_provider_runtime_deadline_records_failed_attempt_and_bounds_queue_retry_waits`
   expects `TimeoutError` where an observed partial-body failure raises
   `ProviderCallError`; `test_cli_fallback_failing_seat_board_win_is_only_a_board_result`
