@@ -2,6 +2,76 @@
   "organizations": [],
   "models": [
     {
+      "provider": "xai",
+      "model": "grok-4.7",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "responses"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.x.ai/developers/models",
+        "https://docs.x.ai/developers/model-capabilities/text/reasoning"
+      ]
+    },
+    {
+      "provider": "xai",
+      "model": "grok-4.6",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "responses"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.x.ai/developers/models",
+        "https://docs.x.ai/developers/model-capabilities/text/reasoning"
+      ]
+    },
+    {
       "provider": "openai",
       "model": "gpt-5-mini",
       "available_from_api": true,

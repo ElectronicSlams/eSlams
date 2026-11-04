@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add a native xAI Responses adapter (`xai`, alias `x-ai`) with full public
+  history, sanitized attempt receipts, conservative usage accounting, native
+  tick-based cost reporting, keyless wire fixtures, and account model discovery.
+  See `docs/PROVIDER_XAI.md` for supported behavior and limits.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

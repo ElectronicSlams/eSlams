@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, load_provider_registry, xai
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -401,7 +401,7 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = xai.canonical_provider(self.provider.lower())
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +626,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "xai":
+            return xai.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1520,7 +1522,8 @@ def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]
         "provider": provider,
         "model": model,
         "currency": "USD",
-        "sourceUri": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+        "sourceUri": (xai.COST_SOURCE if provider == "xai" else
+                      "https://openrouter.ai/docs/cookbook/administration/usage-accounting"),
     }
     return {
         "schemaVersion": "eslams.price-card-reference.v1",
@@ -1532,7 +1535,7 @@ def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]
         "sourceUri": identity["sourceUri"],
         "effectiveAt": None,
         "retrievedAt": None,
-        "complete": provider == "openrouter",
+        "complete": provider in {"openrouter", "xai"},
     }
 
 
@@ -1965,6 +1968,7 @@ def _provider_endpoint(
 def _endpoint_kind(provider: str) -> str:
     return {
         "openai": "openai_responses",
+        "xai": "xai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
@@ -1976,6 +1980,7 @@ def _endpoint_kind(provider: str) -> str:
 def _parser_version(provider: str) -> str:
     return {
         "openai": "openai-responses-raw-v2",
+        "xai": "xai-responses-raw-v1",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
@@ -1987,6 +1992,8 @@ def _parser_version(provider: str) -> str:
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if not isinstance(usage, dict):
         return _empty_usage()
+    if provider == "xai":
+        usage = xai.usage_fields(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2482,7 +2489,7 @@ def _check_provider_completion(
     status: Any = None
     error = data.get("error")
     refused = False
-    if provider == "openai":
+    if provider in {"openai", "xai"}:
         status = data.get("status")
         details = data.get("incomplete_details")
         reason = details.get("reason") if isinstance(details, dict) else None

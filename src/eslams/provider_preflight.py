@@ -13,10 +13,11 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import load_provider_registry, xai
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
+    "xai": xai.API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -26,6 +27,7 @@ DEFAULT_PROVIDER_ENV = {
 }
 
 _MODELS_ENDPOINTS = {
+    "xai": xai.MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -53,7 +55,7 @@ def provider_preflight(
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
-    provider = provider.lower()
+    provider = xai.canonical_provider(provider.lower())
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -181,6 +183,11 @@ def provider_preflight(
                     _is_int(usage.get(key))
                     for key in ("input_tokens", "output_tokens", "total_tokens")
                 )
+                if record.provider == "xai" and isinstance(usage, dict):
+                    checks["usage_extraction"] = checks["usage_extraction"] and (
+                        isinstance(usage.get("reasoning_included_in_output"), bool)
+                        and usage.get("usage_validation_errors") == []
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -344,6 +351,7 @@ def provider_models_live(provider: str) -> list[str] | None:
 
 def provider_models_result(provider: str) -> dict[str, Any]:
     """JSON-safe live discovery response shared by the CLI and local clients."""
+    provider = xai.canonical_provider(provider)
     payload: dict[str, Any] = {"provider": provider, "mode": "live", "ok": False, "models": []}
     try:
         models = provider_models_live(provider)
