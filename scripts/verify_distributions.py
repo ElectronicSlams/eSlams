@@ -45,10 +45,19 @@ def run(
     *,
     expected: int = 0,
     source: Path | None = None,
+    offline_guard: Path | None = None,
 ) -> str:
     environment = clean_environment()
     if source is not None:
         environment["PYTHONPATH"] = str(source / "src")
+    if offline_guard is not None:
+        if source is None:
+            raise ValueError("offline suite requires its explicit source tree")
+        environment.update(
+            PYTHONPATH=os.pathsep.join([str(offline_guard), str(source / "src")]),
+            PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PIP_NO_INDEX="1",
+            CORE_NETWORK_ATTEMPT_LOG=str(offline_guard.parent / "consumer-network-attempts.log"),
+        )
     result = subprocess.run(
         command,
         cwd=cwd,
@@ -184,7 +193,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dist", required=True, type=Path)
     parser.add_argument("--expected-commit", required=True)
+    parser.add_argument(
+        "--offline-suite-guard", type=Path,
+        help="Explicit network audit/offline fixture policy for admitted sdist tests.",
+    )
     arguments = parser.parse_args()
+    if arguments.offline_suite_guard is not None:
+        arguments.offline_suite_guard = arguments.offline_suite_guard.resolve()
+        for name in ("sitecustomize.py", "release_offline.py"):
+            if not (arguments.offline_suite_guard / name).is_file():
+                raise ValueError("offline guard/plugin missing; do not start consumer checks")
     distribution = arguments.dist.resolve()
     (wheel,) = distribution.glob("*.whl")
     (sdist,) = distribution.glob("*.tar.gz")
@@ -250,11 +268,14 @@ def main() -> None:
                 "-m",
                 "pytest",
                 str(source / "tests"),
+                *(["--ignore=" + str(source / "tests/test_elapsed_deadline_regressions.py"),
+                   "-p", "release_offline"] if arguments.offline_suite_guard is not None else []),
                 "--basetemp",
                 str(root / "pytest"),
             ],
             root,
             source=source,
+            offline_guard=arguments.offline_suite_guard,
         )
         print(json.dumps({"sdist_suite_without_git": "passed"}))
 

@@ -118,7 +118,8 @@ def main() -> None:
     for name, command in [
         ("twine", [python, "-m", "twine", "check", *map(str, sorted((out / "dist").iterdir()))]),
         ("distribution-consumers", [python, "scripts/verify_distributions.py", "--dist",
-                                    str(out / "dist"), "--expected-commit", commit]),
+                                    str(out / "dist"), "--expected-commit", commit,
+                                    "--offline-suite-guard", str(guard)]),
     ]:
         start = time.monotonic()
         with (out / f"{name}.log").open("w") as stream:
