@@ -1453,6 +1453,13 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = provider.lower()
+    from eslams.providers import databricks
+
+    if databricks.is_databricks(provider):
+        provider = databricks.PROVIDER_ID
+        if not model:
+            raise ValueError("Databricks requires an explicit serving endpoint name")
+        defaults[provider] = (model, databricks.API_KEY_ENV)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

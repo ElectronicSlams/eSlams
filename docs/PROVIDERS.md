@@ -1,5 +1,8 @@
 # Provider Guide
 
+Databricks native serving-endpoint chat is documented in [DATABRICKS.md](DATABRICKS.md),
+including explicit workspace/deployment configuration, reasoning, and accounting limits.
+
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
 Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
