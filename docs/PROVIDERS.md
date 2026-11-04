@@ -1,7 +1,7 @@
 # Provider Guide
 
-eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+eSlams Core has native, secret-free artifact support for OpenAI,
+Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Qwen/DashScope. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -9,6 +9,7 @@ convenience properties.
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
+| `qwen:<model>` | `DASHSCOPE_API_KEY` | native DashScope text generation | `output.choices[0].message.content` | unknown (no native response model field) |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
@@ -20,6 +21,10 @@ requested model into `locked_model_id` as if it came from the response. Bedrock
 is the deliberate exception: the literal model ID is part of the signed
 Converse endpoint and is recorded with `model_identity_source:
 pinned_endpoint`.
+
+For the proposed 0.7.1 Qwen adapter, see [DashScope setup, supported scope,
+regional routing, controls and accounting limits](providers/QWEN.md). `alibaba`,
+`alibaba-cn` and `dashscope` are aliases of `qwen`; region selection is explicit.
 
 ## Setup and Preflight
 

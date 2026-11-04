@@ -1,0 +1,17 @@
+{
+  "request_id": "902fee3b-f7f0-9a8c-96a1-6b4ea25af114",
+  "output": {
+    "text": null,
+    "finish_reason": null,
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"action\":1,\"confidence\":0.75,\"public_explanation\":\"Fixture action.\"}"
+        }
+      }
+    ]
+  },
+  "usage": {"input_tokens": 12, "output_tokens": 4, "total_tokens": 16}
+}

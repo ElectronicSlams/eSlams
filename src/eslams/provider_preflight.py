@@ -14,9 +14,12 @@ from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
+from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
+from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
+    "qwen": "DASHSCOPE_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -53,7 +56,7 @@ def provider_preflight(
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
-    provider = provider.lower()
+    provider = canonicalize_qwen_provider(provider)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -90,6 +93,13 @@ def provider_preflight(
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
+    configuration_error = None
+
+    if record.provider == "qwen":
+        try:
+            qwen_generation_endpoint()
+        except ValueError as exc:
+            configuration_error = str(exc)
 
     if credential_environment is None:
         error = {
@@ -106,6 +116,8 @@ def provider_preflight(
             "error_class": "provider_request_rejected",
             "message": f"model {model!r} is not registered for text game actions",
         }
+    elif configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
     elif not live:
@@ -211,7 +223,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

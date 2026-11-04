@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Qwen / Alibaba Cloud DashScope synchronous text adapter with
+  regional/workspace routing, canonical aliases, sanitized attempt receipts,
+  conservative identity/accounting, explicit caller controls and offline fixtures.
+  See `docs/providers/QWEN.md` for supported routes and limitations.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
