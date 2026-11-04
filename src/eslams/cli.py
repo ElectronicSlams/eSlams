@@ -1333,6 +1333,9 @@ def _official_command(args: argparse.Namespace) -> int:
 
 
 def _providers_command(args: argparse.Namespace) -> int:
+    from eslams.providers import cohere
+
+    args.provider = cohere.canonical_provider(args.provider) or args.provider
     if args.providers_command == "preflight":
         payload = provider_preflight(
             args.provider, args.model, args.arena, live=args.live,
@@ -1440,6 +1443,8 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    from eslams.providers import cohere
+
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
@@ -1453,6 +1458,10 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = provider.lower()
+    provider = cohere.canonical_provider(provider) or provider
+    if provider == "cohere":
+        cohere.validate_model(model)
+        defaults[provider] = (model, cohere.API_KEY_ENV)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

@@ -1,0 +1,16 @@
+{
+  "id": "fixture-thinking-reply",
+  "finish_reason": "COMPLETE",
+  "message": {
+    "role": "assistant",
+    "content": [
+      {"type": "thinking", "thinking": "private fixture thinking: {\"action\":2}"},
+      {"type": "text", "text": "{\"action\":"},
+      {"type": "text", "text": "1}"}
+    ]
+  },
+  "usage": {
+    "billed_units": {"input_tokens": 5, "output_tokens": 6},
+    "tokens": {"input_tokens": 71, "output_tokens": 10}
+  }
+}

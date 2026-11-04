@@ -13,10 +13,11 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import cohere, load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
+    "cohere": "COHERE_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -54,6 +55,12 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    provider = cohere.canonical_provider(provider) or provider
+    if provider == "cohere":
+        cohere.validate_model(model)
+    configuration_error = (
+        cohere.configuration_error(model, runtime_config) if provider == "cohere" else None
+    )
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -91,7 +98,9 @@ def provider_preflight(
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
 
-    if credential_environment is None:
+    if configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
+    elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
@@ -211,7 +220,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -248,6 +258,8 @@ def provider_models_live(provider: str) -> list[str] | None:
     """
     provider = provider.strip().lower().replace("_", "-")
     provider = PROVIDER_ALIASES.get(provider, provider)
+    if provider == "cohere":
+        return cohere.models_live()
     endpoint = _MODELS_ENDPOINTS.get(provider)
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
     if api_key_env is None:
@@ -344,6 +356,7 @@ def provider_models_live(provider: str) -> list[str] | None:
 
 def provider_models_result(provider: str) -> dict[str, Any]:
     """JSON-safe live discovery response shared by the CLI and local clients."""
+    provider = cohere.canonical_provider(provider) or provider
     payload: dict[str, Any] = {"provider": provider, "mode": "live", "ok": False, "models": []}
     try:
         models = provider_models_live(provider)
