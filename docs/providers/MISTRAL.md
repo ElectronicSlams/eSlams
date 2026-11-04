@@ -102,6 +102,8 @@ shared provenance contract.
 Provider output is scrubbed against the active primary key (including custom
 credential environment names) and configured environment values whose names
 contain credential components such as KEY, TOKEN, SECRET, PASSWORD or CREDENTIAL.
+Core's documented public session/request/artifact signing key IDs are excluded
+from that scan; credential values such as `AWS_ACCESS_KEY_ID` remain covered.
 Literal, JSON-escaped and URL-escaped echoes are covered. Contaminated response,
 request, gateway and resolved-model IDs become unknown; contaminated discovery
 model IDs fail validation. Action text is scrubbed before action parsing and
@@ -109,6 +111,8 @@ metadata generation. Malformed bodies, partial transport observations and error
 receipts use the same boundary; raw exception chains are not retained. These
 rules cover configured known values, not unknown credentials or arbitrary
 encodings. They do not rewrite outgoing credentials or the supplied history.
+Trusted receipt schema/parser labels and outcome enums are not provider text
+and are preserved even when an unrelated short credential matches a label.
 Removing a contaminated ID does not permit replay of an observed attempt.
 
 Default retries are zero. Even with an operator retry count, only the shared

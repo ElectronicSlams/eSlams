@@ -131,7 +131,9 @@ def _assert_scrubbed(value, secrets=(PRIMARY, SECONDARY)):
 
 
 @pytest.mark.parametrize("custom_primary", [False, True])
-@pytest.mark.parametrize("secondary_env", ["OPENAI_API_KEY", "SECONDARY_KEY", "GATEWAY_AUTH_TOKEN"])
+@pytest.mark.parametrize("secondary_env", [
+    "OPENAI_API_KEY", "SECONDARY_KEY", "GATEWAY_AUTH_TOKEN", "AWS_ACCESS_KEY_ID",
+])
 def test_primary_and_secondary_echoes_are_scrubbed_from_actions_ids_and_receipts(
     monkeypatch, custom_primary, secondary_env,
 ):
@@ -383,3 +385,20 @@ def test_conflicting_identity_produces_a_valid_failure_artifact_and_no_scoring_v
     assert receipts[0]["outcome"] == "provider_request_rejected"
     assert receipts[0]["locked_model_id"] == "unexpected-model"
     assert receipts[0]["usage"]["total_tokens"] == 16
+
+
+def test_public_key_ids_and_short_secondary_secrets_do_not_corrupt_receipt_contracts(monkeypatch):
+    payload = _success()
+    payload["id"] = "response-stop"
+    payload["choices"][0]["message"]["content"] = '{"action":1,"public_explanation":"stop"}'
+    _post(monkeypatch, httpx.Response(200, json=payload))
+    monkeypatch.setenv("ESLAMS_RUNNER_REQUEST_KEY_ID", "1")
+    monkeypatch.setenv("SECONDARY_PASSWORD", "stop")
+    agent = _agent()
+    response = agent.act(_request())
+    assert response.action == 1 and response.public_explanation == "[REDACTED]"
+    assert agent.last_receipt["provider_response_id"] is None
+    assert agent.last_receipt["provider"] == "mistral-ai"
+    assert agent.last_receipt["parser_version"] == "mistral-chat-completions-raw-v1"
+    assert agent.last_receipt["finish_reason"] == "stop"
+    assert agent.last_receipt["outcome"] == "ok"

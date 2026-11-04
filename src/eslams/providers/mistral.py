@@ -42,6 +42,11 @@ def _credential_variants(primary: str | None = None) -> tuple[str, ...]:
     # supplied under a custom environment name. Never log these values.
     values = {primary} if primary else set()
     for name, value in os.environ.items():
+        if name.upper() in {
+            "ESLAMS_ARENA_SESSION_KEY_ID", "ESLAMS_RUNNER_REQUEST_KEY_ID",
+            "ESLAMS_RUNNER_REQUEST_KEY_ID_PREVIOUS", "RUNNER_ARTIFACT_SIGNING_KEY_ID",
+        }:
+            continue  # Public credential identifiers are not credential values.
         if re.search(r"(?:^|_)(?:KEY|APIKEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?|AUTHORIZATION)"
                      r"(?:_|$)", name.upper()) and value.strip():
             values.add(value.strip())
@@ -64,14 +69,18 @@ def _scrub_text(value: str, secrets: tuple[str, ...]) -> str:
 
 
 def _scrub_receipt(value: Any, secrets: tuple[str, ...]) -> Any:
-    if isinstance(value, str):
-        return _scrub_text(value, secrets)
+    # Core constructs this closed receipt shape itself. Only its identifier
+    # fields carry untrusted provider strings; keep trusted protocol labels and
+    # enum values intact even if an unrelated short secret matches their text.
     if isinstance(value, list):
         return [_scrub_receipt(item, secrets) for item in value]
     if isinstance(value, dict):
         result = {key: _scrub_receipt(item, secrets) for key, item in value.items()}
         for key in ("request_id", "gateway_request_id", "provider_response_id", "locked_model_id"):
-            if isinstance(result.get(key), str) and "[REDACTED]" in result[key]:
+            if isinstance(result.get(key), str) and (
+                _scrub_text(result[key], secrets) != result[key]
+                or "[REDACTED]" in result[key]
+            ):
                 result[key] = None
         if "locked_model_id" in result and result["locked_model_id"] is None:
             result["model_identity_source"] = None
