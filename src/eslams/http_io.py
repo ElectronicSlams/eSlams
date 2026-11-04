@@ -130,7 +130,7 @@ async def _bounded_post(
         ):
             if _observed is not None:
                 allowed = (
-                    "x-request-id", "request-id", "x-amzn-requestid",
+                    "x-request-id", "request-id", "x-amzn-requestid", "x-tc-requestid",
                     "cf-aig-request-id", "x-gateway-request-id",
                 )
                 _observed.append(ResponseObservation(

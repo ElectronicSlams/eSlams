@@ -15,6 +15,7 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -23,6 +24,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "tencent-hunyuan": "TENCENTCLOUD_SECRET_ID",
 }
 
 _MODELS_ENDPOINTS = {
@@ -54,6 +56,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider.strip().replace("_", "-") in {"hunyuan", "tencent-hunyuan"}:
+        provider = "tencent-hunyuan"
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -66,10 +70,22 @@ def provider_preflight(
         try:
             if provider_key(credential_environment) is not None:
                 credential_present = True
+            if record.provider == "tencent-hunyuan":
+                from eslams.providers.tencent_hunyuan import credentials
+
+                credentials()
+                if not credential_present:
+                    raise ValueError("native Hunyuan requires a primary credential")
         except ValueError:
             credential_error = (
                 "API key must contain printable ASCII without internal whitespace"
             )
+            if record.provider == "tencent-hunyuan":
+                credential_present = False
+                credential_error = (
+                    "native Hunyuan requires valid TENCENTCLOUD_SECRET_ID/SECRET_KEY "
+                    "and optional TOKEN/REGION"
+                )
     checks: dict[str, bool | None] = {
         "registry_entry": record.known,
         "adapter_available": credential_environment is not None,
@@ -86,6 +102,15 @@ def provider_preflight(
         "usage_extraction": False,
     }
     warnings = provider_registry.warnings_for(provider, model)
+    control_error = None
+    if record.provider == "tencent-hunyuan":
+        from eslams.providers.tencent_hunyuan import validate_controls
+
+        warnings.append(RETIREMENT_WARNING)
+        try:
+            validate_controls(model, runtime_config or ProviderRuntimeConfig(), max_output_tokens)
+        except ValueError as exc:
+            control_error = str(exc)
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
@@ -108,6 +133,8 @@ def provider_preflight(
         }
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
+    elif control_error:
+        error = {"error_class": "provider_request_rejected", "message": control_error}
     elif not live:
         warnings.append("This configuration preflight did not verify live provider availability.")
     elif not credential_environment or not credential_present:
@@ -211,7 +238,10 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (
+                checks["adapter_available"] is True
+                and credential_error is None and control_error is None
+            ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

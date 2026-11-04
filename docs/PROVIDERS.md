@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `tencent-hunyuan:<model>` / `hunyuan:<model>` | `TENCENTCLOUD_SECRET_ID` + `TENCENTCLOUD_SECRET_KEY` | signed native ChatCompletions | `Choices[0].Message.Content` (optional `Response` wrapper) | unknown; no attested model field |
+
+See the [Tencent native Hunyuan guide](providers/TENCENT_HUNYUAN.md) for TC3
+signing, separate Tencent products, controls and the announced December 2026
+retirement. This adapter does not enable TokenHub or Coding Plan catalogue routes.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
