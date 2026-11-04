@@ -1454,7 +1454,7 @@ def _provider_agent(
         provider, model = value, ""
     provider = provider.lower()
     if provider.replace("_", "-") in {"arcee", "arcee-ai"}:
-        if not model:
+        if not model.strip():
             raise ValueError("Arcee requires an explicit exact model ID: arcee-ai:<model>")
         from eslams.providers.arcee import API_KEY_ENV
 

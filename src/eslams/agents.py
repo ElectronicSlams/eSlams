@@ -404,6 +404,9 @@ class ModelProviderAgent:
         self.provider = self.provider.lower()
         if self.provider.replace("_", "-") in {"arcee", "arcee-ai"}:
             self.provider = "arcee-ai"
+            from eslams.providers.arcee import validate_model
+
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

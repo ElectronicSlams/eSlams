@@ -20,7 +20,8 @@ The adapter follows the concrete quickstart URL; it never probes or falls back
 to the alternate path after a failure. This discrepancy has not been resolved
 by live inference.
 
-Always specify an exact model ID. No default model is selected. The current
+Always specify a nonblank exact model ID. CLI, direct construction and preflight
+reject missing or whitespace-only IDs; no default model is selected. The current
 [pricing page](https://docs.arcee.ai/get-started/pricing) includes
 `zai-org/glm-5.3-flash`; model availability is account-dependent and changes.
 [Model discovery](https://docs.arcee.ai/api-reference/models) uses
@@ -62,8 +63,9 @@ The quickstart reads `message.reasoning_content`; the first-call page reads
 `message.reasoning`. Both are treated as private response fields. The direct
 request schema documents no reasoning effort/budget/enable switch. The adapter
 uses native defaults, rejects explicit reasoning switches/budgets and routing
-preferences before submission, and never copies self-hosted or OpenRouter
-controls into this API.
+preferences in both offline/live preflight and before submission, and never
+copies self-hosted or OpenRouter controls into this API. This includes zero
+budgets and controls for other providers.
 
 Only response `model` attests resolved identity; absence remains null. Usage
 normalizes standard `prompt_tokens`, `completion_tokens`, `total_tokens` and
@@ -79,6 +81,13 @@ daily/aggregate statistics, so Core does not use it to invent per-call charges.
 The chat reference lists 400, 401, 402, 403, 404, 422, 429, 500 and 503 with
 `detail` errors. Existing shared transport maps these into sanitized outcomes;
 raw error prose, headers, keys, prompts and reasoning never enter receipts.
+Credential protection covers the standard `ARCEE_API_KEY` and a selected
+alternate `api_key_env`, including when both remain configured. Any receipt
+identifier or nested string containing either credential is discarded in full;
+a discarded resolved identity also loses its identity-source claim. The same
+protection applies to HTTP errors, malformed responses and partial-body failures.
+Action text containing credentials, including JSON-escaped values, is rejected
+before parsing or public output rather than rewritten into a synthetic response.
 `Retry-After` is retained where supplied. Default retries and action repair are
 zero. Even opted-in retries require shared proof of rejection before work;
 a plain Arcee `detail` 429 is insufficient proof, and timeout/ambiguous work

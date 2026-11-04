@@ -16,6 +16,7 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.arcee import API_KEY_ENV as ARCEE_API_KEY_ENV
 from eslams.providers.arcee import MODELS_ENDPOINT as ARCEE_MODELS_ENDPOINT
+from eslams.providers.arcee import validate_configuration as validate_arcee_configuration
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -58,6 +59,12 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    configuration_error = None
+    if provider.replace("_", "-") in {"arcee", "arcee-ai"}:
+        try:
+            validate_arcee_configuration(model, runtime_config)
+        except ValueError as exc:
+            configuration_error = str(exc)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -95,7 +102,9 @@ def provider_preflight(
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
 
-    if credential_environment is None:
+    if configuration_error is not None:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
+    elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
@@ -215,7 +224,10 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (
+                checks["adapter_available"] is True and credential_error is None
+                and configuration_error is None
+            ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

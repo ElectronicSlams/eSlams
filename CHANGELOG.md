@@ -6,6 +6,8 @@
   preflight/discovery wiring, sanitized receipts and deterministic raw-wire tests.
   Native reasoning defaults apply; unsupported explicit controls fail before
   submission. Missing identity/accounting stays unknown. See `docs/providers/ARCEE.md`.
+  Reject blank model IDs and unsupported controls in preflight, and discard
+  credential echoes from receipt identifiers on success and failure paths.
 
 ## v0.7.0 - 2026-11-04
 

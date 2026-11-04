@@ -10,19 +10,24 @@ from __future__ import annotations
 
 import copy
 import json
+import traceback
+from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
 
 import httpx
 import pytest
 
+from eslams import http_io
 from eslams.agents import ModelProviderAgent, ProviderCallError
+from eslams.artifacts import ArtifactValidator
 from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import ActRequest, AgentIdentity, ArenaIdentity
 from eslams.provider_preflight import provider_models_live, provider_preflight
 from eslams.providers.arcee import CHAT_COMPLETIONS_ENDPOINT, MODELS_ENDPOINT
+from eslams.runner import RunConfig, Runner
 
 MODEL = "zai-org/glm-5.3-flash"
 FIXTURE = Path(__file__).parent / "fixtures/provider/arcee_chat_completions_success.json"
@@ -270,3 +275,231 @@ def test_aliases_cli_preflight_dispatch_and_discovery(monkeypatch, wire, capsys,
     assert json.loads(capsys.readouterr().out)["models"] == [MODEL]
     with pytest.raises(ValueError, match="explicit exact model"):
         _provider_agent(alias)
+
+
+@pytest.mark.parametrize("model", ["", " ", "\t\n", None])
+@pytest.mark.parametrize("alias", ["arcee", "arcee-ai", "arcee_ai", "ARCEE-AI"])
+def test_nonblank_exact_model_required_for_direct_agent_and_cli(model, alias):
+    with pytest.raises(ValueError, match="explicit exact model"):
+        ModelProviderAgent(provider=alias, model=model, api_key_env="ARCEE_API_KEY")
+    if model is not None:
+        with pytest.raises(ValueError, match="explicit exact model"):
+            _provider_agent(f"{alias}:{model}")
+
+
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("model", ["", " ", "\t\n", None])
+def test_preflight_rejects_blank_model_before_any_network(monkeypatch, live, model):
+    monkeypatch.setenv("ARCEE_API_KEY", "fixture-primary-key")
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("inference"))
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("discovery"))
+    result = provider_preflight("arcee_ai", model, "tic-tac-toe", live=live)
+    assert result["ok"] is False
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    assert result["readiness"]["configuration_ready"] is False
+    assert result["readiness"]["inference"] == "not_attempted"
+
+
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("controls", [
+    {"reasoning": "enabled"}, {"reasoning": "disabled"}, {"reasoning_effort": "high"},
+    {"reasoning_budget_tokens": 0}, {"reasoning_budget_tokens": 2048},
+    {"gemini_thinking_budget": -1}, {"gemini_thinking_budget": 0},
+    {"openrouter_provider_order": ("backend",)},
+])
+def test_preflight_rejects_explicit_controls_before_discovery_or_inference(
+    monkeypatch, live, controls,
+):
+    monkeypatch.setenv("ARCEE_API_KEY", "fixture-primary-key")
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("inference"))
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get",
+                        lambda *a, **k: pytest.fail("discovery"))
+    result = provider_preflight("arcee", MODEL, "tic-tac-toe", live=live,
+                                runtime_config=ProviderRuntimeConfig(**controls))
+    assert result["ok"] is False
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    assert result["readiness"]["configuration_ready"] is False
+    assert result["readiness"]["inference"] == "not_attempted"
+
+
+def test_changed_model_and_zero_reasoning_budget_rejected_before_transport(wire):
+    _, calls = wire
+    a = agent()
+    a.model = " "
+    with pytest.raises(ProviderCallError, match="explicit exact model"):
+        a.act(request())
+    with pytest.raises(ProviderCallError, match="native reasoning defaults"):
+        agent(runtime_config=ProviderRuntimeConfig(reasoning_budget_tokens=0)).act(request())
+    assert not calls
+
+
+@pytest.mark.parametrize("mode", [
+    "success", "http_error", "error200", "malformed_json", "malformed_choices",
+    "refused", "truncated", "partial_timeout", "partial_reset", "partial_resource",
+])
+@pytest.mark.parametrize("selected_env", ["ARCEE_API_KEY", "ARCEE_SECONDARY_API_KEY"])
+def test_actual_wire_credentials_never_persist_in_receipts_or_artifacts(
+    monkeypatch, tmp_path, mode, selected_env,
+):
+    # Arbitrary printable secrets deliberately lack known API-key prefixes.
+    primary, secondary = "PrimaryCredential12345", "SecondaryCredential67890"
+    monkeypatch.setenv("ARCEE_API_KEY", primary)
+    monkeypatch.setenv("ARCEE_SECONDARY_API_KEY", secondary)
+    # When the alternate is selected, both configured values need protection.
+    # When the primary is selected, secondary remains private body prose only.
+    echoed_secondary = secondary if selected_env != "ARCEE_API_KEY" else primary
+    payload = json.loads(FIXTURE.read_text())
+    payload["id"] = f"generation-{primary}"
+    payload["model"] = f"model/{echoed_secondary}"
+    payload["usage"]["debug"] = primary
+    payload["choices"][0]["message"]["reasoning"] = secondary
+    status = 200
+    if mode == "http_error":
+        status = 429
+        payload["detail"] = secondary
+    elif mode == "error200":
+        payload["error"] = {"code": 429, "message": secondary}
+    elif mode == "malformed_choices":
+        payload["choices"] = []
+    elif mode == "refused":
+        payload["choices"][0]["message"]["refusal"] = secondary
+    elif mode == "truncated":
+        payload["choices"][0]["finish_reason"] = "length"
+    calls = []
+    original_client = httpx.AsyncClient
+
+    class PartialStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield json.dumps({"private": primary, "private2": secondary}).encode()
+            if mode == "partial_timeout":
+                raise httpx.ReadTimeout(secondary)
+            if mode == "partial_reset":
+                raise httpx.ReadError(secondary)
+            yield b"x" * (1024 * 1024 + 1)
+
+    def respond(sent_request):
+        calls.append(sent_request)
+        expected = primary if selected_env == "ARCEE_API_KEY" else secondary
+        assert sent_request.headers["Authorization"] == f"Bearer {expected}"
+        headers = {
+            "x-request-id": f"request-{primary}",
+            "cf-aig-request-id": f"gateway-{echoed_secondary}",
+            "Retry-After": "2",
+        }
+        if mode.startswith("partial_"):
+            return httpx.Response(status, stream=PartialStream(), headers=headers)
+        content = (
+            f"invalid JSON: {primary} {secondary}".encode() if mode == "malformed_json"
+            else json.dumps(payload).encode()
+        )
+        return httpx.Response(status, stream=httpx.ByteStream(content), headers=headers)
+
+    class Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        @asynccontextmanager
+        async def stream(self, method, url, **kwargs):
+            async with (
+                original_client(transport=httpx.MockTransport(respond)) as client,
+                client.stream(method, url, **kwargs) as response,
+            ):
+                yield response
+
+    monkeypatch.setattr(http_io.httpx, "AsyncClient", lambda **kwargs: Client())
+    a = ModelProviderAgent("arcee-ai", MODEL, selected_env,
+                           runtime_config=ProviderRuntimeConfig(max_retries=2))
+    result = Runner().run(RunConfig("tic-tac-toe", agent_1=a, max_turns=1,
+                                    on_agent_error="forfeit", output_dir=tmp_path))
+    assert len(calls) == len(a.attempt_receipts) == 1
+    receipt = a.last_receipt
+    assert receipt["request_id"] is None
+    assert receipt["gateway_request_id"] is None
+    assert receipt.get("provider_response_id") is None
+    assert receipt.get("locked_model_id") is None
+    assert receipt.get("model_identity_source") is None
+    if mode == "success":
+        assert receipt["outcome"] == "ok"
+        assert receipt["usage"]["total_tokens"] == 16
+    else:
+        assert receipt["outcome"] != "ok"
+    assert ArtifactValidator().validate(result.expanded_path) == []
+    for path in result.expanded_path.rglob("*"):
+        if path.is_file():
+            for credential in (primary, secondary):
+                assert credential.encode() not in path.read_bytes(), path
+
+
+@pytest.mark.parametrize("credential_field", ["public_explanation", "action", "unknown"])
+def test_credential_echo_in_action_text_never_reaches_public_output(wire, credential_field):
+    payload, calls = wire
+    payload["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, credential_field: "rcai-fixture-credential",
+    })
+    a = agent()
+    with pytest.raises(ProviderCallError, match="credential material"):
+        a.act(request())
+    assert len(calls) == 1
+    assert a.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert "rcai-fixture-credential" not in json.dumps(a.last_receipt)
+
+
+def test_escaped_credential_echo_in_action_json_is_rejected(wire):
+    payload, _ = wire
+    payload["choices"][0]["message"]["content"] = (
+        '{"action":1,"public_explanation":"\\u0072cai-fixture-credential"}'
+    )
+    with pytest.raises(ProviderCallError, match="credential material"):
+        agent().act(request())
+
+
+def test_uninspectable_action_text_preserves_sanitized_usage_receipt(wire):
+    payload, _ = wire
+    payload["choices"][0]["message"]["content"] = "[" * 2000 + "0" + "]" * 2000
+    payload["id"] = "rcai-fixture-credential"
+    a = agent()
+    with pytest.raises(ProviderCallError, match="safely inspected"):
+        a.act(request())
+    assert a.last_receipt["usage"]["total_tokens"] == 16
+    assert a.last_receipt["provider_response_id"] is None
+
+
+def test_credential_protection_preserves_explicit_safe_retry_receipts(monkeypatch, wire):
+    payload, _ = wire
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            return httpx.Response(429, json={"error": {"code": 429}},
+                                  headers={"x-request-id": "rcai-fixture-credential"})
+        return httpx.Response(200, json=payload)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    a = agent(runtime_config=ProviderRuntimeConfig(max_retries=1, retry_backoff_ms=0))
+    assert a.act(request()).action == 1
+    assert len(calls) == len(a.attempt_receipts) == 2
+    assert [r["attempt_index"] for r in a.attempt_receipts] == [1, 2]
+    assert a.attempt_receipts[0]["request_id"] is None
+    assert a.attempt_receipts[1]["provider_response_id"] == payload["id"]
+
+
+@pytest.mark.parametrize("failure", [httpx.ReadTimeout, httpx.ReadError])
+def test_private_transport_causes_are_not_exposed_in_tracebacks(monkeypatch, failure):
+    primary, secondary = "PrimaryCredential12345", "SecondaryCredential67890"
+    monkeypatch.setenv("ARCEE_API_KEY", primary)
+    monkeypatch.setenv("ARCEE_SECONDARY_API_KEY", secondary)
+
+    def post(*args, **kwargs):
+        raise failure(f"{primary} {secondary}")
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    a = ModelProviderAgent("arcee-ai", MODEL, "ARCEE_SECONDARY_API_KEY")
+    with pytest.raises((ProviderCallError, TimeoutError)) as error:
+        a.act(request())
+    public = "".join(traceback.format_exception(error.value)) + json.dumps(a.attempt_receipts)
+    assert primary not in public and secondary not in public
