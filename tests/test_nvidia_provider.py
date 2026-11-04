@@ -336,3 +336,16 @@ def test_ambiguous_timeout_never_retries_even_if_enabled(transport, monkeypatch)
     assert calls == [1] and len(configured.attempt_receipts) == 1
     assert configured.last_receipt["outcome"] == "provider_timeout"
     assert "synthetic-nvidia-primary" not in json.dumps(configured.last_receipt)
+
+
+def test_catalogue_prices_cannot_manufacture_hosted_billing(transport):
+    configured = agent()
+    configured.capabilities = replace(configured.capabilities, pricing={
+        "input_cost_per_token": 0.0, "output_cost_per_token": 0.0,
+        "source": "synthetic-external-catalogue",
+    })
+    configured.act(_request())
+    assert configured.last_receipt["usage"]["total_tokens"] == 140
+    assert configured.last_receipt["pricing"]["status"] == "cost_unavailable"
+    assert configured.last_receipt["estimated_cost"]["status"] == "cost_unavailable"
+    assert configured.last_receipt["rate_card_reference"] is None

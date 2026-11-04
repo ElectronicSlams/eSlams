@@ -135,9 +135,9 @@ and primary/secondary credential echoes. No NVIDIA key was obtained or used;
 account availability, entitlement, actual latency, actual billing, quotas and
 regional placement remain unverified.
 
-Cloud validation used Python 3.12.14. The final provider/transport subset passed
-284 tests, including 78 NVIDIA cases. The broader suite passed 1329 tests and
-failed two existing cases before the last focused additions:
+Cloud validation used Python 3.12.14. Provider/transport regressions passed; the
+PR records final counts and the exact checked commit. The broader suite has two
+existing failures:
 `test_provider_runtime_deadline_records_failed_attempt_and_bounds_queue_retry_waits`
 and `test_cli_fallback_failing_seat_board_win_is_only_a_board_result`. Both failures
 reproduced in an unmodified worktree at base

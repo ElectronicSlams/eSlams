@@ -6,6 +6,7 @@ This is not a self-hosted NIM or partner endpoint adapter. See docs/providers/NV
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -144,7 +145,8 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
     receipt = _receipt(
         provider=PROVIDER_ID, model=agent.model, response=response,
         provider_response_id=data.get("id"), resolved_model=data.get("model"),
-        usage=data.get("usage"), capabilities=agent.capabilities, runtime_config=runtime,
+        usage=data.get("usage"), capabilities=replace(agent.capabilities, pricing={}),
+        runtime_config=runtime,
     )
     try:
         if response.status_code == 202:
