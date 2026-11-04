@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased (0.7.1 candidates)
+
+- Add a direct Sakana Namazu text adapter with explicit model/thinking controls,
+  full supplied history, disabled tools, credential-safe receipts and raw-wire tests.
+  Fugu routing is excluded; region and live billing remain unverified. See
+  `docs/PROVIDER_SAKANA.md`. No package version change.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

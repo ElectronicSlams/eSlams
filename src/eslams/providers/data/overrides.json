@@ -2,6 +2,72 @@
   "organizations": [],
   "models": [
     {
+      "provider": "sakana",
+      "model": "sakana-namazu-v1.0",
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "chat_template_kwargs.thinking"
+      ],
+      "default_reasoning_track": "native-default",
+      "context_window": 262144,
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://console.sakana.ai/models?model=sakana-namazu"
+      ]
+    },
+    {
+      "provider": "sakana",
+      "model": "sakana-namazu",
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "chat_template_kwargs.thinking"
+      ],
+      "default_reasoning_track": "native-default",
+      "context_window": 262144,
+      "lifecycle": "alias",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://console.sakana.ai/models?model=sakana-namazu"
+      ]
+    },
+    {
       "provider": "openai",
       "model": "gpt-5-mini",
       "available_from_api": true,
