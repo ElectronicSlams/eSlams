@@ -106,6 +106,11 @@ success and failure paths, including partial reads. Credentials in action conten
 or its JSON-decoded envelope cause rejection before parsing; this includes escaped
 JSON strings. The private thinking field is ignored. This is covered by synthetic
 credential tests, not a claim to detect arbitrary transformations of a secret.
+Echo protection covers the active Bearer key, any separately configured
+`CLOVASTUDIO_API_KEY`, and deprecated `NCP_CLOVASTUDIO_API_KEY` /
+`NCP_APIGW_API_KEY` values. Deprecated keys are never sent. Error messages are
+scrubbed and private transport exception chains are suppressed. Discovery has no
+NAVER network endpoint and emits no credential values.
 
 ## Fixture provenance and validation
 
@@ -117,3 +122,11 @@ the same native envelope and deliberately malformed variants.
 reasoning, identity, usage/cost, offline and mocked live preflight, CLI artifact
 validation, native/HTTP errors, malformed JSON, credential echoes, timeout and
 actual bounded-reader partial/disconnect/oversize cases through HTTPX MockTransport.
+`tests/test_naver_hardening.py` adds independent primary/secondary credential and
+preflight budget regressions. Both token-budget fields are rejected in configuration
+and live preflight before discovery or transport, including explicit zero/default
+sentinels. The follow-up CLI investigation reproduced all six CLI checks as passing
+on both untouched base and adapter branch. The prior two 15-second subprocess
+failures are classified as intermittent test-harness timeouts: their commands only
+validate a nonexistent artifact and do not invoke NAVER. No timeout was increased;
+the exact resource/scheduling cause of the original slow starts remains unproven.

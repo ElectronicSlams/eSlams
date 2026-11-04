@@ -6,6 +6,7 @@ No SDK, router, tool execution, model substitution, or inferred billing.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, NoReturn
 from urllib.parse import quote
 
@@ -34,26 +35,36 @@ def validate_settings(model: str, runtime: ProviderRuntimeConfig) -> None:
         raise ValueError("NAVER enabled reasoning conflicts with effort none")
 
 
-def _without_credential(value: Any, credential: str) -> Any:
+def _credential_values(api_key: str) -> tuple[str, ...]:
+    # Legacy keys are never sent by this adapter. Still protect configured
+    # values if a provider/gateway echoes them in unrelated response fields.
+    names = (API_KEY_ENV, "NCP_CLOVASTUDIO_API_KEY", "NCP_APIGW_API_KEY")
+    values = {api_key, *(os.getenv(name, "").strip() for name in names)}
+    return tuple(sorted(values - {""}, key=len, reverse=True))
+
+
+def _without_credentials(value: Any, credentials: tuple[str, ...]) -> Any:
     """Discard echoed identifiers instead of creating fictitious redacted identities."""
     if isinstance(value, str):
-        return None if credential in value else value
+        return None if any(credential in value for credential in credentials) else value
     if isinstance(value, dict):
-        return {key: _without_credential(item, credential) for key, item in value.items()
-                if credential not in key}
+        return {key: _without_credentials(item, credentials) for key, item in value.items()
+                if not any(credential in key for credential in credentials)}
     if isinstance(value, list):
-        return [_without_credential(item, credential) for item in value]
+        return [_without_credentials(item, credentials) for item in value]
     return value
 
 
-def _contains_credential(value: Any, credential: str) -> bool:
+def _contains_credentials(value: Any, credentials: tuple[str, ...]) -> bool:
     if isinstance(value, str):
-        return credential in value
+        return any(credential in value for credential in credentials)
     if isinstance(value, dict):
-        return any(credential in key or _contains_credential(item, credential)
-                   for key, item in value.items())
+        return any(
+            _contains_credentials(key, credentials) or _contains_credentials(item, credentials)
+            for key, item in value.items()
+        )
     if isinstance(value, list):
-        return any(_contains_credential(item, credential) for item in value)
+        return any(_contains_credentials(item, credentials) for item in value)
     return False
 
 
@@ -88,6 +99,7 @@ def call_provider(
 
     runtime = agent.runtime_config or ProviderRuntimeConfig()
     validate_settings(agent.model, runtime)
+    credentials = _credential_values(api_key)
     payload: dict[str, Any] = {
         "messages": [{"role": "system", "content": _SYSTEM_INSTRUCTIONS},
                      {"role": "user", "content": prompt}],
@@ -133,7 +145,7 @@ def call_provider(
             response.headers.get("x-ncp-clovastudio-request-id")
         ) or receipt["request_id"]
         receipt["endpoint_region"] = "Korea" if not runtime.gateway_base_url else None
-        receipt = _without_credential(receipt, api_key)
+        receipt = _without_credentials(receipt, credentials)
         status = data.get("status")
         code = status.get("code") if isinstance(status, dict) else None
 
@@ -173,7 +185,8 @@ def call_provider(
             fail("provider_response_schema_mismatch")
         # Scan the same decoded action envelope used by Core, including JSON escapes.
         try:
-            echoed = api_key in text or _contains_credential(extract_json(text), api_key)
+            echoed = (_contains_credentials(text, credentials)
+                      or _contains_credentials(extract_json(text), credentials))
         except (ValueError, RecursionError):
             fail("provider_response_schema_mismatch")
         if echoed:
@@ -183,5 +196,11 @@ def call_provider(
         # A foreign/unknown error envelope cannot authorize replay of native calls.
         exc.retry_permitted = False
         if exc.receipt is not None:
-            exc.receipt = _without_credential(exc.receipt, api_key)
-        raise
+            exc.receipt = _without_credentials(exc.receipt, credentials)
+        message = str(exc)
+        for credential in credentials:
+            message = message.replace(credential, "[REDACTED]")
+        exc.args = (message,)
+        raise exc from None
+    except TimeoutError:
+        raise TimeoutError("NAVER provider request timed out") from None
