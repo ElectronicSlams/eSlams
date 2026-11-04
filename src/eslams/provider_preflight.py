@@ -281,6 +281,11 @@ def provider_models_live(provider: str) -> list[str] | None:
             f"missing API key environment variable {api_key_env}",
             error_kind="provider_auth_failed", provider=provider,
         )
+    apodex_credentials: tuple[str, ...] = ()
+    if provider == "apodex":
+        from eslams.providers.apodex import redaction_credentials
+
+        apodex_credentials = redaction_credentials(api_key)
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -333,7 +338,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             )
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
-            if provider == "apodex" and api_key in raw:
+            if any(secret in raw for secret in apodex_credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

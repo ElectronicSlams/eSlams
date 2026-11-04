@@ -85,3 +85,13 @@ and privacy assertions. Faults are synthetic, not recorded service outcomes.
 mocked live preflight/discovery, native defaults, errors, retry, identity, usage,
 reasoning privacy and exact credential echoes, including JSON-escaped action text.
 No credentials, headers, prompt bodies or private reasoning enter public receipts.
+
+Credential echo checks cover the active key plus configured credential-named
+environment entries (API keys, tokens, secrets, passwords and access keys),
+including secondary provider/gateway values and their trimmed forms. These
+values are used only for local redaction, never sent to Apodex or persisted.
+Echoed identifiers become null; credential-bearing action text is rejected,
+including JSON-escaped content. Discovery rejects credential-bearing model IDs.
+`tests/test_apodex_security_followup.py` independently covers these paths and
+checks blank IDs and explicit reasoning budgets in offline/live preflight and
+again before transport after adapter reconfiguration.
