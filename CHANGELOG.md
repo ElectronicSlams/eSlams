@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Preserve DeepSeek usage receipts when action JSON exceeds structural inspection
+  limits or exhausts parser depth; scan and redact credentials iteratively.
+- Reject missing DeepSeek model IDs and unsupported explicit reasoning budgets;
+  remove primary/secondary credential echoes across native receipt paths.
+- Add a native DeepSeek Chat Completions adapter with conservative identity, usage,
+  safe retry and interruption handling; see `docs/providers/DEEPSEEK.md` for scope
+  and synthetic fixture provenance. No live service availability is claimed.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

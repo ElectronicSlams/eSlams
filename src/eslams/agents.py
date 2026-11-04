@@ -44,6 +44,10 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
+from eslams.providers.deepseek import call as call_deepseek
+from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
+from eslams.providers.deepseek import normalize_usage as normalize_deepseek_usage
+from eslams.providers.deepseek import validate_model as validate_deepseek_model
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
@@ -402,6 +406,9 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        self.provider = canonical_deepseek_provider(self.provider)
+        if self.provider == "deepseek":
+            validate_deepseek_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -634,6 +641,8 @@ class ModelProviderAgent:
             return self._call_gemini(api_key, prompt)
         if self.provider == "openrouter":
             return self._call_openrouter(api_key, prompt)
+        if self.provider == "deepseek":
+            return call_deepseek(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         raise ProviderCallError(
@@ -1968,6 +1977,7 @@ def _endpoint_kind(provider: str) -> str:
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
+        "deepseek": "deepseek_chat_completions",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
     }.get(provider, "unknown")
@@ -1979,6 +1989,7 @@ def _parser_version(provider: str) -> str:
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
+        "deepseek": "deepseek-chat-completions-raw-v1",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
     }.get(provider, "unknown")
@@ -1987,6 +1998,8 @@ def _parser_version(provider: str) -> str:
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if not isinstance(usage, dict):
         return _empty_usage()
+    if provider == "deepseek":
+        return normalize_deepseek_usage(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2516,6 +2529,18 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
+    elif provider == "deepseek":
+        choices = data.get("choices")
+        first = choices[0] if isinstance(choices, list) and choices else None
+        if isinstance(first, dict):
+            error = error or first.get("error")
+            reason = first.get("finish_reason")
+            if reason in ("insufficient_system_resource", "aborted"):
+                status = "incomplete"
+            message = first.get("message")
+            refused = reason == "content_filter" or (
+                isinstance(message, dict) and bool(message.get("refusal"))
+            )
     elif provider == "openrouter":
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
@@ -2548,6 +2573,7 @@ def _check_provider_completion(
         "MALFORMED_RESPONSE", "FINISH_REASON_UNSPECIFIED", "BLOCK_REASON_UNSPECIFIED",
         "stop", "length", "error", "tool_calls", "guardrail_intervened", "content_filtered",
         "malformed_model_output", "malformed_tool_use",
+        "insufficient_system_resource", "aborted",
     }
     receipt["finish_reason"] = reason if isinstance(reason, str) and reason in known_reasons else (
         "unknown" if reason is not None else None

@@ -51,6 +51,8 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
+from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
+from eslams.providers.deepseek import validate_model as validate_deepseek_model
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1441,6 +1443,7 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
+        "deepseek": ("deepseek-flash", "DEEPSEEK_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1453,6 +1456,9 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = provider.lower()
+    provider = canonical_deepseek_provider(provider)
+    if provider == "deepseek":
+        validate_deepseek_model(model)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

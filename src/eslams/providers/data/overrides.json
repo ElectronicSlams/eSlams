@@ -2,6 +2,153 @@
   "organizations": [],
   "models": [
     {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "none",
+        "low",
+        "high",
+        "max"
+      ],
+      "default_reasoning_effort": "high",
+      "supported_reasoning_modes": [
+        "native-default",
+        "disabled",
+        "enabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning",
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_controlled",
+      "max_output_tokens": 393216,
+      "context_window": 1048576,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://api-docs.deepseek.com/api/create-chat-completion/",
+        "https://api-docs.deepseek.com/quick_start/pricing/"
+      ],
+      "pricing": {},
+      "lifecycle": "active"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-v4-pro",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "none",
+        "low",
+        "high",
+        "max"
+      ],
+      "default_reasoning_effort": "high",
+      "supported_reasoning_modes": [
+        "native-default",
+        "disabled",
+        "enabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning",
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_controlled",
+      "max_output_tokens": 393216,
+      "context_window": 1048576,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://api-docs.deepseek.com/api/create-chat-completion/",
+        "https://api-docs.deepseek.com/quick_start/pricing/"
+      ],
+      "pricing": {},
+      "lifecycle": "active"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-chat",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-reasoner",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek/deepseek-chat",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek/deepseek-coder",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek/deepseek-r1",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek/deepseek-reasoner",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek/deepseek-v3",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek/deepseek-v3.2",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek/deepseek-v4-flash",
+      "pricing": {}
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek/deepseek-v4-pro",
+      "pricing": {}
+    },
+    {
       "provider": "openai",
       "model": "gpt-5-mini",
       "available_from_api": true,
