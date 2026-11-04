@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import re
 from typing import TYPE_CHECKING, Any
 
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -35,29 +37,43 @@ def validate_settings(model: str, runtime: ProviderRuntimeConfig | None) -> None
         raise ValueError("Perceptron reasoning controls are unverified for this model ID")
 
 
-def _contains_credential(value: Any, api_key: str) -> bool:
+def credential_values(
+    api_key: str | None = None, *, api_key_env: str | None = None,
+) -> tuple[str, ...]:
+    """Snapshot configured credentials for redaction only; never send secondary values."""
+    values = {api_key} if api_key else set()
+    for name, value in os.environ.items():
+        if (name in {API_KEY_ENV, api_key_env} or re.search(
+            r"(?:^|_)(?:API_?KEY|ACCESS_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?)(?:_|$)",
+            name.upper(),
+        )) and value.strip():
+            values.add(value.strip())
+    return tuple(values)
+
+
+def contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
     if isinstance(value, str):
-        return api_key in value
+        return any(credential in value for credential in credentials)
     if isinstance(value, dict):
-        return any(_contains_credential(key, api_key) or _contains_credential(item, api_key)
+        return any(contains_credential(key, credentials) or contains_credential(item, credentials)
                    for key, item in value.items())
     if isinstance(value, list):
-        return any(_contains_credential(item, api_key) for item in value)
+        return any(contains_credential(item, credentials) for item in value)
     return False
 
 
-def scrub_receipt(value: Any, api_key: str) -> Any:
+def scrub_receipt(value: Any, credentials: tuple[str, ...]) -> Any:
     """Drop credential-bearing observations; redacted text cannot attest identity."""
     if isinstance(value, str):
-        return None if api_key in value else value
+        return None if contains_credential(value, credentials) else value
     if isinstance(value, dict):
-        clean = {key: scrub_receipt(item, api_key) for key, item in value.items()
-                 if not _contains_credential(key, api_key)}
+        clean = {key: scrub_receipt(item, credentials) for key, item in value.items()
+                 if not contains_credential(key, credentials)}
         if "locked_model_id" in clean and clean["locked_model_id"] is None:
             clean["model_identity_source"] = None
         return clean
     if isinstance(value, list):
-        return [scrub_receipt(item, api_key) for item in value]
+        return [scrub_receipt(item, credentials) for item in value]
     return value
 
 
@@ -78,6 +94,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
 
     runtime = agent.runtime_config
     validate_settings(agent.model, runtime)
+    credentials = credential_values(api_key, api_key_env=agent.api_key_env)
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [
@@ -167,12 +184,12 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         except (ValueError, RecursionError):
             raise ProviderCallError("Perceptron returned malformed action text",
                                     error_kind="provider_response_schema_mismatch") from None
-        if _contains_credential(text, api_key) or _contains_credential(parsed_text, api_key):
+        if contains_credential(text, credentials) or contains_credential(parsed_text, credentials):
             raise ProviderCallError("Perceptron answer contained credentials",
                                     error_kind="provider_response_schema_mismatch")
-        return text, scrub_receipt(receipt, api_key)
+        return text, scrub_receipt(receipt, credentials)
     except ProviderCallError as exc:
-        safe_receipt = scrub_receipt(exc.receipt or receipt, api_key)
+        safe_receipt = scrub_receipt(exc.receipt or receipt, credentials)
         raise ProviderCallError(
             "Perceptron request failed: " + exc.error_kind,
             error_kind=exc.error_kind, status_code=exc.status_code,

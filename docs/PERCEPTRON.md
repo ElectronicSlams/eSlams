@@ -29,6 +29,11 @@ evidence of game performance. Fault cases preserve that envelope where applicabl
 Credential-bearing final answers are rejected, including escaped JSON strings;
 credential-bearing receipt observations are removed on success, HTTP errors,
 invalid JSON, and transport failures after headers arrive.
+Redaction snapshots the selected credential and nonempty configured environment
+values whose names identify API/access keys, tokens, secrets, passwords, or
+credentials. These secondary values are used only for redaction and never added
+to requests or receipts. A discovery response containing such a value in a model
+ID fails as a whole; no redacted ID or apparently complete partial list is returned.
 
 ## Use
 
@@ -96,3 +101,15 @@ paid inference, merge, deployment, and release were not run. The draft PR uses
 `[skip ci]` on its head commit, following
 [GitHub's documented skip behavior](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs),
 to avoid hosted push/pull-request workflows; workflow configuration is unchanged.
+
+Follow-up cross-draft review: 60 additional cases cover missing/blank IDs,
+unsupported explicit budgets (including zero), whitespace-provider preflight,
+selected/default/secondary credential echoes in identifiers and final actions,
+HTTP/body errors, malformed and partial transport responses, and discovery.
+Twenty-nine of these cases failed against the original draft. The fixed tree
+passes all 137 Perceptron cases and 146 focused provider/discovery checks.
+The full suite passes 1,395 tests with only the same two inherited failures
+listed above (92.81 seconds); repository-wide Ruff and mypy also pass.
+Full supplied history, zero default retries, and the no-replay rule for observed
+work remain covered by the original tests. Only synthetic credentials and mocked
+provider IO were used for this review; no hosted CI, merge, or release was run.

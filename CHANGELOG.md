@@ -7,6 +7,8 @@
   lifecycle and accounting, and deterministic raw-wire/privacy regressions.
   Preserve native defaults, full history, safe transport, and zero default retries.
   No paid inference or package version change.
+  Follow-up review rejects credential-bearing discovery IDs, protects configured
+  secondary credentials, and closes whitespace-provider preflight bypasses.
 
 ## v0.7.0 - 2026-11-04
 
