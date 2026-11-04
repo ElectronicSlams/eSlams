@@ -5,6 +5,9 @@ Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
+Mistral AI is also available through its direct API; see the
+[Mistral adapter guide](providers/MISTRAL.md) for scope, research and limitations.
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
@@ -13,6 +16,7 @@ convenience properties.
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `mistral-ai:<model>` (alias `mistral`) | `MISTRAL_API_KEY` | native Chat Completions | string or typed text chunks in `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 
 An absent provider model identity remains `null`. Core never copies the

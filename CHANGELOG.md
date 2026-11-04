@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Mistral AI Chat Completions adapter (`mistral-ai`, alias `mistral`)
+  with account model discovery, sanitized receipts and offline wire regressions.
+  See `docs/providers/MISTRAL.md` for supported behavior and limitations.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
