@@ -15,6 +15,8 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
+from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -23,6 +25,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "stepfun": STEPFUN_API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
@@ -31,6 +34,7 @@ _MODELS_ENDPOINTS = {
     "openrouter": "https://openrouter.ai/api/v1/models",
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
+    "stepfun": STEPFUN_MODELS_ENDPOINT,
 }
 
 

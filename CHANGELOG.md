@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add the native StepFun direct Chat Completions adapter for 0.7.1 review,
+  with CLI dispatch, offline/live preflight support, documented model controls,
+  conservative usage accounting and deterministic raw-wire/privacy regressions.
+  Keep full supplied history, exact model IDs, zero default retries and native
+  output/reasoning defaults. Step Plan and regional aliases are not inferred.
+  No package version, protocol or arena behavior changes.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

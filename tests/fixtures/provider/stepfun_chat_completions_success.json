@@ -1,0 +1,23 @@
+{
+  "id": "stepfun-wire-fixture",
+  "object": "chat.completion",
+  "created": 1709893411,
+  "model": "step-3.7-flash",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1}",
+        "reasoning": "private-reasoning-fixture"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "cached_tokens": 8,
+    "completion_tokens": 4,
+    "total_tokens": 16
+  }
+}
