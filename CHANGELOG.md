@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Contextual AI Generate adapter with explicit model selection,
+  full supplied history, no retrieval/tools or automatic transport replay, and
+  credential-safe receipts. Preserve missing identity/accounting as unknown;
+  reject unsupported reasoning controls. See `docs/providers/CONTEXTUAL_AI.md`
+  for pinned API evidence and limitations. Package version remains 0.7.0.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
