@@ -45,6 +45,15 @@ provision resources or guess a deployment endpoint.
 | Retry | Default zero retries/repairs. No Krutrim error envelope inspected establishes that a rejected request did no work; adapter errors therefore never authorize automatic HTTP replay, even with a nonzero retry maximum. Timeouts/partial bodies never prove cancellation. |
 | Transport/privacy | Shared bounded nonstreaming transport, byte limits and caller-selected deadlines; no default read/thinking deadline. Exact credential echoes are removed from receipt values and keys, including IDs and malformed/partial failures. Generated action/explanation echoes are rejected, including JSON escapes. |
 
+The privacy filter captures the selected credential environment plus other
+Krutrim-named API-key, token, secret, password and credential environment values
+for each action. These secondary values are used only for redaction, never as
+authentication fallbacks. The snapshot remains available if a key changes while
+the response is in flight. It covers receipt keys/values, response/request IDs,
+resolved identity, sanitized exceptions and complete decoded action payloads,
+including unused JSON fields and escaped strings. Raw exception chains are
+suppressed because they can carry private transport headers or malformed bodies.
+
 The operator SDK sources used to pin the wire contract:
 
 - [Client base URL, credential environment and Bearer header](https://github.com/ola-krutrim/krutrim-cloud-python/blob/6c01ffa0dffd151b08dd7fdd65d3f7e931ed6e2a/src/krutrim_cloud/_client.py)

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -13,6 +16,47 @@ if TYPE_CHECKING:
 PROVIDER_ID = "krutrim"
 API_KEY_ENV = "KRUTRIM_CLOUD_API_KEY"
 CHAT_COMPLETIONS_ENDPOINT = "https://cloud.olakrutrim.com/v1/chat/completions"
+_CREDENTIAL_SNAPSHOT: ContextVar[tuple[str, ...]] = ContextVar(
+    "krutrim_credential_snapshot", default=(),
+)
+
+
+def _credential_values(agent: ModelProviderAgent, active_key: str | None = None) -> tuple[str, ...]:
+    # Other configured Krutrim credentials must not become public merely because
+    # this request used a different key. This does not add authentication aliases.
+    values = set(_CREDENTIAL_SNAPSHOT.get())
+    if active_key:
+        values.add(active_key)
+    for name, value in dict(os.environ).items():
+        credential_name = name == agent.api_key_env or (
+            "KRUTRIM" in name.upper() and any(marker in name.upper() for marker in (
+                "API_KEY", "APIKEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL",
+            )))
+        if credential_name and value.strip():
+            values.add(value.strip())
+    return tuple(sorted(values))
+
+
+@contextmanager
+def credential_scope(agent: ModelProviderAgent) -> Iterator[None]:
+    # Scope covers action parsing and receipt publication too, and survives a
+    # key being rotated/removed while an in-flight response is being received.
+    token = _CREDENTIAL_SNAPSHOT.set(_credential_values(agent))
+    try:
+        yield
+    finally:
+        _CREDENTIAL_SNAPSHOT.reset(token)
+
+
+def _contains_credential(value: Any, secrets: tuple[str, ...]) -> bool:
+    if isinstance(value, str):
+        return any(secret in value for secret in secrets)
+    if isinstance(value, dict):
+        return any(_contains_credential(key, secrets) or _contains_credential(item, secrets)
+                   for key, item in value.items())
+    if isinstance(value, list):
+        return any(_contains_credential(item, secrets) for item in value)
+    return False
 
 
 def validate_config(model: str, runtime: ProviderRuntimeConfig | None) -> None:
@@ -34,15 +78,14 @@ def sanitize_receipt(
     agent: ModelProviderAgent, receipt: dict[str, Any], *, secret: str | None = None,
 ) -> dict[str, Any]:
     """Remove exact credential echoes, including keys and harmless-looking IDs."""
-    if secret is None:
-        secret = os.getenv(agent.api_key_env, "").strip()
+    secrets = _credential_values(agent, secret)
 
     def clean(value: Any) -> Any:
         if isinstance(value, str):
-            return None if secret and secret in value else value
+            return None if _contains_credential(value, secrets) else value
         if isinstance(value, dict):
             return {key: clean(item) for key, item in value.items()
-                    if not (secret and secret in key)}
+                    if not _contains_credential(key, secrets)}
         if isinstance(value, list):
             return [clean(item) for item in value]
         return value
@@ -73,19 +116,13 @@ def normalize_usage(usage: Any) -> dict[str, Any]:
     return result
 
 
-def validate_action(action: Any, explanation: str | None, secret: str) -> None:
+def validate_action(
+    agent: ModelProviderAgent, action: Any, explanation: str | None, secret: str,
+) -> None:
     from eslams.protocol import ProtocolError
 
-    def contains(value: Any) -> bool:
-        if isinstance(value, str):
-            return bool(secret and secret in value)
-        if isinstance(value, dict):
-            return any(contains(key) or contains(item) for key, item in value.items())
-        if isinstance(value, list):
-            return any(contains(item) for item in value)
-        return False
-
-    if contains(action) or contains(explanation):
+    secrets = _credential_values(agent, secret)
+    if _contains_credential(action, secrets) or _contains_credential(explanation, secrets):
         raise ProtocolError("Krutrim action contains a credential echo")
 
 
@@ -94,22 +131,26 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
 
     try:
         return _call(agent, api_key, prompt)
-    except ProviderCallError as exc:
+    except (ProviderCallError, TimeoutError) as exc:
+        secrets = _credential_values(agent, api_key)
         # No documented Krutrim rejection envelope establishes a safe replay.
-        exc.retry_permitted = False
-        if exc.receipt is not None:
-            exc.receipt = sanitize_receipt(agent, exc.receipt, secret=api_key)
-        if api_key in str(exc):
+        if isinstance(exc, ProviderCallError):
+            exc.retry_permitted = False
+            if exc.receipt is not None:
+                exc.receipt = sanitize_receipt(agent, exc.receipt, secret=api_key)
+            if _contains_credential(exc.model, secrets):
+                exc.model = None
+        if _contains_credential(str(exc), secrets):
             exc.args = ("Krutrim response rejected",)
-        if exc.model and api_key in exc.model:
-            exc.model = None
-        raise
+        # Raw transport/JSON exceptions can carry private bodies and headers.
+        raise exc from None
 
 
 def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams.agents import (
         _SYSTEM_INSTRUCTIONS,
         ProviderCallError,
+        _extract_json,
         _post_json,
         _receipt,
         _response_json_with_receipt,
@@ -148,6 +189,7 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
     message = choice.get("message") if isinstance(choice, dict) else None
     text = message.get("content") if isinstance(message, dict) else None
     reason = choice.get("finish_reason") if isinstance(choice, dict) else None
+    secrets = _credential_values(agent, api_key)
     kind = "provider_response_schema_mismatch"
     if data.get("error") or (isinstance(choice, dict) and choice.get("error")):
         kind = "provider_unavailable"
@@ -160,7 +202,8 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
           and reason == "stop" and isinstance(message, dict)
           and message.get("role") == "assistant" and not message.get("tool_calls")
           and not message.get("function_call") and isinstance(text, str) and text.strip()
-          and api_key not in text):
+          and not _contains_credential(text, secrets)
+          and not _contains_credential(_extract_json(text), secrets)):
         receipt.update(finish_reason="stop", finish_status="completed")
         return text, receipt
     receipt.update(

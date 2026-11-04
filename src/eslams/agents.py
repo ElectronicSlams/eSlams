@@ -426,6 +426,11 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "krutrim":
+                from eslams.providers.krutrim import credential_scope
+
+                with credential_scope(self):
+                    return self._act(request)
             return self._act(request)
 
     def _act(self, request: ActRequest) -> ActResponse:
@@ -575,7 +580,7 @@ class ModelProviderAgent:
                 if self.provider == "krutrim":
                     from eslams.providers.krutrim import validate_action
 
-                    validate_action(action, explanation, api_key)
+                    validate_action(self, action, explanation, api_key)
             except ProtocolError as exc:
                 parse_error = exc
                 failed_receipt: dict[str, Any] = self.last_receipt or {}
