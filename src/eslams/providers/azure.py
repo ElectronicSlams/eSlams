@@ -33,7 +33,16 @@ def credential_environment() -> str:
     return "AZURE_AI_AUTH_TOKEN" if mode == "entra" else API_KEY_ENV
 
 
+def validate_runtime_controls(runtime_config: ProviderRuntimeConfig | None) -> None:
+    if runtime_config is None:
+        return
+    for name in ("reasoning_budget_tokens", "gemini_thinking_budget"):
+        if getattr(runtime_config, name) is not None:
+            raise ValueError(f"Azure v1 does not support explicit {name}")
+
+
 def endpoint(runtime_config: ProviderRuntimeConfig | None = None) -> str:
+    validate_runtime_controls(runtime_config)
     if runtime_config and runtime_config.gateway_base_url:
         raise ValueError("Azure direct inference does not support gateway_base_url")
     raw = os.getenv("AZURE_AI_ENDPOINT", "")
@@ -123,7 +132,54 @@ def _completion_text(data: dict[str, Any]) -> str:
     return str(content)
 
 
+_CREDENTIAL_IDENTIFIER = re.compile(
+    r"(?i)(?:sk|key|token|secret)[-_][a-z0-9_-]{8,}"
+    r"|eyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+"
+    r"|(?:gh[pousr]_|github_pat_)[a-z0-9_]+"
+    r"|AKIA[A-Z0-9]{16}|AIza[a-z0-9_-]{20,}"
+)
+_PROVIDER_IDENTIFIER_FIELDS = (
+    "provider_response_id",
+    "locked_model_id",
+    "request_id",
+    "gateway_request_id",
+)
+
+
+def _redact_receipt_identifiers(receipt: dict[str, Any], credential: str) -> dict[str, Any]:
+    from eslams.agents import _redact_sensitive_text
+
+    sanitized = dict(receipt)
+    for field in _PROVIDER_IDENTIFIER_FIELDS:
+        value = sanitized.get(field)
+        # Identifier syntax alone cannot establish that a provider string is
+        # safe to publish. Drop evidence rather than invent a redacted identity.
+        if isinstance(value, str) and (
+            (credential and credential in value)
+            or _CREDENTIAL_IDENTIFIER.search(value)
+            or _redact_sensitive_text(value) != value
+        ):
+            sanitized[field] = None
+    if sanitized.get("locked_model_id") is None:
+        sanitized["model_identity_source"] = None
+    return sanitized
+
+
 def call(agent: ModelProviderAgent, credential: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    from eslams.agents import ProviderCallError
+
+    try:
+        text, receipt = _call(agent, credential, prompt)
+    except ProviderCallError as exc:
+        # All transport/body/semantic failures cross this boundary, including
+        # partial-body header observations retained by the bounded transport.
+        if exc.receipt is not None:
+            exc.receipt = _redact_receipt_identifiers(exc.receipt, credential)
+        raise
+    return text, _redact_receipt_identifiers(receipt, credential)
+
+
+def _call(agent: ModelProviderAgent, credential: str, prompt: str) -> tuple[str, dict[str, Any]]:
     # Imports are local so the dispatch owner can import provider metadata while
     # this provider reuses the existing bounded transport and sanitized receipts.
     from eslams import agents as core

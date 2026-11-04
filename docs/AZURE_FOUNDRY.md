@@ -83,8 +83,10 @@ Azure's own context/output ceilings and native defaults still apply.
 An explicit output limit becomes `max_completion_tokens`, including reasoning
 where the model uses it. Explicit `reasoning_effort` and temperature are forwarded
 unchanged; unsupported controls are rejected by Azure without removal or replay.
-No model-name heuristics, game-specific reasoning mode or hidden reasoning budget
-is selected. `reasoning=disabled` omits optional reasoning controls; it cannot
+Explicit `reasoning_budget_tokens` and `gemini_thinking_budget` are unsupported
+and rejected in configuration/live preflight and before transport, including
+explicit zero/automatic sentinel values. No model-name heuristics, game-specific
+reasoning mode or hidden reasoning budget is selected. `reasoning=disabled` omits optional reasoning controls; it cannot
 promise that a model with native reasoning will stop reasoning. Use an explicit,
 model-supported effort when needed.
 
@@ -146,7 +148,12 @@ and abuse monitoring still apply; selected material may be stored for human
 review. `store: false` disables optional stored completions, not all service
 retention or abuse monitoring. This adapter makes no zero-retention claim.
 Public receipts and artifacts exclude credentials, headers, prompts, raw private
-responses and reasoning text.
+responses and reasoning text. Provider-supplied model and request/response/gateway
+IDs containing the active credential or recognizable secondary credential patterns
+are discarded before success or failure receipts are published. This includes
+HTTP errors, malformed bodies and partial-body header observations. A discarded
+model identity remains unknown with no identity source; sanitization does not
+turn an ambiguous failure into a safely retryable rejection.
 
 Global deployment processing may cross geographies; Data Zone processing stays
 within the selected zone; Standard/Regional processing stays within the Azure

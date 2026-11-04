@@ -439,11 +439,20 @@ def test_artifacts_do_not_publish_private_wire_material(monkeypatch, tmp_path):
     def post(url, **kwargs):
         body = wire()
         body["private_extension"] = PRIVATE
+        body.update(id=SECRET, model="sk-secondary-secret-never-publish")
         body["choices"][0]["message"].update(
             content=json.dumps({"action": next(actions)}),
             reasoning_content=PRIVATE,
         )
-        return httpx.Response(200, json=body, headers={"set-cookie": SECRET})
+        return httpx.Response(
+            200,
+            json=body,
+            headers={
+                "set-cookie": SECRET,
+                "x-request-id": SECRET,
+                "cf-aig-request-id": "sk-secondary-secret-never-publish",
+            },
+        )
 
     monkeypatch.setattr("eslams.agents.bounded_post", post)
     result = Runner().run(
@@ -459,6 +468,7 @@ def test_artifacts_do_not_publish_private_wire_material(monkeypatch, tmp_path):
         if path.suffix in {".json", ".jsonl", ".html"}:
             text = path.read_text()
             assert PRIVATE not in text and SECRET not in text
+            assert "sk-secondary-secret-never-publish" not in text
     receipts = [
         json.loads(line)
         for line in (result.artifact_path / "receipts/provider_receipts.jsonl")
@@ -467,3 +477,115 @@ def test_artifacts_do_not_publish_private_wire_material(monkeypatch, tmp_path):
     ]
     assert receipts and all(row["provider"] == "azure" for row in receipts)
     assert all(row["cost_complete"] is False for row in receipts)
+    assert all(row.get("locked_model_id") is None for row in receipts)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("reasoning_budget_tokens", 0),
+        ("reasoning_budget_tokens", 2048),
+        ("gemini_thinking_budget", -1),
+        ("gemini_thinking_budget", 0),
+        ("gemini_thinking_budget", 2048),
+    ],
+)
+def test_unsupported_explicit_reasoning_controls_fail_before_transport(monkeypatch, field, value):
+    calls = post_fixture(monkeypatch)
+    config = ProviderRuntimeConfig(**{field: value})
+    for live in (False, True):
+        result = provider_preflight(
+            "azure", DEPLOYMENT, "tic-tac-toe", live=live, runtime_config=config
+        )
+        assert not result["ok"]
+        assert not result["readiness"]["configuration_ready"]
+        assert result["error"]["error_class"] == "provider_request_rejected"
+        assert field in result["error"]["message"]
+    a = agent(config=config)
+    with pytest.raises(ProviderCallError) as exc:
+        a.act(request())
+    assert exc.value.error_kind == "provider_request_rejected"
+    assert field in str(exc.value)
+    assert a.last_receipt["outcome"] == "provider_request_rejected"
+    assert not calls
+
+
+@pytest.mark.parametrize(
+    "echo",
+    [
+        SECRET,
+        f"prefix-{SECRET}-suffix",
+        "sk-secondary-secret-never-publish",
+        "token-secondary-secret-never-publish",
+        "secret-secondary-secret-never-publish",
+        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwcml2YXRlIn0.c2lnbmF0dXJl",
+        "ghp_secondarysecretneverpublish",
+        "AIzaSecondaryCredentialNeverPublish123",
+        "AKIA0123456789ABCDEF",
+    ],
+)
+@pytest.mark.parametrize("scenario", ["success", "http_error", "malformed", "partial_body"])
+def test_echoed_credentials_and_secondary_secret_identifiers_never_enter_receipts(
+    monkeypatch,
+    echo,
+    scenario,
+):
+    from eslams.http_io import ResponseObservation
+
+    headers = {"x-request-id": echo, "cf-aig-request-id": echo}
+    calls = []
+
+    def post(url, **kwargs):
+        calls.append(1)
+        if scenario == "partial_body":
+            exc = httpx.ReadError("private incomplete body")
+            exc.__dict__["_eslams_response_observation"] = ResponseObservation(
+                status_code=200,
+                headers=tuple(headers.items()),
+            )
+            raise exc
+        if scenario == "malformed":
+            return httpx.Response(200, content=b"not JSON", headers=headers)
+        body = wire()
+        body.update(id=echo, model=echo)
+        if scenario == "http_error":
+            body.update(error={"code": "rate_limit_exceeded", "message": echo})
+        return httpx.Response(429 if scenario == "http_error" else 200, json=body, headers=headers)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    a = agent(config=ProviderRuntimeConfig(max_retries=2))
+    if scenario == "success":
+        response = a.act(request())
+        assert echo not in json.dumps(response.metadata)
+    else:
+        with pytest.raises(ProviderCallError) as failure:
+            a.act(request())
+        assert echo not in str(failure.value)
+        assert echo not in json.dumps(failure.value.receipt)
+    assert len(calls) == 1
+    assert echo not in json.dumps(a.last_receipt)
+    assert echo not in json.dumps(a.attempt_receipts)
+    assert a.last_receipt.get("provider_response_id") is None
+    assert a.last_receipt["locked_model_id"] is None
+    assert a.last_receipt["model_identity_source"] is None
+    assert a.last_receipt["request_id"] is None
+    assert a.last_receipt["gateway_request_id"] is None
+    assert a.last_receipt["model"] == DEPLOYMENT
+    if scenario in {"success", "http_error"}:
+        assert a.last_receipt["usage"]["total_tokens"] == 1863
+    if scenario == "http_error":
+        assert a.last_receipt["pricing_provenance"]["work_observation_present"] is True
+
+
+def test_custom_credential_environment_and_entra_echoes_are_redacted(monkeypatch):
+    monkeypatch.setenv("AZURE_AI_AUTH_MODE", "entra")
+    custom = "opaque-custom-credential-without-standard-prefix"
+    monkeypatch.setenv("CUSTOM_AZURE_TOKEN", custom)
+    body = wire()
+    body.update(id=custom, model=custom)
+    post_fixture(monkeypatch, body, headers={"x-request-id": custom})
+    a = ModelProviderAgent("azure", DEPLOYMENT, "CUSTOM_AZURE_TOKEN")
+    assert a.act(request()).action == 0
+    assert custom not in json.dumps(a.last_receipt)
+    assert a.last_receipt["locked_model_id"] is None
+    assert a.last_receipt["model_identity_source"] is None
