@@ -22,15 +22,20 @@ INVALID_ACTION_CODES: tuple[str, ...] = (
     "provider_error",
 )
 
+# Bound decoded structures before Python's JSON decoder or recursive consumers
+# can exhaust their stack. This is a format/resource bound, not a thinking cap.
+MAX_MODEL_JSON_DEPTH = 128
+
 
 class InvalidModelAction(ProtocolError):
     """Raised when a model output cannot be mapped to a legal Core action."""
 
-    def __init__(self, code: str, detail: str) -> None:
+    def __init__(self, code: str, detail: str, *, repair_permitted: bool = True) -> None:
         if code not in INVALID_ACTION_CODES:
             code = "schema_mismatch"
         self.code = code
         self.detail = detail
+        self.repair_permitted = repair_permitted
         super().__init__(f"{code}: {detail}")
 
     def to_dict(self) -> dict[str, str]:
@@ -51,7 +56,7 @@ def parse_model_action(text: str, legal_actions: list[Any]) -> ParsedModelAction
     if not text.strip():
         raise InvalidModelAction("empty_output", "model output was empty")
     token_to_action = {action_token(action): action for action in legal_actions}
-    payload = extract_json(text)
+    payload = _extract_json(text)
     if not isinstance(payload, dict):
         raise InvalidModelAction(
             "invalid_json",
@@ -76,22 +81,75 @@ def parse_model_action(text: str, legal_actions: list[Any]) -> ParsedModelAction
 
 
 def extract_json(text: str) -> Any:
+    """Extract bounded JSON, returning None for malformed/resource-limited input.
+
+    Adapters also use this helper for credential scanning before returning their
+    receipt. Never expose an excessively deep structure or untyped decoder error
+    to those consumers. The action parser reports the typed failure separately.
+    """
+    try:
+        return _extract_json(text)
+    except InvalidModelAction:
+        return None
+
+
+def _extract_json(text: str) -> Any:
     stripped = text.strip()
     fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", stripped, re.DOTALL)
     if fenced:
         stripped = fenced.group(1)
     try:
-        return json.loads(stripped)
+        return _bounded_json_loads(stripped)
     except json.JSONDecodeError:
         start = stripped.find("{")
         end = stripped.rfind("}")
         if start != -1 and end > start:
             with_json = stripped[start : end + 1]
             try:
-                return json.loads(with_json)
+                return _bounded_json_loads(with_json)
             except json.JSONDecodeError:
                 return None
     return None
+
+
+def _check_json_nesting(text: str) -> None:
+    depth = 0
+    quoted = False
+    escaped = False
+    for character in text:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                quoted = False
+        elif character == '"':
+            quoted = True
+        elif character in "[{":
+            depth += 1
+            if depth > MAX_MODEL_JSON_DEPTH:
+                raise InvalidModelAction(
+                    "invalid_json", "model response exceeds JSON nesting limit",
+                    repair_permitted=False,
+                )
+        elif character in "]}":
+            depth = max(0, depth - 1)
+
+
+def _bounded_json_loads(text: str) -> Any:
+    _check_json_nesting(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        raise  # Preserve the existing prose/JSON recovery policy.
+    except (ValueError, RecursionError) as exc:
+        # Decoder resource errors (including integer digit limits) must not
+        # escape with raw provider content or turn into another paid request.
+        raise InvalidModelAction(
+            "invalid_json", "model response exceeds JSON decoder limits",
+            repair_permitted=False,
+        ) from exc
 
 
 def coerce_action(
@@ -159,6 +217,10 @@ def streaming_action_status(buffer: str, legal_actions: list[Any]) -> dict[str, 
 
     if not buffer.strip():
         return {"status": "incomplete"}
+    try:
+        _check_json_nesting(buffer)
+    except InvalidModelAction as exc:
+        return {"status": "invalid", "reason": str(exc), "code": exc.code}
     ids = {action_token(action) for action in legal_actions}
     match = re.search(r'"action_id"\s*:\s*"([^"]+)"', buffer)
     if match and match.group(1) in ids and _looks_incomplete(buffer):
@@ -166,6 +228,8 @@ def streaming_action_status(buffer: str, legal_actions: list[Any]) -> dict[str, 
     try:
         parsed = parse_model_action(buffer, legal_actions)
     except InvalidModelAction as exc:
+        if not exc.repair_permitted:
+            return {"status": "invalid", "reason": str(exc), "code": exc.code}
         if match and match.group(1) in ids:
             return {"status": "action_ready", "action": {"action_id": match.group(1)}}
         if _looks_incomplete(buffer):

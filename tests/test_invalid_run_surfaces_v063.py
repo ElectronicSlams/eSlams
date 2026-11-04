@@ -18,6 +18,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
 
 import eslams.arenas  # noqa: F401
@@ -247,14 +248,16 @@ def test_bundle_and_merged_rows_carry_no_winner_for_invalid_runs(tmp_path: Path)
 # --- CLI output -----------------------------------------------------------------
 
 
-def _cli_run(tmp_path: Path, capsys, *extra: str) -> dict[str, Any]:
+def _cli_run(
+    tmp_path: Path, capsys, *extra: str, agent: str = "http://127.0.0.1:9/act",
+) -> dict[str, Any]:
     code = main(
         [
             "run",
             "--arena",
             "tic-tac-toe",
             "--agent",
-            "http://127.0.0.1:9/act",
+            agent,
             "--opponent",
             "first-legal",
             "--output-dir",
@@ -269,7 +272,9 @@ def _cli_run(tmp_path: Path, capsys, *extra: str) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize("policy", NON_FORFEIT_POLICIES)
-def test_cli_summary_prints_no_winner_for_invalid_run(tmp_path: Path, capsys, policy):
+def test_cli_summary_prints_no_winner_for_invalid_run(
+    tmp_path: Path, capsys, policy, refused_http_transport,
+):
     payload = _cli_run(tmp_path, capsys, "--on-agent-error", policy, "--run-id", f"cli-{policy}")
     summary = payload["summary"]
     public = _json(Path(payload["expanded_artifact"]) / "public/public_result_summary.json")
@@ -280,10 +285,53 @@ def test_cli_summary_prints_no_winner_for_invalid_run(tmp_path: Path, capsys, po
     assert summary["board_winner"] == payload["score"]["winner"]
 
 
-def test_cli_fallback_failing_seat_board_win_is_only_a_board_result(tmp_path: Path, capsys):
-    payload = _cli_run(tmp_path, capsys, "--on-agent-error", "fallback", "--run-id", "cli-fb")
+def test_cli_fallback_failing_seat_board_win_is_only_a_board_result(
+    tmp_path: Path, capsys, monkeypatch,
+):
+    from eslams.runner import create_builtin_agent
+
+    def local_agent(name, **kwargs):
+        if name == "failing-local":
+            return FunctionAgent(_no_action, id=name)
+        return create_builtin_agent(name, **kwargs)
+
+    monkeypatch.setattr("eslams.runner.create_builtin_agent", local_agent)
+    payload = _cli_run(tmp_path, capsys, "--on-agent-error", "fallback", "--run-id", "cli-fb",
+                       agent="failing-local")
     assert payload["summary"]["winner"] is None
     assert payload["summary"]["board_winner"] == "player_1"
+    assert payload["score"]["fallback_action_count_by_player"]["player_1"] > 0
+
+
+@pytest.fixture
+def refused_http_transport(monkeypatch):
+    """Exercise HttpAgent and bounded_post without opening a socket/listener."""
+    original_client = httpx.AsyncClient
+    calls = []
+
+    def refused(request):
+        calls.append(request)
+        raise httpx.ConnectError("synthetic connection refused", request=request)
+
+    monkeypatch.setattr(
+        "eslams.http_io.httpx.AsyncClient",
+        lambda **kwargs: original_client(**kwargs, transport=httpx.MockTransport(refused)),
+    )
+    return calls
+
+
+@pytest.mark.parametrize("policy", ["fallback", "invalid-match", "forfeit"])
+def test_cli_transport_refusal_never_creates_a_board_result(
+    tmp_path: Path, capsys, policy, refused_http_transport,
+):
+    payload = _cli_run(tmp_path, capsys, "--on-agent-error", policy, "--run-id", "cli-refused")
+    assert len(refused_http_transport) == 1
+    assert payload["summary"]["match_valid_for_scoring"] is False
+    assert payload["summary"]["winner"] is None
+    assert payload["summary"]["board_winner"] is None
+    assert payload["score"]["winner"] is None
+    assert payload["score"]["fallback_action_count_by_player"]["player_1"] == 0
+    assert "provider_transport_error" in payload["score"]["invalid_reason_codes"]
 
 
 def test_cli_summary_for_valid_run_is_unchanged(tmp_path: Path, capsys):

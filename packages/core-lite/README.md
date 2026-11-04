@@ -24,3 +24,7 @@ safe integer seeds. Wall-clock timestamps, timing values, and error prose are
 excluded. Core-lite provides the `ids` legal-action response and default public
 compact observation; it does not expose Python's complete CoreStepRequest API,
 deadlines, HTTP service, session signatures, or official-run artifact generation.
+
+Core-lite reports Core 0.7.0 and the current prompt-v3 identifier in step
+responses. It has no prompt-construction API; Python owns prompt packaging,
+full supplied-history semantics and explicit legacy-v2 compatibility.

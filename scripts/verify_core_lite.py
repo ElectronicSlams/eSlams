@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import eslams.arenas  # noqa: F401
+from eslams import __version__
 from eslams.arena import registry
 from eslams.arena_transport import deserialize_state, serialize_state
 from eslams.core_contract import core_step
@@ -143,6 +144,12 @@ console.log(JSON.stringify({initial: fixtures.initial.length, steps: fixtures.st
 
 
 def main() -> None:
+    source_root = Path(__file__).resolve().parents[1]
+    for name in ("core-lite", "core-contracts"):
+        package = json.loads((source_root / "packages" / name / "package.json").read_text())
+        assert package["version"] == __version__, (name, package["version"], __version__)
+        if name == "core-lite":
+            assert package["dependencies"]["@eslams/core-contracts"] == __version__
     runtime = Path(sys.argv[1]).resolve()
     assert runtime.is_file(), runtime
     with tempfile.TemporaryDirectory(prefix="eslams-core-lite-") as folder:

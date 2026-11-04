@@ -1,0 +1,246 @@
+{
+  "source_commit": "c618696c1641dce1430c4e9bba2b7edb8afa0c70",
+  "version": "0.7.0",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "steps": [
+    {
+      "name": "ruff",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "exit_code": 0,
+      "seconds": 0.267
+    },
+    {
+      "name": "mypy",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "-m",
+        "mypy",
+        "--cache-dir",
+        "/tmp/core-071-checks/mypy-cache",
+        "src"
+      ],
+      "exit_code": 0,
+      "seconds": 17.779
+    },
+    {
+      "name": "typescript-contracts",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/core-tools/node_modules/typescript/bin/tsc",
+        "--project",
+        "packages/core-contracts/tsconfig.json"
+      ],
+      "exit_code": 0,
+      "seconds": 1.132
+    },
+    {
+      "name": "typescript-lite",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/core-tools/node_modules/typescript/bin/tsc",
+        "--project",
+        "packages/core-lite/tsconfig.json"
+      ],
+      "exit_code": 0,
+      "seconds": 3.504
+    },
+    {
+      "name": "typescript-lite-compile",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/core-tools/node_modules/typescript/bin/tsc",
+        "--project",
+        "packages/core-lite/tsconfig.json",
+        "--noEmit",
+        "false",
+        "--outDir",
+        "/tmp/core-071-checks/core-lite"
+      ],
+      "exit_code": 0,
+      "seconds": 5.298
+    },
+    {
+      "name": "core-lite-parity",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "scripts/verify_core_lite.py",
+        "/tmp/core-071-checks/core-lite/core-lite/src/index.js"
+      ],
+      "exit_code": 0,
+      "seconds": 14.005
+    },
+    {
+      "name": "pytest",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-o",
+        "addopts=",
+        "-p",
+        "release_offline",
+        "tests",
+        "--ignore=tests/test_elapsed_deadline_regressions.py",
+        "--junitxml=/tmp/core-071-checks/pytest.xml",
+        "--basetemp=/tmp/core-071-checks/test-temp"
+      ],
+      "exit_code": 0,
+      "seconds": 169.564
+    },
+    {
+      "name": "arena-versions",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "scripts/verify_arena_versions.py"
+      ],
+      "exit_code": 0,
+      "seconds": 45.494
+    },
+    {
+      "name": "portable-bytes",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "scripts/verify_portable_bytes.py",
+        "--output",
+        "/tmp/core-071-checks/portable-bytes.json"
+      ],
+      "exit_code": 0,
+      "seconds": 1.96
+    },
+    {
+      "name": "build",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "/tmp/core-071-checks/dist"
+      ],
+      "exit_code": 0,
+      "seconds": 4.941
+    },
+    {
+      "name": "twine",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "-m",
+        "twine",
+        "check",
+        "/tmp/core-071-checks/dist/eslams_core-0.7.0-py3-none-any.whl",
+        "/tmp/core-071-checks/dist/eslams_core-0.7.0.tar.gz"
+      ],
+      "exit_code": 0,
+      "seconds": 1.573
+    },
+    {
+      "name": "distribution-consumers",
+      "argv": [
+        "/workspace/core-venv/bin/python",
+        "scripts/verify_distributions.py",
+        "--dist",
+        "/tmp/core-071-checks/dist",
+        "--expected-commit",
+        "c618696c1641dce1430c4e9bba2b7edb8afa0c70",
+        "--offline-suite-guard",
+        "/tmp/core-071-checks/guards"
+      ],
+      "exit_code": 0,
+      "seconds": 259.716
+    }
+  ],
+  "status": "passed",
+  "excluded": "previously denied elapsed-deadline listener fixtures not opened or retried",
+  "pytest_counts": {
+    "tests": 1263,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0
+  },
+  "source_tree": "00cc5186ab42731f1e2684ca845bd8ccf97747ec",
+  "artifacts": [
+    {
+      "filename": "eslams_core-0.7.0-py3-none-any.whl",
+      "size": 485276,
+      "sha256": "7b51e2dafc8f37ee5c02d5243ee454b24901340fb59efbf3ba6914a9bdfbd1d6"
+    },
+    {
+      "filename": "eslams_core-0.7.0.tar.gz",
+      "size": 905273,
+      "sha256": "b14d95e459ff40202913dcbce2a6541fa0986333e5c976f3bfd1bddbc2330343"
+    }
+  ],
+  "status_scope": "Only the admitted finite checks; listener regression file excluded and browser assertions blocked.",
+  "network_audit": {
+    "source": [
+      {
+        "event": "socket.bind",
+        "blocked_before_OS_operation": true
+      }
+    ],
+    "sdist": [
+      {
+        "event": "socket.bind",
+        "blocked_before_OS_operation": true
+      }
+    ]
+  },
+  "additional_checks": {
+    "focused_regressions": {
+      "passed": 58
+    },
+    "core_lite_parity": {
+      "initial": 22,
+      "steps": 1401,
+      "seeds": "zero, negative, large safe integers",
+      "outcomes": "both winners and draw",
+      "parity": "all deterministic response fields",
+      "malformed": "contained"
+    },
+    "initial_state_budgets": {
+      "arenas": 50,
+      "passed": true
+    },
+    "arena_step_benchmark": {
+      "game": "tic-tac-toe",
+      "iterations": 10,
+      "passed": true
+    },
+    "schema_exports": {
+      "byte_identical": true,
+      "manifest_inspected": true,
+      "deterministic_build_id": "sha256:3e96537e1281014ed747f58a9f9f12733a063f0cb09b4ec9ed160669a13f983b"
+    },
+    "replay_generation": {
+      "validated_pages": 50,
+      "adversarial_fixture": true
+    },
+    "browser_assertions": {
+      "status": "blocked",
+      "download": "HTTP 403 Domain forbidden",
+      "system_chromium": "151.0.7922.173",
+      "navigation": "ERR_BLOCKED_BY_ADMINISTRATOR on first local replay file"
+    },
+    "distribution_consumers": [
+      {
+        "distribution": "eslams_core-0.7.0-py3-none-any.whl",
+        "consumer_checks": "passed"
+      },
+      {
+        "distribution": "eslams_core-0.7.0.tar.gz",
+        "consumer_checks": "passed"
+      },
+      {
+        "sdist_suite_without_git": "passed"
+      }
+    ]
+  }
+}
