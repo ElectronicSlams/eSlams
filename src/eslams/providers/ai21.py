@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, quote_plus
@@ -10,7 +11,6 @@ from urllib.parse import quote, quote_plus
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.model_actions import extract_json
 from eslams.protocol import ProtocolError
-from eslams.provider_credentials import provider_key
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -34,32 +34,43 @@ def validate_config(model: str, runtime: ProviderRuntimeConfig | None) -> None:
         raise ValueError("AI21 Jamba Chat has no documented reasoning controls")
 
 
-def redact_credential(value: Any, api_key: str | None) -> Any:
+def _credential_values(api_key_env: str) -> tuple[str, ...]:
+    # Protect both the selected credential (whose variable name is arbitrary)
+    # and other configured credentials that a response might echo. Values stay
+    # private; neither environment names nor credentials enter the receipt.
+    suffixes = ("_KEY", "_TOKEN", "_SECRET", "_PASSWORD", "_CREDENTIAL", "_CREDENTIALS",
+                "_ACCESS_KEY_ID")
+    return tuple(sorted({value.strip() for name, value in os.environ.items()
+                         if value.strip() and (name in {api_key_env, API_KEY_ENV}
+                         or name.upper() in {"API_KEY", "TOKEN", "SECRET", "PASSWORD"}
+                         or name.upper().endswith(suffixes))}))
+
+
+def _redact_credentials(value: Any, credentials: tuple[str, ...]) -> Any:
     """Drop credential-bearing observations, including otherwise valid identifiers.
 
     Provider values never become a redaction marker that could attest identity.
-    The exact configured key is protected even without a recognizable key prefix.
+    Configured credentials are protected even without recognizable key prefixes.
     """
-    if not api_key:
-        return value
-    variants = {api_key, quote(api_key, safe=""), quote_plus(api_key),
-                json.dumps(api_key, ensure_ascii=True)[1:-1]}
-    if isinstance(value, str):
-        return None if any(secret in value for secret in variants) else value
-    if isinstance(value, list):
-        return [redact_credential(item, api_key) for item in value]
-    if isinstance(value, dict):
-        return {key: redact_credential(item, api_key) for key, item in value.items()
-                if redact_credential(key, api_key) is not None}
-    return value
+    variants = {variant for secret in credentials for variant in (
+        secret, quote(secret, safe=""), quote_plus(secret),
+        json.dumps(secret, ensure_ascii=True)[1:-1],
+    )}
+
+    def redact(item: Any) -> Any:
+        if isinstance(item, str):
+            return None if any(secret in item for secret in variants) else item
+        if isinstance(item, list):
+            return [redact(child) for child in item]
+        if isinstance(item, dict):
+            return {key: redact(child) for key, child in item.items() if redact(key) is not None}
+        return item
+
+    return redact(value)
 
 
 def sanitize_receipt(receipt: dict[str, Any], api_key_env: str) -> dict[str, Any]:
-    try:
-        api_key = provider_key(api_key_env)
-    except ValueError:
-        api_key = None  # Invalid credentials were never sent to the endpoint.
-    result: dict[str, Any] = redact_credential(receipt, api_key)
+    result: dict[str, Any] = _redact_credentials(receipt, _credential_values(api_key_env))
     return result
 
 
@@ -85,6 +96,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     from eslams import agents as shared
 
     validate_config(agent.model, agent.runtime_config)
+    credentials = (*_credential_values(agent.api_key_env), api_key)
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [
@@ -118,7 +130,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             capabilities=replace(agent.capabilities, pricing={}),
             runtime_config=agent.runtime_config,
         )
-        receipt = redact_credential(receipt, api_key)
+        receipt = _redact_credentials(receipt, credentials)
         choices = data.get("choices")
         if (response.status_code != 200 or "error" in data
                 or not isinstance(choices, list) or len(choices) != 1
@@ -156,8 +168,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             ) from None
         except (ValueError, ProtocolError):
             decoded = None
-        if (redact_credential(text, api_key) is None
-                or redact_credential(decoded, api_key) != decoded):
+        if (_redact_credentials(text, credentials) is None
+                or _redact_credentials(decoded, credentials) != decoded):
             raise shared.ProviderCallError(
                 "AI21 returned credential-bearing action text",
                 error_kind="provider_response_schema_mismatch",
@@ -167,7 +179,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     except shared.ProviderCallError as exc:
         # AI21 does not document an error body proving rejected, unbilled work;
         # even an operator retry allowance cannot replay ambiguous outcomes.
-        safe_receipt = redact_credential(exc.receipt or receipt, api_key)
+        safe_receipt = _redact_credentials(exc.receipt or receipt, credentials)
         raise shared.ProviderCallError(
             "AI21 request failed: " + exc.error_kind,
             error_kind=exc.error_kind, status_code=exc.status_code,

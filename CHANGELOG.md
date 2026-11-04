@@ -6,6 +6,9 @@
   selection, CLI/preflight support, credential-safe receipts, and deterministic
   wire tests. Reject unsupported reasoning controls and ambiguous automatic
   retries; preserve missing model identity, usage details and cost as unknown.
+- Protect AI21 primary and configured secondary credentials in IDs, errors,
+  malformed/partial responses and action text, including custom key-variable
+  selection and credentials rotated during a request.
 - Document the official AI21 direct API contract, model lifecycle evidence and
   remaining account/availability verification limits. No package version bump.
 

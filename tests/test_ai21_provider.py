@@ -16,11 +16,16 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.http_io import ResponseObservation
 from eslams.protocol import ProtocolError
-from eslams.provider_preflight import provider_models_live, provider_preflight
+from eslams.provider_preflight import (
+    provider_models_live,
+    provider_models_result,
+    provider_preflight,
+)
 from eslams.providers.ai21 import CHAT_COMPLETIONS_ENDPOINT, normalize_usage
 from eslams.runner import RunConfig, Runner
 
 SECRET = "plainAi21CredentialNoPrefix9381"
+SECONDARY_SECRET = "otherCredentialWithoutPrefix7462"
 MODEL = "jamba-mini-2-2026-01"
 FIXTURE = Path(__file__).parent / "fixtures/provider/ai21_chat_completions_success.json"
 
@@ -38,6 +43,7 @@ def agent(**kwargs):
 @pytest.fixture(autouse=True)
 def offline(monkeypatch):
     monkeypatch.setenv("AI21_API_KEY", SECRET)
+    monkeypatch.setenv("AI21_SECONDARY_API_KEY", SECONDARY_SECRET)
 
     def forbidden(*args, **kwargs):
         pytest.fail("Unexpected network access")
@@ -112,25 +118,37 @@ def test_operator_controls_and_gateway_preserve_model(monkeypatch):
     assert sent["timeout"].read <= 20
 
 
+@pytest.mark.parametrize("provider", ["ai21-labs", "ai21", "AI21-LABS"])
 @pytest.mark.parametrize("model", [None, "", " ", "\n\t"])
-def test_missing_model_rejected_every_entrypoint(model):
+def test_missing_model_rejected_every_entrypoint(model, provider):
     with pytest.raises(ValueError, match="explicit nonblank model"):
-        ModelProviderAgent(provider="ai21-labs", model=model, api_key_env="AI21_API_KEY")
+        ModelProviderAgent(provider=provider, model=model, api_key_env="AI21_API_KEY")
     with pytest.raises(ValueError, match="explicit nonblank model"):
-        provider_preflight("ai21-labs", model, "tic-tac-toe")
+        provider_preflight(provider, model, "tic-tac-toe")
+    native = agent()
+    native.model = model
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        native.act(_request())
 
 
 @pytest.mark.parametrize("config", [
     ProviderRuntimeConfig(reasoning="enabled"),
     ProviderRuntimeConfig(reasoning_effort="high"),
     ProviderRuntimeConfig(reasoning_budget_tokens=0),
+    ProviderRuntimeConfig(reasoning_budget_tokens=128),
     ProviderRuntimeConfig(gemini_thinking_budget=-1),
+    ProviderRuntimeConfig(gemini_thinking_budget=0),
 ])
 def test_unsupported_reasoning_rejected_before_transport(config):
     with pytest.raises(ValueError, match="no documented reasoning controls"):
         agent(runtime_config=config)
     with pytest.raises(ValueError, match="no documented reasoning controls"):
         provider_preflight("ai21-labs", MODEL, "tic-tac-toe", runtime_config=config)
+    # ModelProviderAgent is mutable; revalidate a replaced runtime at dispatch.
+    native = agent()
+    native.runtime_config = config
+    with pytest.raises(ValueError, match="no documented reasoning controls"):
+        native.act(_request())
 
 
 @pytest.mark.parametrize("mode", ["auto", "disabled"])
@@ -149,11 +167,12 @@ def test_reasoning_modes_do_not_change_with_arena(monkeypatch, mode):
     (422, "provider_request_rejected"), (429, "provider_rate_limited"),
     (500, "provider_unavailable"), (503, "provider_unavailable"),
 ])
-def test_http_faults_never_retry_or_echo_credentials(monkeypatch, code, kind):
-    payload = {"error": {"code": "rate_limit_exceeded", "message": SECRET},
-               "id": SECRET, "model": SECRET, "usage": wire()["usage"]}
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY_SECRET], ids=["primary", "secondary"])
+def test_http_faults_never_retry_or_echo_credentials(monkeypatch, code, kind, secret):
+    payload = {"error": {"code": "rate_limit_exceeded", "message": secret},
+               "id": secret, "model": secret, "usage": wire()["usage"]}
     calls = respond(monkeypatch, payload, status=code, headers={
-        "x-request-id": SECRET, "cf-aig-request-id": SECRET, "Retry-After": "2",
+        "x-request-id": secret, "cf-aig-request-id": secret, "Retry-After": "2",
     })
     native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
     with pytest.raises(ProviderCallError) as caught:
@@ -167,7 +186,7 @@ def test_http_faults_never_retry_or_echo_credentials(monkeypatch, code, kind):
     assert receipt["provider_response_id"] is None
     assert receipt["request_id"] is None
     assert receipt["locked_model_id"] is None
-    assert SECRET not in json.dumps([receipt, caught.value.receipt, str(caught.value)])
+    assert secret not in json.dumps([receipt, caught.value.receipt, str(caught.value)])
 
 
 @pytest.mark.parametrize("observed", [False, True])
@@ -176,17 +195,18 @@ def test_http_faults_never_retry_or_echo_credentials(monkeypatch, code, kind):
     (httpx.ReadError, "provider_transport_error"),
     (ProtocolError, "provider_response_schema_mismatch"),
 ])
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY_SECRET], ids=["primary", "secondary"])
 def test_partial_and_transport_failures_preserve_only_safe_evidence(
-    monkeypatch, observed, exception_type, kind,
+    monkeypatch, observed, exception_type, kind, secret,
 ):
     calls = []
 
     def post(*args, **kwargs):
         calls.append(1)
-        exc = exception_type(SECRET)
+        exc = exception_type(secret)
         if observed:
             exc.__dict__["_eslams_response_observation"] = ResponseObservation(
-                200, (("x-request-id", SECRET), ("cf-aig-request-id", SECRET)),
+                200, (("x-request-id", secret), ("cf-aig-request-id", secret)),
             )
         raise exc
 
@@ -198,22 +218,23 @@ def test_partial_and_transport_failures_preserve_only_safe_evidence(
     assert native.last_receipt["outcome"] == kind
     assert native.last_receipt["status_code"] == (200 if observed else None)
     assert native.last_receipt["usage"] == {}
-    assert SECRET not in json.dumps([native.attempt_receipts, str(caught.value)])
+    assert secret not in json.dumps([native.attempt_receipts, str(caught.value)])
 
 
 @pytest.mark.parametrize("body", [
     b"not-json", b"[]", b'{"id":"first","id":"second"}', b'{"usage":{"x":NaN}}',
 ])
-def test_malformed_wire_is_sanitized(monkeypatch, body):
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY_SECRET], ids=["primary", "secondary"])
+def test_malformed_wire_is_sanitized(monkeypatch, body, secret):
     monkeypatch.setattr("eslams.agents.bounded_post", lambda *args, **kwargs: httpx.Response(
-        200, content=body, headers={"x-request-id": SECRET},
+        200, content=body, headers={"x-request-id": secret},
     ))
     native = agent()
     with pytest.raises(ProviderCallError, match="provider_response_schema_mismatch"):
         native.act(_request())
     assert native.last_receipt["request_id"] is None
     assert native.last_receipt["usage"] == {}
-    assert SECRET not in json.dumps(native.attempt_receipts)
+    assert secret not in json.dumps(native.attempt_receipts)
 
 
 @pytest.mark.parametrize("code", [202, 302])
@@ -268,15 +289,16 @@ def test_incomplete_unsupported_output_never_becomes_an_action(monkeypatch, faul
 
 
 @pytest.mark.parametrize("field", ["id", "model", "header", "explanation", "escaped", "action"])
-def test_success_envelope_cannot_publish_a_credential_echo(monkeypatch, field):
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY_SECRET], ids=["primary", "secondary"])
+def test_success_envelope_cannot_publish_a_credential_echo(monkeypatch, field, secret):
     payload = wire()
     headers = {}
     if field in {"id", "model"}:
-        payload[field] = SECRET
+        payload[field] = secret
     elif field == "header":
-        headers = {"x-request-id": SECRET, "cf-aig-request-id": SECRET}
+        headers = {"x-request-id": secret, "cf-aig-request-id": secret}
     else:
-        echoed = "".join(f"\\u{ord(char):04x}" for char in SECRET) if field == "escaped" else SECRET
+        echoed = "".join(f"\\u{ord(char):04x}" for char in secret) if field == "escaped" else secret
         name = "action" if field == "action" else "public_explanation"
         payload["choices"][0]["message"]["content"] = (
             '{"action": 1, "' + name + '": "' + echoed + '"}'
@@ -289,8 +311,8 @@ def test_success_envelope_cannot_publish_a_credential_echo(monkeypatch, field):
         serialized = json.dumps([str(caught.value), caught.value.receipt])
     else:
         serialized = json.dumps(native.act(_request()).to_dict())
-    assert SECRET not in serialized
-    assert SECRET not in json.dumps(native.attempt_receipts)
+    assert secret not in serialized
+    assert secret not in json.dumps(native.attempt_receipts)
     assert native.last_receipt["locked_model_id"] is None
 
 
@@ -395,3 +417,77 @@ def test_missing_and_invalid_credentials_do_not_call_provider(monkeypatch):
             native.act(_request())
         assert caught.value.error_kind == "provider_auth_failed"
         assert native.last_receipt["outcome"] == "provider_auth_failed"
+
+
+@pytest.mark.parametrize("secret", [SECRET, SECONDARY_SECRET, "selectedCustomAuthValue8376"])
+@pytest.mark.parametrize("field", ["id", "header", "action"])
+def test_custom_auth_selection_still_protects_other_configured_credentials(
+    monkeypatch, secret, field,
+):
+    custom = "selectedCustomAuthValue8376"
+    # This name deliberately lacks a secret-like suffix; explicit selection
+    # must protect it alongside default and secondary provider credentials.
+    monkeypatch.setenv("AI21_CUSTOM_AUTH", custom)
+    payload = wire()
+    headers = {}
+    if field == "id":
+        payload["id"] = secret
+    elif field == "header":
+        headers = {"request-id": secret, "x-gateway-request-id": secret}
+    else:
+        payload["choices"][0]["message"]["content"] = json.dumps({
+            "action": 1, "public_explanation": secret,
+        })
+    calls = respond(monkeypatch, payload, headers=headers)
+    native = ModelProviderAgent(provider="ai21", model=MODEL, api_key_env="AI21_CUSTOM_AUTH")
+    if field == "action":
+        with pytest.raises(ProviderCallError):
+            native.act(_request())
+    else:
+        response = native.act(_request())
+        assert all(value not in json.dumps(response.to_dict())
+                   for value in (SECRET, SECONDARY_SECRET, custom))
+    assert calls[0][1]["headers"]["Authorization"] == f"Bearer {custom}"
+    assert all(value not in json.dumps(native.attempt_receipts)
+               for value in (SECRET, SECONDARY_SECRET, custom))
+
+
+def test_credential_snapshot_survives_rotation_during_transport(monkeypatch):
+    def post(*args, **kwargs):
+        monkeypatch.setenv("AI21_SECONDARY_API_KEY", "rotatedCredentialValue9462")
+        payload = wire()
+        payload["id"] = SECONDARY_SECRET
+        payload["choices"][0]["message"]["content"] = json.dumps({
+            "action": 1, "public_explanation": SECONDARY_SECRET,
+        })
+        return httpx.Response(200, json=payload, headers={"request-id": SECONDARY_SECRET})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = agent()
+    with pytest.raises(ProviderCallError) as caught:
+        native.act(_request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert SECONDARY_SECRET not in json.dumps([caught.value.receipt, native.attempt_receipts])
+
+
+def test_discovery_absence_never_sends_or_echoes_either_credential():
+    for provider in ("ai21", "ai21-labs"):
+        assert provider_models_live(provider) is None
+        result = provider_models_result(provider)
+        assert result["error"]["error_class"] == "provider_discovery_unavailable"
+        assert SECRET not in json.dumps(result)
+        assert SECONDARY_SECRET not in json.dumps(result)
+
+
+@pytest.mark.parametrize("model", ["", " "])
+def test_cli_blank_model_fails_preflight_and_run_before_transport(tmp_path, capsys, model):
+    assert main([
+        "providers", "preflight", "--provider", "ai21-labs", "--model", model,
+        "--arena", "tic-tac-toe", "--live",
+    ]) == 1
+    assert "explicit nonblank model ID" in capsys.readouterr().err
+    assert main([
+        "run", "--arena", "tic-tac-toe", "--agent", f"ai21-labs:{model}",
+        "--output-dir", str(tmp_path),
+    ]) == 1
+    assert "explicit nonblank model ID" in capsys.readouterr().err
