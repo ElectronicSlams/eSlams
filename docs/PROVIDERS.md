@@ -14,6 +14,7 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `kuaishou:<model-or-endpoint>` / `kwaipilot:<model-or-endpoint>` | `STREAMLAKE_API_KEY` | StreamLake Chat Completions | `choices[0].message.content` | response `model` |
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
@@ -231,3 +232,10 @@ Core uses a shared bounded asynchronous HTTP loop behind its synchronous adapter
 API. Expired requests are cancelled and their network streams are closed; it
 also works when the caller already has an asyncio loop or is a worker thread.
 Network concurrency is bounded to 32 active requests in a process.
+## Kuaishou / KwaiPilot KAT (proposed for 0.7.1)
+
+The native `kuaishou:MODEL` and `kwaipilot:MODEL` adapters call StreamLake's
+direct text API with an explicit model/endpoint ID. See the
+[provider-specific contract and setup](providers/KUAISHOU.md), including region,
+reasoning, accounting, and credential-redaction limitations. Kling's media
+products are separate.

@@ -23,6 +23,8 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "kuaishou": "STREAMLAKE_API_KEY",
+    "kwaipilot": "STREAMLAKE_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -54,6 +56,10 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider in {"kuaishou", "kwaipilot"}:
+        from eslams.providers.kuaishou import validate_configuration
+
+        validate_configuration(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)

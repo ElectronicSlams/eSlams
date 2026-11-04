@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Kuaishou / KwaiPilot KAT text adapter through StreamLake's direct
+  pay-as-you-go API, with explicit service-region selection, exact model IDs,
+  full history, conservative receipts/retries, and deterministic wire tests.
+  See `docs/providers/KUAISHOU.md` for verified contracts and limitations.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
