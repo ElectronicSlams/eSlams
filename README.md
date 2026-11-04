@@ -697,7 +697,7 @@ smuggling in engine strength.
 ## Provider Support
 
 Core has direct HTTP adapters for the provider routes below. The Inception Labs
-Mercury adapter targets 0.7.1; see [its API notes](docs/INCEPTION.md).
+Mercury adapter targets 0.7.1; see [its API notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/INCEPTION.md).
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
