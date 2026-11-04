@@ -50,7 +50,7 @@ from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
-from eslams.providers import load_provider_registry
+from eslams.providers import fireworks, load_provider_registry
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1453,6 +1453,13 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = provider.lower()
+    if provider in fireworks.PROVIDER_ALIASES:
+        if not model:
+            raise ValueError("Fireworks requires an explicit model resource: fireworks:<model>")
+        return ModelProviderAgent(
+            provider=fireworks.PROVIDER_ID, model=model, api_key_env=fireworks.API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
