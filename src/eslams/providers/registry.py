@@ -238,6 +238,9 @@ class ProviderRegistry:
 def load_provider_registry() -> ProviderRegistry:
     generated = _load_package_json("models.generated.json")
     overrides = _load_package_json("overrides.json")
+    overrides["models"] = [
+        *overrides.get("models", []), *_load_package_json("sarvam.json").get("models", []),
+    ]
     return _registry_from_payloads(generated, overrides)
 
 
