@@ -5,6 +5,10 @@ Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
+The prospective 0.7.1 `ibm-rhai` adapter adds Red Hat AI Inference on IBM Cloud
+under a distinct hosting namespace. Granite author names do not select a host.
+See [configuration, wire sources and limitations](PROVIDER_IBM_RHAI.md).
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
@@ -13,6 +17,7 @@ convenience properties.
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `ibm-rhai:<exact-model-id>` | `IBM_RHAI_API_KEY` | IBM project-scoped Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 
 An absent provider model identity remains `null`. Core never copies the

@@ -402,6 +402,10 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        from eslams.providers.ibm_rhai import normalize_alias, validate_model
+        self.provider = normalize_alias(self.provider)
+        if self.provider == "ibm-rhai":
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -634,6 +638,9 @@ class ModelProviderAgent:
             return self._call_gemini(api_key, prompt)
         if self.provider == "openrouter":
             return self._call_openrouter(api_key, prompt)
+        if self.provider == "ibm-rhai":
+            from eslams.providers.ibm_rhai import call
+            return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         raise ProviderCallError(
@@ -1969,6 +1976,7 @@ def _endpoint_kind(provider: str) -> str:
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
+        "ibm-rhai": "ibm_rhai_chat_completions",
         "bedrock": "bedrock_converse",
     }.get(provider, "unknown")
 
@@ -1980,6 +1988,7 @@ def _parser_version(provider: str) -> str:
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
+        "ibm-rhai": "ibm-rhai-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
     }.get(provider, "unknown")
 
@@ -1987,6 +1996,9 @@ def _parser_version(provider: str) -> str:
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if not isinstance(usage, dict):
         return _empty_usage()
+    if provider == "ibm-rhai":
+        from eslams.providers.ibm_rhai import normalize_usage
+        return normalize_usage(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(

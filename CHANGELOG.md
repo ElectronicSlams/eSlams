@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add native Red Hat AI Inference on IBM Cloud chat under `ibm-rhai`, separate
+  from Granite model-author names and watsonx hosting. Includes explicit region
+  and project configuration, conservative accounting, credential-echo protection
+  and deterministic wire/CLI tests. See `docs/PROVIDER_IBM_RHAI.md` for limits.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
