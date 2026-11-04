@@ -11,8 +11,10 @@ eslams run --arena tic-tac-toe --agent upstage:solar-pro4
 
 Configuration preflight is offline. `--live` submits billable inference and
 requires the operator's separate authorization. No live inference was used to
-validate this adapter. Bare `upstage` selects `solar-pro4`; explicit aliases and
-snapshots are forwarded unchanged. There is no model substitution or fallback.
+validate this adapter. An explicit nonblank model ID is required; bare
+`upstage`, an empty suffix and whitespace-only IDs are rejected. Explicit
+aliases and snapshots are forwarded unchanged. There is no model substitution
+or fallback.
 
 ## Verified protocol
 
@@ -49,14 +51,17 @@ confirms that current Solar Pro/Mini 4 omit reasoning by default. Explicit
 `none`/`minimal` disable it; `low`, `medium`, `high`, `xhigh`, `max` enable it.
 Use `--reasoning-effort high`, for example. Core's `auto` leaves native defaults
 alone; `disabled` sends `none`. `enabled` requires an explicit enabling effort.
-Numeric budgets and unknown effort values fail before submission. Model-specific
-support is ultimately decided by Upstage; no catalogue-based effort substitution
+Numeric budgets and unknown effort values fail in configuration/live preflight
+and before submission. Model-specific support is ultimately decided by Upstage; no catalogue-based effort substitution
 occurs. No default output or total/read timeout cap is added. Explicit operator
 limits use the shared transport; its connection timeout and response byte safety
 limit remain in force.
 
 The final answer is parsed separately from `message.reasoning`; visible reasoning
-never enters action text or receipts. Reasoning tokens are already included in
+never enters action text or receipts. Receipt strings are also checked against
+the active key and configured secondary credential values before custody;
+credential-bearing identifiers become unknown rather than fabricated IDs. An
+answer containing a credential echo fails without accepting an action. Reasoning tokens are already included in
 `completion_tokens`. The shared normalizer records reported prompt, completion,
 cache, reasoning and total counts and validates their types/relationships.
 Missing identity stays null; only response `model` attests a resolved model.

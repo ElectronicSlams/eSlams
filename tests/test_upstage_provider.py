@@ -120,7 +120,6 @@ def test_cli_provider_case_normalization_preserves_model_aliases_and_snapshots(w
     assert native.provider == "upstage" and native.model == model
     native.act(request())
     assert calls[0][1]["json"]["model"] == model
-    assert _provider_agent("upstage").model == upstage.DEFAULT_MODEL
 
 
 def test_configuration_preflight_and_discovery_are_offline(monkeypatch, capsys):
@@ -360,3 +359,133 @@ def test_real_bounded_transport_with_mocked_raw_bytes(monkeypatch, partial):
         assert native.last_receipt["usage"]["total_tokens"] == 123
     assert native.last_receipt["request_id"] == "raw-request"
     assert len(calls) == len(native.attempt_receipts) == 1
+
+
+@pytest.mark.parametrize("model", [None, "", " ", "\t\r\n"])
+def test_missing_or_blank_models_rejected_by_direct_agent_preflight_and_mutation(wire, model):
+    _, calls = wire
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        ModelProviderAgent("upstage", model, "UPSTAGE_API_KEY")
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        provider_preflight("upstage", model, "tic-tac-toe", live=True)
+    native = agent()
+    native.model = model
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        native.act(request())
+    assert calls == []
+
+
+@pytest.mark.parametrize("spec", ["upstage", "UPSTAGE", "upstage:", "upstage:   "])
+def test_cli_never_selects_a_default_upstage_model(wire, capsys, spec):
+    _, calls = wire
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _provider_agent(spec)
+    assert main(["run", "--arena", "tic-tac-toe", "--agent", spec]) == 1
+    assert "explicit nonblank model" in capsys.readouterr().err
+    assert calls == []
+
+
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("config", [
+    ProviderRuntimeConfig(reasoning_budget_tokens=0),
+    ProviderRuntimeConfig(reasoning_budget_tokens=123),
+    ProviderRuntimeConfig(gemini_thinking_budget=0),
+    ProviderRuntimeConfig(gemini_thinking_budget=123),
+    ProviderRuntimeConfig(reasoning_effort="unknown"),
+    ProviderRuntimeConfig(reasoning="enabled"),
+])
+def test_preflight_rejects_unsupported_explicit_controls_without_network(wire, monkeypatch,
+                                                                       live, config):
+    _, calls = wire
+    def forbidden(*args, **kwargs):
+        pytest.fail("invalid provider configuration reached model discovery")
+    monkeypatch.setattr("eslams.provider_preflight.provider_models_live", forbidden)
+    result = provider_preflight("upstage", "solar-pro4", "tic-tac-toe", live=live,
+                                runtime_config=config)
+    assert not result["ok"] and not result["readiness"]["configuration_ready"]
+    assert result["error"]["error_class"] == "provider_request_rejected"
+    assert not result["checks"]["minimal_inference"]
+    assert calls == []
+
+
+@pytest.mark.parametrize("credential", ["primary", "secondary"])
+@pytest.mark.parametrize("outcome", ["success", "http", "malformed", "partial", "refused"])
+def test_credential_echoes_never_enter_receipt_custody(monkeypatch, tmp_path, credential, outcome):
+    # Ordinary alphanumeric values evade pattern-only redaction. The primary
+    # comes from an arbitrary api_key_env; the secondary is not sent on wire.
+    primary, secondary = "PrimaryCredential999ABC", "SecondaryCredential888XYZ"
+    monkeypatch.setenv("CUSTOM_UPSTAGE_KEY", primary)
+    monkeypatch.setenv("SECONDARY_PROVIDER_API_KEY", secondary)
+    secret = primary if credential == "primary" else secondary
+    echoed = "prefix-" + secret + "-suffix"
+    headers = {"x-request-id": echoed, "cf-aig-request-id": echoed}
+    calls = []
+    def post(*args, **kwargs):
+        calls.append(1)
+        if outcome == "partial":
+            from eslams.http_io import ResponseObservation
+            failure = httpx.ReadError(echoed)
+            failure._eslams_response_observation = ResponseObservation(200, tuple(headers.items()))
+            raise failure
+        if outcome == "malformed":
+            return httpx.Response(200, content=b'{not-json', headers=headers)
+        if outcome == "http":
+            return httpx.Response(429, headers=headers, json={
+                "id": echoed, "usage": {"prompt_tokens": 1, "completion_tokens": 1,
+                                          "total_tokens": 2},
+                "error": {"code": "too_many_requests", "type": "invalid_request_error",
+                          "message": echoed}})
+        body = fixture()
+        body.update(id=echoed, model=echoed)
+        if outcome == "refused":
+            body["choices"][0]["message"]["refusal"] = echoed
+        return httpx.Response(200, headers=headers, json=body)
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = ModelProviderAgent("upstage", "solar-pro4", "CUSTOM_UPSTAGE_KEY",
+                                runtime_config=ProviderRuntimeConfig(max_retries=3))
+    invocation = object()
+    with receipt_invocation(invocation):
+        if outcome == "success":
+            result = native.act(request())
+            assert secret not in json.dumps(result.to_dict())
+            assert native.last_receipt["locked_model_id"] is None
+            assert native.last_receipt["model_identity_source"] is None
+        else:
+            with pytest.raises(ProviderCallError) as caught:
+                native.act(request())
+            assert secret not in str(caught.value)
+            assert secret not in json.dumps(caught.value.receipt)
+    rows = native._receipt_snapshot(invocation)
+    for value in (rows, native.last_receipt, native.attempt_receipts):
+        assert primary not in json.dumps(value) and secondary not in json.dumps(value)
+    assert len(rows) == len(calls) == 1
+    assert rows[0]["request_id"] is None
+    assert rows[0]["gateway_request_id"] is None
+    assert rows[0].get("provider_response_id") is None
+    if outcome in {"success", "refused"}:
+        assert rows[0]["usage"]["total_tokens"] == 123
+    result = Runner().run(RunConfig("tic-tac-toe", agent_1=native, max_turns=1,
+                                   output_dir=tmp_path))
+    for path in result.expanded_path.rglob("*.json*"):
+        serialized = path.read_text()
+        assert primary not in serialized and secondary not in serialized
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("credential", ["primary", "secondary"])
+def test_credential_bearing_answer_is_rejected_before_public_action_metadata(wire, monkeypatch,
+                                                                            credential):
+    body, calls = wire
+    secondary = "OtherProviderCredential999ABC"
+    monkeypatch.setenv("SECONDARY_PROVIDER_TOKEN", secondary)
+    secret = "synthetic-upstage-secret" if credential == "primary" else secondary
+    body["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": "echo-" + secret})
+    native = agent()
+    with pytest.raises(ProviderCallError) as caught:
+        native.act(request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert secret not in json.dumps(native.last_receipt)
+    assert caught.value.receipt["outcome"] == "provider_response_schema_mismatch"
+    assert native.last_receipt["usage"]["total_tokens"] == 123
+    assert len(calls) == 1

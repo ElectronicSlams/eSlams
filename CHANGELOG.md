@@ -5,6 +5,8 @@
 - Add a native Upstage Chat Completions adapter for 0.7.1, with exact model
   forwarding, explicit reasoning effort, shared safe transport/receipt custody,
   keyless wire tests and [provider documentation](docs/providers/UPSTAGE.md).
+- Require explicit Upstage model IDs, validate reasoning controls in preflight,
+  and exclude primary/secondary credential echoes before receipt custody.
 
 ## v0.7.0 - 2026-11-04
 
