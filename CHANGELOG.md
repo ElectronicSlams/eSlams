@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Poolside-hosted Chat Completions adapter with explicit model IDs,
+  CLI/preflight/discovery aliases, native thinking on/off controls, sanitized
+  attempt receipts and deterministic wire regressions. Missing accounting stays
+  unknown; native costs and safe automatic retries remain unverified. See
+  `docs/POOLSIDE.md` for official sources and restricted-reference limitations.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

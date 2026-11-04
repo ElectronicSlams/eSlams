@@ -51,6 +51,7 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
+from eslams.providers.poolside import API_KEY_ENV, normalize_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1441,6 +1442,7 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
+        "poolside": ("", API_KEY_ENV),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1452,9 +1454,11 @@ def _provider_agent(
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    provider = normalize_provider(provider.lower())
     if provider not in defaults:
         return None
+    if provider == "poolside" and not model.strip():
+        raise ValueError("Poolside requires an explicit model: poolside:<model-id>")
     default_model, env_name = defaults[provider]
     return ModelProviderAgent(
         provider=provider,
