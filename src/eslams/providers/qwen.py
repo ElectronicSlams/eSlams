@@ -61,7 +61,7 @@ def validate_controls(runtime: ProviderRuntimeConfig | None) -> None:
 
 def _credential_setting(name: str) -> bool:
     normalized = name.upper()
-    if normalized == "AWS_ACCESS_KEY_ID":
+    if normalized in {"AWS_ACCESS_KEY_ID", "AWS_BEARER_TOKEN_BEDROCK"}:
         return True
     # Feature flags and token limits are not secrets. Treating values such as
     # '1'/'false' as credentials would corrupt legitimate action JSON.
@@ -77,7 +77,7 @@ def _credential_setting(name: str) -> bool:
     if parts & {"LIMIT", "BUDGET", "COUNT", "MAX", "MIN"}:
         return False
     return re.search(
-        r"(?:^|_)(?:API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?|KEY)(?:_|$)", normalized,
+        r"(?:^|_)(?:API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?|KEY)$", normalized,
     ) is not None
 
 

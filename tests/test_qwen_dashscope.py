@@ -767,6 +767,7 @@ def test_timeout_exception_chain_cannot_print_echoed_credentials(monkeypatch):
 
 @pytest.mark.parametrize("name,value", [
     ("TOKENIZERS_PARALLELISM", "false"), ("HF_HUB_DISABLE_IMPLICIT_TOKEN", "1"),
+    ("HF_TOKEN_TYPE", "1"),
     ("ESLAMS_MAX_TOKENS", "1"), ("DASHSCOPE_TOKEN_MODE", "stop"),
     ("ESLAMS_ARENA_SESSION_ALLOW_DEVELOPMENT_SECRET", "1"),
 ])
