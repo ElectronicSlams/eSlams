@@ -1440,6 +1440,14 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    provider, separator, model = value.partition(":")
+    if provider.lower() in {"ant-group", "bailing"}:
+        from eslams.providers.ant_ling import API_KEY_ENV, PROVIDER_ID
+
+        return ModelProviderAgent(
+            provider=PROVIDER_ID, model=model if separator else "", api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),

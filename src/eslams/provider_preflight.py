@@ -23,6 +23,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "ant-group": "ANT_LING_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -55,6 +56,11 @@ def provider_preflight(
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
     provider_registry = load_provider_registry()
+    normalized_provider = provider.strip().replace("_", "-")
+    if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "ant-group":
+        from eslams.providers.ant_ling import validate_config
+
+        validate_config(model, runtime_config or ProviderRuntimeConfig())
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)

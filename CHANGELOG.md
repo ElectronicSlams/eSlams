@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Add a direct Ant Ling (`ant-group`, CLI alias `bailing`) text adapter with
+  explicit model IDs, documented thinking controls, disabled search, sanitized
+  attempt receipts, and offline CLI/preflight/raw-wire regression coverage.
+  Keep routed InclusionAI identities separate, record Ling/Ring deprecations,
+  and preserve unknown accounting and model evidence without substitution.
+- Harden Ant Ling preflight alias validation and scrub additional configured
+  credentials from provider identifiers, errors, partial responses, and action
+  text without enabling credential fallback.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

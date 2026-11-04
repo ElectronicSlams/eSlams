@@ -402,6 +402,12 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider in {"ant-group", "bailing"}:
+            from eslams.providers.ant_ling import validate_config
+
+            self.provider = "ant-group"
+            validate_config(self.model, self.runtime_config or ProviderRuntimeConfig(),
+                            self.temperature)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +632,10 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "ant-group":
+            from eslams.providers.ant_ling import call
+
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1970,6 +1980,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "ant-group": "ant_ling_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,6 +1992,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "ant-group": "ant-ling-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
