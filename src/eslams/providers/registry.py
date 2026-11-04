@@ -175,7 +175,9 @@ PROVIDER_ALIASES = {
     "bedrock": "bedrock",
     "azure": "microsoft",
     "azure-ai": "microsoft",
-    "watsonx": "ibm",
+    "watsonx-ai": "watsonx",
+    "ibm-watsonx": "watsonx",
+    "ibm-watsonx-ai": "watsonx",
     "xverse": "xverse-ai",
 }
 

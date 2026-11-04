@@ -23,6 +23,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "watsonx": "WATSONX_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -54,6 +55,11 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    from eslams.providers.watsonx import configuration_error, normalize_alias, validate_model
+    watsonx_problem = None
+    if normalize_alias(provider) == "watsonx":
+        validate_model(model)
+        watsonx_problem = configuration_error(runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -96,6 +102,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif watsonx_problem:
+        error = {"error_class": "provider_request_rejected", "message": watsonx_problem}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -129,7 +137,9 @@ def provider_preflight(
                 )
         if visible_models is None and error is None:
             warnings.append(
-                "This adapter has no Models API; account visibility remains unverified."
+                "Adapter model discovery is unavailable; account visibility remains unverified."
+                 if record.provider == "watsonx" else
+                 "This adapter has no Models API; account visibility remains unverified."
             )
         if visible_models is not None:
             checks["account_model_visible"] = model in visible_models
@@ -177,9 +187,11 @@ def provider_preflight(
                 checks["response_parsing"] = response.action in legal_actions
                 receipt = agent.last_receipt
                 usage = receipt.get("usage") if isinstance(receipt, dict) else None
-                checks["usage_extraction"] = isinstance(usage, dict) and all(
-                    _is_int(usage.get(key))
-                    for key in ("input_tokens", "output_tokens", "total_tokens")
+                checks["usage_extraction"] = (
+                    isinstance(usage, dict)
+                    and not usage.get("usage_validation_errors")
+                    and all(_is_int(usage.get(key))
+                            for key in ("input_tokens", "output_tokens", "total_tokens"))
                 )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
@@ -211,7 +223,9 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None
+                                    and (record.provider != "watsonx" or error is None)),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
