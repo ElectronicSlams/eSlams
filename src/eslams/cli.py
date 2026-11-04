@@ -1440,7 +1440,10 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    from eslams.providers.qwen import canonicalize_provider, validate_model
+
     defaults = {
+        "qwen": ("", "DASHSCOPE_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1452,9 +1455,11 @@ def _provider_agent(
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    provider = canonicalize_provider(provider)
     if provider not in defaults:
         return None
+    if provider == "qwen":
+        validate_model(model)
     default_model, env_name = defaults[provider]
     return ModelProviderAgent(
         provider=provider,

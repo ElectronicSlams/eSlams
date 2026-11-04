@@ -1,0 +1,5 @@
+{
+  "request_id": "649b2bbc-c541-9e16-9845-db7fe4fe5b2d",
+  "code": "Throttling.RateQuota",
+  "message": "Requests rate limit exceeded, please try again later."
+}
