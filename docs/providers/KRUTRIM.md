@@ -54,6 +54,23 @@ resolved identity, sanitized exceptions and complete decoded action payloads,
 including unused JSON fields and escaped strings. Raw exception chains are
 suppressed because they can carry private transport headers or malformed bodies.
 
+Action JSON is limited to 64 structural container levels before recursive
+decoding, including the shared parser's fallback object candidate. Quoted and
+escaped bracket characters do not count as containers. Credential traversal
+uses an iterative walk. Nesting violations and decoder failures reject the
+action through the normal sanitized error receipt, preserving already observed
+HTTP status, IDs, model identity and usage. An undecodable outer HTTP body keeps
+its header evidence and unknown accounting. The existing response byte bound
+continues to apply.
+
+The Krutrim action decoder rejects duplicate keys at every object level,
+including keys with equivalent Unicode escapes, before an earlier field can be
+overwritten. Nonfinite JSON values are also rejected. Normal fences and object
+fallback parsing retain their existing behavior. Successful Krutrim responses
+expose the normalized action, explanation and sanitized receipts, without a
+`raw_action_text` copy of the original provider output; ignored preambles and
+unused fields therefore cannot escape through that diagnostic field.
+
 The operator SDK sources used to pin the wire contract:
 
 - [Client base URL, credential environment and Bearer header](https://github.com/ola-krutrim/krutrim-cloud-python/blob/6c01ffa0dffd151b08dd7fdd65d3f7e931ed6e2a/src/krutrim_cloud/_client.py)

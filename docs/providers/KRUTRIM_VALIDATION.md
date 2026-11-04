@@ -109,6 +109,52 @@ packaged-provenance build/schema check. Follow-up logs are retained in
 `/tmp/krutrim-review-full.log`.
 
 No live credential or inference service was used; no
-listener was opened. The follow-up commit also uses `[skip ci]` and updates
-only the proposed revision for draft PR #282; remote publication remains subject
-to approval. No merge, release or hosted workflow dispatch is authorized.
+listener was opened. That follow-up was prepared solely for draft PR #282 with
+`[skip ci]`; publication and merge are separately authorized actions. No release
+or hosted workflow dispatch is part of this verification.
+
+## Nested-response correction
+
+The subsequent merge review of `18376410f662a1fd79cbef9fd8191923075bfbfc`
+found that nested action JSON could raise `RecursionError` during decoding or
+credential traversal before receipt publication. The synthetic HTTP 200 carried
+usage 12/4/16 but left zero attempt receipts. Regression depths 800 and 1500
+failed on that head; the merge was stopped.
+
+The correction bounds action JSON to 64 container levels before decoding both
+the full text and any fallback object candidate. It replaces recursive
+credential traversal with an iterative walk and routes depth/decode failures
+through the receipt-bearing error path. It preserves status, safe identity/IDs
+and reported usage; private IDs remain redacted and uncertain accounting is
+never reconstructed from undecodable outer bodies. It adds raw and escaped
+wire regressions, malformed preamble/fallback cases, decoder fault injection,
+and valid JSON/string/fence cases. No provider request, history, reasoning or
+retry policy is changed.
+
+This is a source correction for the same PR; fresh checks and independent review
+must be tied to its final source tree before a merge. The inherited offline
+guard, CLI mocks and listener exclusion remain mandatory. Source checks do not
+establish live API or real-transport availability.
+
+## Duplicate-action-field correction
+
+Independent adversarial review of local head
+`f8e223567ebcfb0d82bf7c88614cf0b6e9881400` found a second blocker. A content
+object could contain a Unicode-escaped credential in an earlier duplicate
+field, overwrite that field, and succeed while retaining the original text in
+`raw_action_text`. Publication and merge were stopped before that local head
+was uploaded.
+
+The correction uses a Krutrim-local strict action decoder. It rejects duplicate
+keys at every level, including equivalent escaped key names, and rejects
+nonfinite constants. It retains the nesting bound, fences and object fallback,
+and preserves the received usage and sanitized receipt on rejection without
+retries. Krutrim no longer exports the original provider response as
+`raw_action_text`; normalized action/explanation fields remain available.
+
+Thirty-six added cases pass for overwritten primary/secondary credentials,
+escaped duplicate keys, nested duplicates and depth boundaries, raw/escaped
+wire forms, fences/preambles, benign duplicates, nonfinite fields and valid
+controls. The prior independent reproduction now passes with its other 19
+adversarial probes. The 34 nesting cases continue to pass. Fresh full checks and
+independent review must be tied to the final head before publication/merge.

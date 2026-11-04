@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -16,6 +18,7 @@ if TYPE_CHECKING:
 PROVIDER_ID = "krutrim"
 API_KEY_ENV = "KRUTRIM_CLOUD_API_KEY"
 CHAT_COMPLETIONS_ENDPOINT = "https://cloud.olakrutrim.com/v1/chat/completions"
+_MAX_ACTION_JSON_DEPTH = 64
 _CREDENTIAL_SNAPSHOT: ContextVar[tuple[str, ...]] = ContextVar(
     "krutrim_credential_snapshot", default=(),
 )
@@ -49,14 +52,92 @@ def credential_scope(agent: ModelProviderAgent) -> Iterator[None]:
 
 
 def _contains_credential(value: Any, secrets: tuple[str, ...]) -> bool:
-    if isinstance(value, str):
-        return any(secret in value for secret in secrets)
-    if isinstance(value, dict):
-        return any(_contains_credential(key, secrets) or _contains_credential(item, secrets)
-                   for key, item in value.items())
-    if isinstance(value, list):
-        return any(_contains_credential(item, secrets) for item in value)
+    pending = [value]
+    visited: set[int] = set()
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str):
+            if any(secret in item for secret in secrets):
+                return True
+        elif isinstance(item, (dict, list)) and id(item) not in visited:
+            visited.add(id(item))
+            if isinstance(item, dict):
+                pending.extend(item.keys())
+                pending.extend(item.values())
+            else:
+                pending.extend(item)
     return False
+
+
+def _check_action_json_depth(text: str) -> None:
+    """Bound structural nesting before the recursive JSON decoder can run."""
+    depth = 0
+    quoted = False
+    escaped = False
+    for char in text:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+        elif char == '"':
+            quoted = True
+        elif char in "[{":
+            depth += 1
+            if depth > _MAX_ACTION_JSON_DEPTH:
+                raise ValueError("Krutrim action JSON exceeds the nesting safety limit")
+        elif char in "]}":
+            depth -= 1
+            if depth < 0:
+                raise ValueError("Krutrim action JSON has unbalanced containers")
+
+
+def _unique_action_fields(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate Krutrim action JSON field")
+        result[key] = value
+    return result
+
+
+def _reject_action_constant(_value: str) -> Any:
+    raise ValueError("Krutrim action JSON must contain finite values")
+
+
+def _load_action_json(text: str) -> Any:
+    return json.loads(text, object_pairs_hook=_unique_action_fields,
+                      parse_constant=_reject_action_constant)
+
+
+def _decode_action_json(text: str) -> Any:
+    # Match the shared action extractor's fences and object fallback, but keep
+    # duplicate/finite-value validation local to this provider. A duplicate is
+    # not a syntax error and must never be retried as a different candidate.
+    stripped = text.strip()
+    fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", stripped, re.DOTALL)
+    if fenced:
+        stripped = fenced.group(1)
+    _check_action_json_depth(stripped)
+    try:
+        return _load_action_json(stripped)
+    except json.JSONDecodeError:
+        start, end = stripped.find("{"), stripped.rfind("}")
+        if start != -1 and end > start:
+            candidate = stripped[start:end + 1]
+            _check_action_json_depth(candidate)
+            try:
+                return _load_action_json(candidate)
+            except json.JSONDecodeError:
+                return None
+    return None
+
+
+def _action_text_is_safe(text: str, secrets: tuple[str, ...]) -> bool:
+    return (not _contains_credential(text, secrets)
+            and not _contains_credential(_decode_action_json(text), secrets))
 
 
 def validate_config(model: str, runtime: ProviderRuntimeConfig | None) -> None:
@@ -150,7 +231,6 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
     from eslams.agents import (
         _SYSTEM_INSTRUCTIONS,
         ProviderCallError,
-        _extract_json,
         _post_json,
         _receipt,
         _response_json_with_receipt,
@@ -201,11 +281,16 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
           and choice["index"] == 0
           and reason == "stop" and isinstance(message, dict)
           and message.get("role") == "assistant" and not message.get("tool_calls")
-          and not message.get("function_call") and isinstance(text, str) and text.strip()
-          and not _contains_credential(text, secrets)
-          and not _contains_credential(_extract_json(text), secrets)):
-        receipt.update(finish_reason="stop", finish_status="completed")
-        return text, receipt
+          and not message.get("function_call") and isinstance(text, str) and text.strip()):
+        try:
+            safe = _action_text_is_safe(text, secrets)
+        except (ValueError, RecursionError, OverflowError):
+            # The HTTP envelope and its accounting were already observed.
+            # Reject unsafe action JSON through the normal receipt-bearing path.
+            safe = False
+        if safe:
+            receipt.update(finish_reason="stop", finish_status="completed")
+            return text, receipt
     receipt.update(
         outcome=kind,
         finish_reason=reason if reason in ("stop", "length", "content_filter") else "unknown",

@@ -600,7 +600,7 @@ class ModelProviderAgent:
                 metadata={
                     "provider": self.provider,
                     "model": self.model,
-                    "raw_action_text": text[:500],
+                    **({"raw_action_text": text[:500]} if self.provider != "krutrim" else {}),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
                 },
