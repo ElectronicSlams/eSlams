@@ -1,5 +1,9 @@
 # Core 0.7.1 baseline investigation
 
+This is the initial investigation record. The later shared action-depth repair
+and its newer implementation/check identity are recorded in
+[core-action-depth-validation.md](core-action-depth-validation.md).
+
 Date: 2026-11-04. Base: `270a863d10d57a0953f21924f1a0dd50159e6cf1`.
 The final documentation-only commit adds this report and receipt; the tested
 implementation is unchanged.

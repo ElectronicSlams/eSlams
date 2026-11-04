@@ -1,0 +1,162 @@
+{
+  "source_commit": "4801cda05e4a4e2a55b97cd1f37013d3f5bd3901",
+  "version": "0.7.0",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "steps": [
+    {
+      "name": "ruff",
+      "exit_code": 0,
+      "seconds": 0.218
+    },
+    {
+      "name": "mypy",
+      "exit_code": 0,
+      "seconds": 24.718
+    },
+    {
+      "name": "typescript-contracts",
+      "exit_code": 0,
+      "seconds": 0.875
+    },
+    {
+      "name": "typescript-lite",
+      "exit_code": 0,
+      "seconds": 1.072
+    },
+    {
+      "name": "typescript-lite-compile",
+      "exit_code": 0,
+      "seconds": 0.979
+    },
+    {
+      "name": "core-lite-parity",
+      "exit_code": 0,
+      "seconds": 3.14
+    },
+    {
+      "name": "pytest",
+      "exit_code": 0,
+      "seconds": 78.366
+    },
+    {
+      "name": "arena-versions",
+      "exit_code": 0,
+      "seconds": 31.463
+    },
+    {
+      "name": "portable-bytes",
+      "exit_code": 0,
+      "seconds": 1.131
+    },
+    {
+      "name": "build",
+      "exit_code": 0,
+      "seconds": 2.801
+    },
+    {
+      "name": "twine",
+      "exit_code": 0,
+      "seconds": 0.519
+    },
+    {
+      "name": "distribution-consumers",
+      "exit_code": 0,
+      "seconds": 186.417
+    }
+  ],
+  "status": "passed",
+  "excluded": "previously denied elapsed-deadline listener fixtures not opened or retried",
+  "pytest_counts": {
+    "tests": 1369,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0
+  },
+  "source_tree": "db5d904fbc506bae9b6aa4e2d7409ead73c804bc",
+  "artifacts": [
+    {
+      "filename": "eslams_core-0.7.0-py3-none-any.whl",
+      "size": 486028,
+      "sha256": "efdc494fc9453ac53f9c7690c10839473cec36e48a1bd0c5baf30dd5ba472ac8"
+    },
+    {
+      "filename": "eslams_core-0.7.0.tar.gz",
+      "size": 910880,
+      "sha256": "5f8c5bcb96e9d1afefb98c80331a9591ac9a580018fc7cc60d69f560d81f8900"
+    }
+  ],
+  "raw_receipt_sha256": "c097ccf114c358032ff29eca9c82ef1ba49ba53d2cf1e278a1b896d772c11ac9",
+  "status_scope": "Admitted finite checks only; listener regression file excluded; prior browser policy blockers remain.",
+  "baseline_reproduction": [
+    {
+      "baseline": "3c6f3b9",
+      "depth": 12000,
+      "pre_return_scanner": false,
+      "failure": "untyped RecursionError",
+      "published_receipts": 1,
+      "published_usage": {
+        "input_tokens": 12,
+        "output_tokens": 4,
+        "cached_input_tokens": null,
+        "cache_read_input_tokens": null,
+        "cache_write_input_tokens": null,
+        "reasoning_tokens": null,
+        "total_tokens": 16,
+        "reasoning_included_in_output": true,
+        "cached_input_is_subset": true,
+        "total_tokens_source": "derived_input_plus_output",
+        "usage_source": "provider",
+        "usage_validation_errors": []
+      }
+    },
+    {
+      "baseline": "3c6f3b9",
+      "depth": 1200,
+      "pre_return_scanner": true,
+      "failure": "untyped RecursionError",
+      "published_receipts": 0,
+      "published_usage": null
+    }
+  ],
+  "focused_tests_passed": 198,
+  "added_regression_cases": 106,
+  "extra_depth_stress": {
+    "depth": 12000,
+    "all_provider_scanner_cases": 10,
+    "status": "passed"
+  },
+  "network_audit": {
+    "source": [
+      {
+        "event": "socket.bind",
+        "blocked_before_OS_operation": true
+      }
+    ],
+    "sdist": [
+      {
+        "event": "socket.bind",
+        "blocked_before_OS_operation": true
+      }
+    ]
+  },
+  "consumers": [
+    {
+      "distribution": "eslams_core-0.7.0-py3-none-any.whl",
+      "consumer_checks": "passed"
+    },
+    {
+      "distribution": "eslams_core-0.7.0.tar.gz",
+      "consumer_checks": "passed"
+    },
+    {
+      "sdist_suite_without_git": "passed"
+    }
+  ],
+  "additional_checks": {
+    "schema_exports": "byte-identical; manifest inspected; source_commit matched",
+    "initial_state_budgets": "50 passed",
+    "arena_step_benchmark": "tic-tac-toe, 10 iterations passed",
+    "browser": "not retried; previous download/file-navigation policy blocks remain"
+  }
+}
