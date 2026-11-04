@@ -706,6 +706,9 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 
+The next-release [Baichuan adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BAICHUAN.md) additionally accepts
+`baichuan-ai:<exact-model>` and `baichuan:<exact-model>` using `BAICHUAN_API_KEY`.
+
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
 `usage.cost`, and Bedrock uses Converse. OpenRouter provider fallback is

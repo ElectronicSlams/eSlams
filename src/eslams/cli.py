@@ -1441,6 +1441,9 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
+        "baichuan": ("", "BAICHUAN_API_KEY"),
+        "baichuan-ai": ("", "BAICHUAN_API_KEY"),
+        "baichuan_ai": ("", "BAICHUAN_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1456,6 +1459,8 @@ def _provider_agent(
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
+    if provider in {"baichuan", "baichuan-ai", "baichuan_ai"} and not model.strip():
+        raise ValueError("Baichuan requires an exact provider-native model ID")
     return ModelProviderAgent(
         provider=provider,
         model=model or default_model,

@@ -1,0 +1,14 @@
+{
+  "id": "chatcmpl-baichuan-redacted",
+  "object": "chat.completion",
+  "created": 1698205608,
+  "model": "Baichuan4-Turbo",
+  "choices": [
+    {
+      "index": 0,
+      "message": {"role": "assistant", "content": "{\"action\": 1}"},
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 4, "total_tokens": 16, "search_count": 0}
+}
