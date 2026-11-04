@@ -743,3 +743,23 @@ def test_credential_echoes_are_removed_from_partial_response_custody(
     assert not wrapped.last_receipt["usage"]
     exported = json.dumps([wrapped.last_receipt, wrapped.attempt_receipts, failure.value.receipt])
     assert all(secret not in exported + str(failure.value) for secret in secrets)
+
+
+def test_timeout_exception_chain_cannot_print_echoed_credentials(monkeypatch):
+    import traceback
+
+    secrets = echo_credentials(monkeypatch)
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        raise httpx.ReadTimeout(" ".join(secrets))
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    wrapped = ModelProviderAgent("qwen", REQUESTED, "QWEN_CUSTOM_AUTH",
+                                 runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(TimeoutError) as failure:
+        wrapped.act(request())
+    assert calls == [1] and wrapped.last_receipt["outcome"] == "provider_timeout"
+    printed = "".join(traceback.format_exception(failure.value))
+    assert all(secret not in printed + json.dumps(wrapped.last_receipt) for secret in secrets)

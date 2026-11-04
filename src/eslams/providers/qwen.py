@@ -101,8 +101,8 @@ def act(agent: ModelProviderAgent, request: ActRequest) -> ActResponse:
     with credential_scope(agent.api_key_env):
         try:
             response = agent._act(request)
-        except ProviderCallError as exc:
-            if exc.receipt is not None:
+        except (ProviderCallError, TimeoutError) as exc:
+            if isinstance(exc, ProviderCallError) and exc.receipt is not None:
                 exc.receipt = redact(exc.receipt)
             exc.args = (redact(str(exc)),)
             raise exc from None
