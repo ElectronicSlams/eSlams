@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from eslams.hashing import sha256_json
+from eslams.providers.azure import ALIASES
 from eslams.providers.capabilities import ModelCapabilities
 
 REQUESTED_PROVIDER_ORGANIZATIONS: tuple[tuple[str, str], ...] = (
@@ -173,8 +174,7 @@ PROVIDER_ALIASES = {
     "gigachat": "sber",
     "aws": "amazon-aws",
     "bedrock": "bedrock",
-    "azure": "microsoft",
-    "azure-ai": "microsoft",
+    **dict.fromkeys(ALIASES, "azure"),
     "watsonx": "ibm",
     "xverse": "xverse-ai",
 }

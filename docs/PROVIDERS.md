@@ -1,7 +1,8 @@
 # Provider Guide
 
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The proposed 0.7.1
+Azure Foundry adapter is documented in [AZURE_FOUNDRY.md](AZURE_FOUNDRY.md). The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -9,6 +10,7 @@ convenience properties.
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
+| `azure:<deployment>` | `AZURE_AI_API_KEY` (or explicit Entra token) | Azure v1 Chat Completions | `choices[0].message.content` | response `model`; see [setup](AZURE_FOUNDRY.md) |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
