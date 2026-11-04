@@ -14,6 +14,8 @@ from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
+from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
+from eslams.providers.inception import MODELS_ENDPOINT as INCEPTION_MODELS_ENDPOINT
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -22,6 +24,7 @@ DEFAULT_PROVIDER_ENV = {
     "gemini": "GEMINI_API_KEY",
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
+    "inception": INCEPTION_API_KEY_ENV,
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
 }
 
@@ -29,6 +32,7 @@ _MODELS_ENDPOINTS = {
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
+    "inception": INCEPTION_MODELS_ENDPOINT,
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
 }

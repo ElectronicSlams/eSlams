@@ -45,6 +45,8 @@ from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
+from eslams.providers.inception import call as call_inception
+from eslams.providers.inception import normalize_provider as normalize_inception_provider
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 
@@ -401,7 +403,7 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = normalize_inception_provider(self.provider)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -634,6 +636,8 @@ class ModelProviderAgent:
             return self._call_gemini(api_key, prompt)
         if self.provider == "openrouter":
             return self._call_openrouter(api_key, prompt)
+        if self.provider == "inception":
+            return call_inception(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         raise ProviderCallError(
@@ -1969,6 +1973,7 @@ def _endpoint_kind(provider: str) -> str:
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
+        "inception": "inception_chat_completions",
         "bedrock": "bedrock_converse",
     }.get(provider, "unknown")
 
@@ -1980,6 +1985,7 @@ def _parser_version(provider: str) -> str:
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
+        "inception": "inception-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
     }.get(provider, "unknown")
 
@@ -2144,7 +2150,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "inception"}
+            else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2516,7 +2523,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider == "openrouter":
+    elif provider in {"openrouter", "inception"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
@@ -2617,7 +2624,7 @@ def _body_error_status(error: Any) -> int | None:
     )
     codes = {
         "authentication_error": 401, "invalid_api_key": 401, "permission_error": 403,
-        "rate_limit_error": 429, "rate_limit_exceeded": 429,
+        "rate_limit_error": 429, "rate_limit_exceeded": 429, "rate_limit_reached": 429,
         "overloaded_error": 529, "api_error": 500, "server_error": 500, "server": 500,
         "internal_error": 500, "timeout_error": 504, "timeout": 504,
         "not_found_error": 404, "invalid_request_error": 400,
