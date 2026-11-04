@@ -373,3 +373,205 @@ def test_truncation_artifact_keeps_usage_without_action_or_private_trace(wire, t
     for path in result.artifact_path.rglob("*.json*"):
         content = path.read_text()
         assert KEY not in content and "private-reka-reasoning-fixture" not in content
+
+
+@pytest.mark.parametrize("alias", ALIASES)
+@pytest.mark.parametrize("model", [None, "", " ", "\t\r\n"])
+def test_explicit_model_is_required_by_constructor_and_preflight(alias, model, monkeypatch):
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("transport"))
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, **k:
+                        pytest.fail("discovery"))
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _agent(provider=alias, model=model)
+    for live in (False, True):
+        result = provider_preflight(alias, model, "tic-tac-toe", live=live)
+        assert not result["ok"] and not result["readiness"]["configuration_ready"]
+        assert result["error"]["error_class"] == "provider_request_rejected"
+        assert not result["checks"]["minimal_inference"]
+
+
+@pytest.mark.parametrize("alias", ALIASES)
+@pytest.mark.parametrize("suffix", ["", ":", ":   "])
+def test_cli_cannot_silently_choose_a_reka_model(alias, suffix, monkeypatch, capsys):
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("transport"))
+    with pytest.raises(ValueError, match="explicit nonblank model"):
+        _agent_arg(alias + suffix)
+    assert main(["run", "--agent", alias + suffix]) == 1
+    assert "explicit nonblank model" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("control", [
+    {"reasoning_budget_tokens": 0}, {"reasoning_budget_tokens": 1024},
+    {"gemini_thinking_budget": 0}, {"gemini_thinking_budget": -1},
+    {"gemini_thinking_budget": 2048},
+    {"reasoning_effort": "high", "reasoning_budget_tokens": 1024},
+])
+@pytest.mark.parametrize("alias", ALIASES)
+def test_explicit_reasoning_budgets_fail_preflight_and_before_transport(alias, control, wire,
+                                                                       monkeypatch):
+    payload, calls = wire
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, **k:
+                        pytest.fail("discovery must not precede configuration validation"))
+    runtime = ProviderRuntimeConfig(**control)
+    for live in (False, True):
+        result = provider_preflight(alias, MODEL, "tic-tac-toe", live=live, runtime_config=runtime)
+        assert not result["ok"] and not result["readiness"]["configuration_ready"]
+        assert result["error"]["error_class"] == "provider_request_rejected"
+        assert "reasoning token budgets" in result["error"]["message"]
+        assert not result["checks"]["minimal_inference"]
+    agent = _agent(provider=alias, runtime_config=runtime)
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+    assert failure.value.error_kind == "provider_request_rejected" and calls == []
+    assert not agent.last_receipt["usage"]
+
+
+SECONDARY_KEY = "OpaqueSecondaryCredential789"
+
+
+def _assert_private(agent, failure=None):
+    published = [agent.last_receipt, agent.attempt_receipts, agent._receipt_batch[1]]
+    if failure is not None:
+        published.extend([failure.receipt, str(failure)])
+    dumped = json.dumps(published)
+    assert KEY not in dumped and SECONDARY_KEY not in dumped
+
+
+@pytest.mark.parametrize("secret", [KEY, SECONDARY_KEY])
+@pytest.mark.parametrize("field", ["id", "model", "x-request-id", "cf-aig-request-id"])
+def test_success_receipt_ids_cannot_echo_any_configured_credential(secret, field, wire,
+                                                                  monkeypatch):
+    payload, calls = wire
+    monkeypatch.setenv("OTHER_PROVIDER_API_KEY", f"  {SECONDARY_KEY}\n")
+    headers = {"x-request-id": "safe-request", "cf-aig-request-id": "safe-gateway"}
+    if field in {"id", "model"}:
+        payload[field] = f"prefix-{secret}-suffix"
+    else:
+        headers[field] = f"prefix-{secret}-suffix"
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k:
+                        httpx.Response(200, json=payload, headers=headers))
+    agent = _agent()
+    response = agent.act(_request())
+    _assert_private(agent)
+    assert KEY not in json.dumps(response.to_dict())
+    assert SECONDARY_KEY not in json.dumps(response.to_dict())
+    receipt_key = {"id": "provider_response_id", "model": "locked_model_id",
+                   "x-request-id": "request_id", "cf-aig-request-id": "gateway_request_id"}[field]
+    assert agent.last_receipt[receipt_key] is None
+    if field == "model":
+        assert agent.last_receipt["model_identity_source"] is None
+    assert agent.last_receipt["model"] == MODEL
+    assert agent.last_receipt["usage"]["total_tokens"] == 16
+
+
+@pytest.mark.parametrize("status", [400, 401, 429, 503])
+def test_http_error_credential_ids_are_redacted_without_enabling_replay(status, wire, monkeypatch):
+    payload, calls = wire
+    monkeypatch.setenv("SECONDARY_API_KEY", SECONDARY_KEY)
+    attempts = []
+
+    def post(*a, **k):
+        attempts.append(1)
+        return httpx.Response(status, json={
+            "id": f"work-{SECONDARY_KEY}",
+            "error": {"type": "rate_limit_error", "code": "rate_limit_exceeded",
+                      "message": f"{KEY} {SECONDARY_KEY}"},
+        }, headers={"x-request-id": KEY, "cf-aig-request-id": SECONDARY_KEY})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    agent = _agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+    _assert_private(agent, failure.value)
+    assert attempts == [1]
+    assert agent.last_receipt["provider_response_id"] is None
+    assert agent.last_receipt["request_id"] is None
+    assert agent.last_receipt["gateway_request_id"] is None
+    assert agent.last_receipt["pricing_provenance"]["work_observation_present"]
+
+
+@pytest.mark.parametrize("body", ["invalid", '{"id":', '{"id":"duplicate","id":"again"}'])
+def test_malformed_response_credential_headers_are_private(body, wire, monkeypatch):
+    payload, calls = wire
+    monkeypatch.setenv("OTHER_API_TOKEN", SECONDARY_KEY)
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k:
+                        httpx.Response(200, text=body, headers={
+                            "x-request-id": f"request-{KEY}",
+                            "x-gateway-request-id": f"gateway-{SECONDARY_KEY}",
+                        }))
+    agent = _agent()
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    _assert_private(agent, failure.value)
+    assert agent.last_receipt["request_id"] is None
+    assert agent.last_receipt["gateway_request_id"] is None
+
+
+@pytest.mark.parametrize("status", [200, 429, 503])
+@pytest.mark.parametrize("interruption", ["timeout", "reset", "resource"])
+def test_actual_partial_reader_never_publishes_credential_headers(status, interruption,
+                                                                monkeypatch):
+    monkeypatch.setenv("REKA_API_KEY", KEY)
+    monkeypatch.setenv("SECONDARY_PROVIDER_KEY", SECONDARY_KEY)
+    client = httpx.AsyncClient
+    calls = []
+
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield json.dumps({"id": KEY, "private": SECONDARY_KEY}).encode()[:20]
+            if interruption == "timeout":
+                raise httpx.ReadTimeout(f"private-{KEY}-{SECONDARY_KEY}")
+            if interruption == "reset":
+                raise httpx.ReadError(f"private-{KEY}-{SECONDARY_KEY}")
+            yield b"x" * (1024 * 1024 + 1)
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(status, stream=Stream(), headers={
+            "x-request-id": f"partial-{KEY}", "cf-aig-request-id": f"partial-{SECONDARY_KEY}",
+        })
+
+    monkeypatch.setattr("eslams.http_io.httpx.AsyncClient", lambda **kwargs:
+                        client(transport=httpx.MockTransport(handler), **kwargs))
+    agent = _agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+    _assert_private(agent, failure.value)
+    assert len(calls) == 1 and len(agent.attempt_receipts) == 1
+    assert agent.last_receipt["status_code"] == status
+    assert agent.last_receipt["request_id"] is None
+    assert agent.last_receipt["gateway_request_id"] is None
+    assert agent.last_receipt["usage"] == {}
+
+
+@pytest.mark.parametrize("secret", [KEY, SECONDARY_KEY])
+def test_credential_echo_in_action_text_is_rejected_without_repair(secret, wire, monkeypatch):
+    payload, calls = wire
+    monkeypatch.setenv("OTHER_PROVIDER_API_KEY", SECONDARY_KEY)
+    payload["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": f"echo-{secret}",
+    })
+    agent = _agent(runtime_config=ProviderRuntimeConfig(action_repair_attempts=2, max_retries=2))
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    assert len(calls) == 1
+    _assert_private(agent, failure.value)
+    assert agent.last_receipt["usage"]["total_tokens"] == 16
+
+
+def test_custom_primary_environment_and_secondary_discovery_ids_are_private(wire, monkeypatch):
+    payload, calls = wire
+    monkeypatch.setenv("CUSTOM_ACCESS", KEY)
+    monkeypatch.setenv("OTHER_API_KEY", SECONDARY_KEY)
+    payload["id"] = KEY
+    agent = ModelProviderAgent("reka", MODEL, "CUSTOM_ACCESS")
+    agent.act(_request())
+    _assert_private(agent)
+    monkeypatch.setattr("eslams.provider_preflight.httpx.get", lambda *a, **k:
+                        httpx.Response(200, json={"data": [{"id": SECONDARY_KEY}]}))
+    with pytest.raises(ProviderCallError) as failure:
+        provider_models_live("reka")
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    assert SECONDARY_KEY not in str(failure.value)

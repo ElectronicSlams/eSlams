@@ -3,8 +3,10 @@
 The `reka-ai` route calls Reka directly. `reka`, `reka_ai` and case-insensitive
 spellings are aliases for that provider identity. Model IDs are passed byte for
 byte, including any slash, case or revision suffix supplied by the operator.
-The bare `reka` CLI argument chooses `reka-flash-3`; explicit model selection is
-recommended. There is no alternate model, broker route or provider fallback.
+Every route requires an explicit model ID. Bare aliases, an empty suffix after
+the colon, and whitespace-only model IDs are rejected by CLI construction and
+preflight before network access. There is no default model, alternate model,
+broker route or provider fallback.
 The package version remains 0.7.0 until a separately reviewed release.
 
 ## Setup
@@ -54,6 +56,23 @@ write, cancellation and response-byte protections still apply. Reka documents a
 per-model default output budget when `max_tokens` is omitted; provider ceilings
 remain provider-owned.
 
+The adapter rejects explicit `reasoning_budget_tokens` and
+`gemini_thinking_budget` values, including zero and automatic-budget sentinels.
+Configuration and live preflight reject those unsupported controls before model
+discovery or inference; direct calls reject them before transport. An explicit
+`reasoning_effort` remains an endpoint-validated choice.
+
+Receipt redaction compares provider strings against the active credential and
+known credentials configured in the process environment, including credentials
+for other providers. Matching request, gateway, response and resolved-model IDs
+become null; an erased model identity also loses its identity-source claim.
+This applies to success, HTTP errors, malformed JSON and partial-body header
+observations before receipt publication. Removing an echoed ID does not remove
+the observation of work or make a rejection eligible for retry. Credential
+material in action text is rejected before parsing or action repair. Credential
+values are kept only in invocation-local memory for comparison. Credential-like
+model IDs in discovery also fail closed before reaching CLI or preflight output.
+
 Refusal/content-filter fields and truncation (`finish_reason: length`) are
 classified before action parsing, retaining reported usage. Tool calls, unknown
 finish values and malformed responses fail closed even if they contain a legal
@@ -70,5 +89,7 @@ deterministic accounting checks. It is not a recorded live inference result.
 preflight and dispatch, exact wire fields, full history, operator controls,
 missing identity/accounting, reasoning privacy, refusal, truncation, malformed
 bodies, HTTP 400/401/403/404/429/5xx, timeouts, transport errors and safe opt-in
-retries. HTTP error tests exercise the real bounded transport with an in-memory
+retries. Regressions also cover missing model IDs, unsupported reasoning budgets
+and primary/secondary credential echoes across success and failure paths.
+HTTP error tests exercise the real bounded transport with an in-memory
 HTTPX transport. All tests are keyless and do not contact Reka.

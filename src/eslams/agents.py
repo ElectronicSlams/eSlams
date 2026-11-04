@@ -48,6 +48,7 @@ from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 from eslams.providers.reka import call as call_reka
+from eslams.providers.reka import configuration_error as reka_configuration_error
 
 
 class AgentError(RuntimeError):
@@ -405,6 +406,9 @@ class ModelProviderAgent:
         self.provider = self.provider.lower()
         if self.provider.strip().replace("_", "-") in {"reka", "reka-ai"}:
             self.provider = "reka-ai"
+            error = reka_configuration_error(self.model)
+            if error:
+                raise ValueError(error)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

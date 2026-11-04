@@ -17,6 +17,8 @@ from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.reka import API_KEY_ENV as REKA_API_KEY_ENV
 from eslams.providers.reka import MODELS_ENDPOINT as REKA_MODELS_ENDPOINT
+from eslams.providers.reka import configuration_error as reka_configuration_error
+from eslams.providers.reka import credential_echo as reka_credential_echo
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -60,6 +62,9 @@ def provider_preflight(
     provider = provider.lower()
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
+    configuration_error = (
+        reka_configuration_error(model, runtime_config) if record.provider == "reka-ai" else None
+    )
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
@@ -95,7 +100,9 @@ def provider_preflight(
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
 
-    if credential_environment is None:
+    if configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
+    elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
@@ -215,7 +222,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -323,6 +331,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == "reka-ai" and reka_credential_echo(raw):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
