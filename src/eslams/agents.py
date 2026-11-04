@@ -47,6 +47,12 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.shanghai_ai_lab import (
+    call as call_shanghai_ai_lab,
+)
+from eslams.providers.shanghai_ai_lab import (
+    validate_configuration as validate_shanghai_ai_lab,
+)
 
 
 class AgentError(RuntimeError):
@@ -406,6 +412,10 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "shanghai-ai-lab":
+            validate_shanghai_ai_lab(
+                self.model, self.runtime_config, self.temperature, self.max_output_tokens,
+            )
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -626,6 +636,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "shanghai-ai-lab":
+            return call_shanghai_ai_lab(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1970,6 +1982,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "shanghai-ai-lab": "shanghai_ai_lab_atria_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,6 +1994,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "shanghai-ai-lab": "shanghai-ai-lab-atria-chat-raw-v1",
     }.get(provider, "unknown")
 
 

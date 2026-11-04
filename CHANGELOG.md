@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add a Shanghai AI Lab Atria text adapter proposed for 0.7.1, requiring the
+  exact `Atria-Dawn` model ID and using `ATRIA_API_KEY`. Preserve full history,
+  reject unverified controls, and keep missing identity/accounting unknown.
+  Include deterministic raw-wire, CLI/preflight and credential-custody tests.
+  See `docs/SHANGHAI_AI_LAB.md`; the package version is unchanged.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
