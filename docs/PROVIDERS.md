@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `ai21-labs:<model-id>` | `AI21_API_KEY` | AI21 Studio Chat Completions | `choices[0].message.content` | unknown in documented envelope |
+
+The proposed 0.7.1 [AI21 Labs adapter](providers/AI21.md) requires an explicit
+model ID and rejects unsupported reasoning controls. Its service lifecycle,
+accounting limitations, and fixture provenance are documented separately.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased - proposed 0.7.1
+
+- Add a native AI21 Labs Jamba Chat Completions adapter with explicit model
+  selection, CLI/preflight support, credential-safe receipts, and deterministic
+  wire tests. Reject unsupported reasoning controls and ambiguous automatic
+  retries; preserve missing model identity, usage details and cost as unknown.
+- Document the official AI21 direct API contract, model lifecycle evidence and
+  remaining account/availability verification limits. No package version bump.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.
