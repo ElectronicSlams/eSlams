@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, azure, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -401,7 +401,7 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = azure.normalize_provider(self.provider)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +626,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "azure":
+            return azure.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1209,7 +1211,11 @@ def _post_json(
             ) from exc
     if response.status_code >= 400:
         kind = _provider_error_kind(response.status_code)
-        retry_after = _retry_after_seconds(response)
+        if provider == "azure" and azure.is_content_filter_rejection(response):
+            kind = "provider_refused"
+        retry_after = (azure.retry_after_seconds(response) if provider == "azure" else None)
+        if retry_after is None:
+            retry_after = _retry_after_seconds(response)
         receipt = _failure_receipt(
             provider=provider, model=model, agent_id="", agent_version="", turn_id=0,
             outcome=kind, usage_unavailable_reason="provider_error_usage_unverified",
@@ -1964,6 +1970,7 @@ def _provider_endpoint(
 
 def _endpoint_kind(provider: str) -> str:
     return {
+        "azure": azure.ENDPOINT_KIND,
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -1975,6 +1982,7 @@ def _endpoint_kind(provider: str) -> str:
 
 def _parser_version(provider: str) -> str:
     return {
+        "azure": azure.PARSER_VERSION,
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -2144,7 +2152,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "azure"} else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2516,7 +2524,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider == "openrouter":
+    elif provider in {"openrouter", "azure"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

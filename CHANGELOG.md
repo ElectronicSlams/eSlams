@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add an Azure Foundry direct v1 Chat Completions adapter with explicit deployment
+  identity, API-key/Entra-token authentication, conservative retries and sanitized
+  usage receipts. Azure aliases now select Azure inference instead of the
+  Microsoft publisher catalogue. See `docs/AZURE_FOUNDRY.md` for setup and scope.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

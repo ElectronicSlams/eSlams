@@ -13,10 +13,11 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import azure, load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
+    "azure": azure.API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -61,6 +62,15 @@ def provider_preflight(
     legal_actions = arena.legal_actions_for(state, state.active_player)
     credential_environment = DEFAULT_PROVIDER_ENV.get(record.provider)
     credential_error = None
+    configuration_error = None
+    if record.provider == "azure":
+        try:
+            credential_environment = azure.credential_environment()
+            azure.endpoint(runtime_config)
+            if not model or not model.strip():
+                raise ValueError("Azure requires an explicit deployment name")
+        except ValueError as exc:
+            configuration_error = str(exc)
     credential_present = False
     if credential_environment:
         try:
@@ -96,6 +106,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -211,7 +223,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
