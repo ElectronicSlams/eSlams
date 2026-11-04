@@ -1440,6 +1440,14 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    if value.split(":", 1)[0].lower() == "perplexity":
+        from eslams.providers.perplexity import API_KEY_ENV
+
+        model = value.split(":", 1)[1] if ":" in value else ""
+        return ModelProviderAgent(
+            provider="perplexity", model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
