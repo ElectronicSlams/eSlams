@@ -11,6 +11,8 @@ from typing import Any, cast
 
 from eslams.hashing import sha256_json
 from eslams.providers.capabilities import ModelCapabilities
+from eslams.providers.morph import capability_records as morph_capability_records
+from eslams.providers.morph import is_specialized as morph_is_specialized
 
 REQUESTED_PROVIDER_ORGANIZATIONS: tuple[tuple[str, str], ...] = (
     ("qwen", "Alibaba / Qwen"),
@@ -238,6 +240,8 @@ class ProviderRegistry:
 def load_provider_registry() -> ProviderRegistry:
     generated = _load_package_json("models.generated.json")
     overrides = _load_package_json("overrides.json")
+    overrides = {**overrides, "models": [*morph_capability_records(),
+                                        *overrides.get("models", [])]}
     return _registry_from_payloads(generated, overrides)
 
 
@@ -275,6 +279,9 @@ def _registry_from_payloads(
             merged = {**records.get(key, {}), **item, "provider": key[0], "model": key[1]}
             records[key] = merged
 
+    for (provider, model), raw_record in records.items():
+        if provider == "morph" and morph_is_specialized(model):
+            raw_record["game_agent_supported"] = False
     models = {key: ModelCapabilities.from_mapping(value) for key, value in records.items()}
     by_slug: dict[str | None, list[tuple[str, str]]] = {}
     for key, record in models.items():

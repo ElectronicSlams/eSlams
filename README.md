@@ -696,7 +696,7 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+Core has direct HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -704,6 +704,7 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` |
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
+| `morph:<model-id>` | `MORPH_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
@@ -713,7 +714,9 @@ disabled explicitly on every request, including without an order. A supplied
 provider order is preserved but is not an authenticated endpoint/build attestation.
 Strict evaluations must require their actual provider/model identity policy;
 Core never substitutes a fallback model. Bedrock model IDs
-retain their literal version separator such as `:0`.
+retain their literal version separator such as `:0`. The 0.7.1 workstream adds
+[Morph general text inference](https://github.com/ElectronicSlams/eSlams/blob/main/docs/MORPH.md) with an explicit model ID;
+specialized Morph editing/search/compaction models are excluded.
 
 The model capability registry covers a broader provider landscape so Core can
 track API availability, text-game support, endpoints, modalities, temperature
