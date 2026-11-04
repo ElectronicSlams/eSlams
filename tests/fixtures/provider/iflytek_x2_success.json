@@ -1,0 +1,17 @@
+{
+  "code": 0,
+  "message": "Success",
+  "sid": "cha-synthetic-x2",
+  "status": "complete",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "reasoning_content": "synthetic private reasoning",
+        "content": "{\"action\": 0}"
+      }
+    }
+  ],
+  "usage": {"prompt_tokens": 8, "completion_tokens": 1175, "total_tokens": 1183}
+}

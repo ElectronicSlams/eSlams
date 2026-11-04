@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "message": "Success",
+  "sid": "cha-synthetic-v1",
+  "choices": [
+    {"index": 0, "message": {"role": "assistant", "content": "{\"action\": 0}"}}
+  ],
+  "usage": {"prompt_tokens": 6, "completion_tokens": 42, "total_tokens": 48}
+}
