@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add an NVIDIA-hosted Chat Completions adapter with explicit model IDs,
+  `nvidia-nim` / `nvidia-hosted` aliases, documented reasoning controls,
+  safe transport and sanitized receipts. Preserve unknown identity/accounting
+  and zero default retries. Hosted API Catalog use is limited by development
+  entitlements; production access is unverified. See `docs/providers/NVIDIA.md`.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

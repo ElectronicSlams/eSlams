@@ -14,6 +14,12 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `nvidia:<exact-model-id>` | `NVIDIA_API_KEY` | NVIDIA-hosted Chat Completions | `choices[0].message.content` | response `model` |
+
+The proposed 0.7.1 [NVIDIA hosted adapter](providers/NVIDIA.md) requires an explicit
+model ID and is for authorized development/test/evaluation access. The shared
+hosted trial is not verified for production. See its provider guide for aliases,
+reasoning controls, terms, missing accounting and live-entitlement limitations.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

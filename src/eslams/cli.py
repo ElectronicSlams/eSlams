@@ -1447,12 +1447,17 @@ def _provider_agent(
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
+        "nvidia": ("", "NVIDIA_API_KEY"),
+        "nvidia-nim": ("", "NVIDIA_API_KEY"),
+        "nvidia-hosted": ("", "NVIDIA_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
     provider = provider.lower()
+    if provider in {"nvidia", "nvidia-nim", "nvidia-hosted"} and not model.strip():
+        raise ValueError("NVIDIA requires an explicit nonblank model ID")
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

@@ -14,6 +14,7 @@ from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
+from eslams.providers.nvidia import validate_options as validate_nvidia_options
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -23,6 +24,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "nvidia": "NVIDIA_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -90,8 +92,13 @@ def provider_preflight(
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
+    option_error = (
+        validate_nvidia_options(model, runtime_config) if record.provider == "nvidia" else None
+    )
 
-    if credential_environment is None:
+    if option_error:
+        error = {"error_class": "provider_request_rejected", "message": option_error}
+    elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
@@ -211,7 +218,10 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (
+                checks["adapter_available"] is True and credential_error is None
+                and option_error is None
+            ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
