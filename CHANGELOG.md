@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Meituan LongCat Chat Completions adapter with explicit model IDs,
+  aliases, Models discovery, full-history prompts and provider-native reasoning
+  controls. Reuse bounded HTTP transport and private receipts with zero default
+  retries. Preserve unknown identity/accounting and fail closed on incomplete
+  responses. See `docs/providers/LONGCAT.md` for sources and limitations.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

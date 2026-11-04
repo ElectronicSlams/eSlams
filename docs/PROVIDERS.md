@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `meituan:<model>` / `longcat:<model>` | `LONGCAT_API_KEY` | native LongCat Chat Completions | `choices[0].message.content` | response `model` |
+
+The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including
+official API sources, exact aliases, reasoning controls and unresolved native
+accounting semantics. LongCat requires an explicit model ID and has no fallback.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

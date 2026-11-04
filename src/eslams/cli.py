@@ -1440,6 +1440,8 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    from eslams.providers import longcat
+
     defaults = {
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
@@ -1452,7 +1454,14 @@ def _provider_agent(
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    provider = longcat.normalize_provider(provider)
+    if provider == longcat.PROVIDER_ID:
+        if not model.strip():
+            raise ValueError("LongCat requires an explicit provider-native model ID")
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=longcat.API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

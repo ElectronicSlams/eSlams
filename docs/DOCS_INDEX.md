@@ -11,6 +11,7 @@
 | Artifact profiles, signatures and migration boundaries | [ARTIFACTS.md](ARTIFACTS.md) |
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
 | Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |
+| Meituan LongCat native API, controls and accounting limits | [providers/LONGCAT.md](providers/LONGCAT.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

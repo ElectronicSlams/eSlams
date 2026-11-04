@@ -13,10 +13,11 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import load_provider_registry, longcat
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
+    longcat.PROVIDER_ID: longcat.API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -26,6 +27,7 @@ DEFAULT_PROVIDER_ENV = {
 }
 
 _MODELS_ENDPOINTS = {
+    longcat.PROVIDER_ID: longcat.MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -53,7 +55,9 @@ def provider_preflight(
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
-    provider = provider.lower()
+    provider = longcat.normalize_provider(provider)
+    if provider == longcat.PROVIDER_ID:
+        longcat.validate_configuration(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -181,6 +185,12 @@ def provider_preflight(
                     _is_int(usage.get(key))
                     for key in ("input_tokens", "output_tokens", "total_tokens")
                 )
+                if record.provider == longcat.PROVIDER_ID and isinstance(usage, dict):
+                    checks["usage_extraction"] = (
+                        checks["usage_extraction"] is True
+                        and isinstance(usage.get("reasoning_included_in_output"), bool)
+                        and not usage.get("usage_validation_errors")
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -319,6 +329,10 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == longcat.PROVIDER_ID and longcat.credential_echo(
+                raw, longcat.credential_values(api_key, api_key_env),
+            ):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
