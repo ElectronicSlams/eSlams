@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import databricks, load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -23,6 +23,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    databricks.PROVIDER_ID: databricks.API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
@@ -86,6 +87,13 @@ def provider_preflight(
         "usage_extraction": False,
     }
     warnings = provider_registry.warnings_for(provider, model)
+    configuration_error = None
+    if record.provider == databricks.PROVIDER_ID:
+        try:
+            databricks.invocation_endpoint(model)
+        except ValueError as exc:
+            configuration_error = str(exc)
+        checks["workspace_endpoint_configured"] = configuration_error is None
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
@@ -106,6 +114,8 @@ def provider_preflight(
             "error_class": "provider_request_rejected",
             "message": f"model {model!r} is not registered for text game actions",
         }
+    elif configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
     elif not live:
@@ -211,7 +221,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": checks["adapter_available"] is True
+            and credential_error is None and configuration_error is None,
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
