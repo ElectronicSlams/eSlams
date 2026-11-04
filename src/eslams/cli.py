@@ -1447,12 +1447,15 @@ def _provider_agent(
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
+        "sarvam-ai": ("sarvam-105b", "SARVAM_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
     provider = provider.lower()
+    if provider in {"sarvam", "sarvam_ai"}:
+        provider = "sarvam-ai"
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

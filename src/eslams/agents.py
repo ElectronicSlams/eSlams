@@ -47,6 +47,7 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.sarvam import call as call_sarvam
 
 
 class AgentError(RuntimeError):
@@ -402,6 +403,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider in {"sarvam", "sarvam_ai"}:
+            self.provider = "sarvam-ai"
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -636,6 +639,8 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == "sarvam-ai":
+            return call_sarvam(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1161,7 +1166,10 @@ def _post_json(
     check_cancelled()
     # None removes only framework limits; omitted wire parameters retain
     # genuine provider defaults/constraints, whose actual ceiling may be unknown.
-    payload = {key: value for key, value in payload.items() if value is not None}
+    payload = {
+        key: value for key, value in payload.items()
+        if value is not None or (provider == "sarvam-ai" and key == "reasoning_effort")
+    }
     for group in ("generationConfig", "inferenceConfig"):
         if isinstance(payload.get(group), dict):
             payload[group] = {
@@ -1219,6 +1227,11 @@ def _post_json(
         body_retry_permitted = _capture_error_body_observations(
             response, provider=provider, receipt=receipt,
         )
+        if provider == "sarvam-ai":
+            from eslams.providers.sarvam import http_error
+
+            kind, body_retry_permitted = http_error(response)
+            receipt["outcome"] = kind
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-amzn-requestid"),
@@ -1970,6 +1983,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "sarvam-ai": "sarvam_chat_completions_v1",
     }.get(provider, "unknown")
 
 
@@ -1981,10 +1995,15 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "sarvam-ai": "sarvam-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "sarvam-ai":
+        from eslams.providers.sarvam import normalize_usage
+
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []
@@ -2516,7 +2535,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider == "openrouter":
+    elif provider in {"openrouter", "sarvam-ai"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
