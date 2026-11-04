@@ -406,6 +406,10 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "naver":
+            from eslams.providers.naver import validate_settings
+
+            validate_settings(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -626,6 +630,10 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "naver":
+            from eslams.providers.naver import call_provider
+
+            return call_provider(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1221,6 +1229,7 @@ def _post_json(
         )
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
+            or response.headers.get("x-ncp-clovastudio-request-id")
             or response.headers.get("x-amzn-requestid"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
@@ -1290,6 +1299,11 @@ def _capture_error_body_observations(
     usages: list[Any] = []
     identities: list[Any] = []
     costs: list[Any] = []
+    if provider == "naver" and isinstance(data.get("result"), dict):
+        from eslams.providers.naver import wire_usage
+
+        if "usage" in data["result"]:
+            usages.append(wire_usage(data["result"]["usage"]))
     # Only documented envelope positions are custody sources. Never descend
     # through prompt/response/content/message payloads to harvest telemetry.
     nodes: list[dict[str, Any]] = [data]
@@ -1356,6 +1370,7 @@ def _raise_observed_transport_failure(
     )
     receipt["request_id"] = _http_error_identifier(
         headers.get("x-request-id") or headers.get("request-id")
+        or headers.get("x-ncp-clovastudio-request-id")
         or headers.get("x-amzn-requestid"),
     )
     receipt["gateway_request_id"] = _http_error_identifier(
@@ -1970,6 +1985,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "naver": "naver_chat_completions_v3",
     }.get(provider, "unknown")
 
 
@@ -1981,6 +1997,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "naver": "naver-chat-completions-v3-raw-v1",
     }.get(provider, "unknown")
 
 
@@ -2758,6 +2775,7 @@ def _response_json_with_receipt(
             {
                 "request_id": _http_error_identifier(response.headers.get("x-request-id")
                 or response.headers.get("request-id")
+                or response.headers.get("x-ncp-clovastudio-request-id")
                 or response.headers.get("x-cloud-trace-context")
                 or response.headers.get("x-amzn-requestid")),
                 "gateway_request_id": _http_error_identifier(
