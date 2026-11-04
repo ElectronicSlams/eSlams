@@ -696,6 +696,10 @@ smuggling in engine strength.
 
 ## Provider Support
 
+The proposed 0.7.1 [native Cohere adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/cohere.md) adds
+`cohere:<model>` (alias `cohere-ai:<model>`) with `COHERE_API_KEY`.
+It uses Chat v2 and retains unknown served identity and monetary cost explicitly.
+
 Core has direct first-party HTTP adapters for all five provider routes below:
 
 | Provider Argument | API Key Environment Variable |

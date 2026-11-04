@@ -1,0 +1,10 @@
+{
+  "models": [{
+    "name": "command-a-03-2025",
+    "is_deprecated": false,
+    "endpoints": ["chat"],
+    "finetuned": false,
+    "context_length": 256000
+  }],
+  "next_page_token": "fixture-page-two"
+}

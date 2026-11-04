@@ -1,5 +1,9 @@
 # Provider Guide
 
+The proposed 0.7.1 [native Cohere adapter](providers/cohere.md) adds
+`cohere:<model>` / `cohere-ai:<model>` using `COHERE_API_KEY` and native Chat v2.
+Its research note documents controls, discovery, accounting, and identity limits.
+
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
 Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
