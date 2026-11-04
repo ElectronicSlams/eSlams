@@ -42,11 +42,6 @@ def main() -> None:
         "import subprocess,pytest\n"
         "@pytest.fixture(autouse=True)\n"
         "def offline(request,monkeypatch):\n"
-        " if request.node.name.startswith(('test_cli_summary_prints_no_winner_for_invalid_run',"
-        "'test_cli_fallback_failing_seat_board_win_is_only_a_board_result')):\n"
-        "  from eslams.agents import HttpAgent\n"
-        "  def failed(*args,**kwargs):raise ConnectionError('synthetic offline refusal')\n"
-        "  monkeypatch.setattr(HttpAgent,'act',failed)\n"
         " if request.node.name=='test_wheel_export_matches_source_without_git_checkout':\n"
         "  original=subprocess.run\n"
         "  def run(args,*pos,**kwargs):\n"
@@ -68,6 +63,9 @@ def main() -> None:
     node = shutil.which("node")
     if node is None or not args.tsc.is_file():
         raise RuntimeError("provide reviewed Node/TypeScript build tools")
+    lite = out / "core-lite"
+    lite.mkdir()
+    (lite / "package.json").write_text('{"type":"module"}\n', encoding="utf-8")
     steps = [
         ("ruff", [python, "-m", "ruff", "check", "."], 60),
         ("mypy", [python, "-m", "mypy", "--cache-dir", str(out / "mypy-cache"), "src"], 180),
@@ -75,6 +73,11 @@ def main() -> None:
                                   "packages/core-contracts/tsconfig.json"], 60),
         ("typescript-lite", [node, str(args.tsc), "--project",
                              "packages/core-lite/tsconfig.json"], 60),
+        ("typescript-lite-compile", [node, str(args.tsc), "--project",
+                                    "packages/core-lite/tsconfig.json", "--noEmit", "false",
+                                    "--outDir", str(lite)], 60),
+        ("core-lite-parity", [python, "scripts/verify_core_lite.py",
+                              str(lite / "core-lite/src/index.js")], 90),
         ("pytest", [python, "-m", "pytest", "-q", "-o", "addopts=", "-p", "release_offline",
                     "tests", "--ignore=tests/test_elapsed_deadline_regressions.py",
                     f"--junitxml={out}/pytest.xml", f"--basetemp={out}/test-temp"], 300),

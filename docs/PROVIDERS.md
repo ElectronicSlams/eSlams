@@ -227,6 +227,13 @@ rate waits and action repair. Inline retry waits that cannot fit are refused
 before another attempt. Timeout receipts retain failed attempt identity and
 unknown usage/cost; a partial body is not accepted as an action.
 
+Direct adapter calls raise `TimeoutError` when no response headers were observed.
+If headers were observed before an HTTP timeout, they raise `ProviderCallError`
+with `error_kind="provider_timeout"` and a sanitized receipt retaining the
+observed status and request IDs. This distinction preserves receipt custody;
+it does not permit replay, infer usage/cost or extend the elapsed deadline.
+Runner treats both forms as a provider timeout and applies no fallback action.
+
 Core uses a shared bounded asynchronous HTTP loop behind its synchronous adapter
 API. Expired requests are cancelled and their network streams are closed; it
 also works when the caller already has an asyncio loop or is a worker thread.
