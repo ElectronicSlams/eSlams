@@ -64,7 +64,11 @@ reasoning. Do not fall back to a broker or another model.
 Then add documented raw-wire success fixtures and deterministic fault injection
 for 400/401/403/404/429/5xx, timeout, malformed bodies, missing usage, identity
 absence/mismatch, refusal, truncation, retry policy, and privacy. Test aliases
-through CLI, preflight, discovery, and dispatch. No such wire tests are claimed
+through CLI, preflight, discovery, and dispatch. Reject missing/blank model IDs
+without selecting a default; reject unsupported explicit reasoning controls in
+both preflight and transport. Test echoed primary and secondary credentials in
+IDs/receipts on success, error, malformed-response, and partial-body paths.
+No such wire tests are claimed
 by this change: fabricating an envelope would defeat the verification gate.
 
 `tests/test_inflection_unavailable.py` covers the current boundary without
@@ -72,3 +76,9 @@ network calls: all selected spellings remain unavailable, no fallback is
 contacted, and unsuccessful direct dispatch cannot manufacture identity or
 accounting. No version bump, shared transport rewrite, live inference, merge,
 or release is part of this change.
+
+The boundary tests also cover blank model choices and explicit reasoning
+budgets: both remain blocked before any network call. Receipt request/gateway
+IDs remain null. Response-path credential-echo tests require a verified adapter
+and remain outstanding. Replace the unavailability tests when implementing the
+documented transport, preserving their no-fallback and privacy guarantees.

@@ -7,6 +7,7 @@ from test_model_agents import _request
 
 from eslams.agents import ModelProviderAgent, ProviderCallError
 from eslams.cli import _provider_agent, main
+from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.provider_preflight import provider_models_live, provider_preflight
 from eslams.providers import load_provider_registry
 
@@ -28,6 +29,7 @@ def test_inflection_alias_is_catalogue_identity_without_cli_transport(provider, 
     record = load_provider_registry().resolve(provider, MODEL)
     assert record.provider == "inflection-ai"
     assert record.model == MODEL
+    assert _provider_agent(provider) is None
     assert _provider_agent(f"{provider}:{MODEL}") is None
 
 
@@ -66,6 +68,7 @@ def test_inflection_direct_dispatch_cannot_fabricate_action_or_identity(
     provider, no_network, monkeypatch,
 ):
     monkeypatch.setenv("ESLAMS_TEST_INFLECTION_KEY", "test-secret-never-transmitted")
+    monkeypatch.setenv("ESLAMS_TEST_SECONDARY_SECRET", "secondary-secret-never-transmitted")
     agent = ModelProviderAgent(provider, MODEL, "ESLAMS_TEST_INFLECTION_KEY")
     request = _request()
     request.observation["private_marker"] = "private-observation-never-published"
@@ -77,10 +80,49 @@ def test_inflection_direct_dispatch_cannot_fabricate_action_or_identity(
     assert len(agent.attempt_receipts) == 1
     receipt = agent.last_receipt
     assert receipt["locked_model_id"] is None
+    assert receipt["request_id"] is None
+    assert receipt["gateway_request_id"] is None
     assert receipt["usage"] == {}
     assert receipt["model_identity_source"] is None
     assert receipt["usage_unavailable_reason"] == "provider_unavailable"
     assert receipt["estimated_cost"]["status"] == "cost_unavailable"
     public = json.dumps(receipt) + str(error.value)
     assert "test-secret-never-transmitted" not in public
+    assert "secondary-secret-never-transmitted" not in public
     assert "private-observation-never-published" not in public
+
+
+@pytest.mark.parametrize("provider", SPELLINGS)
+@pytest.mark.parametrize("model", ("", " ", "\t"))
+def test_inflection_blank_model_never_selects_a_default(provider, model, no_network, monkeypatch):
+    assert _provider_agent(f"{provider}:{model}") is None
+    result = provider_preflight(provider, model, "tic-tac-toe", live=True)
+    assert not result["ok"]
+    assert result["model"] == model
+    monkeypatch.setenv("ESLAMS_TEST_INFLECTION_KEY", "fake-test-key")
+    agent = ModelProviderAgent(provider, model, "ESLAMS_TEST_INFLECTION_KEY")
+    with pytest.raises(ProviderCallError):
+        agent.act(_request())
+    assert agent.model == model
+    assert agent.last_receipt["locked_model_id"] is None
+
+
+@pytest.mark.parametrize("provider", SPELLINGS)
+@pytest.mark.parametrize("budget", (0, 32))
+def test_inflection_explicit_reasoning_budget_cannot_reach_transport(
+    provider, budget, no_network, monkeypatch,
+):
+    runtime = ProviderRuntimeConfig(reasoning_budget_tokens=budget)
+    result = provider_preflight(
+        provider, MODEL, "tic-tac-toe", live=True, runtime_config=runtime,
+    )
+    assert not result["ok"]
+    assert result["error"]["error_class"] == "provider_adapter_unavailable"
+    assert result["readiness"]["inference"] == "not_attempted"
+    monkeypatch.setenv("ESLAMS_TEST_INFLECTION_KEY", "fake-test-key")
+    agent = ModelProviderAgent(
+        provider, MODEL, "ESLAMS_TEST_INFLECTION_KEY", runtime_config=runtime,
+    )
+    with pytest.raises(ProviderCallError):
+        agent.act(_request())
+    assert agent.last_receipt["locked_model_id"] is None
