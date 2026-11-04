@@ -1453,6 +1453,11 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = provider.lower()
+    if provider in {"liquid", "liquid-ai"}:
+        return ModelProviderAgent(
+            provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",
+            version=model, runtime_config=runtime_config,
+        )
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
