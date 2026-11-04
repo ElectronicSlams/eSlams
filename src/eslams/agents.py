@@ -47,6 +47,8 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.perplexity import call as call_perplexity
+from eslams.providers.perplexity import validate_config as validate_perplexity_config
 
 
 class AgentError(RuntimeError):
@@ -402,6 +404,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider == "perplexity":
+            validate_perplexity_config(self.model, self.runtime_config)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -636,6 +640,8 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == "perplexity":
+            return call_perplexity(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1970,6 +1976,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "perplexity": "perplexity_agent",
     }.get(provider, "unknown")
 
 
@@ -1981,6 +1988,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "perplexity": "perplexity-agent-raw-v1",
     }.get(provider, "unknown")
 
 

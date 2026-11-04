@@ -1,5 +1,9 @@
 # Provider Guide
 
+See the [Perplexity Agent adapter](PERPLEXITY.md) for the explicit-model,
+tool-free REST path proposed for 0.7.1. It requires `PERPLEXITY_API_KEY` and an
+exact model ID. The package version remains 0.7.0 until a separate release decision.
+
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
 Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
