@@ -15,6 +15,7 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.sensenova import configuration_error as sensenova_configuration_error
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -23,6 +24,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "sensetime": "SENSENOVA_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -56,6 +58,10 @@ def provider_preflight(
     provider = provider.lower()
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
+    adapter_configuration_error = (
+        sensenova_configuration_error(model, runtime_config)
+        if record.provider == "sensetime" else None
+    )
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
@@ -108,6 +114,9 @@ def provider_preflight(
         }
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
+    elif adapter_configuration_error:
+        error = {"error_class": "provider_request_rejected",
+                 "message": adapter_configuration_error}
     elif not live:
         warnings.append("This configuration preflight did not verify live provider availability.")
     elif not credential_environment or not credential_present:
@@ -211,7 +220,9 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None
+                                    and adapter_configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

@@ -134,6 +134,9 @@ FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS: tuple[str, ...] = (
 )
 
 PROVIDER_ALIASES = {
+    "sensenova": "sensetime",
+    "sense-nova": "sensetime",
+    "sense-time": "sensetime",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",
