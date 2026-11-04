@@ -52,6 +52,7 @@ from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
 from eslams.providers.xai import canonical_provider
+from eslams.providers.xai import validate_model as validate_xai_model
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1442,7 +1443,7 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
-        "xai": ("grok-4.7", "XAI_API_KEY"),
+        "xai": ("", "XAI_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1455,6 +1456,8 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = canonical_provider(provider.lower())
+    if provider == "xai":
+        validate_xai_model(model)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

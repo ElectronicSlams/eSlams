@@ -56,6 +56,10 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = xai.canonical_provider(provider.lower())
+    configuration_error = None
+    if provider == "xai":
+        xai.validate_model(model)
+        configuration_error = xai.configuration_error(runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
@@ -98,6 +102,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -218,7 +224,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -255,6 +262,9 @@ def provider_models_live(provider: str) -> list[str] | None:
     """
     provider = provider.strip().lower().replace("_", "-")
     provider = PROVIDER_ALIASES.get(provider, provider)
+    if provider == "xai" and not xai.credentials_scoped():
+        with xai.credential_scope(environment_name=xai.API_KEY_ENV):
+            return provider_models_live(provider)
     endpoint = _MODELS_ENDPOINTS.get(provider)
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
     if api_key_env is None:
@@ -326,6 +336,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == "xai" and xai.contains_credential(raw):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

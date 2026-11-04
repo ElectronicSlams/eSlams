@@ -22,8 +22,9 @@ eslams providers models --provider xai
 eslams run --arena tic-tac-toe --agent xai:grok-4.7
 ```
 
-The bare `xai` CLI shortcut selects `grok-4.7`, following other Core shortcuts.
-An explicitly supplied model is never replaced. Catalogue records for `grok-4.7`
+An explicit nonblank model ID is required in the agent, CLI and preflight. Bare
+`xai`/`x-ai`, an empty suffix, null and whitespace-only IDs are rejected before
+discovery or transport. An explicitly supplied model is never replaced. Catalogue records for `grok-4.7`
 and `grok-4.6` document text Responses support; availability remains
 account-dependent. Existing generated catalogue entries are historical, advisory
 metadata, not proof of current access. No registry snapshot was regenerated.
@@ -71,7 +72,8 @@ otherwise xAI owns its default. `grok-4.7`/`grok-4.6` document low, medium, high
 and xhigh; `grok-4.5` lacks xhigh. Reasoning cannot be disabled on these models;
 Core's `reasoning="disabled"` does not promise to disable native reasoning.
 Other names and explicit values remain subject to authoritative endpoint
-rejection. Token-based thinking budgets are rejected before submission.
+rejection. Token-based thinking budgets are rejected by configuration-only and live
+preflight before discovery, and by execution before submission.
 The [reasoning guide](https://docs.x.ai/developers/model-capabilities/text/reasoning)
 also documents encrypted reasoning and explains that 4.7 returns it by default.
 
@@ -146,6 +148,16 @@ Credentials, headers, prompts, refusal prose, reasoning and raw private response
 are absent from public receipts. Every physical attempt keeps Core's existing
 invocation-scoped receipt and action ID behavior.
 
+Credential-aware redaction snapshots the selected primary credential and configured
+secondary credential environment values for each xAI invocation and discovery.
+Identifiers containing a known credential remain unknown rather than attesting a
+redacted ID. Explanations and action-text metadata are scrubbed after JSON decoding,
+including escaped strings; a credential inside the selected action is rejected.
+Malformed/partial response headers and private exception chains receive the same
+protection. Context-local scopes reset on every exit and do not change unrelated
+provider behavior. Raw work observations are classified before redaction, so
+removing a credential-bearing ID never makes an ambiguous attempt retryable.
+
 ## Fixture provenance and verification
 
 `tests/fixtures/provider/xai_responses_success.json` is a synthetic, redacted
@@ -160,6 +172,9 @@ alias paths, payload/history, explicit controls, credential checks, missing
 identity/usage/cost, current and legacy accounting, refusal/truncation/pending,
 malformed JSON and output, HTTP and transport failures, safe retry and ambiguous
 work, and an artifact round trip with no truncated action applied.
+`tests/test_xai_integrity_audit.py` adds model/control rejection, primary/secondary
+credential echoes across success/errors/discovery/partial responses, escaped action
+text, concurrent redaction scopes and full artifact privacy regressions.
 
 Integration hotspots for parallel adapters: `agents.py` dispatch, endpoint/parser
 maps, native-cost provenance and usage routing; `provider_preflight.py` maps;

@@ -324,6 +324,8 @@ class HttpAgent:
 
 def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
+    if xai.contains_credential(value):
+        return None
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
     sanitized = _sanitize_receipt_value(value)
@@ -402,6 +404,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = xai.canonical_provider(self.provider.lower())
+        if self.provider == "xai":
+            xai.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -422,6 +426,9 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "xai":
+                with xai.credential_scope(environment_name=self.api_key_env):
+                    return self._act(request)
             return self._act(request)
 
     def _act(self, request: ActRequest) -> ActResponse:
@@ -2814,6 +2821,7 @@ _SECRET_TEXT_PATTERNS = (
 
 
 def _redact_sensitive_text(value: str) -> str:
+    value = xai.scrub_text(value)
     redacted = value.replace("\r", " ").replace("\n", " ")
     for pattern in _SECRET_TEXT_PATTERNS:
         redacted = pattern.sub(

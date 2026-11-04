@@ -6,18 +6,112 @@ See docs/PROVIDER_XAI.md for source provenance and accounting limits.
 
 from __future__ import annotations
 
+import json
 import math
+import os
+import re
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
+    from eslams.contracts.provider import ProviderRuntimeConfig
 
 PROVIDER_ID = "xai"
 API_KEY_ENV = "XAI_API_KEY"
 RESPONSES_ENDPOINT = "https://api.x.ai/v1/responses"
 MODELS_ENDPOINT = "https://api.x.ai/v1/models"
 COST_SOURCE = "https://docs.x.ai/developers/cost-tracking"
+_CREDENTIAL_VALUES: ContextVar[tuple[str, ...] | None] = ContextVar(
+    "xai_credential_values", default=None,
+)
+_CREDENTIAL_NAME = re.compile(
+    r"(?:^|_)(?:API_?KEY|ACCESS_KEY|PRIVATE_KEY|SIGNING_KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?)"
+    r"(?:_|$)"
+)
+
+
+def validate_model(model: Any) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("xAI requires an explicit nonblank model ID")
+
+
+def configuration_error(runtime: ProviderRuntimeConfig | None) -> str | None:
+    if runtime and (
+        runtime.reasoning_budget_tokens is not None or runtime.gemini_thinking_budget is not None
+    ):
+        return "xAI does not support Core's token-based thinking budget controls"
+    return None
+
+
+def credentials_scoped() -> bool:
+    return _CREDENTIAL_VALUES.get() is not None
+
+
+@contextmanager
+def credential_scope(
+    *explicit_values: str, environment_name: str | None = None,
+) -> Iterator[None]:
+    # Snapshot exact configured values, including secondary/gateway credentials.
+    # The scope is invocation-local and never serialized or shared across threads.
+    environment = os.environ.copy()
+    values = set(_CREDENTIAL_VALUES.get() or ())
+    values.update(explicit_values)
+    values.update(value for name, value in environment.items()
+                  if _CREDENTIAL_NAME.search(name.upper()) or name == environment_name)
+    values.update(value.strip() for value in tuple(values))
+    token = _CREDENTIAL_VALUES.set(tuple(sorted(filter(None, values), key=len, reverse=True)))
+    try:
+        yield
+    finally:
+        _CREDENTIAL_VALUES.reset(token)
+
+
+def contains_credential(value: Any) -> bool:
+    return isinstance(value, str) and any(
+        secret in value for secret in _CREDENTIAL_VALUES.get() or ()
+    )
+
+
+def scrub_text(value: str) -> str:
+    values = _CREDENTIAL_VALUES.get() or ()
+    marker = "" if any(secret in "[REDACTED]" for secret in values) else "[REDACTED]"
+    for secret in values:
+        value = value.replace(secret, marker)
+    return value
+
+
+def _scrub_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return scrub_text(value)
+    if isinstance(value, list):
+        return [_scrub_value(item) for item in value]
+    if isinstance(value, dict):
+        return {scrub_text(key): _scrub_value(item) for key, item in value.items()}
+    return value
+
+
+def _action_text(text: str, *, model: str) -> str:
+    from eslams.model_actions import extract_json
+
+    # Decode the same JSON that Core will parse, including escaped credentials
+    # inside explanations/metadata, before serializing a safe action-text value.
+    payload = extract_json(text)
+    if isinstance(payload, dict):
+        action = payload.get("action", payload.get("action_id"))
+        if _scrub_value(action) != action:
+            from eslams.agents import ProviderCallError
+
+            raise ProviderCallError(
+                "xAI returned a credential in the selected action",
+                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID, model=model,
+            )
+    return json.dumps(_scrub_value(payload), ensure_ascii=False) if payload is not None else (
+        scrub_text(text)
+    )
 
 
 def canonical_provider(provider: str) -> str:
@@ -48,6 +142,25 @@ def cost_usd(usage: Any) -> float | None:
 
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    from eslams.agents import ProviderCallError
+
+    with credential_scope(api_key):
+        try:
+            return _call(agent, api_key, prompt)
+        except ProviderCallError as exc:
+            # Suppress private exception chains (JSON errors retain their raw
+            # document; transport errors can retain authorization headers).
+            raise ProviderCallError(
+                str(exc), status_code=exc.status_code, error_kind=exc.error_kind,
+                retry_after_seconds=exc.retry_after_seconds,
+                provider=exc.provider, model=exc.model,
+                receipt=_scrub_value(exc.receipt), retry_permitted=exc.retry_permitted,
+            ) from None
+        except TimeoutError:
+            raise TimeoutError("provider timed out") from None
+
+
+def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     # Imported at execution time: Core owns shared attempt, transport and receipt
     # machinery; the provider-specific module owns wire behavior.
     from eslams.agents import (
@@ -61,11 +174,16 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     )
 
     runtime = agent.runtime_config
-    if runtime and (
-        runtime.reasoning_budget_tokens is not None or runtime.gemini_thinking_budget is not None
-    ):
+    try:
+        validate_model(agent.model)
+    except ValueError as exc:
         raise ProviderCallError(
-            "xAI does not support Core's token-based thinking budget controls",
+            str(exc), error_kind="provider_request_rejected", provider=PROVIDER_ID, model=None,
+        ) from None
+    problem = configuration_error(runtime)
+    if problem:
+        raise ProviderCallError(
+            problem,
             error_kind="provider_request_rejected", provider=PROVIDER_ID, model=agent.model,
         )
     payload: dict[str, Any] = {
@@ -102,7 +220,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         _check_provider_completion(
             data, provider=PROVIDER_ID, model=agent.model, response=response, receipt=receipt,
         )
-        text = response_text(data, model=agent.model)
+        text = _action_text(response_text(data, model=agent.model), model=agent.model)
     except ProviderCallError as exc:
         exc.receipt = {**receipt, "outcome": exc.error_kind}
         raise
