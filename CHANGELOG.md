@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — 0.7.1 adapter work
+
+- Add a native Baidu Qianfan direct Chat Completions adapter under `baidu`,
+  `qianfan`, and `baidu-qianfan`, requiring an explicit model API name and
+  `QIANFAN_API_KEY`. Preserve native defaults, full supplied history, exact
+  requested/attested identities and incomplete accounting; reject filtered,
+  truncated, malformed and tool-call responses before action parsing.
+- Add deterministic Qianfan wire, transport, discovery, CLI and artifact-privacy
+  regressions, with official source provenance in `docs/BAIDU_QIANFAN.md`.
+- Reject blank Qianfan models at construction/preflight, validate explicit
+  reasoning budgets before discovery/transport, and remove primary/secondary
+  credential echoes from success and failure receipts, discovery and final text.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `baidu:<exact-model-api-name>` | `QIANFAN_API_KEY` | Qianfan Chat Completions | `choices[0].message.content` | response `model` |
+
+The native Baidu Qianfan adapter is 0.7.1 work on the 0.7.0 baseline. Aliases,
+domestic endpoint scope, exact controls, accounting and raw-wire provenance are
+documented in [BAIDU_QIANFAN.md](BAIDU_QIANFAN.md).
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

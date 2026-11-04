@@ -1453,6 +1453,13 @@ def _provider_agent(
     else:
         provider, model = value, ""
     provider = provider.lower()
+    if provider in {"baidu", "qianfan", "baidu-qianfan"}:
+        if not model:
+            raise ValueError("Baidu Qianfan requires an explicit model API name")
+        return ModelProviderAgent(
+            provider="baidu", model=model, api_key_env="QIANFAN_API_KEY",
+            version=model, runtime_config=runtime_config,
+        )
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

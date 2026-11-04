@@ -204,6 +204,12 @@ not marked game-agent-supported, or missing its API key. See
 [the provider guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDERS.md) for the exact wire adapters, model
 identity rules, reasoning behavior, usage semantics, and rate-card contract.
 
+Baidu Qianfan direct inference is available as `baidu:<exact-model-api-name>`
+(`qianfan` and `baidu-qianfan` aliases), using `QIANFAN_API_KEY`. It requires an
+explicit model and uses the domestic Qianfan endpoint. See the
+[Qianfan guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/BAIDU_QIANFAN.md)
+for account/region scope and verified controls.
+
 Use the verified provider workflow before spending on a run:
 
 ```bash
