@@ -55,6 +55,12 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    from eslams.providers.byteplus import canonical_provider, configuration_error
+
+    if canonical_provider(provider) and (
+        byteplus_error := configuration_error(model, runtime_config)
+    ):
+        raise ValueError(byteplus_error)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)

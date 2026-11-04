@@ -6,6 +6,9 @@
   BytePlus aliases, configuration preflight, sanitized receipts, inclusive reasoning
   usage, fallback rejection and deterministic offline raw-wire tests. See
   `docs/providers/BYTEPLUS.md` for service boundaries and verification limits.
+- Reject missing/blank BytePlus model IDs and unsupported reasoning budgets in
+  preflight; remove primary/secondary credential echoes from all receipt paths
+  and reject credential-bearing action text before parsing.
 
 ## v0.7.0 - 2026-11-04
 

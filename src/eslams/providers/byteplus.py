@@ -6,7 +6,12 @@ Shared transport/receipts are imported inside calls to avoid an agents cycle.
 
 from __future__ import annotations
 
+import json
+import os
 from typing import TYPE_CHECKING, Any, NoReturn
+from urllib.parse import quote, quote_plus
+
+from eslams.contracts.provider import ProviderRuntimeConfig
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -21,6 +26,45 @@ PARSER_VERSION = "byteplus-modelark-chat-raw-v1"
 
 def canonical_provider(value: str) -> str | None:
     return PROVIDER_ID if value.strip().lower().replace("_", "-") in ALIASES else None
+
+
+def model_error(model: Any) -> str | None:
+    if not isinstance(model, str) or not model.strip():
+        return "BytePlus requires an explicit model or ep-* endpoint ID"
+    return None
+
+
+def configuration_error(model: Any, runtime: ProviderRuntimeConfig | None) -> str | None:
+    error = model_error(model)
+    if error:
+        return error
+    if runtime and (runtime.reasoning_budget_tokens is not None
+                    or runtime.gemini_thinking_budget is not None):
+        return "BytePlus does not support the selected token reasoning budget; no request submitted"
+    return None
+
+
+def _redact_echoes(value: Any, credentials: set[str]) -> Any:
+    if isinstance(value, str):
+        # Syntax checks cannot detect an opaque key, including inside an ID.
+        # Null removes tainted identity without inventing a replacement ID.
+        return None if any(secret in value for secret in credentials) else value
+    if isinstance(value, dict):
+        return {key: _redact_echoes(item, credentials) for key, item in value.items()
+                if not any(secret in key for secret in credentials)}
+    if isinstance(value, list):
+        return [_redact_echoes(item, credentials) for item in value]
+    return value
+
+
+def _private_receipt(receipt: dict[str, Any] | None,
+                     credentials: set[str]) -> dict[str, Any] | None:
+    if receipt is None:
+        return None
+    result: dict[str, Any] = _redact_echoes(receipt, credentials)
+    if result.get("locked_model_id") is None:
+        result["model_identity_source"] = None
+    return result
 
 
 def normalize_usage(usage: Any) -> dict[str, Any]:
@@ -72,6 +116,41 @@ def error_kind(data: Any, status: int | None) -> str:
 
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    from eslams.agents import ProviderCallError
+
+    error = configuration_error(agent.model, agent.runtime_config)
+    if error:
+        raise ProviderCallError(
+            error, provider=PROVIDER_ID, model=agent.model, error_kind="provider_request_rejected",
+        )
+    # Snapshot only relevant credentials for this invocation. ARK_API_KEY is
+    # redaction-only; it still cannot authenticate this adapter. The standard
+    # key may differ from the active custom api_key_env credential.
+    credentials = {value for value in (
+        api_key, os.getenv(API_KEY_ENV, "").strip(), os.getenv("ARK_API_KEY", "").strip(),
+    ) if value}
+    credentials |= {encoded for value in credentials for encoded in (
+        quote(value, safe=""), quote_plus(value, safe=""), json.dumps(value)[1:-1],
+    )}
+    try:
+        text, receipt = _call(agent, api_key, prompt)
+    except ProviderCallError as exc:
+        exc.receipt = _private_receipt(exc.receipt, credentials)
+        if any(secret in str(exc) for secret in credentials):
+            exc.args = ("BytePlus returned a private diagnostic; details withheld",)
+        raise exc from None
+    receipt = _private_receipt(receipt, credentials) or {}
+    if any(secret in text for secret in credentials):
+        receipt["outcome"] = "provider_response_schema_mismatch"
+        raise ProviderCallError(
+            "BytePlus echoed a credential in action text; no action accepted",
+            provider=PROVIDER_ID, model=agent.model, error_kind="provider_response_schema_mismatch",
+            receipt=receipt,
+        )
+    return text, receipt
+
+
+def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams.agents import (
         _SYSTEM_INSTRUCTIONS,
         ProviderCallError,
@@ -97,13 +176,6 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     if agent.temperature is not None:
         payload["temperature"] = agent.temperature
     if runtime:
-        if (runtime.reasoning_budget_tokens is not None
-                or runtime.gemini_thinking_budget is not None):
-            raise ProviderCallError(
-                "BytePlus does not support the selected token reasoning budget; "
-                "no request submitted",
-                provider=PROVIDER_ID, model=agent.model, error_kind="provider_request_rejected",
-            )
         if runtime.reasoning != "auto":
             payload["thinking"] = {"type": runtime.reasoning}
         if runtime.reasoning_effort is not None:

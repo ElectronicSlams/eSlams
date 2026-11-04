@@ -403,6 +403,11 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = byteplus_provider(self.provider) or self.provider.lower()
+        if self.provider == "byteplus":
+            from eslams.providers.byteplus import model_error
+
+            if error := model_error(self.model):
+                raise ValueError(error)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

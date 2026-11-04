@@ -43,6 +43,11 @@ response `model` supplies `locked_model_id`. Missing/unsafe identity remains
 null. Core does not resolve deployments via the management API. Operators must
 pin deployment configuration and disable server-side fallback themselves.
 
+Blank, whitespace-only, and missing model IDs are rejected by CLI dispatch,
+direct construction, preflight and the call boundary. Unsupported explicit
+reasoning budgets are rejected by offline/live preflight before discovery and
+again before transport; they are never silently dropped.
+
 ## Wire behavior and accounting
 
 The [Chat reference](https://ai.byteplus.com/ark/region:ap-southeast-1/docs/chat-api)
@@ -78,6 +83,15 @@ burst, capacity, and internal failures. HTTP status determines the shared outcom
 documented text-moderation 400 codes become refusal. Provider error prose stays
 private. HTTP-200 error envelopes cannot become successful actions. Receipts
 retain request IDs and quarantined usage observations where available.
+
+Before returning any receipt, BytePlus removes credential echoes from IDs and
+other fields on success, HTTP errors, malformed bodies and interrupted streams.
+Tainted identity becomes null; known token observations remain intact. The active
+key, standard `BYTEPLUS_API_KEY`, and `ARK_API_KEY` are checked using an
+invocation-local snapshot, including JSON/URL-escaped forms. `ARK_API_KEY` is
+used only for redaction and still cannot authenticate a request. Action text
+containing a credential is rejected before it can enter an explanation or raw
+action metadata. No secret values are retained on the agent for redaction.
 
 Default retries and action repairs are zero. This adapter disables automatic
 transport retries even if `max_retries` is configured: quota/burst errors alone

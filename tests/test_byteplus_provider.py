@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -15,6 +16,8 @@ from eslams.artifacts import ArtifactValidator
 from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
+from eslams.http_io import ResponseObservation
+from eslams.protocol import ProtocolError
 from eslams.provider_preflight import provider_models_live, provider_preflight
 from eslams.providers import load_provider_registry
 from eslams.providers.byteplus import ALIASES, CHAT_ENDPOINT
@@ -366,3 +369,160 @@ def test_invalid_action_has_no_default_repair_and_no_fallback(monkeypatch):
         configured.act(_request())
     assert failure.value.error_kind == "action_response_unparseable"
     assert len(calls) == len(configured.attempt_receipts) == 1
+
+
+@pytest.mark.parametrize("model", [None, "", " ", "\t\r\n"])
+@pytest.mark.parametrize("alias", sorted(ALIASES))
+def test_review_blank_models_rejected_everywhere_before_transport(monkeypatch, model, alias):
+    calls = wire(monkeypatch)
+    with pytest.raises(ValueError, match="explicit model"):
+        ModelProviderAgent(alias, model, "BYTEPLUS_API_KEY")
+    with pytest.raises(ValueError, match="explicit model"):
+        provider_preflight(alias, model, "tic-tac-toe", live=True)
+    if model is not None:
+        with pytest.raises(ValueError, match="explicit model"):
+            _provider_agent(f"{alias}:{model}")
+    assert calls == []
+
+
+@pytest.mark.parametrize("field", ["reasoning_budget_tokens", "gemini_thinking_budget"])
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize("alias", sorted(ALIASES))
+def test_review_unsupported_budget_preflight_fails_before_discovery_or_transport(
+    monkeypatch, field, live, alias,
+):
+    calls = wire(monkeypatch)
+    monkeypatch.setattr("eslams.provider_preflight.provider_models_live",
+                        lambda *a: pytest.fail("invalid budget reached discovery"))
+    runtime = ProviderRuntimeConfig(**{field: 0})
+    with pytest.raises(ValueError, match="token reasoning budget"):
+        provider_preflight(alias, MODEL, "tic-tac-toe", runtime_config=runtime, live=live)
+    configured = agent(runtime_config=runtime)
+    with pytest.raises(ProviderCallError, match="no request submitted"):
+        configured.act(_request())
+    assert calls == []
+
+
+@pytest.mark.parametrize("outcome", ["success", "http", "body-error", "malformed", "partial"])
+@pytest.mark.parametrize("credential", ["active", "standard", "ark"])
+def test_review_opaque_primary_and_secondary_credential_echoes_are_not_public(
+    monkeypatch, outcome, credential,
+):
+    secrets = {"active": "a91Qh4r7LzM2v6P8", "standard": "B5n3J7s0U4t2X9e6",
+               "ark": "C8y1F6k3W0p7D4m2"}
+    for name, value in (("CUSTOM_BYTEPLUS_CREDENTIAL", secrets["active"]),
+                        ("BYTEPLUS_API_KEY", secrets["standard"]),
+                        ("ARK_API_KEY", secrets["ark"])):
+        monkeypatch.setenv(name, value)
+    echoed = secrets[credential]
+    headers = {"x-request-id": f"req-{echoed}-tail", "cf-aig-request-id": echoed,
+               "retry-after": "0"}
+    data = fixture()
+    data.update(id=echoed, model=f"weights-{echoed}")
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        assert kwargs["headers"]["Authorization"] == f"Bearer {secrets['active']}"
+        if outcome == "partial":
+            failure = httpx.ReadError("stream interrupted")
+            failure._eslams_response_observation = ResponseObservation(200, tuple(headers.items()))
+            raise failure
+        if outcome == "malformed":
+            return httpx.Response(200, content=b"{unparseable", headers=headers)
+        if outcome in {"http", "body-error"}:
+            data["error"] = {"type": "TooManyRequests", "message": echoed}
+        return httpx.Response(429 if outcome == "http" else 200, json=data, headers=headers)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    configured = ModelProviderAgent(
+        "byteplus", "ep-account-owned-deployment", "CUSTOM_BYTEPLUS_CREDENTIAL",
+        runtime_config=ProviderRuntimeConfig(max_retries=3),
+    )
+    if outcome == "success":
+        result = configured.act(_request())
+        public = json.dumps(result.to_dict())
+        assert configured.last_receipt["locked_model_id"] is None
+        assert configured.last_receipt["model_identity_source"] is None
+    else:
+        with pytest.raises(ProviderCallError) as caught:
+            configured.act(_request())
+        public = str(caught.value) + json.dumps(caught.value.receipt)
+    public += json.dumps(configured.attempt_receipts)
+    assert calls == [1]
+    for value in secrets.values():
+        assert value not in public
+    receipt = configured.last_receipt
+    assert receipt["request_id"] is None and receipt["gateway_request_id"] is None
+    assert receipt.get("provider_response_id") is None
+    if outcome in {"success", "http", "body-error"}:
+        assert receipt["usage"]["total_tokens"] == 28
+
+
+@pytest.mark.parametrize("credential", ["active", "secondary"])
+def test_review_action_text_echo_cannot_enter_explanation_or_raw_action_metadata(
+    monkeypatch, credential,
+):
+    calls = wire(monkeypatch)
+    primary, secondary = "a91Qh4r7LzM2v6P8", "B5n3J7s0U4t2X9e6"
+    monkeypatch.setenv("BYTEPLUS_API_KEY", primary)
+    monkeypatch.setenv("ARK_API_KEY", secondary)
+    data = fixture()
+    data["choices"][0]["message"]["content"] = json.dumps(
+        {"action": 1, "public_explanation": primary if credential == "active" else secondary}
+    )
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        return httpx.Response(200, json=data)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    configured = agent()
+    with pytest.raises(ProviderCallError) as caught:
+        configured.act(_request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch" and calls == [1]
+    assert configured.last_receipt["usage"]["total_tokens"] == 28
+    public = str(caught.value) + json.dumps(configured.attempt_receipts)
+    assert primary not in public and secondary not in public
+
+
+def test_review_mutated_blank_model_and_protocol_diagnostic_fail_closed(monkeypatch):
+    calls = wire(monkeypatch)
+    configured = agent()
+    configured.model = " "
+    with pytest.raises(ProviderCallError, match="explicit model"):
+        configured.act(_request())
+    assert calls == []
+    configured.model = MODEL
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        raise ProtocolError("opaque diagnostic byteplus-test-private-key")
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    with pytest.raises(ProviderCallError) as caught:
+        configured.act(_request())
+    assert "byteplus-test-private-key" not in str(caught.value)
+    assert calls == [1]
+
+
+@pytest.mark.parametrize("encoding", ["json", "url"])
+def test_review_encoded_credential_in_action_text_is_rejected(monkeypatch, encoding):
+    secret = 'opaqueCred"slash/plus+back\\key'
+    calls = wire(monkeypatch)
+    monkeypatch.setenv("BYTEPLUS_API_KEY", secret)
+    data = fixture()
+    data["choices"][0]["message"]["content"] = json.dumps({
+        "action": 1, "public_explanation": secret if encoding == "json" else quote(secret, safe=""),
+    })
+
+    def post(*args, **kwargs):
+        calls.append(1)
+        return httpx.Response(200, json=data)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    configured = agent()
+    with pytest.raises(ProviderCallError, match="echoed a credential"):
+        configured.act(_request())
+    assert calls == [1]
+    assert secret not in json.dumps(configured.attempt_receipts)
