@@ -696,7 +696,7 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+Core has native HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -705,6 +705,10 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
+| `sakana:sakana-namazu-v1.0` (or explicit `sakana-namazu`) | `SAKANA_API_KEY` |
+
+The [Sakana Namazu adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDER_SAKANA.md) uses Sakana's direct API,
+requires an explicit model ID and excludes Fugu's routed/orchestrated products.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
