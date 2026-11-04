@@ -6,6 +6,8 @@ See docs/providers/HUAWEI.md for the official sources and scope.
 
 from __future__ import annotations
 
+import os
+import re
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -72,15 +74,42 @@ def normalize_usage(usage: Any) -> dict[str, Any]:
     return normalized
 
 
-def _without_credential(value: Any, credential: str) -> Any:
+def credential_values(primary: str, environment_name: str) -> tuple[str, ...]:
+    """Snapshot configured provider credentials for echo checks, without logging them."""
+    from eslams.provider_preflight import DEFAULT_PROVIDER_ENV
+
+    names = {*DEFAULT_PROVIDER_ENV.values(), API_KEY_ENV, environment_name}
+    # Custom provider credentials conventionally use *_API_KEY, including
+    # alternate Huawei keys which discovery does not itself authenticate with.
+    names.update(name for name in os.environ if name.endswith("_API_KEY"))
+    values = {primary}
+    values.update(value for name in names if (value := os.environ.get(name, "").strip()))
+    return tuple(value for value in values if value)
+
+
+def contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
+    if isinstance(value, str):
+        # Check Unicode JSON escapes even in prose surrounding the action JSON;
+        # the shared action parser may accept that prose and retain raw text.
+        decoded = re.sub(r"\\u([0-9a-fA-F]{4})", lambda match: chr(int(match[1], 16)), value)
+        return any(credential in value or credential in decoded for credential in credentials)
+    if isinstance(value, list):
+        return any(contains_credential(item, credentials) for item in value)
+    if isinstance(value, dict):
+        return any(contains_credential(key, credentials) or contains_credential(item, credentials)
+                   for key, item in value.items())
+    return False
+
+
+def _without_credentials(value: Any, credentials: tuple[str, ...]) -> Any:
     """Discard credential-bearing identity/telemetry, including wrapped echoes."""
     if isinstance(value, str):
-        return None if credential in value else value
+        return None if contains_credential(value, credentials) else value
     if isinstance(value, list):
-        return [_without_credential(item, credential) for item in value]
+        return [_without_credentials(item, credentials) for item in value]
     if isinstance(value, dict):
-        return {key: _without_credential(item, credential) for key, item in value.items()
-                if credential not in key}
+        return {key: _without_credentials(item, credentials) for key, item in value.items()
+                if not contains_credential(key, credentials)}
     return value
 
 
@@ -96,6 +125,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
 
     runtime = agent.runtime_config or ProviderRuntimeConfig()
     validate_config(agent.model, runtime)
+    credentials = credential_values(api_key, agent.api_key_env)
     payload: dict[str, Any] = {
         "model": agent.model, "stream": False,
         "messages": [{"role": "system", "content": _SYSTEM_INSTRUCTIONS},
@@ -117,29 +147,35 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             response, provider="huawei", model=agent.model,
             capabilities=agent.capabilities, runtime_config=runtime,
         )
-        receipt = _without_credential(_receipt(
+        receipt = _without_credentials(_receipt(
             provider="huawei", model=agent.model, response=response,
             provider_response_id=data.get("id"), resolved_model=data.get("model"),
             usage=data.get("usage"), capabilities=agent.capabilities, runtime_config=runtime,
-        ), api_key)
+        ), credentials)
         # Sanitized-away model evidence must never retain an identity claim.
         if receipt["locked_model_id"] is None:
             receipt["model_identity_source"] = None
         try:
-            text = _text(data, agent.model, api_key, receipt)
+            text = _text(data, agent.model, credentials, receipt)
         except ProviderCallError as exc:
             exc.receipt = {**receipt, "outcome": exc.error_kind}
             raise
         return text, receipt
     except ProviderCallError as exc:
         if exc.receipt is not None:
-            exc.receipt = _without_credential(exc.receipt, api_key)
+            exc.receipt = _without_credentials(exc.receipt, credentials)
         # Huawei error envelopes do not establish safe rejection replay semantics.
         exc.retry_permitted = False
-        raise
+        raise exc from None
+    except TimeoutError:
+        # Shared transport already supplies a generic message. Suppress private
+        # underlying transport exceptions when tracebacks are rendered.
+        raise TimeoutError("provider timed out") from None
 
 
-def _text(data: dict[str, Any], model: str, api_key: str, receipt: dict[str, Any]) -> str:
+def _text(
+    data: dict[str, Any], model: str, credentials: tuple[str, ...], receipt: dict[str, Any],
+) -> str:
     from eslams.agents import ProviderCallError
     from eslams.model_actions import extract_json
 
@@ -173,11 +209,12 @@ def _text(data: dict[str, Any], model: str, api_key: str, receipt: dict[str, Any
     if reason != "stop" or not isinstance(message, dict) or message.get("role") != "assistant":
         reject()
     content = message.get("content")
-    if not isinstance(content, str) or not content.strip() or api_key in content:
+    if (not isinstance(content, str) or not content.strip()
+            or contains_credential(content, credentials)):
         reject()
     # JSON escapes in action fields must not decode into a credential later.
     action_payload = extract_json(content)
-    if _without_credential(action_payload, api_key) != action_payload:
+    if contains_credential(action_payload, credentials):
         reject()
     # reasoning_content is private and can never be an action-text source.
     receipt["finish_status"] = "completed"

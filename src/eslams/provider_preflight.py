@@ -16,6 +16,8 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.huawei import API_KEY_ENV as HUAWEI_API_KEY_ENV
 from eslams.providers.huawei import MODELS_ENDPOINT as HUAWEI_MODELS_ENDPOINT
+from eslams.providers.huawei import contains_credential as huawei_contains_credential
+from eslams.providers.huawei import credential_values as huawei_credential_values
 from eslams.providers.huawei import validate_config as validate_huawei_config
 from eslams.providers.registry import PROVIDER_ALIASES
 
@@ -59,7 +61,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
-    if provider == "huawei":
+    if provider.strip() == "huawei":
+        provider = "huawei"
         validate_huawei_config(model, runtime_config or ProviderRuntimeConfig())
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
@@ -275,6 +278,9 @@ def provider_models_live(provider: str) -> list[str] | None:
             f"missing API key environment variable {api_key_env}",
             error_kind="provider_auth_failed", provider=provider,
         )
+    huawei_credentials = (
+        huawei_credential_values(api_key, api_key_env) if provider == "huawei" else ()
+    )
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -327,7 +333,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             )
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
-            if provider == "huawei" and api_key in raw:
+            if provider == "huawei" and huawei_contains_credential(raw, huawei_credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

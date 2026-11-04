@@ -102,9 +102,15 @@ establish safe replay or idempotency for ambiguous/billable work. No timeout,
 partial body, or 5xx causes an automatic repeat. An explicitly configured action
 repair remains the shared Core policy for parse failures after completed output.
 
-Exact active-key echoes are removed from identifiers and all returned receipts
+Exact configured-key echoes are removed from identifiers and all returned receipts
 on success, HTTP errors, malformed JSON, and partial-body transport errors.
-Credential-bearing answer content is rejected before it can enter action,
+The credential snapshot includes the selected environment, known provider
+credential environments, and custom `*_API_KEY` environments. A secondary or
+alternate key is protected even when it was not used to authenticate this call;
+discovery rejects credential-bearing model IDs from the same set. Transport
+exception chains are suppressed so private echoed values do not reappear in
+rendered tracebacks. Unicode-escaped echoes are also checked in prose surrounding
+action JSON. Credential-bearing answer content is rejected before it can enter action,
 explanation, or raw-action metadata. Removed model identity has no identity-source
 claim. This is in addition to shared structural receipt redaction.
 

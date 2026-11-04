@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import traceback
 from pathlib import Path
 
 import httpx
@@ -101,11 +102,19 @@ def test_explicit_controls(monkeypatch, mode, thinking):
 
 
 @pytest.mark.parametrize("model", [None, "", " ", "\t", " model "])
-def test_missing_model_is_rejected_everywhere(model):
+def test_missing_model_is_rejected_everywhere(monkeypatch, model):
+    monkeypatch.setenv(API_KEY_ENV, SECRET)
+    monkeypatch.setattr("httpx.get", lambda *a, **k: pytest.fail("blank model discovery"))
+    monkeypatch.setattr("eslams.agents.bounded_post",
+                        lambda *a, **k: pytest.fail("blank model inference"))
     with pytest.raises(ValueError, match="model ID"):
         ModelProviderAgent(provider="huawei", model=model, api_key_env=API_KEY_ENV)
     with pytest.raises(ValueError, match="model ID"):
-        provider_preflight("huawei", model, "tic-tac-toe")
+        provider_preflight("huawei", model, "tic-tac-toe", live=True)
+    selected = agent()
+    selected.model = model
+    with pytest.raises(ValueError, match="model ID"):
+        selected.act(request())
 
 
 @pytest.mark.parametrize("value", ["huawei", "huawei:", "huawei: "])
@@ -450,3 +459,129 @@ def test_cli_run_dispatch_writes_secret_free_receipt(monkeypatch, tmp_path, caps
     rows = [json.loads(line) for line in text.splitlines()]
     assert rows[0]["provider"] == "huawei"
     assert rows[0]["model"] == MODEL
+
+
+@pytest.mark.parametrize("provider", ["huawei", "HUAWEI", " huawei "])
+@pytest.mark.parametrize("runtime", [ProviderRuntimeConfig(reasoning_budget_tokens=1),
+                                    ProviderRuntimeConfig(reasoning_budget_tokens=0),
+                                    ProviderRuntimeConfig(gemini_thinking_budget=1),
+                                    ProviderRuntimeConfig(gemini_thinking_budget=0)])
+def test_preflight_budget_rejection_precedes_all_transport(monkeypatch, provider, runtime):
+    monkeypatch.setenv(API_KEY_ENV, SECRET)
+    monkeypatch.setattr("httpx.get", lambda *a, **k: pytest.fail("discovery before validation"))
+    monkeypatch.setattr("eslams.agents.bounded_post",
+                        lambda *a, **k: pytest.fail("inference before validation"))
+    with pytest.raises(ValueError, match="budgets"):
+        provider_preflight(provider, MODEL, "tic-tac-toe", runtime_config=runtime, live=True)
+    selected = agent()
+    selected.runtime_config = runtime
+    with pytest.raises(ValueError, match="budgets"):
+        selected.act(request())
+
+
+@pytest.mark.parametrize("credential_name", [
+    API_KEY_ENV, "CUSTOM_HUAWEI_API_KEY", "OPENAI_API_KEY",
+])
+@pytest.mark.parametrize("surface", [
+    "id", "escaped-id", "request", "gateway", "model", "http-error", "malformed", "partial",
+    "transport", "timeout", "action", "escaped-action", "escaped-prose", "discovery",
+    "discovery-http", "discovery-malformed", "discovery-transport", "discovery-partial",
+])
+def test_all_configured_credentials_are_excluded_from_public_surfaces(
+    monkeypatch, credential_name, surface,
+):
+    credentials = {
+        API_KEY_ENV: SECRET,
+        "CUSTOM_HUAWEI_API_KEY": "fixture-custom-539f-c952-43e5-8011",
+        "OPENAI_API_KEY": "fixture-other-689e-5172-4b68-8022",
+    }
+    for name, value in credentials.items():
+        monkeypatch.setenv(name, value)
+    echo = credentials[credential_name]
+    payload = body()
+    headers = {}
+    status = 200
+    raw = None
+    if surface == "id":
+        payload["id"] = f"prefix-{echo}"
+    elif surface == "escaped-id":
+        payload["id"] = "".join(f"\\u{ord(char):04x}" for char in echo)
+    elif surface == "model":
+        payload["model"] = echo
+    elif surface == "request":
+        headers["x-request-id"] = f"prefix-{echo}"
+    elif surface == "gateway":
+        headers["x-gateway-request-id"] = f"prefix-{echo}"
+    elif surface == "http-error":
+        status = 429
+        payload = {"error_code": "ModelArts.81101", "error_msg": echo, "id": echo}
+        headers["x-request-id"] = echo
+    elif surface == "malformed":
+        raw = b'{"choices":'
+        headers["x-request-id"] = echo
+    elif surface in {"action", "escaped-action", "escaped-prose"}:
+        encoded = ("".join(f"\\u{ord(char):04x}" for char in echo)
+                   if surface in {"escaped-action", "escaped-prose"} else echo)
+        payload["choices"][0]["message"]["content"] = (
+            '{"action":1,"public_explanation":"' + encoded + '"}'
+        )
+        if surface == "escaped-prose":
+            payload["choices"][0]["message"]["content"] = encoded + '\n{"action":1}'
+    if surface.startswith("discovery"):
+        def discover(*a, **k):
+            if surface in {"discovery-transport", "discovery-partial"}:
+                exc = httpx.ReadError(echo)
+                if surface == "discovery-partial":
+                    exc._eslams_response_observation = ResponseObservation(
+                        200, (("x-request-id", echo),),
+                    )
+                raise exc
+            if surface == "discovery-http":
+                return httpx.Response(401, json={"error_msg": echo},
+                                      headers={"x-request-id": echo})
+            if surface == "discovery-malformed":
+                return httpx.Response(200, content=(echo + "{").encode(),
+                                      headers={"x-request-id": echo})
+            return httpx.Response(200, json={"data": [{"id": echo}]})
+
+        monkeypatch.setattr("httpx.get", discover)
+        with pytest.raises(ProviderCallError) as raised:
+            provider_models_live("huawei")
+        public = str(raised.value) + "".join(traceback.format_exception(raised.value))
+        assert all(value not in public for value in credentials.values())
+        return
+    calls = []
+
+    def post(*a, **k):
+        calls.append(1)
+        if surface in {"transport", "timeout"}:
+            raise (httpx.ReadTimeout(echo) if surface == "timeout" else httpx.ConnectError(echo))
+        if surface == "partial":
+            exc = httpx.ReadError(echo)
+            exc._eslams_response_observation = ResponseObservation(
+                200, (("x-request-id", echo), ("x-gateway-request-id", echo)),
+            )
+            raise exc
+        return httpx.Response(status, content=raw, headers=headers) if raw else httpx.Response(
+            status, json=payload, headers=headers,
+        )
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    selected = ModelProviderAgent(
+        provider="huawei", model=MODEL, api_key_env="CUSTOM_HUAWEI_API_KEY",
+        runtime_config=ProviderRuntimeConfig(max_retries=2),
+    )
+    if surface in {"model", "http-error", "malformed", "partial", "transport", "timeout",
+                   "action", "escaped-action", "escaped-prose"}:
+        with pytest.raises((ProviderCallError, TimeoutError)) as raised:
+            selected.act(request())
+        public = json.dumps(getattr(raised.value, "receipt", None)) + str(raised.value)
+        public += "".join(traceback.format_exception(raised.value))
+        if surface == "model":
+            assert selected.last_receipt["locked_model_id"] is None
+            assert selected.last_receipt["model_identity_source"] is None
+    else:
+        public = json.dumps(selected.act(request()).to_dict())
+    public += json.dumps(selected.attempt_receipts)
+    assert all(value not in public for value in credentials.values())
+    assert len(calls) == 1
