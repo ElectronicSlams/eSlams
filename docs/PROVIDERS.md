@@ -1,9 +1,8 @@
 # Provider Guide
 
-eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
-HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
-convenience properties.
+The native adapters below use secret-free artifacts and raw HTTP APIs. Their
+parsers are pinned to documented REST envelopes rather than SDK convenience
+properties.
 
 ## Provider Matrix
 
@@ -14,6 +13,13 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `contextual-ai:<model>` | `CONTEXTUAL_API_KEY` | Generate | `response` string | unavailable (null) |
+
+The proposed 0.7.1 [Contextual AI adapter](providers/CONTEXTUAL_AI.md) uses the
+standalone Generate endpoint without documents or retrieval. It requires an
+explicit model ID and `reasoning=auto`. Its API supplies no per-request identity,
+usage or cost attestation; all remain unknown. The linked evidence distinguishes
+provider-owned text-only integration support from unverified live availability.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
