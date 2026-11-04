@@ -66,8 +66,11 @@ as an action or copied into receipts. Known API-key and IAM-token echoes are
 removed from request/response/model identifiers and recursively redacted from
 other receipt strings, including nested extensions and malformed/partial-response
 receipts. Transport diagnostics are filtered even when no response headers were
-observed. Generated action text containing either credential is rejected before
-action parsing, publication or action repair. The [response schema](https://ibm.github.io/watsonx-ai-node-sdk/interfaces/1_7_x.WatsonXAI.TextChatResponse.html)
+observed. Privacy checks cover literal credentials and JSON Unicode/short-escape
+representations, including mixed escaping, duplicate keys, fenced text and
+incomplete diagnostics. The escape probe never transforms accepted action text.
+Generated action text containing either credential is rejected before action
+parsing, publication or action repair. The [response schema](https://ibm.github.io/watsonx-ai-node-sdk/interfaces/1_7_x.WatsonXAI.TextChatResponse.html)
 attests identity with `model_id`; an OpenAI-shaped `model` field does not.
 Missing identity stays null. A different reported model fails while retaining
 its evidence. The exact requested model remains unchanged in every receipt.
@@ -77,8 +80,12 @@ reports `prompt_tokens`, `completion_tokens`, and `total_tokens`. Preserve
 reported counters; never invent missing totals, cached/reasoning counts,
 reasoning inclusion, or USD cost. Reasoning inclusion remains unknown, so
 artifact `usage_complete` is false even when all three numeric counts exist.
-Preflight's numeric `usage_extraction` check does not establish complete billing
-or official eligibility. No host-specific price card is fabricated from an
+Preflight's numeric `usage_extraction` check also requires valid counters; it
+does not establish complete billing or official eligibility. Invalid or
+conflicting counters and their validation errors are retained under
+`pricing_provenance.usage_observation` with `accounting_status=quarantined`.
+Canonical usage is empty, cost is unavailable, and preflight/artifact usage
+completeness stays false. Reported counters are never repaired. No host-specific price card is fabricated from an
 author catalogue row.
 
 Only `stop` is accepted as complete. IBM's [finish reasons](https://ibm.github.io/watsonx-ai-node-sdk/enums/1_6_x.WatsonXAI.TextChatResultChoiceStream.Constants.FinishReason.html)

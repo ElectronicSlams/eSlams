@@ -405,9 +405,11 @@ def test_invalid_usage_is_reported_not_repaired(monkeypatch, field, value):
     stub(monkeypatch, payload)
     native = agent()
     native.act(request())
-    assert native.last_receipt["usage"]["usage_validation_errors"]
+    assert native.last_receipt["usage"] == {}
+    observed = native.last_receipt["pricing_provenance"]["usage_observation"]
+    assert observed["usage_validation_errors"]
     if field == "total_tokens" and not isinstance(value, int):
-        assert native.last_receipt["usage"]["total_tokens"] is None
+        assert observed["total_tokens"] is None
     assert native.last_receipt["estimated_cost"]["status"] == "cost_unavailable"
 
 
@@ -622,3 +624,182 @@ def test_protocol_diagnostic_without_observed_headers_cannot_leak_credentials(mo
     result = provider_preflight("watsonx", MODEL, "tic-tac-toe", live=True)
     assert not result["ok"] and secret not in json.dumps(result)
     assert len(calls) == 4  # One IAM exchange and inference attempt per explicit invocation.
+
+
+@pytest.mark.parametrize("secret", ["synthetic-private-primary", "synthetic-private-secondary"])
+def test_unicode_escaped_explanation_cannot_publish_credential(monkeypatch, secret):
+    monkeypatch.setenv("WATSONX_API_KEY", "synthetic-private-primary")
+    payload = wire()
+    escaped = "".join(f"\\u{ord(character):04x}" for character in secret)
+    payload["choices"][0]["message"]["content"] = (
+        '{"action": 0, "public_explanation": "' + escaped + '"}'
+    )
+    calls = stub(monkeypatch, payload, iam={
+        "access_token": "synthetic-private-secondary", "token_type": "Bearer",
+    })
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=2))
+    with pytest.raises(ProviderCallError) as error:
+        native.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert secret not in str(error.value) + json.dumps(native.attempt_receipts)
+    assert len(calls) == 2
+    assert native.last_receipt["usage"]["total_tokens"] == 37
+
+
+def test_conflicting_counters_cannot_claim_preflight_usage_completeness(monkeypatch):
+    payload = wire()
+    payload["usage"]["total_tokens"] = 999
+    stub(monkeypatch, payload)
+    result = provider_preflight("watsonx", MODEL, "tic-tac-toe", live=True)
+    assert result["checks"]["minimal_inference"]
+    assert not result["checks"]["usage_extraction"]
+    assert not result["readiness"]["usage_complete"]
+    assert not result["receipt_shape"]["usage_complete"]
+
+
+def _escaped_secret(secret, encoding):
+    if encoding == "unicode":
+        return "".join(f"\\u{ord(character):04x}" for character in secret)
+    if encoding == "mixed":
+        return "".join(f"\\u{ord(character):04X}" if index % 2 else
+                       json.dumps(character)[1:-1] for index, character in enumerate(secret))
+    encoded = json.dumps(secret)[1:-1]
+    return encoded.replace("/", "\\/") if encoding == "escaped_slash" else encoded
+
+
+@pytest.mark.parametrize("credential", ["primary", "secondary"])
+@pytest.mark.parametrize("encoding", ["json", "unicode", "mixed", "escaped_slash"])
+@pytest.mark.parametrize("wrapper", ["plain", "fenced", "prose", "duplicate"])
+def test_escaped_action_credentials_never_reach_decoded_response_or_raw_metadata(
+    monkeypatch, credential, encoding, wrapper,
+):
+    primary = 'synthetic-private-primary/"\\end'
+    secondary = 'synthetic-private-secondary/"\\end'
+    monkeypatch.setenv("WATSONX_API_KEY", primary)
+    secret = primary if credential == "primary" else secondary
+    text = '{"action": 0, "public_explanation": "' + _escaped_secret(secret, encoding) + '"}'
+    if wrapper == "fenced":
+        text = f"```json\n{text}\n```"
+    elif wrapper == "prose":
+        text = f"Response follows:\n{text}\nEnd response."
+    elif wrapper == "duplicate":
+        text = text[:-1] + ', "public_explanation": "safe replacement"}'
+    payload = wire()
+    payload["choices"][0]["message"]["content"] = text
+    calls = stub(monkeypatch, payload, iam={"access_token": secondary, "token_type": "Bearer"})
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=2))
+    with pytest.raises(ProviderCallError) as error:
+        native.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert len(calls) == 2 and len(native.attempt_receipts) == 1
+    assert native.last_receipt["model"] == native.last_receipt["locked_model_id"] == MODEL
+    assert native.last_receipt["usage"]["total_tokens"] == 37
+    assert secret not in str(error.value) + json.dumps(native.attempt_receipts)
+    assert _escaped_secret(secret, encoding) not in str(error.value)
+
+
+@pytest.mark.parametrize("credential", ["primary", "secondary"])
+@pytest.mark.parametrize("scenario", ["http429", "malformed", "partial", "unobserved"])
+def test_escaped_credentials_cannot_leak_through_failed_response_diagnostics(
+    monkeypatch, credential, scenario,
+):
+    from eslams.http_io import ResponseObservation
+    from eslams.protocol import ProtocolError
+
+    primary, secondary = "synthetic-private-primary", "synthetic-private-secondary"
+    monkeypatch.setenv("WATSONX_API_KEY", primary)
+    escaped = _escaped_secret(primary if credential == "primary" else secondary, "mixed")
+    calls = stub(monkeypatch, iam={"access_token": secondary, "token_type": "Bearer"})
+
+    def post(url, **kwargs):
+        calls.append((url, kwargs))
+        if scenario in {"partial", "unobserved"}:
+            failure = ProtocolError(f"private diagnostic {escaped}")
+            if scenario == "partial":
+                failure.__dict__["_eslams_response_observation"] = ResponseObservation(
+                    status_code=429,
+                    headers=(("x-global-transaction-id", escaped), ("cf-aig-request-id", escaped)),
+                )
+            raise failure
+        return httpx.Response(
+            429 if scenario == "http429" else 200,
+            headers={"x-global-transaction-id": escaped, "cf-aig-request-id": escaped},
+            content=(json.dumps({"errors": [{"code": "failed", "message": escaped}],
+                                 "trace": escaped}).encode() if scenario == "http429" else
+                     ('{"partial":"' + escaped).encode()),
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    native = agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
+    with pytest.raises(ProviderCallError) as error:
+        native.act(request())
+    assert len(calls) == 2 and len(native.attempt_receipts) == 1
+    assert primary not in str(error.value) and secondary not in str(error.value)
+    assert escaped not in str(error.value)
+    assert escaped not in str(native.attempt_receipts)
+    assert native.last_receipt.get("locked_model_id") is None
+
+
+@pytest.mark.parametrize("credential", ["primary", "secondary"])
+def test_unicode_escaped_nested_receipt_strings_are_redacted(monkeypatch, credential):
+    import eslams.agents as shared
+
+    primary, secondary = "synthetic-private-primary", "synthetic-private-secondary"
+    monkeypatch.setenv("WATSONX_API_KEY", primary)
+    escaped = _escaped_secret(primary if credential == "primary" else secondary, "unicode")
+    stub(monkeypatch, iam={"access_token": secondary, "token_type": "Bearer"})
+    original = shared._receipt
+
+    def extended(**kwargs):
+        value = original(**kwargs)
+        value["diagnostic_extension"] = {escaped: [f"private {escaped}"]}
+        return value
+
+    monkeypatch.setattr(shared, "_receipt", extended)
+    native = agent()
+    assert native.act(request()).action == 0
+    assert native.last_receipt["diagnostic_extension"] == {"[REDACTED]": ["[REDACTED]"]}
+    assert native.last_receipt["usage"]["total_tokens"] == 37
+
+
+@pytest.mark.parametrize("usage", [
+    {"prompt_tokens": 25, "completion_tokens": 12, "total_tokens": 0},
+    {"prompt_tokens": 25, "completion_tokens": 12, "total_tokens": 999},
+    {"prompt_tokens": 25, "completion_tokens": -1, "total_tokens": 24},
+    {"prompt_tokens": True, "completion_tokens": 12, "total_tokens": 13},
+])
+def test_invalid_accounting_stays_incomplete_in_preflight_and_artifacts(
+    monkeypatch, tmp_path, usage,
+):
+    payload = wire()
+    payload["usage"] = usage
+    stub(monkeypatch, payload)
+    result = provider_preflight("watsonx", MODEL, "tic-tac-toe", live=True)
+    assert result["ok"] and result["checks"]["minimal_inference"]
+    assert not result["readiness"]["usage_complete"]
+    assert not result["receipt_shape"]["usage_complete"]
+    run = Runner().run(RunConfig("tic-tac-toe", agent_1=agent(), max_turns=1, output_dir=tmp_path))
+    rows = [json.loads(row) for row in (run.expanded_path /
+            "receipts/provider_receipts.jsonl").read_text().splitlines()]
+    assert len(rows) == 1 and not rows[0]["usage_complete"]
+    assert rows[0]["usage"] == {}
+    provenance = rows[0]["pricing_provenance"]
+    assert provenance["accounting_status"] == "quarantined"
+    assert provenance["usage_observation"]["usage_validation_errors"]
+    assert not run.score.aggregate_usage["usageComplete"]
+    assert run.score.aggregate_usage["totalTokens"] is None
+    if usage["total_tokens"] in {0, 999}:
+        assert provenance["usage_observation"]["total_tokens"] == usage["total_tokens"]
+    assert ArtifactValidator().validate(run.expanded_path) == []
+
+
+def test_unrelated_json_escapes_preserve_original_action_text_and_decoded_explanation(monkeypatch):
+    text = r'{"action": 0, "public_explanation": "ordinary\/safe\u0020text\n\ud83d\ude00"}'
+    payload = wire()
+    payload["choices"][0]["message"]["content"] = text
+    stub(monkeypatch, payload)
+    response = agent().act(request())
+    assert response.action == 0
+    assert response.public_explanation == "ordinary/safe text\n😀"
+    assert response.metadata["raw_action_text"] == text

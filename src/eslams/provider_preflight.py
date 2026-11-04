@@ -187,9 +187,11 @@ def provider_preflight(
                 checks["response_parsing"] = response.action in legal_actions
                 receipt = agent.last_receipt
                 usage = receipt.get("usage") if isinstance(receipt, dict) else None
-                checks["usage_extraction"] = isinstance(usage, dict) and all(
-                    _is_int(usage.get(key))
-                    for key in ("input_tokens", "output_tokens", "total_tokens")
+                checks["usage_extraction"] = (
+                    isinstance(usage, dict)
+                    and not usage.get("usage_validation_errors")
+                    and all(_is_int(usage.get(key))
+                            for key in ("input_tokens", "output_tokens", "total_tokens"))
                 )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)

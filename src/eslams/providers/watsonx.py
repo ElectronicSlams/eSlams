@@ -5,6 +5,7 @@ Environment configuration stays out of the shared runtime/receipt contracts.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 from datetime import date
@@ -188,10 +189,23 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str,
                        usage=data.get("usage"), capabilities=agent.capabilities,
                        runtime_config=runtime)
     receipt["request_id"] = _http_error_identifier(response.headers.get("x-global-transaction-id"))
+    raw_usage = data.get("usage")
+    observed_usage = normalize_usage(raw_usage) if isinstance(raw_usage, dict) else {}
+    if observed_usage.get("usage_validation_errors"):
+        # Invalid counters remain diagnostic observations, never canonical
+        # accounting. Canonical usage errors would also invalidate the emitted
+        # receipt contract even when its usage_complete flag is false.
+        receipt.update(
+            usage={}, usage_unavailable_reason="provider_usage_malformed",
+            pricing_provenance={"source": "provider_usage", "accounting_status": "quarantined",
+                                "usage_observation": observed_usage},
+            estimated_cost={"status": "cost_unavailable",
+                            "unavailable_reason": "provider_usage_malformed"},
+        )
     _exclude_credentials(receipt, api_key, token)
     try:
         text = _text(data, receipt)
-        if any(secret in text for secret in (api_key, token)):
+        if _contains_credential_text(text, (api_key, token)):
             raise ProviderCallError(
                 "watsonx response contains credential material; no action accepted",
                 error_kind="provider_response_schema_mismatch", provider="watsonx",
@@ -276,7 +290,7 @@ def _exclude_credentials(receipt: dict[str, Any], *secrets: str) -> None:
     """A provider can echo credentials even in otherwise safe identifier syntax."""
     for key in ("locked_model_id", "provider_response_id", "request_id", "gateway_request_id"):
         value = receipt.get(key)
-        if isinstance(value, str) and any(secret and secret in value for secret in secrets):
+        if isinstance(value, str) and _contains_credential_text(value, secrets):
             receipt[key] = None
     if receipt.get("locked_model_id") is None:
         receipt["model_identity_source"] = None
@@ -287,13 +301,24 @@ def _exclude_credentials(receipt: dict[str, Any], *secrets: str) -> None:
 
 def _redact_credential_values(value: Any, secrets: tuple[str, ...]) -> Any:
     if isinstance(value, str):
-        for secret in secrets:
-            if secret:
-                value = value.replace(secret, "[REDACTED]")
-        return value
+        return "[REDACTED]" if _contains_credential_text(value, secrets) else value
     if isinstance(value, list):
         return [_redact_credential_values(item, secrets) for item in value]
     if isinstance(value, dict):
         return {_redact_credential_values(key, secrets): _redact_credential_values(item, secrets)
                 for key, item in value.items()}
     return value
+
+
+# Decode only JSON string escapes, in one pass. This is a privacy probe, never
+# an action transformation. Looking across the raw text also covers duplicate
+# keys, fences, malformed prefixes and incomplete strings without dropping them
+# during object parsing. No recursive unescape or arbitrary size/time cap.
+_JSON_ESCAPE = re.compile(r'\\(?:u[0-9a-fA-F]{4}|["\\/bfnrt])')
+
+
+def _contains_credential_text(text: str, secrets: tuple[str, ...]) -> bool:
+    if any(secret and secret in text for secret in secrets):
+        return True
+    decoded = _JSON_ESCAPE.sub(lambda match: json.loads('"' + match.group(0) + '"'), text)
+    return any(secret and secret in decoded for secret in secrets)
