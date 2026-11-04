@@ -1441,6 +1441,9 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
+        "reka": ("reka-flash-3", "REKA_API_KEY"),
+        "reka-ai": ("reka-flash-3", "REKA_API_KEY"),
+        "reka_ai": ("reka-flash-3", "REKA_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),

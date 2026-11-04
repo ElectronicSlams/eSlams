@@ -15,6 +15,8 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.reka import API_KEY_ENV as REKA_API_KEY_ENV
+from eslams.providers.reka import MODELS_ENDPOINT as REKA_MODELS_ENDPOINT
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -23,9 +25,11 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "reka-ai": REKA_API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
+    "reka-ai": REKA_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
