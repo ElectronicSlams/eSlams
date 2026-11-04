@@ -99,16 +99,22 @@ receipts. Successful-envelope usage and response identity survive semantic and
 action failures. HTTP-error-body observations remain quarantined under the
 shared provenance contract.
 
-Provider output is scrubbed against the active primary key (including custom
-credential environment names) and configured environment values whose names
+Provider identifiers and errors are scrubbed against the active primary key
+(including custom credential environment names) and configured environment values whose names
 contain credential components such as KEY, TOKEN, SECRET, PASSWORD or CREDENTIAL.
 Core's documented public session/request/artifact signing key IDs are excluded
 from that scan; credential values such as `AWS_ACCESS_KEY_ID` remain covered.
 Literal, JSON-escaped and URL-escaped echoes are covered. Contaminated response,
 request, gateway and resolved-model IDs become unknown; contaminated discovery
-model IDs fail validation. Action text is scrubbed before action parsing and
-metadata generation. Malformed bodies, partial transport observations and error
-receipts use the same boundary; raw exception chains are not retained. These
+model IDs fail validation. Action text is scanned in its original form and through
+Core's JSON recovery, inspecting all decoded string values and keys. Standard
+JSON escapes, mixed/all Unicode escapes and surrogate pairs are covered. Any
+credential-contaminated action is rejected before Core action parsing or repair;
+usage is preserved, and no retry or repair call is made. Clean action text is
+returned unchanged: model actions are never rewritten by raw replacement. An
+inspection failure is terminal and retains its usage receipt. Malformed bodies,
+partial transport observations and error receipts use the same boundary; raw
+exception chains are not retained. These
 rules cover configured known values, not unknown credentials or arbitrary
 encodings. They do not rewrite outgoing credentials or the supplied history.
 Trusted receipt schema/parser labels and outcome enums are not provider text
@@ -156,6 +162,10 @@ and primary/secondary credential echo cases across success, errors, malformed
 or partial responses, discovery, identifiers and raw/decoded action text.
 Identity regressions reject missing, blank and conflicting returned model IDs,
 including a different dated ID for a requested alias, while preserving usage.
+`tests/test_mistral_action_credentials.py` reproduces the Unicode-escape bypass
+and covers raw/decoded inspection, wrapper recovery, nested strings/keys, split
+chunks, custom primary names, secondary credentials, no repair/retry, unchanged
+clean action text, full history and receipt retention when inspection fails.
 
 Integration note for parallel adapter PRs: narrow insertions touch `agents.py`
 (imports, canonicalization, dispatch, endpoint/parser maps, usage projection),

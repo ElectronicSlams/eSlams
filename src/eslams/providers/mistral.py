@@ -24,6 +24,7 @@ PROVIDER_ID = "mistral-ai"
 API_KEY_ENV = "MISTRAL_API_KEY"
 CHAT_COMPLETIONS_ENDPOINT = "https://api.mistral.ai/v1/chat/completions"
 MODELS_ENDPOINT = "https://api.mistral.ai/v1/models"
+_JSON_ESCAPES = re.compile(r'(?:\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))+')
 
 
 def configuration_error(model: object, runtime: ProviderRuntimeConfig | None) -> str | None:
@@ -59,7 +60,40 @@ def _credential_variants(primary: str | None = None) -> tuple[str, ...]:
 
 
 def contains_credential(value: str, primary: str | None = None) -> bool:
-    return any(secret in value for secret in _credential_variants(primary))
+    return _contains_credential_text(value, _credential_variants(primary))
+
+
+def _contains_credential_text(value: str, secrets: tuple[str, ...]) -> bool:
+    if any(secret in value for secret in secrets):
+        return True
+
+    def decode(match: re.Match[str]) -> str:
+        # Comparison only: the original action is never rewritten. A run of
+        # escapes is decoded together so JSON surrogate pairs stay intact.
+        return str(json.loads('"' + match.group(0) + '"'))
+
+    decoded = _JSON_ESCAPES.sub(decode, value)
+    return any(secret in decoded for secret in secrets)
+
+
+def _action_contains_credential(text: str, secrets: tuple[str, ...]) -> bool:
+    from eslams.model_actions import extract_json
+
+    if _contains_credential_text(text, secrets):
+        return True
+    # Match Core's fenced/prose JSON recovery, then inspect every decoded key
+    # and string value. Do not validate, choose, coerce or repair an action here.
+    pending = [extract_json(text)]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str) and _contains_credential_text(value, secrets):
+            return True
+        if isinstance(value, dict):
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return False
 
 
 def _scrub_text(value: str, secrets: tuple[str, ...]) -> str:
@@ -101,7 +135,7 @@ def discovery_guard(
         secrets = _credential_variants()
         try:
             models = discover(provider)
-            if any(secret in model for model in models or [] for secret in secrets):
+            if any(_contains_credential_text(model, secrets) for model in models or []):
                 raise ProviderCallError(
                     "Mistral model discovery returned a credential-contaminated identifier",
                     error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
@@ -126,11 +160,27 @@ def complete(
 
     secrets = _credential_variants(api_key)
     failure: ProviderCallError | TimeoutError | None = None
+    receipt: dict[str, Any] | None = None
     try:
         error = configuration_error(agent.model, agent.runtime_config)
         if error:
             raise _error(error, "provider_request_rejected")
         text, receipt = _complete(agent, api_key, prompt)
+        try:
+            contaminated = _action_contains_credential(text, secrets)
+        except (ValueError, RecursionError, OverflowError):
+            raise ProviderCallError(
+                "Mistral action could not be inspected safely; no action accepted",
+                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+                model=agent.model,
+                receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
+            ) from None
+        if contaminated:
+            raise ProviderCallError(
+                "Mistral action contains configured credential material; no action accepted",
+                error_kind="provider_request_rejected", provider=PROVIDER_ID,
+                model=agent.model, receipt={**receipt, "outcome": "provider_request_rejected"},
+            )
     except ProviderCallError as exc:
         # Preserve the original retry decision. Removing a contaminated ID must
         # never turn observed/ambiguous work into a safe rejection to replay.
@@ -141,12 +191,18 @@ def complete(
             receipt=_scrub_receipt(exc.receipt, secrets), retry_permitted=exc.retry_permitted,
         )
     except TimeoutError as exc:
-        failure = TimeoutError(_scrub_text(str(exc), secrets))
+        failure = (
+            ProviderCallError(
+                "Mistral response inspection timed out; no action accepted",
+                error_kind="provider_timeout", provider=PROVIDER_ID, model=agent.model,
+                receipt=_scrub_receipt({**receipt, "outcome": "provider_timeout"}, secrets),
+            ) if receipt is not None else TimeoutError(_scrub_text(str(exc), secrets))
+        )
     if failure is not None:
         # Raise outside the handler so even private exception context cannot
         # retain the original transport/body exception and its credential echo.
         raise failure from None
-    return _scrub_text(text, secrets), _scrub_receipt(receipt, secrets)
+    return text, _scrub_receipt(receipt, secrets)
 
 
 def _complete(

@@ -8,6 +8,8 @@
 - Require explicit Mistral model IDs and matching returned identity, reject
   unsupported reasoning token budgets, and scrub configured primary/secondary
   credential echoes from provider results.
+- Reject credential-contaminated Mistral actions before parsing or repair,
+  including mixed/full JSON Unicode escapes, without rewriting model actions.
 
 ## v0.7.0 - 2026-11-04
 

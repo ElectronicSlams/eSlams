@@ -134,13 +134,13 @@ def _assert_scrubbed(value, secrets=(PRIMARY, SECONDARY)):
 @pytest.mark.parametrize("secondary_env", [
     "OPENAI_API_KEY", "SECONDARY_KEY", "GATEWAY_AUTH_TOKEN", "AWS_ACCESS_KEY_ID",
 ])
-def test_primary_and_secondary_echoes_are_scrubbed_from_actions_ids_and_receipts(
+def test_primary_and_secondary_ids_are_scrubbed_without_rewriting_clean_actions(
     monkeypatch, custom_primary, secondary_env,
 ):
     payload = _success()
     payload.update(id=f"cmpl-{PRIMARY}-{SECONDARY}")
     payload["choices"][0]["message"]["content"] = json.dumps({
-        "action": 1, "public_explanation": f"Echo {PRIMARY} and {SECONDARY}",
+        "action": 1, "public_explanation": "safe explanation",
     })
     calls = _post(monkeypatch, httpx.Response(200, json=payload, headers={
         "x-request-id": f"req-{PRIMARY}", "cf-aig-request-id": f"gw-{SECONDARY}",
@@ -151,7 +151,8 @@ def test_primary_and_secondary_echoes_are_scrubbed_from_actions_ids_and_receipts
     agent = ModelProviderAgent("mistral", MODEL, key_env)
     request = replace(_request(), history=[{"turn": i} for i in range(50)])
     response = agent.act(request)
-    assert response.action == 1 and "[REDACTED]" in response.public_explanation
+    assert response.action == 1 and response.public_explanation == "safe explanation"
+    assert response.metadata["raw_action_text"] == payload["choices"][0]["message"]["content"]
     _assert_scrubbed(json.loads(response.metadata["raw_action_text"]))
     _assert_scrubbed(response.public_explanation)
     _assert_scrubbed(response.to_dict())
@@ -178,10 +179,11 @@ def test_escaped_credential_echoes_cannot_survive_in_raw_action_text(monkeypatch
     _post(monkeypatch, httpx.Response(200, json=payload))
     monkeypatch.setenv(KEY, secret)
     agent = _agent()
-    response = agent.act(_request())
-    assert response.action == 1
-    _assert_scrubbed(response.to_dict(), (secret,))
-    assert json.dumps(secret)[1:-1] not in response.metadata["raw_action_text"]
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+    assert failure.value.error_kind == "provider_request_rejected"
+    _assert_scrubbed(failure.value.__dict__, (secret,))
+    assert agent.last_receipt["usage"]["total_tokens"] == 16
 
 
 @pytest.mark.parametrize("valid_json", [False, True])
@@ -199,7 +201,7 @@ def test_invalid_action_text_does_not_leak_either_credential_or_trigger_retry(
     agent = _agent(runtime_config=ProviderRuntimeConfig(max_retries=2))
     with pytest.raises(ProviderCallError) as failure:
         agent.act(_request())
-    assert failure.value.error_kind == "action_response_unparseable" and len(calls) == 1
+    assert failure.value.error_kind == "provider_request_rejected" and len(calls) == 1
     assert agent.last_receipt["usage"]["total_tokens"] == 16
     _assert_scrubbed(agent.attempt_receipts)
     _assert_scrubbed(failure.value.__dict__)
@@ -362,7 +364,8 @@ def test_live_preflight_and_cli_discovery_do_not_expose_either_credential(monkey
     assert main(["providers", "models", "--provider", "mistral", "--live"]) == 1
     _assert_scrubbed(json.loads(capsys.readouterr().out))
     result = provider_preflight("mistral", MODEL, "tic-tac-toe", live=True)
-    assert result["ok"] and result["checks"]["account_model_visible"] is None
+    assert not result["ok"] and result["checks"]["account_model_visible"] is None
+    assert result["error"]["error_class"] == "provider_request_rejected"
     assert result["discovery_error"]["error_class"] == "provider_response_schema_mismatch"
     _assert_scrubbed(result)
 
@@ -390,13 +393,12 @@ def test_conflicting_identity_produces_a_valid_failure_artifact_and_no_scoring_v
 def test_public_key_ids_and_short_secondary_secrets_do_not_corrupt_receipt_contracts(monkeypatch):
     payload = _success()
     payload["id"] = "response-stop"
-    payload["choices"][0]["message"]["content"] = '{"action":1,"public_explanation":"stop"}'
     _post(monkeypatch, httpx.Response(200, json=payload))
     monkeypatch.setenv("ESLAMS_RUNNER_REQUEST_KEY_ID", "1")
     monkeypatch.setenv("SECONDARY_PASSWORD", "stop")
     agent = _agent()
     response = agent.act(_request())
-    assert response.action == 1 and response.public_explanation == "[REDACTED]"
+    assert response.action == 1
     assert agent.last_receipt["provider_response_id"] is None
     assert agent.last_receipt["provider"] == "mistral-ai"
     assert agent.last_receipt["parser_version"] == "mistral-chat-completions-raw-v1"
