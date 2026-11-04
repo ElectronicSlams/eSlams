@@ -696,7 +696,7 @@ smuggling in engine strength.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+Core has direct HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -705,6 +705,11 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
+| `minimax:<model>` | `MINIMAX_API_KEY` |
+
+MiniMax calls its [direct Chat Completions API](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/MINIMAX.md) with
+separated reasoning and no model or provider fallback. Its default model is
+`MiniMax-M3.1-Flash`; configuration preflight is offline unless `--live` is selected.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native

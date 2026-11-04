@@ -45,6 +45,9 @@ from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
+from eslams.providers.minimax import call as call_minimax
+from eslams.providers.minimax import conversation as minimax_conversation
+from eslams.providers.minimax import observe_http_error as minimax_http_error
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 
@@ -422,6 +425,9 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "minimax":
+                with minimax_conversation():
+                    return self._act(request)
             return self._act(request)
 
     def _act(self, request: ActRequest) -> ActResponse:
@@ -636,6 +642,8 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == "minimax":
+            return call_minimax(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1219,6 +1227,9 @@ def _post_json(
         body_retry_permitted = _capture_error_body_observations(
             response, provider=provider, receipt=receipt,
         )
+        if provider == "minimax":
+            kind, body_retry_permitted = minimax_http_error(response, receipt, kind)
+            receipt["outcome"] = kind
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-amzn-requestid"),
@@ -1970,6 +1981,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "minimax": "minimax_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1981,10 +1993,14 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "minimax": "minimax-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "minimax":
+        from eslams.providers.minimax import normalize_usage
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []
