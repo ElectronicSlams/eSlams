@@ -1,0 +1,23 @@
+{
+  "id": "zai-wire-response-001",
+  "request_id": "zai-wire-request-001",
+  "created": 1793808000,
+  "model": "glm-5.3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1, \"confidence\": 0.8, \"public_explanation\": \"Selected a legal action.\"}",
+        "reasoning_content": "PRIVATE_REASONING_SENTINEL"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "prompt_tokens_details": {"cached_tokens": 3},
+    "total_tokens": 16
+  }
+}

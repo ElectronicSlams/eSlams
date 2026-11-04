@@ -10,7 +10,7 @@
 | Act protocol and failure/deadline behavior | [PROTOCOL.md](PROTOCOL.md) |
 | Artifact profiles, signatures and migration boundaries | [ARTIFACTS.md](ARTIFACTS.md) |
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
-| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |
+| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md), [Z.ai/Zhipu](PROVIDER_ZAI.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

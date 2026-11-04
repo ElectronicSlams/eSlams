@@ -227,6 +227,376 @@
       "sources": [
         "https://platform.claude.com/docs/en/about-claude/model-deprecations"
       ]
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.3",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "high",
+        "max"
+      ],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "low",
+        "high",
+        "max"
+      ],
+      "accepted_control_fields": [
+        "reasoning",
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.z.ai/api-reference/llm/chat-completion"
+      ]
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.2",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled",
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "accepted_control_fields": [
+        "reasoning",
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.z.ai/api-reference/llm/chat-completion"
+      ]
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5.1",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.z.ai/api-reference/llm/chat-completion"
+      ]
+    },
+    {
+      "provider": "zai",
+      "model": "glm-5",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.z.ai/api-reference/llm/chat-completion"
+      ]
+    },
+    {
+      "provider": "zai",
+      "model": "glm-4.7",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.z.ai/api-reference/llm/chat-completion"
+      ]
+    },
+    {
+      "provider": "zai",
+      "model": "glm-4.6",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.z.ai/api-reference/llm/chat-completion"
+      ]
+    },
+    {
+      "provider": "zhipu",
+      "model": "glm-5.3",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "high",
+        "max"
+      ],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "low",
+        "high",
+        "max"
+      ],
+      "accepted_control_fields": [
+        "reasoning",
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.bigmodel.cn/api-reference/模型-api/对话补全"
+      ]
+    },
+    {
+      "provider": "zhipu",
+      "model": "glm-5.2",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled",
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "accepted_control_fields": [
+        "reasoning",
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.bigmodel.cn/api-reference/模型-api/对话补全"
+      ]
+    },
+    {
+      "provider": "zhipu",
+      "model": "glm-5.1",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.bigmodel.cn/api-reference/模型-api/对话补全"
+      ]
+    },
+    {
+      "provider": "zhipu",
+      "model": "glm-5",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.bigmodel.cn/api-reference/模型-api/对话补全"
+      ]
+    },
+    {
+      "provider": "zhipu",
+      "model": "glm-4.7",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.bigmodel.cn/api-reference/模型-api/对话补全"
+      ]
+    },
+    {
+      "provider": "zhipu",
+      "model": "glm-4.6",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat-completions"
+      ],
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "reasoning"
+      ],
+      "default_reasoning_track": "native-default",
+      "pricing": {},
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://docs.bigmodel.cn/api-reference/模型-api/对话补全"
+      ]
     }
   ]
 }

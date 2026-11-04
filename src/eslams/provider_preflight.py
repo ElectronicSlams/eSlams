@@ -15,8 +15,10 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.zai import API_KEY_ENVS
 
 DEFAULT_PROVIDER_ENV = {
+    **API_KEY_ENVS,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",

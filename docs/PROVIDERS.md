@@ -1,7 +1,8 @@
 # Provider Guide
 
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The 0.7.1 candidate
+also adds [Z.ai and Zhipu direct APIs](PROVIDER_ZAI.md). The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -13,6 +14,8 @@ convenience properties.
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `zai:<model>` | `ZAI_API_KEY` | Z.ai Chat Completions | `choices[0].message.content` | response `model` |
+| `zhipu:<model>` | `ZHIPU_API_KEY` | Zhipu China Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 
 An absent provider model identity remains `null`. Core never copies the
