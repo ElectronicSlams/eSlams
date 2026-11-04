@@ -272,6 +272,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             f"missing API key environment variable {api_key_env}",
             error_kind="provider_auth_failed", provider=provider,
         )
+    relace_credentials = relace.credential_values(api_key) if provider == "relace" else ()
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -324,7 +325,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             )
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
-            if provider == "relace" and relace.contains_credential(raw, api_key):
+            if provider == "relace" and relace.contains_credential(raw, relace_credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

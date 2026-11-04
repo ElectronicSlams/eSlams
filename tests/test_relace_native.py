@@ -8,6 +8,7 @@ from urllib.parse import quote
 import httpx
 import pytest
 
+import eslams.agents as agents_module
 from eslams.agents import ModelProviderAgent, ProviderCallError
 from eslams.cli import _provider_agent, main
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -18,6 +19,7 @@ from eslams.providers import relace
 
 MODEL = "deepseek-ai/DeepSeek-V4-Flash-0731"
 SECRET = "rlc-0123456789abcdef0123456789abcdef"
+SECONDARY = "opaque-secondary-credential-90abc"
 FIXTURE = Path(__file__).parent / "fixtures/provider/relace_chat_completions_success.json"
 
 
@@ -349,20 +351,24 @@ def test_timeout_never_replayed_even_with_retry_opt_in(wire, monkeypatch):
     assert SECRET not in json.dumps(selected.attempt_receipts)
 
 
-def test_real_safe_transport_partial_body_sanitizes_header_evidence(monkeypatch):
+@pytest.mark.parametrize("echo", [SECRET, SECONDARY])
+def test_real_safe_transport_partial_body_sanitizes_header_evidence(monkeypatch, echo):
     monkeypatch.setenv("RELACE_API_KEY", SECRET)
+    monkeypatch.setenv("RELACE_SECONDARY_API_KEY", SECONDARY)
     original_client = httpx.AsyncClient
 
     class BrokenBody(httpx.AsyncByteStream):
         async def __aiter__(self):
             yield b'{"choices":'
-            raise httpx.ReadError(SECRET)
+            raise httpx.ReadError(echo)
 
     def handler(incoming):
         assert str(incoming.url) == relace.CHAT_COMPLETIONS_ENDPOINT
         assert incoming.headers["authorization"] == "Bearer " + SECRET
         assert json.loads(incoming.content)["model"] == MODEL
-        return httpx.Response(200, headers={"x-request-id": SECRET}, stream=BrokenBody())
+        return httpx.Response(200, headers={
+            "x-request-id": echo, "cf-aig-request-id": echo,
+        }, stream=BrokenBody())
 
     monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original_client(
         **kwargs, transport=httpx.MockTransport(handler),
@@ -374,3 +380,133 @@ def test_real_safe_transport_partial_body_sanitizes_header_evidence(monkeypatch)
     assert selected.last_receipt["status_code"] == 200
     assert not selected.last_receipt["usage"]
     assert SECRET not in json.dumps(selected.attempt_receipts)
+    assert SECONDARY not in json.dumps(selected.attempt_receipts)
+    assert selected.last_receipt["request_id"] is None
+    assert selected.last_receipt["gateway_request_id"] is None
+
+
+@pytest.mark.parametrize("model", [None, "", " ", "\t"])
+def test_blank_model_preflight_fails_before_discovery(model, wire, monkeypatch):
+    monkeypatch.setattr(httpx, "get", lambda *a, **kw: pytest.fail("unexpected discovery"))
+    with pytest.raises(ValueError, match="explicit nonblank"):
+        provider_preflight("relace", model, "tic-tac-toe", live=True)
+    assert not wire["calls"]
+
+
+@pytest.mark.parametrize("budget", [0, 1, 4096])
+def test_explicit_budget_revalidated_before_transport_and_live_discovery(budget, wire, monkeypatch):
+    runtime = ProviderRuntimeConfig(reasoning_budget_tokens=budget)
+    monkeypatch.setattr(httpx, "get", lambda *a, **kw: pytest.fail("unexpected discovery"))
+    with pytest.raises(ValueError, match="controls are unverified"):
+        provider_preflight("relace", MODEL, "tic-tac-toe", live=True, runtime_config=runtime)
+    selected = agent()
+    selected.runtime_config = runtime
+    with pytest.raises(ValueError, match="controls are unverified"):
+        selected.act(request())
+    assert not wire["calls"]
+
+
+@pytest.mark.parametrize("boundary", ["success", "error", "malformed", "action", "discovery"])
+def test_secondary_credential_is_private_across_boundaries(boundary, wire, monkeypatch):
+    monkeypatch.setenv("RELACE_SECONDARY_API_KEY", SECONDARY)
+    wire["headers"] = {"x-request-id": SECONDARY, "cf-aig-request-id": SECONDARY}
+    selected = agent(runtime_config=ProviderRuntimeConfig(max_retries=3))
+    if boundary == "success":
+        wire["data"].update(id=SECONDARY, model=SECONDARY)
+        result = selected.act(request())
+        assert SECONDARY not in json.dumps(result.to_dict())
+        assert selected.last_receipt["locked_model_id"] is None
+        return
+    if boundary == "error":
+        wire.update(status=429, data={"error": {
+            "type": "rate_limit_error", "message": SECONDARY, "id": SECONDARY,
+        }})
+    elif boundary == "malformed":
+        wire["raw"] = ('{"unfinished": "' + SECONDARY).encode()
+    elif boundary == "action":
+        wire["data"]["choices"][0]["message"]["content"] = json.dumps(
+            {"action": 1, "public_explanation": SECONDARY},
+        )
+    else:
+        monkeypatch.setattr(httpx, "get", lambda *a, **kw: httpx.Response(
+            200, json={"data": [{"id": SECONDARY}]},
+        ))
+        with pytest.raises(ProviderCallError):
+            provider_models_live("relace")
+        assert not wire["calls"]
+        return
+    with pytest.raises(ProviderCallError) as caught:
+        selected.act(request())
+    assert len(wire["calls"]) == 1
+    assert SECONDARY not in str(caught.value)
+    assert SECONDARY not in json.dumps(caught.value.receipt)
+    assert SECONDARY not in json.dumps(selected.attempt_receipts)
+    assert selected.last_receipt["request_id"] is None
+    assert selected.last_receipt["gateway_request_id"] is None
+
+
+@pytest.mark.parametrize("name", [
+    "OPENAI_API_KEY", "AWS_SESSION_TOKEN", "CUSTOM_CLIENT_SECRET", "RELACE_SECONDARY_KEY",
+])
+def test_other_configured_credentials_cannot_be_action_text(name, wire, monkeypatch):
+    monkeypatch.setenv(name, SECONDARY)
+    wire["data"]["choices"][0]["message"]["content"] = (
+        '```json\n{"action": 1, "public_explanation": "'
+        + SECONDARY.replace("o", "\\u006f", 1) + '"}\n```'
+    )
+    with pytest.raises(ProviderCallError):
+        agent().act(request())
+
+
+def test_custom_primary_and_canonical_secondary_credentials_are_both_private(wire, monkeypatch):
+    monkeypatch.setenv("CUSTOM_RELACE_AUTH", "custom-opaque-primary")
+    monkeypatch.setenv("RELACE_API_KEY", SECONDARY)
+    wire["data"].update(id=SECONDARY, model=SECONDARY)
+    selected = ModelProviderAgent(provider="relace", model=MODEL, api_key_env="CUSTOM_RELACE_AUTH")
+    result = selected.act(request())
+    assert wire["calls"][0][1]["Authorization"] == "Bearer custom-opaque-primary"
+    assert selected.last_receipt["locked_model_id"] is None
+    assert SECONDARY not in json.dumps(result.to_dict())
+
+
+@pytest.mark.parametrize("echo", [
+    "Bearer unconfigured-secondary", "api_key=unconfigured-secondary",
+    "https://example.invalid/?key=unconfigured-secondary",
+])
+def test_marked_credentials_are_rejected_without_environment_match(echo, wire):
+    wire["data"]["choices"][0]["message"]["content"] = json.dumps(
+        {"action": 1, "public_explanation": echo},
+    )
+    with pytest.raises(ProviderCallError):
+        agent().act(request())
+
+
+def test_secondary_credential_snapshot_survives_environment_rotation(wire, monkeypatch):
+    monkeypatch.setenv("RELACE_API_KEY_SECONDARY", SECONDARY)
+    wire["data"].update(id=SECONDARY, model=SECONDARY)
+    wire["headers"] = {"x-request-id": SECONDARY}
+    original = agents_module.bounded_post
+
+    def post(*args, **kwargs):
+        monkeypatch.setenv("RELACE_API_KEY_SECONDARY", "rotated-secondary")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    selected = agent()
+    result = selected.act(request())
+    assert selected.last_receipt["locked_model_id"] is None
+    assert SECONDARY not in json.dumps(result.to_dict())
+
+
+def test_discovery_credential_snapshot_survives_environment_rotation(wire, monkeypatch):
+    monkeypatch.setenv("RELACE_SECONDARY_KEY", SECONDARY)
+
+    def get(*args, **kwargs):
+        monkeypatch.setenv("RELACE_SECONDARY_KEY", "rotated-secondary")
+        return httpx.Response(200, json={"data": [{"id": SECONDARY}]})
+
+    monkeypatch.setattr(httpx, "get", get)
+    with pytest.raises(ProviderCallError) as caught:
+        provider_models_live("relace")
+    assert SECONDARY not in str(caught.value)
+    assert not wire["calls"]

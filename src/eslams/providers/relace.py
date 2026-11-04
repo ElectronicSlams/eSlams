@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote_plus
@@ -19,6 +20,20 @@ CHAT_COMPLETIONS_ENDPOINT = "https://models.relace.ai/v1/chat/completions"
 MODELS_ENDPOINT = "https://models.relace.ai/v1/models"
 ENDPOINT_KIND = "relace_chat_completions"
 PARSER_VERSION = "relace-chat-completions-raw-v1"
+
+_CREDENTIAL_ENV = re.compile(
+    r"^RELACE_.*(?:KEY|TOKEN|SECRET|PASSWORD)(?:_|$)"
+    r"|(?:^|_)(?:API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?|ACCESS_KEY|PRIVATE_KEY)(?:_|$)",
+    re.IGNORECASE,
+)
+_CREDENTIAL_TEXT = re.compile(
+    r"\brlc-[A-Za-z0-9_-]+|\b(?:sk|key|token)-[A-Za-z0-9_-]{8,}\b"
+    r"|\bbearer\s+(?!\[REDACTED\])[^\s,;\"']+"
+    r"|\b(?:authorization|x[-_]?api[-_]?key|api[-_]?key|token|secret|password)"
+    r"\s*[:=]\s*(?!\[REDACTED\])[^\s,;\"']+"
+    r"|[?&;](?:key|access_token|refresh_token)=[^\s&#;]+",
+    re.IGNORECASE,
+)
 
 
 def validate_configuration(model: str, runtime: ProviderRuntimeConfig | None) -> None:
@@ -39,18 +54,29 @@ def validate_configuration(model: str, runtime: ProviderRuntimeConfig | None) ->
         raise ValueError("Relace does not support gateway authentication or region controls")
 
 
-def contains_credential(value: Any, api_key: str) -> bool:
+def credential_values(api_key: str | tuple[str, ...]) -> tuple[str, ...]:
+    if isinstance(api_key, tuple):
+        return api_key
+    # Capture once per invocation, including canonical/secondary credentials
+    # when the caller uses a custom primary environment name. Values never
+    # leave this private comparison set or become transport inputs.
+    return tuple({api_key, *(value.strip() for name, value in os.environ.items()
+                            if _CREDENTIAL_ENV.search(name) and value.strip())} - {""})
+
+
+def contains_credential(value: Any, api_key: str | tuple[str, ...]) -> bool:
     """Check decoded strings too, including JSON-escaped text and URL echoes."""
+    credentials = credential_values(api_key)
     if isinstance(value, dict):
-        return any(contains_credential(key, api_key) or contains_credential(item, api_key)
+        return any(contains_credential(key, credentials) or contains_credential(item, credentials)
                    for key, item in value.items())
     if isinstance(value, (list, tuple)):
-        return any(contains_credential(item, api_key) for item in value)
+        return any(contains_credential(item, credentials) for item in value)
     if not isinstance(value, str):
         return False
     decoded = value
     for _ in range(3):
-        if api_key in decoded or re.search(r"\brlc-[A-Za-z0-9_-]+", decoded):
+        if any(secret in decoded for secret in credentials) or _CREDENTIAL_TEXT.search(decoded):
             return True
         updated = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m[1], 16)),
                          unquote_plus(decoded))
@@ -61,19 +87,20 @@ def contains_credential(value: Any, api_key: str) -> bool:
         parsed = json.loads(value)
     except (ValueError, RecursionError):
         return False
-    return parsed != value and contains_credential(parsed, api_key)
+    return parsed != value and contains_credential(parsed, credentials)
 
 
-def _safe_receipt(value: Any, api_key: str) -> Any:
+def _safe_receipt(value: Any, api_key: str | tuple[str, ...]) -> Any:
+    credentials = credential_values(api_key)
     if isinstance(value, dict):
-        result = {key: _safe_receipt(item, api_key) for key, item in value.items()
-                  if not contains_credential(key, api_key)}
+        result = {key: _safe_receipt(item, credentials) for key, item in value.items()
+                  if not contains_credential(key, credentials)}
         if result.get("locked_model_id") is None and "model_identity_source" in result:
             result["model_identity_source"] = None
         return result
     if isinstance(value, list):
-        return [_safe_receipt(item, api_key) for item in value]
-    return None if contains_credential(value, api_key) else value
+        return [_safe_receipt(item, credentials) for item in value]
+    return None if contains_credential(value, credentials) else value
 
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
@@ -88,6 +115,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     )
 
     validate_configuration(agent.model, agent.runtime_config)
+    credentials = credential_values(api_key)
     payload: dict[str, Any] = {
         "model": agent.model,
         "messages": [
@@ -123,7 +151,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             provider_response_id=data.get("id"), resolved_model=data.get("model"),
             usage=usage, capabilities=agent.capabilities, runtime_config=agent.runtime_config,
         )
-        receipt = _safe_receipt(receipt, api_key)
+        receipt = _safe_receipt(receipt, credentials)
         if response.status_code != 200:
             raise ValueError("unexpected completion HTTP status")
         if isinstance(usage, dict) and usage.get("total_tokens") is None and receipt["usage"]:
@@ -149,16 +177,16 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         if (message.get("tool_calls") or message.get("function_call")
                 or not isinstance(text, str) or not text.strip()):
             raise ValueError("completion has no standalone text")
-        if (contains_credential(text, api_key)
-                or contains_credential(extract_json(text), api_key)):
+        if (contains_credential(text, credentials)
+                or contains_credential(extract_json(text), credentials)):
             raise ValueError("credential in completion")
         return text, receipt
     except ValueError:
         raise ProviderCallError(
             "Relace returned an invalid or unsafe text completion",
             error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID, model=agent.model,
-            receipt=_safe_receipt(receipt, api_key) if receipt is not None else None,
+            receipt=_safe_receipt(receipt, credentials) if receipt is not None else None,
         ) from None
     except ProviderCallError as exc:
-        exc.receipt = _safe_receipt(exc.receipt or receipt, api_key)
+        exc.receipt = _safe_receipt(exc.receipt or receipt, credentials)
         raise

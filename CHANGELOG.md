@@ -6,6 +6,8 @@
   full history, native reasoning defaults, no fallback or default retries, and
   sanitized attempt receipts. Include offline CLI/preflight wiring, explicit
   model discovery, documented API evidence, and deterministic raw-wire tests.
+- Guard secondary configured credential echoes in Relace receipts, discovery
+  and action text, including custom primary-key names and interrupted bodies.
 
 ## v0.7.0 - 2026-11-04
 

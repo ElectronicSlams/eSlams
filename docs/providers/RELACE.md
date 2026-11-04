@@ -76,6 +76,10 @@ Credential echoes are removed from receipt identifiers on success, HTTP error,
 malformed JSON and interrupted bodies. Credential-bearing action text is
 rejected, including decoded JSON and common URL/Unicode escape forms. Raw
 provider bodies and headers are never copied into action metadata or receipts.
+Echo detection snapshots the active key and configured credential environment
+values per invocation, including canonical and secondary keys when a custom
+primary environment name is used. Only the selected primary key is transmitted.
+Recognizable credential markers are rejected even without an environment match.
 
 ## Fixture provenance
 
