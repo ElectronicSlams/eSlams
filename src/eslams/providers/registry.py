@@ -134,6 +134,8 @@ FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS: tuple[str, ...] = (
 )
 
 PROVIDER_ALIASES = {
+    "poolside-ai": "poolside",
+    "poolsideai": "poolside",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",

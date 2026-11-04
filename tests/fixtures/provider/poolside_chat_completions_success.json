@@ -1,0 +1,22 @@
+{
+  "id": "chatcmpl-poolside-fixture",
+  "model": "poolside/laguna-s-2.1",
+  "created": 1751993576,
+  "object": "chat.completion",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "reasoning_content": "PRIVATE_REASONING_SENTINEL {\"action\": 2}",
+        "content": "{\"action\": 1}",
+        "role": "assistant"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "completion_tokens": 88,
+    "prompt_tokens": 447,
+    "total_tokens": 535
+  }
+}

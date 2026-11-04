@@ -14,6 +14,11 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `poolside:<model-id>` | `POOLSIDE_API_KEY` | Poolside-hosted Chat Completions | `choices[0].message.content` | response `model` |
+
+The [Poolside adapter notes](POOLSIDE.md) record current official sources,
+thinking controls, exact-model requirements, accounting unknowns and restricted
+reference documentation. Poolside uses the native hosted endpoint directly.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
