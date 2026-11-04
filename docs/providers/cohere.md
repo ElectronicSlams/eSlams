@@ -19,8 +19,8 @@ The canonical Core namespace is `cohere`. The local convenience alias
 namespace in registry lookup, CLI construction, configuration/live preflight,
 discovery, dispatch, and receipts. This alias is a Core convention, not an API
 model alias. An explicitly supplied model string is forwarded verbatim.
-Bare `cohere` selects `command-a-03-2025` only when no model is supplied.
-There is no model or provider fallback.
+Missing, blank, and non-string model IDs fail before transport, including bare
+`cohere` and `cohere:` CLI agents. There is no default model or provider fallback.
 
 ```bash
 eslams providers preflight --provider cohere-ai --model command-a-03-2025 --arena tic-tac-toe
@@ -82,10 +82,15 @@ text. Only typed final text blocks supply an action.
 [Thinking](https://docs.cohere.com/docs/reasoning) is left at the provider's
 native default in `auto` mode. Explicit enabled/disabled choices map to
 `thinking.type`; a positive explicit reasoning budget maps to
-`thinking.token_budget` with type enabled. Zero budgets and unsupported effort
-or Gemini-specific controls fail before submission. Thinking blocks are ignored
+`thinking.token_budget` with type enabled. Explicit thinking controls require
+the exact documented `command-a-reasoning-08-2025` or
+[`command-a-plus-05-2026`](https://docs.cohere.com/docs/command-a-plus) ID.
+Unknown aliases/models may still use native defaults, but explicit controls
+require independent verification first. Zero budgets and unsupported effort
+or Gemini-specific controls fail both preflight modes and before submission.
+Thinking blocks are ignored
 for action parsing and excluded from receipts and response metadata. No arena
-selects a reasoning mode. Unsupported controls/models remain endpoint decisions.
+selects a reasoning mode. Account availability remains an endpoint decision.
 
 `max_tokens` is omitted by default, preserving the provider's model-specific
 output ceiling. Only a positive operator output limit sends that parameter.
@@ -123,7 +128,13 @@ automatic transport retry, including when `max_retries` is nonzero. Timeouts,
 explicit action repair remains a separate physical attempt after invalid final
 action text; it is not fallback and remains prohibited by official-run policy.
 Headers such as request ID and Retry-After are sanitized by shared machinery;
-credential values and private error bodies are not published.
+credential values and private error bodies are not published. Scrubbing covers
+the active custom credential, `COHERE_API_KEY`, and the SDK's `CO_API_KEY`,
+including identifiers, malformed/partial-response receipts, and final action
+text before parsing or metadata capture. JSON-escaped and URL-encoded echoes
+are covered. `CO_API_KEY` is a redaction source only; Core does not silently
+select it for authentication. Discovery rejects credential-bearing model names
+or cursors without returning partial results or inventing replacement IDs.
 
 ## Usage, pricing, and integrity limits
 

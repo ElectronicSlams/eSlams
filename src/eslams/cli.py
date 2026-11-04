@@ -1446,7 +1446,6 @@ def _provider_agent(
     from eslams.providers import cohere
 
     defaults = {
-        "cohere": (cohere.DEFAULT_MODEL, cohere.API_KEY_ENV),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1460,6 +1459,9 @@ def _provider_agent(
         provider, model = value, ""
     provider = provider.lower()
     provider = cohere.canonical_provider(provider) or provider
+    if provider == "cohere":
+        cohere.validate_model(model)
+        defaults[provider] = (model, cohere.API_KEY_ENV)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

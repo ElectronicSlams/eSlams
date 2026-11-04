@@ -403,6 +403,8 @@ class ModelProviderAgent:
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
         self.provider = cohere.canonical_provider(self.provider) or self.provider
+        if self.provider == "cohere":
+            cohere.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:

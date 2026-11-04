@@ -6,7 +6,10 @@ Imports of Core's transport/receipt helpers are deferred to avoid a module cycle
 
 from __future__ import annotations
 
+import json
+import os
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote, quote_plus
 
 import httpx
 
@@ -14,12 +17,13 @@ from eslams.provider_credentials import provider_key
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent, ProviderCallError
+    from eslams.contracts.provider import ProviderRuntimeConfig
 
 PROVIDER_ID = "cohere"
 API_KEY_ENV = "COHERE_API_KEY"
 CHAT_ENDPOINT = "https://api.cohere.com/v2/chat"
 MODELS_ENDPOINT = "https://api.cohere.com/v1/models"
-DEFAULT_MODEL = "command-a-03-2025"
+THINKING_MODELS = frozenset({"command-a-reasoning-08-2025", "command-a-plus-05-2026"})
 
 
 def canonical_provider(value: str) -> str | None:
@@ -27,21 +31,62 @@ def canonical_provider(value: str) -> str | None:
     return PROVIDER_ID if normalized in {PROVIDER_ID, "cohere-ai"} else None
 
 
+def validate_model(model: Any) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("Cohere requires an explicit nonblank model ID")
+
+
+def configuration_error(model: str, config: ProviderRuntimeConfig | None) -> str | None:
+    if config is None:
+        return None
+    if config.reasoning_effort is not None or config.gemini_thinking_budget is not None:
+        return "Cohere supports thinking type/token_budget, not effort or Gemini controls"
+    if config.reasoning_budget_tokens == 0:
+        return "Cohere thinking token_budget must be positive; use reasoning=disabled to disable it"
+    if (config.reasoning != "auto" or config.reasoning_budget_tokens is not None
+            ) and model not in THINKING_MODELS:
+        return "Cohere explicit thinking controls require an exactly verified reasoning model ID"
+    return None
+
+
+def _credentials(api_key: str | None = None, api_key_env: str | None = None) -> tuple[str, ...]:
+    # CO_API_KEY is a Cohere SDK name. It is redacted, never selected as an
+    # implicit authentication fallback. Include custom agent credentials too.
+    values = {api_key} if api_key else set()
+    for name in (API_KEY_ENV, "CO_API_KEY", api_key_env):
+        if name:
+            value = os.environ.get(name, "").strip()
+            if value:
+                values.add(value)
+    variants = {variant for value in values for variant in (
+        value, json.dumps(value, ensure_ascii=False)[1:-1],
+        quote(value, safe=""), quote_plus(value),
+    )}
+    return tuple(sorted(variants, key=len, reverse=True))
+
+
+def _redact_text(value: str, credentials: tuple[str, ...]) -> str:
+    for credential in credentials:
+        value = value.replace(credential, "[REDACTED]")
+    return value
+
+
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams import agents as core
 
     config = agent.runtime_config
-    if config and (config.reasoning_effort is not None
-                   or config.gemini_thinking_budget is not None):
+    try:
+        validate_model(agent.model)
+    except ValueError:
         raise core.ProviderCallError(
-            "Cohere supports thinking type/token_budget, not effort or Gemini controls",
+            "Cohere requires an explicit nonblank model ID",
             error_kind="provider_request_rejected", provider=PROVIDER_ID, model=agent.model,
-        )
-    if config and config.reasoning_budget_tokens == 0:
-        raise core.ProviderCallError(
-            "Cohere thinking token_budget must be positive; use reasoning=disabled to disable it",
-            error_kind="provider_request_rejected", provider=PROVIDER_ID, model=agent.model,
-        )
+        ) from None
+    error = configuration_error(agent.model, config)
+    if error:
+        raise core.ProviderCallError(error, error_kind="provider_request_rejected",
+                                     provider=PROVIDER_ID, model=agent.model)
+    credentials = _credentials(api_key, agent.api_key_env)
     payload: dict[str, Any] = {
         "model": agent.model,
         "stream": False,
@@ -71,26 +116,29 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         # Cohere's documented native error is {"message": ...}. Neither that
         # prose nor an undocumented gateway envelope attests rejected work.
         exc.retry_permitted = False
-        _redact_identifiers(exc.receipt, api_key)
+        _redact_identifiers(exc.receipt, credentials)
+        exc.args = (_redact_text(str(exc), credentials),)
         if exc.status_code in {498, 499}:
             exc.error_kind = _http_error_kind(exc.status_code)
             if exc.receipt is not None:
                 exc.receipt["outcome"] = exc.error_kind
-        raise
+        raise exc from None
+    except TimeoutError:
+        raise TimeoutError("Cohere provider timed out") from None
     try:
         data = core._response_json_with_receipt(
             response, provider=PROVIDER_ID, model=agent.model,
             capabilities=agent.capabilities, runtime_config=config,
         )
     except core.ProviderCallError as exc:
-        _redact_identifiers(exc.receipt, api_key)
-        raise
+        _redact_identifiers(exc.receipt, credentials)
+        raise exc from None
     receipt = core._receipt(
         provider=PROVIDER_ID, model=agent.model, response=response,
         provider_response_id=data.get("id"), resolved_model=None,
         usage=data.get("usage"), capabilities=agent.capabilities, runtime_config=config,
     )
-    _redact_identifiers(receipt, api_key)
+    _redact_identifiers(receipt, credentials)
     # V2 Chat attests a reply ID, not the served model. Processed tokens are
     # not billed units. Neither a catalogue price nor an echoed extension is
     # sufficient evidence for a canonical monetary cost.
@@ -113,18 +161,18 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     except core.ProviderCallError as exc:
         exc.retry_permitted = False
         exc.receipt = {**receipt, "outcome": exc.error_kind}
-        raise
-    return text, receipt
+        raise exc from None
+    return _redact_text(text, credentials), receipt
 
 
-def _redact_identifiers(receipt: dict[str, Any] | None, api_key: str) -> None:
+def _redact_identifiers(receipt: dict[str, Any] | None, credentials: tuple[str, ...]) -> None:
     # Shared sanitizers reject sensitive shapes; additionally reject an exact
     # credential echoed in an otherwise syntactically valid opaque identifier.
     if receipt is None:
         return
     for name in ("provider_response_id", "request_id", "gateway_request_id"):
         value = receipt.get(name)
-        if isinstance(value, str) and api_key in value:
+        if isinstance(value, str) and _redact_text(value, credentials) != value:
             receipt[name] = None
 
 
@@ -239,6 +287,7 @@ def models_live() -> list[str]:
             f"missing or invalid API key environment variable {API_KEY_ENV}",
             error_kind="provider_auth_failed", provider=PROVIDER_ID,
         )
+    credentials = _credentials(key)
     params = {"endpoint": "chat", "page_size": "1000"}
     models: set[str] = set()
     cursors: set[str] = set()
@@ -271,13 +320,15 @@ def models_live() -> list[str]:
             raise _schema_error("")
         for row in rows:
             name = row.get("name") if isinstance(row, dict) else None
-            if not isinstance(name, str) or not name.strip():
+            if (not isinstance(name, str) or not name.strip()
+                    or _redact_text(name, credentials) != name):
                 raise _schema_error("")
             models.add(name)
         cursor = data.get("next_page_token")
         if cursor is None:
             return sorted(models)
-        if not isinstance(cursor, str) or not cursor or cursor in cursors:
+        if (not isinstance(cursor, str) or not cursor or cursor in cursors
+                or _redact_text(cursor, credentials) != cursor):
             raise _schema_error("")
         cursors.add(cursor)
         params["page_token"] = cursor

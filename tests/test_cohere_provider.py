@@ -31,6 +31,7 @@ def fixture(name="cohere_chat_success.json"):
 @pytest.fixture(autouse=True)
 def offline(monkeypatch):
     monkeypatch.setenv("COHERE_API_KEY", "fixture-cohere-key")
+    monkeypatch.delenv("CO_API_KEY", raising=False)
 
     def forbidden(*args, **kwargs):
         raise AssertionError("unexpected network access")
@@ -39,8 +40,8 @@ def offline(monkeypatch):
     monkeypatch.setattr(httpx, "get", forbidden)
 
 
-def agent(**kwargs):
-    return ModelProviderAgent("cohere", "command-a-03-2025", "COHERE_API_KEY", **kwargs)
+def agent(model="command-a-03-2025", **kwargs):
+    return ModelProviderAgent("cohere", model, "COHERE_API_KEY", **kwargs)
 
 
 def wire(monkeypatch, payload=None, *, content=None, status=200, headers=None):
@@ -124,7 +125,8 @@ def test_explicit_controls_gateway_and_thinking_are_separate_from_final_text(mon
     calls = wire(monkeypatch, fixture("cohere_chat_thinking.json"))
     config = ProviderRuntimeConfig(reasoning="enabled", reasoning_budget_tokens=500,
                                    gateway_base_url="https://gateway.example/cohere")
-    selected = agent(runtime_config=config, max_output_tokens=1200, temperature=0.4)
+    selected = agent(model="command-a-reasoning-08-2025", runtime_config=config,
+                     max_output_tokens=1200, temperature=0.4)
     response = selected.act(_request())
     assert response.action == 1
     assert calls[0][0] == "https://gateway.example/cohere/v2/chat"
@@ -141,7 +143,7 @@ def test_explicit_controls_gateway_and_thinking_are_separate_from_final_text(mon
 ])
 def test_explicit_thinking_policy_is_forwarded(monkeypatch, config):
     calls = wire(monkeypatch)
-    agent(runtime_config=config).act(_request())
+    agent(model="command-a-reasoning-08-2025", runtime_config=config).act(_request())
     thinking = calls[0][1]["json"]["thinking"]
     assert thinking == ({"type": "disabled"} if config.reasoning == "disabled"
                         else {"type": "enabled", "token_budget": 123})
