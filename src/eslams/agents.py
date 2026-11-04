@@ -46,6 +46,7 @@ from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.mistral import complete as complete_mistral
+from eslams.providers.mistral import configuration_error as mistral_configuration_error
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 
@@ -405,6 +406,10 @@ class ModelProviderAgent:
         self.provider = self.provider.lower()
         if self.provider.strip().replace("_", "-") in {"mistral", "mistral-ai"}:
             self.provider = "mistral-ai"
+            error = mistral_configuration_error(self.model, None)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -431,6 +436,11 @@ class ModelProviderAgent:
         self.last_receipt = None
         self.attempt_receipts = []
         request = ActRequest.from_mapping(request.to_dict())
+        if self.provider == "mistral-ai":
+            error = mistral_configuration_error(self.model, self.runtime_config)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider, model=self.model)
         policy = request.metadata.get("model_execution_policy")
         output = policy.get("output", {}) if isinstance(policy, dict) else {}
         requested = output.get("max_tokens") if output.get("mode") == "bounded" else None

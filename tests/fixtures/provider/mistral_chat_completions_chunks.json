@@ -2,7 +2,7 @@
   "id": "cmpl-mistral-wire-fixture",
   "object": "chat.completion",
   "created": 1702256327,
-  "model": "mistral-small-2603",
+  "model": "mistral-small-latest",
   "choices": [
     {
       "index": 0,

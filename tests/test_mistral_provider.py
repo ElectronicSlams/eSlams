@@ -53,7 +53,8 @@ def test_alias_registry_cli_dispatch_preflight_and_execution(monkeypatch, provid
     assert registry.resolve(provider, MODEL).provider == "mistral-ai"
     agent = _provider_agent(f"{provider}:{MODEL}")
     assert agent.provider == "mistral-ai" and agent.model == MODEL and agent.api_key_env == KEY
-    assert _provider_agent(provider).model == MODEL
+    with pytest.raises(ValueError, match="explicit model ID"):
+        _provider_agent(provider)
     calls = _post(monkeypatch, httpx.Response(200, json=_success()))
     direct = _agent(provider)
     assert direct.act(_request()).action == 1
@@ -86,7 +87,7 @@ def test_raw_wire_request_usage_identity_privacy_and_full_history(monkeypatch):
     assert calls[0][1]["headers"]["Authorization"] == "Bearer fixture-secret-mistral"
     assert calls[0][1]["timeout"].read is None
     receipt = agent.last_receipt
-    assert receipt["locked_model_id"] == "mistral-small-2603"
+    assert receipt["locked_model_id"] == MODEL
     assert receipt["model_identity_source"] == "provider_response"
     assert receipt["request_id"] == "req-1"
     usage = receipt["usage"]
@@ -100,7 +101,9 @@ def test_raw_wire_request_usage_identity_privacy_and_full_history(monkeypatch):
 
 
 def test_only_explicit_controls_and_exact_model_are_forwarded(monkeypatch):
-    calls = _post(monkeypatch, httpx.Response(200, json=_success()))
+    response = _success()
+    response["model"] = "ft:literal-model:unchanged"
+    calls = _post(monkeypatch, httpx.Response(200, json=response))
     agent = ModelProviderAgent(
         provider="mistral", model="ft:literal-model:unchanged", api_key_env=KEY,
         temperature=0.25, max_output_tokens=923,
@@ -298,16 +301,16 @@ def test_invalid_action_keeps_usage_and_explicit_repair_is_a_separate_attempt(mo
     {"prompt_tokens": True, "completion_tokens": 4, "total_tokens": 16},
     {"prompt_tokens": -1, "completion_tokens": 4, "total_tokens": 3},
     {"prompt_tokens": 12, "completion_tokens": 4, "total_tokens": 999}])
-def test_usage_and_identity_gaps_never_become_zero_or_requested_identity(monkeypatch, usage):
+def test_usage_and_response_id_gaps_never_become_zero(monkeypatch, usage):
     payload = _success()
-    payload.pop("model")
     payload.pop("id")
     payload["usage"] = usage
     _post(monkeypatch, httpx.Response(200, json=payload))
     agent = _agent()
     assert agent.act(_request()).action == 1
     receipt = agent.last_receipt
-    assert receipt["locked_model_id"] is None and receipt["model_identity_source"] is None
+    assert receipt["locked_model_id"] == MODEL
+    assert receipt["model_identity_source"] == "provider_response"
     assert receipt["provider_response_id"] is None
     assert receipt["estimated_cost"]["status"] == "cost_unavailable"
     if not usage:

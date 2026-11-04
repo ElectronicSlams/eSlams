@@ -1441,7 +1441,7 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
-        "mistral-ai": ("mistral-small-latest", "MISTRAL_API_KEY"),
+        "mistral-ai": ("", "MISTRAL_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1456,6 +1456,8 @@ def _provider_agent(
     provider = provider.lower()
     if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"}:
         provider = "mistral-ai"
+        if not model.strip():
+            raise ValueError("Mistral requires a non-empty explicit model ID")
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

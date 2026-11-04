@@ -5,6 +5,9 @@
 - Add a native Mistral AI Chat Completions adapter (`mistral-ai`, alias `mistral`)
   with account model discovery, sanitized receipts and offline wire regressions.
   See `docs/providers/MISTRAL.md` for supported behavior and limitations.
+- Require explicit Mistral model IDs and matching returned identity, reject
+  unsupported reasoning token budgets, and scrub configured primary/secondary
+  credential echoes from provider results.
 
 ## v0.7.0 - 2026-11-04
 

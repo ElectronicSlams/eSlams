@@ -28,11 +28,17 @@ eslams run --arena tic-tac-toe --seat-agent player_1=mistral:mistral-small-lates
   --seat-agent player_2=first-legal --output-dir runs
 ```
 
-The bare `mistral`/`mistral-ai` CLI agent defaults to `mistral-small-latest`.
-An explicit model is forwarded byte-for-byte, including dated and fine-tuned
-IDs. No alias-to-dated-model guess, different-model retry or provider fallback
-is performed. A `latest` model can change upstream; use a dated model when a
-stable requested ID is needed. Missing response `model` and `id` remain null.
+An explicit, nonblank model ID is required by the agent, preflight and CLI;
+bare `mistral`/`mistral-ai` and an empty `mistral:` selection fail rather than
+selecting a default. An explicit model is forwarded byte-for-byte, including
+dated and fine-tuned IDs. No alias-to-dated-model guess, different-model retry
+or provider fallback is performed. A `latest` model can change upstream; use a
+dated model when a stable requested ID is needed. A successful answer must
+report a nonblank `model` exactly equal to the requested ID. A conflicting model
+is rejected without action repair or retry. There is no inferred alias mapping:
+even a legitimate alias-to-dated resolution is rejected if the IDs differ.
+Missing response `model` is also rejected and remains null in the receipt;
+a missing response `id` remains unknown without inventing one.
 The response model attests only what Mistral reports; it does not prove a
 particular physical backend.
 
@@ -73,6 +79,9 @@ reasoning enable/disable flags, reasoning budgets, tools, multimodal inputs,
 streaming, Responses/Agents, FIM and regional inference are not implemented as
 Mistral controls. Generic gateway rewriting remains a separate Core transport
 feature and provides no regional-discovery or residency guarantee.
+Explicit `reasoning_budget_tokens` and `gemini_thinking_budget` values, including
+zero and the Gemini -1 sentinel, fail configuration preflight and agent execution
+before credentials, discovery or inference. They are never silently discarded.
 
 Only a single assistant choice with terminal `stop` and answer text is accepted.
 `length`/`model_length` are `provider_output_truncated`; `error` is unavailable;
@@ -89,6 +98,18 @@ errors keep their existing outcomes. Private error prose is never copied to
 receipts. Successful-envelope usage and response identity survive semantic and
 action failures. HTTP-error-body observations remain quarantined under the
 shared provenance contract.
+
+Provider output is scrubbed against the active primary key (including custom
+credential environment names) and configured environment values whose names
+contain credential components such as KEY, TOKEN, SECRET, PASSWORD or CREDENTIAL.
+Literal, JSON-escaped and URL-escaped echoes are covered. Contaminated response,
+request, gateway and resolved-model IDs become unknown; contaminated discovery
+model IDs fail validation. Action text is scrubbed before action parsing and
+metadata generation. Malformed bodies, partial transport observations and error
+receipts use the same boundary; raw exception chains are not retained. These
+rules cover configured known values, not unknown credentials or arbitrary
+encodings. They do not rewrite outgoing credentials or the supplied history.
+Removing a contaminated ID does not permit replay of an observed attempt.
 
 Default retries are zero. Even with an operator retry count, only the shared
 narrow, definitive rate-rejection evidence permits replay; accepted work,
@@ -126,6 +147,11 @@ string/chunk answers, malformed/truncated JSON and completions, refusal, tools,
 HTTP 200 errors, 400/401/403/404/422/429/5xx, timeout/transport ambiguity, safe
 retry evidence, credential/privacy boundaries, missing identity/usage/cost,
 and generated success/failure artifacts. No live Mistral call was made.
+`tests/test_mistral_provider_security.py` adds explicit-model/budget validation
+and primary/secondary credential echo cases across success, errors, malformed
+or partial responses, discovery, identifiers and raw/decoded action text.
+Identity regressions reject missing, blank and conflicting returned model IDs,
+including a different dated ID for a requested alias, while preserving usage.
 
 Integration note for parallel adapter PRs: narrow insertions touch `agents.py`
 (imports, canonicalization, dispatch, endpoint/parser maps, usage projection),
