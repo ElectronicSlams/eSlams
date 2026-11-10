@@ -16,15 +16,15 @@ No extra dependency or Mistral SDK is required.
 
 ```bash
 # Offline configuration check; no provider request:
-eslams providers preflight --provider mistral --model mistral-small-latest --arena tic-tac-toe
+eslams providers preflight --provider mistral --model mistral-small-2603 --arena tic-tac-toe
 
 # Explicit account discovery; contacts Mistral, no inference:
 eslams providers models --provider mistral-ai --live
 
 # Explicit inference; can incur provider charges:
-eslams providers preflight --provider mistral-ai --model mistral-small-latest --arena tic-tac-toe --live
+eslams providers preflight --provider mistral-ai --model mistral-small-2603 --arena tic-tac-toe --live
 
-eslams run --arena tic-tac-toe --seat-agent player_1=mistral:mistral-small-latest \
+eslams run --arena tic-tac-toe --seat-agent player_1=mistral:mistral-small-2603 \
   --seat-agent player_2=first-legal --output-dir runs
 ```
 
@@ -73,8 +73,12 @@ validation. It adds no total output/time limit. `max_tokens` is omitted unless
 the operator or ActRequest supplies a bound. Provider defaults and context
 limits still apply. Full supplied history is preserved; the existing explicit
 `history_window_turns` option can reduce it. No game selects reasoning policy.
-An explicit temperature or `reasoning_effort` is forwarded unchanged, with the
-endpoint deciding whether the selected model accepts it. `prompt_mode`, generic
+An explicit temperature is forwarded unchanged. For exact documented model IDs,
+effort validation follows the [official reasoning guide](https://docs.mistral.ai/inference/conversations/reasoning):
+Small 2603 and Medium 3.5 accept `none`/`high`; Large 4 accepts `low`/`medium`/`high`;
+GLM 5.3 and Flash accept `low`/`high`/`max`. Other IDs and dynamic aliases remain
+endpoint-authoritative; a missing entry does not invent a per-model contract.
+Supported explicit values are sent unchanged. `prompt_mode`, generic
 reasoning enable/disable flags, reasoning budgets, tools, multimodal inputs,
 streaming, Responses/Agents, FIM and regional inference are not implemented as
 Mistral controls. Generic gateway rewriting remains a separate Core transport
@@ -182,3 +186,9 @@ winner is null, test expects player 1). Neither test nor shared behavior is
 modified here. An initial parallel full-suite run also observed the existing
 slow-header socket-disconnect timing test fail; that test passed in isolation.
 These are reported validation blockers, not waived release gates.
+
+## QA correction verification (2026-11-10)
+
+Dated examples preserve the exact response-identity rule; live alias resolution
+remains unverified. Encoded credential echoes in transport diagnostics are also
+excluded, with original exception contexts discarded. No account inference was used.

@@ -652,7 +652,9 @@ def _main(argv: list[str] | None = None) -> int:
     run.add_argument(
         "--agent",
         default="random",
-        help="Agent for player_1: random (default), first-legal, URL, or provider:model.",
+        help=("Agent for player_1: random (default), first-legal, URL, or provider:model. "
+              "Mistral requires an exact response model ID; use a dated ID such as "
+              "mistral:mistral-small-2603. An alias resolving to a different ID is rejected."),
     )
     run.add_argument(
         "--opponent",

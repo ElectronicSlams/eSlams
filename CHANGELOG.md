@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use dated Mistral examples and CLI identity guidance, validate documented per-model efforts, and exclude encoded transport credential diagnostics.
+
 - Add a native Mistral AI Chat Completions adapter (`mistral-ai`, alias `mistral`)
   with account model discovery, sanitized receipts and offline wire regressions.
   See `docs/providers/MISTRAL.md` for supported behavior and limitations.

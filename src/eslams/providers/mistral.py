@@ -25,6 +25,14 @@ API_KEY_ENV = "MISTRAL_API_KEY"
 CHAT_COMPLETIONS_ENDPOINT = "https://api.mistral.ai/v1/chat/completions"
 MODELS_ENDPOINT = "https://api.mistral.ai/v1/models"
 _JSON_ESCAPES = re.compile(r'(?:\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))+')
+_MODEL_EFFORTS = {
+    "mistral-small-2603": {"none", "high"},
+    "mistral-medium-3-5": {"none", "high"},
+    "mistral-large-4": {"low", "medium", "high"},
+    "mistral-large-4-0": {"low", "medium", "high"},
+    "zai-glm-5-3": {"low", "high", "max"},
+    "zai-glm-5-3-flash": {"low", "high", "max"},
+}
 
 
 def configuration_error(model: object, runtime: ProviderRuntimeConfig | None) -> str | None:
@@ -35,6 +43,9 @@ def configuration_error(model: object, runtime: ProviderRuntimeConfig | None) ->
         runtime.reasoning_budget_tokens is not None or runtime.gemini_thinking_budget is not None
     ):
         return "Mistral does not support explicit token-based reasoning budgets"
+    if (runtime is not None and runtime.reasoning_effort is not None
+            and model in _MODEL_EFFORTS and runtime.reasoning_effort not in _MODEL_EFFORTS[model]):
+        return "Mistral reasoning_effort is unsupported for this exact documented model ID"
     return None
 
 
@@ -99,6 +110,10 @@ def _action_contains_credential(text: str, secrets: tuple[str, ...]) -> bool:
 def _scrub_text(value: str, secrets: tuple[str, ...]) -> str:
     for secret in secrets:
         value = value.replace(secret, "[REDACTED]")
+    if _contains_credential_text(value, secrets):
+        # JSON-escaped diagnostic text can contain a key without its literal
+        # bytes. Do not return the encoded form or decode private error prose.
+        return "Mistral diagnostic contained configured credential material"
     return value
 
 
@@ -235,12 +250,17 @@ def _complete(
         # An explicit operator choice, subject to authoritative model rejection.
         # Never select prompt_mode or reasoning effort based on the game.
         payload["reasoning_effort"] = agent.runtime_config.reasoning_effort
-    response = _post_json(
-        _provider_endpoint(CHAT_COMPLETIONS_ENDPOINT, agent.runtime_config),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        payload=payload, runtime_config=agent.runtime_config,
-        control_key=f"{PROVIDER_ID}:{agent.model}",
-    )
+    try:
+        response = _post_json(
+            _provider_endpoint(CHAT_COMPLETIONS_ENDPOINT, agent.runtime_config),
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            payload=payload, runtime_config=agent.runtime_config,
+            control_key=f"{PROVIDER_ID}:{agent.model}",
+        )
+    except ProviderCallError as exc:
+        # Truncation can leave a secret prefix without the full known value.
+        exc.args = ("Mistral transport or HTTP request failed",)
+        raise
     data = _response_json_with_receipt(
         response, provider=PROVIDER_ID, model=agent.model,
         capabilities=agent.capabilities, runtime_config=agent.runtime_config,
