@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Reject credential-bearing Cohere completions before action parsing or repair,
+  preserving clean text and sanitized receipts without substituting an action.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

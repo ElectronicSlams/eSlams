@@ -155,11 +155,11 @@ def test_all_credentials_are_scrubbed_before_action_parsing_and_metadata(monkeyp
     })
     wire(monkeypatch, payload)
     selected = custom_agent()
-    result = selected.act(_request())
-    assert result.action == 1
-    serialized = json.dumps([result.to_dict(), selected.attempt_receipts])
+    with pytest.raises(ProviderCallError) as failure:
+        selected.act(_request())
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    serialized = json.dumps(selected.attempt_receipts) + str(failure.value)
     assert all(credential not in serialized for credential in credentials)
-    assert result.public_explanation == "[REDACTED] [REDACTED] [REDACTED]"
 
 
 def test_json_escaped_and_url_encoded_secondary_keys_are_scrubbed(monkeypatch):
@@ -170,9 +170,11 @@ def test_json_escaped_and_url_encoded_secondary_keys_are_scrubbed(monkeypatch):
         "action": 1, "public_explanation": secondary + " " + quote(secondary, safe=""),
     })
     wire(monkeypatch, payload)
-    result = agent().act(_request()).to_dict()
-    assert "credential" not in json.dumps(result)
-    assert result["public_explanation"] == "[REDACTED] [REDACTED]"
+    selected = agent()
+    with pytest.raises(ProviderCallError) as failure:
+        selected.act(_request())
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    assert secondary not in json.dumps(selected.attempt_receipts) + str(failure.value)
 
 
 @pytest.mark.parametrize("field", ["name", "cursor", "error", "malformed", "transport"])

@@ -71,8 +71,20 @@ def _redact_text(value: str, credentials: tuple[str, ...]) -> str:
     return value
 
 
+def _contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
+    if isinstance(value, str):
+        return _redact_text(value, credentials) != value
+    if isinstance(value, dict):
+        return any(_contains_credential(key, credentials) or _contains_credential(item, credentials)
+                   for key, item in value.items())
+    if isinstance(value, list):
+        return any(_contains_credential(item, credentials) for item in value)
+    return False
+
+
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams import agents as core
+    from eslams.model_actions import extract_json
 
     config = agent.runtime_config
     try:
@@ -158,11 +170,18 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             data, provider=PROVIDER_ID, model=agent.model, response=response, receipt=receipt,
         )
         text = _text(data, receipt, agent.model)
+        if (_contains_credential(text, credentials)
+                or _contains_credential(extract_json(text), credentials)):
+            raise core.ProviderCallError(
+                "Cohere returned credential-bearing action text; no action accepted",
+                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+                model=agent.model,
+            )
     except core.ProviderCallError as exc:
         exc.retry_permitted = False
         exc.receipt = {**receipt, "outcome": exc.error_kind}
         raise exc from None
-    return _redact_text(text, credentials), receipt
+    return text, receipt
 
 
 def _redact_identifiers(receipt: dict[str, Any] | None, credentials: tuple[str, ...]) -> None:

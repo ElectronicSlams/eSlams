@@ -1,5 +1,12 @@
 # Native Cohere adapter (proposed for 0.7.1)
 
+QA correction checked 2026-11-10: final text containing known credentials is
+rejected before action parsing, repair or retry. Raw text and decoded JSON
+keys/values are checked; clean answer bytes remain unchanged. Receipt sanitation
+does not authorize replacing a completed model action with redacted JSON.
+The thinking-ID allowlist below records models verified against official model
+pages; it is not a complete Cohere catalogue or a prediction about future IDs.
+
 Research checked 2026-11-04. This implements Cohere Platform's native API,
 not a model-author inference guess or an OpenRouter backend. Source version is
 Core 0.7.0; the package version and generated catalogue remain unchanged.
