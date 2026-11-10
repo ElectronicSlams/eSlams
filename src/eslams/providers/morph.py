@@ -1,6 +1,6 @@
 """Direct Morph text inference; no SDK, router, search, or tool execution.
 
-Contract checked 2026-11-04 against Morph's official llms.txt, endpoints,
+Contract checked 2026-11-10 against Morph's official llms.txt, endpoints,
 Open Source Models, Apply response schema, and caching documentation.
 """
 
@@ -32,13 +32,13 @@ SOURCES = [
 ]
 
 _COMMON_EFFORTS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+# The index explicitly accepts minimal/medium as aliases, including GLM.
+# For DeepSeek V4.1, minimal maps to low and medium maps to high server-side.
 MODEL_EFFORTS: dict[str, tuple[str, ...]] = dict.fromkeys((
     "morph-glm53-744b", "morph-glm52-744b", "morph-glm53flash",
     "morph-dsv41flash", "morph-dsv41flash-1017", "morph-dsv41flash-abliterated",
-    "morph-dsv4flash",
 ), _COMMON_EFFORTS)
-MODEL_EFFORTS["morph-kimik3"] = ("none", "low", "medium", "high", "xhigh", "max")
-MODEL_EFFORTS["morph-kimik3-fast"] = ("none", "low", "medium", "high")
+MODEL_EFFORTS["morph-kimik31"] = ("none", "low", "medium", "high", "xhigh", "max")
 
 _CREDENTIAL_NAME = re.compile(
     r"(?:^|_)(?:API_?KEY(?:_[A-Z0-9]+)?|ACCESS_KEY(?:_ID)?|SECRET_ACCESS_KEY|"
@@ -66,6 +66,11 @@ def validate_configuration(model: str, runtime: ProviderRuntimeConfig) -> str | 
     if runtime.reasoning == "enabled" and (effort is None or effort == "none"):
         raise ValueError("Morph enabled reasoning requires an explicit supported non-none effort")
     if effort is not None and effort not in MODEL_EFFORTS.get(model, ()):
+        if isinstance(effort, str) and effort.isdecimal():
+            raise ValueError(
+                "Morph integer effort is not exposed by Core's string reasoning_effort contract; "
+                "use a documented string effort, not a numeric string or token budget"
+            )
         raise ValueError("Morph reasoning effort is unsupported or unverified for this model")
     return effort
 
@@ -87,7 +92,7 @@ def capability_records() -> list[dict[str, Any]]:
         "supported_reasoning_modes": ["native-default", *efforts],
         "default_reasoning_track": "native-default",
         "accepted_control_fields": ["reasoning_effort"],
-        "last_verified_at": "2026-11-04", "sources": SOURCES,
+        "last_verified_at": "2026-11-10", "sources": SOURCES,
         "lifecycle": "account-dependent",
     } for model, efforts in MODEL_EFFORTS.items()]
 

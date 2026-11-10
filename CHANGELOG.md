@@ -2,6 +2,9 @@
 
 ## Unreleased — 0.7.1 adapter workstream
 
+- Refresh verified Morph model IDs for November 10 and document rolling aliases,
+  accepted effort aliases and Core's unsupported integer-effort boundary.
+
 - Add native Morph general text Chat Completions with explicit model selection,
   verified reasoning controls, full history and existing safe transport/receipts.
   Exclude specialized Morph products from text-game eligibility; retain unknown

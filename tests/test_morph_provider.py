@@ -35,7 +35,7 @@ from eslams.runner import RunConfig, Runner
 
 SECRET = "opaque-morph-credential-X9"
 SECONDARY = "opaque-secondary-credential-Y8"
-MODEL = "morph-kimik3"
+MODEL = "morph-kimik31"
 
 
 def wire():
@@ -740,3 +740,47 @@ def test_sensitive_model_identity_cannot_become_an_altered_safe_identity(monkeyp
     assert a.last_receipt["locked_model_id"] is None
     assert a.last_receipt["model_identity_source"] is None
     assert a.last_receipt["provider_response_id"] is None
+
+
+@pytest.mark.parametrize("model", ["morph-kimik3", "morph-kimik3-fast", "morph-dsv4flash"])
+def test_removed_catalogue_ids_remain_literal_unverified_choices(monkeypatch, model):
+    calls = respond(monkeypatch)
+    selected = agent(model=model)
+    assert not selected.capabilities.known
+    selected.act(request())
+    assert calls[0][1]["json"]["model"] == model
+    with pytest.raises(ValueError, match="unsupported or unverified"):
+        agent(model=model, runtime_config=ProviderRuntimeConfig(reasoning_effort="high"))
+
+
+@pytest.mark.parametrize("model", ["kimi-latest", "deepseek-flash-latest"])
+def test_rolling_aliases_are_sent_unchanged_and_identity_is_response_evidence(monkeypatch, model):
+    data = wire()
+    data["model"] = "morph-kimik31" if model == "kimi-latest" else "morph-dsv41flash-1017"
+    calls = respond(monkeypatch, data)
+    selected = agent(model=model)
+    selected.act(request())
+    assert calls[0][1]["json"]["model"] == model
+    assert selected.last_receipt["model"] == model
+    assert selected.last_receipt["locked_model_id"] == data["model"]
+    assert selected.last_receipt["model_identity_source"] == "provider_response"
+    with pytest.raises(ValueError, match="unverified"):
+        agent(model=model, runtime_config=ProviderRuntimeConfig(reasoning_effort="high"))
+
+
+@pytest.mark.parametrize("effort", ["0", "1", "25", "100", "101"])
+def test_numeric_effort_strings_are_rejected_precisely_without_inventing_a_budget(effort):
+    runtime = ProviderRuntimeConfig(reasoning_effort=effort)
+    with pytest.raises(ValueError, match="integer effort is not exposed"):
+        agent(model="morph-dsv41flash", runtime_config=runtime)
+    with pytest.raises(ValueError, match="integer effort is not exposed"):
+        provider_preflight("morph", "morph-dsv41flash", "tic-tac-toe", runtime_config=runtime)
+
+
+@pytest.mark.parametrize("model", ["morph-glm53-744b", "morph-glm52-744b", "morph-glm53flash",
+                                    "morph-dsv41flash", "morph-dsv41flash-1017"])
+@pytest.mark.parametrize("effort", ["minimal", "medium"])
+def test_official_index_effort_aliases_are_accepted_and_forwarded(monkeypatch, model, effort):
+    calls = respond(monkeypatch)
+    agent(model=model, runtime_config=ProviderRuntimeConfig(reasoning_effort=effort)).act(request())
+    assert calls[0][1]["json"]["reasoning_effort"] == effort

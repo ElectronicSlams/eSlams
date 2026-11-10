@@ -1,7 +1,7 @@
 # Morph direct text inference
 
 This adapter targets the 0.7.1 workstream; the package version remains 0.7.0.
-Contract research was checked against official Morph documentation on 2026-11-04.
+Contract research was checked against official Morph documentation on 2026-11-10.
 No credentials, paid inference, or live account access were used for verification.
 
 ## Suitability and sources
@@ -55,9 +55,22 @@ efforts are sent unchanged using `reasoning_effort`:
 
 | Models | Accepted explicit string efforts |
 | --- | --- |
-| `morph-kimik3` | `none`, `low`, `medium`, `high`, `xhigh`, `max` |
-| `morph-kimik3-fast` | `none`, `low`, `medium`, `high` |
-| `morph-glm53-744b`, `morph-glm52-744b`, `morph-glm53flash`, `morph-dsv4flash`, `morph-dsv41flash`, `morph-dsv41flash-1017`, `morph-dsv41flash-abliterated` | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max` |
+| `morph-kimik31` | `none`, `low`, `medium`, `high`, `xhigh`, `max` |
+| `morph-glm53-744b`, `morph-glm52-744b`, `morph-glm53flash` | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max` (per the official index) |
+| `morph-dsv41flash`, `morph-dsv41flash-1017`, `morph-dsv41flash-abliterated` | `none`, `low`, `high`, `xhigh`, `max`; accepted aliases `minimal` → `low`, `medium` → `high` |
+
+The November 10 model table now names Kimi K3.1 Pro as `morph-kimik31`.
+Older `morph-kimik3`, `morph-kimik3-fast` and `morph-dsv4flash` IDs are no longer
+advertised here as verified capabilities. They are not rewritten to a newer ID
+or declared retired without evidence; explicit requests can still use unknown
+native defaults. `morph-glm52-744b` remains in the official index, although absent
+from the shorter Fast Models table. Availability remains account-unverified.
+
+Morph documents rolling `kimi-latest` and `deepseek-flash-latest` aliases. Core
+submits them literally without resolving or pinning them, and permits native
+defaults only because their future reasoning controls are not pinned. A different
+response `model` is recorded as returned; an absent one stays unknown. Use a
+specific provider ID and an identity policy when a stable model is required.
 
 Morph maps DeepSeek V4.1 `minimal` to `low` and `medium` to `high`; Core preserves
 the caller's wire value. Morph also supports integer efforts on DeepSeek V4.1,
@@ -78,15 +91,15 @@ Configure only the desired credential in your own environment. Core does not
 load `.env` files automatically. Offline preflight does not make network requests:
 
 ```bash
-eslams providers preflight --provider morph --model morph-kimik3
+eslams providers preflight --provider morph --model morph-kimik31
 eslams providers models --provider morph
-eslams run --arena tic-tac-toe --agent morph:morph-kimik3 --out ./morph-run
+eslams run --arena tic-tac-toe --agent morph:morph-kimik31 --out ./morph-run
 ```
 
 The run command makes billable inference requests when credentials are configured.
 `eslams providers models --provider morph --live` explicitly requests authenticated
 [`GET /v1/models`](https://docs.morphllm.com/api-reference/endpoint/models).
-`eslams providers preflight --provider morph --model morph-kimik3 --live` also
+`eslams providers preflight --provider morph --model morph-kimik31 --live` also
 requests inference and may incur charges. Neither runs automatically. Model lists
 may contain specialized products; appearing in discovery does not establish text
 game support. No live command was run as part of this implementation.
