@@ -14,6 +14,7 @@ import re
 import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote, quote_plus
 
 import httpx
 
@@ -178,6 +179,10 @@ def _exclude_credential_identifiers(
 def _action_contains_credentials(text: str, credentials: tuple[str, ...]) -> bool:
     from eslams.model_actions import extract_json
 
+    credentials = tuple({variant for credential in credentials if credential
+                         for variant in (credential, quote(credential, safe=""),
+                                         quote_plus(credential, safe=""))})
+
     def contains(value: str) -> bool:
         if any(credential in value for credential in credentials if credential):
             return True
@@ -210,6 +215,38 @@ def _action_contains_credentials(text: str, credentials: tuple[str, ...]) -> boo
 def call(
     agent: ModelProviderAgent, secret_id: str, prompt: str, system: str,
 ) -> tuple[str, dict[str, Any]]:
+    """Keep unobserved transport diagnostics and private exception chains private."""
+    from eslams.agents import ProviderCallError
+
+    excluded = tuple(value for value in (
+        secret_id, *(os.getenv(name, "").strip() for name in (
+            API_KEY_ENV, "TENCENTCLOUD_SECRET_KEY", "TENCENTCLOUD_TOKEN",
+        )),
+    ) if value)
+    failure: ProviderCallError | TimeoutError
+    try:
+        return _call(agent, secret_id, prompt, system)
+    except ProviderCallError as exc:
+        message = str(exc)
+        if (exc.error_kind in {"provider_response_schema_mismatch", "provider_transport_error",
+                               "provider_timeout"}
+                or _action_contains_credentials(message, excluded)):
+            message = "native Hunyuan request or response failed; inspect the sanitized receipt"
+        failure = ProviderCallError(
+            message, status_code=exc.status_code, error_kind=exc.error_kind,
+            retry_after_seconds=exc.retry_after_seconds, provider=PROVIDER_ID, model=agent.model,
+            receipt=(_exclude_credential_identifiers(exc.receipt, excluded)
+                     if exc.receipt is not None else None),
+        )
+    except TimeoutError:
+        failure = TimeoutError("native Hunyuan request timed out")
+    # Raising after the handler also discards the original private context.
+    raise failure from None
+
+
+def _call(
+    agent: ModelProviderAgent, secret_id: str, prompt: str, system: str,
+) -> tuple[str, dict[str, Any]]:
     # Local imports avoid a module cycle while retaining the existing physical
     # attempt, safe transport, cancellation, receipt and action parsing machinery.
     from eslams.agents import (
@@ -239,7 +276,9 @@ def call(
         raise ProviderCallError(
             str(exc), error_kind="provider_auth_failed", provider=PROVIDER_ID, model=agent.model,
         ) from None
-    excluded = tuple(value for value in (secret_id, secret, token) if value is not None)
+    excluded = tuple(value for value in (
+        secret_id, secret, token, os.getenv(API_KEY_ENV, "").strip(),
+    ) if value)
     payload: dict[str, Any] = {
         "Model": agent.model, "Stream": False, "EnableEnhancement": False,
         "Messages": [{"Role": "system", "Content": system}, {"Role": "user", "Content": prompt}],

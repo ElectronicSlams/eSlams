@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Exclude opaque and encoded Tencent transport credential diagnostics and private exception contexts; retain the unresolved native host/lifecycle review limitations.
+
 - Add the signed native Tencent Hunyuan ChatCompletions adapter under
   `tencent-hunyuan` / `hunyuan`, with offline raw-wire tests and lifecycle docs.
   Preserve unknown identity/accounting and reject unsupported controls. Tencent

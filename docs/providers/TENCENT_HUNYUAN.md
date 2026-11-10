@@ -125,3 +125,20 @@ live capture. The disclaimer is preserved in the fixture. Fault injections in
 errors, malformed data, missing usage, privacy and actual transmitted-byte
 signature verification through HTTPX MockTransport. No paid inference or real
 credentials were used.
+
+## QA correction verification (2026-11-10)
+
+The current official API page still disagrees between its description hostname
+and request examples, and still lists the December 21 retirement. Keep the
+current description-host pin and matching signed Host value; neither a fixture
+nor an unauthenticated error proves account acceptance. An account-owned probe
+was not authorized or performed, so hostname acceptance and the 0.7.1 lifecycle
+product decision remain open before merge. TokenHub is not a replacement route
+inside this adapter.
+
+The prior raw/decoded action credential repros are rejected at the reviewed head.
+New negatives reproduce and fix credential-bearing unobserved transport
+errors: opaque and JSON-escaped primary/secondary/STS diagnostics are excluded,
+and the original private exception context is discarded. No replay is added.
+URL-encoded STS token echoes are also excluded before action parsing. The
+correction pass reproduced that remaining encoded-output path before fixing it.
