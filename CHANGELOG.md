@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased QA correction
+
+- Send an explicit typed message item to the Perplexity Agent API. Retain and
+  test rejection of mixed search/tool output and unverified model-specific efforts.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

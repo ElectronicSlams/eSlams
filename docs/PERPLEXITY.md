@@ -26,12 +26,20 @@ Agent requests use one `model`, shared Core system instructions, the complete
 public game prompt, `tools: []`, `tool_choice: "none"`, `stream: false`, and
 `store: false`. They omit fallback chains, effort bundles, presets, profiles,
 skills, previous response IDs, and step limits.
+The prompt is an explicit input item with `type: "message"`, `role: "user"`
+and the full prompt in `content`; it is not an untyped convenience object.
 [Effort bundles](https://docs.perplexity.ai/docs/agent-api/effort) can change model,
 prompt, tools, budgets and fallback; they are unsuitable here.
 The [tools contract](https://docs.perplexity.ai/docs/agent-api/building-agents/give-it-tools)
 enables tools through the tools array. This adapter has no search/tool opt-in.
 Unexpected tool output, reported tool usage, or echoed effort/preset rejects
 the response. This does not undo any remote work already performed.
+The models page's mixed `search_results`/message example represents a search run.
+Its search items and citation data are evidence of external work, so even an
+otherwise completed, legal-looking answer with such items is rejected here.
+Unknown non-message output is also rejected until a documented, tool-free shape
+can be verified. The adapter does not claim that live `tools: []` responses are
+always message-only; unexpected work fails closed instead of being ignored.
 
 This guarantees deterministic request construction and fail-closed parsing,
 not bit-identical hosted inference or pinned underlying weights. Live account
@@ -65,6 +73,11 @@ Perplexity maps `minimal` to low effort and `xhigh`/`max` to maximum effort.
 Other exact models can use native defaults; explicit effort for unverified
 models is rejected. Generic enabled/disabled reasoning, token thinking budgets,
 Gemini budgets and OpenRouter routing settings are rejected instead of ignored.
+This is an intentional verified-model allowlist, not a claim that the API's
+general effort enum applies only to Kimi. The models page explicitly warns that
+not every third-party model supports every feature. A request-level enum alone
+does not establish model-specific reasoning support, so it does not widen this
+allowlist without model-specific evidence.
 The [official generated SDK](https://github.com/perplexityai/perplexity-py/blob/1a79c5d3a7b1ef8c2dce17c0f0aa7e23f9bbdced/src/perplexity/generated/api.py)
 has a narrower effort enum than the Kimi model page; this REST adapter follows
 the explicit model page for Kimi and does not assume SDK feature parity.

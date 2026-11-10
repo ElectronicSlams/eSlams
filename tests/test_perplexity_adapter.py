@@ -64,6 +64,7 @@ def test_exact_wire_full_history_dispatch_and_honest_receipt(monkeypatch):
     assert result.action == 1
     wire = seen[0]
     assert wire["model"] == MODEL and wire["tools"] == [] and wire["tool_choice"] == "none"
+    assert wire["input"][0]["type"] == "message"
     assert wire["stream"] is False and wire["store"] is False
     assert not {"models", "effort", "preset", "profile", "skills", "previous_response_id",
                 "max_output_tokens", "max_steps", "reasoning", "temperature"} & wire.keys()

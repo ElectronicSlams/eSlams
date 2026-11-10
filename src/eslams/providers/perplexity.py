@@ -149,7 +149,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     payload: dict[str, Any] = {
         "model": agent.model,
         "instructions": _SYSTEM_INSTRUCTIONS,
-        "input": [{"role": "user", "content": prompt}],
+        "input": [{"type": "message", "role": "user", "content": prompt}],
         "tools": [],
         "tool_choice": "none",
         "stream": False,
