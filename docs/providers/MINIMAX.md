@@ -20,8 +20,8 @@ shape and contain no provider credentials or captured private responses.
 | Semantic failure | Check MiniMax's `base_resp.status_code`, input/output sensitivity flags, refusal and finish fields before accepting any action, including a legal-looking partial action. |
 
 The [current model list](https://platform.minimax.io/docs/faq/models) lists
-`MiniMax-M3.1-Flash` and `MiniMax-M3`. The CLI default is the exact ID
-`MiniMax-M3.1-Flash`. M3.1 Flash gets a small hand-maintained capability override;
+`MiniMax-M3.1-Flash` and `MiniMax-M3`. An explicit nonblank model ID is required;
+`MiniMax-M3.1-Flash` is an example, not a CLI default. M3.1 Flash gets a small hand-maintained capability override;
 account visibility stays unknown. Explicit unknown IDs are sent unchanged.
 Broker-prefixed IDs in the broader catalogue are not translated to direct IDs.
 
@@ -74,12 +74,15 @@ by a successful fixture or a receipt's gateway mode.
 The [official SDK contract](https://platform.minimax.io/docs/api-reference/text-openai-api)
 separates reasoning with `reasoning_split: true`. This controls formatting, not
 reasoning activation. M3.1 Flash always reasons; its supported effort levels are
-`low`, `medium`, `high`, `xhigh`, and `max`. Core forwards only explicit
-`reasoning_effort`, leaving the provider's default untouched. The shared
-`reasoning=disabled` setting suppresses control injection; it does not disable
-intrinsic reasoning. No game or registry recommendation selects effort.
+`low`, `medium`, `high`, `xhigh`, and `max`. Unsupported effort values fail
+configuration preflight and dispatch locally. Effort is rejected for M3 and
+unknown IDs because real depth tuning is not documented for them. `reasoning=auto`
+leaves native defaults untouched. Explicit enabled thinking sends `thinking.type=adaptive`
+for the documented models. Disabled thinking is rejected for M3.1 Flash and
+unknown models; exact `MiniMax-M3` sends `thinking.type=disabled` as documented. No game or registry recommendation selects effort.
 M3 sampling is fixed upstream, so the adapter omits temperature and top-p.
-Token budgets from other providers are not translated into MiniMax controls.
+Explicit token budgets from other providers, including zero and the Gemini
+-1 sentinel, fail locally before discovery or transport.
 
 Each `/act` is a fresh conversation containing the entire actor-authorized public
 history supplied by the caller, unless the operator explicitly selected Core's
@@ -188,3 +191,22 @@ checkout with `PYTHONPATH` pointing at that checkout's `src`:
 These failures remain unresolved and are not marked passed or excluded from
 the full-suite count. No paid inference, provider secret use, hosted workflow
 dispatch, merge, deployment, version bump or release was performed for validation.
+
+## QA correction verification (2026-11-10)
+
+The [current official chat schema](https://platform.minimax.io/docs/api-reference/text-chat-openai)
+confirms the forced-thinking and effort restrictions above. The mainland
+[official schema](https://platform.minimax.cn/docs/api-reference/text-chat-openai)
+currently uses `api.minimax.cn`; the review's `api.minimaxi.com` spelling is not
+the current documented endpoint. No automatic regional choice is added.
+
+Opaque primary and secondary credentials, raw and JSON-decoded keys/values,
+are excluded before Core action parsing or repair. Provider-controlled receipt
+identifiers are suppressed on success, errors, malformed and partial responses;
+transport prose is fixed and private exception contexts are discarded. Explicit
+repair still keeps full private assistant history, and receipts keep observed
+usage. Removing a contaminated identifier does not grant safe replay.
+
+Existing provider tests were updated to assert the corrected explicit control
+semantics, not skipped. Historical validation above describes the original
+draft; correction-pass results and exact head are recorded in the PR description.

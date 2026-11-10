@@ -405,6 +405,9 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider == "minimax":
+            from eslams.providers.minimax import require_model
+            require_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -433,6 +436,12 @@ class ModelProviderAgent:
     def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
+        if self.provider == "minimax":
+            from eslams.providers.minimax import configuration_error
+            error = configuration_error(self.model, self.runtime_config)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider, model=self.model)
         request = ActRequest.from_mapping(request.to_dict())
         policy = request.metadata.get("model_execution_policy")
         output = policy.get("output", {}) if isinstance(policy, dict) else {}

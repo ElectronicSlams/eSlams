@@ -84,25 +84,36 @@ def test_native_wire_defaults_full_history_and_usage(monkeypatch):
 
 
 @pytest.mark.parametrize("mode", ["auto", "enabled", "disabled"])
-def test_reasoning_modes_keep_native_defaults_without_game_specific_policy(monkeypatch, mode):
+def test_reasoning_modes_honor_forced_thinking_without_game_specific_policy(monkeypatch, mode):
     calls = mock_wire(monkeypatch, wire())
     adapter = agent(reasoning=mode)
     adapter.temperature = 0.2
+    if mode == "disabled":
+        with pytest.raises(ProviderCallError, match="cannot be disabled"):
+            adapter.act(_request(arena_id="chess"))
+        assert not calls
+        return
     adapter.act(_request(arena_id="chess"))
-    controls = {"thinking", "reasoning_effort", "temperature", "top_p"}
+    controls = {"reasoning_effort", "temperature", "top_p"}
     assert not (controls & calls[0][1]["json"].keys())
+    if mode == "enabled":
+        assert calls[0][1]["json"]["thinking"] == {"type": "adaptive"}
+    else:
+        assert "thinking" not in calls[0][1]["json"]
 
 
-def test_explicit_output_and_effort_forwarded_without_rewriting_unknown_model(monkeypatch):
+@pytest.mark.parametrize("model", [DEFAULT_MODEL, "future-model:revision"])
+def test_explicit_output_and_supported_effort_preserve_exact_model(monkeypatch, model):
     body = wire()
-    body["model"] = "future-model:revision"
+    body["model"] = model
     calls = mock_wire(monkeypatch, body)
-    adapter = ModelProviderAgent("minimax", body["model"], API_KEY_ENV,
-        max_output_tokens=12345, runtime_config=ProviderRuntimeConfig(reasoning_effort="high"))
+    effort = "high" if model == DEFAULT_MODEL else None
+    adapter = ModelProviderAgent("minimax", model, API_KEY_ENV,
+        max_output_tokens=12345, runtime_config=ProviderRuntimeConfig(reasoning_effort=effort))
     adapter.act(_request())
     payload = calls[0][1]["json"]
     assert payload["max_completion_tokens"] == 12345
-    assert payload["reasoning_effort"] == "high" and payload["model"] == body["model"]
+    assert payload.get("reasoning_effort") == effort and payload["model"] == model
     assert "max_tokens" not in payload
 
 

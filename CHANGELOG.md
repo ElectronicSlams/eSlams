@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reject unsupported MiniMax thinking controls and blank model IDs locally; exclude raw/decoded primary and secondary credential echoes before action parsing and from response/error identifiers.
+
 - Add a native MiniMax direct Chat Completions adapter with CLI/preflight wiring,
   separated reasoning retained privately for explicit action repairs, and
   provider-specific error, refusal, truncation and accounting checks. Preserve

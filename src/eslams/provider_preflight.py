@@ -56,8 +56,11 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    from eslams.providers.minimax import configuration_error
+    minimax_error = configuration_error(model, runtime_config) if provider == "minimax" else None
+    registry_model = "" if minimax_error and not isinstance(model, str) else model
     provider_registry = load_provider_registry()
-    record = provider_registry.resolve(provider, model)
+    record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
@@ -87,7 +90,7 @@ def provider_preflight(
         "response_parsing": False,
         "usage_extraction": False,
     }
-    warnings = provider_registry.warnings_for(provider, model)
+    warnings = provider_registry.warnings_for(provider, registry_model)
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
@@ -98,6 +101,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif minimax_error:
+        error = {"error_class": "provider_request_rejected", "message": minimax_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -213,7 +218,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True and credential_error is None,
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and minimax_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

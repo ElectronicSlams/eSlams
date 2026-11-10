@@ -1447,13 +1447,16 @@ def _provider_agent(
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
-        "minimax": ("MiniMax-M3.1-Flash", "MINIMAX_API_KEY"),
+        "minimax": ("", "MINIMAX_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
     provider = provider.lower()
+    if provider == "minimax":
+        from eslams.providers.minimax import require_model
+        require_model(model)
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

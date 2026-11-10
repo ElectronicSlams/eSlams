@@ -12,6 +12,7 @@ import httpx
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
+    from eslams.contracts.provider import ProviderRuntimeConfig
 
 PROVIDER_ID = "minimax"
 API_KEY_ENV = "MINIMAX_API_KEY"
@@ -47,6 +48,32 @@ def _code(data: dict[str, Any]) -> int | None:
         code = base.get("status_code")
         if isinstance(code, int) and not isinstance(code, bool):
             return code
+    return None
+
+
+def require_model(model: object) -> None:
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("MiniMax requires an explicit nonblank model ID")
+
+
+def configuration_error(model: object, runtime: ProviderRuntimeConfig | None) -> str | None:
+    try:
+        require_model(model)
+    except ValueError as exc:
+        return str(exc)
+    if runtime is None:
+        return None
+    if runtime.reasoning_budget_tokens is not None or runtime.gemini_thinking_budget is not None:
+        return "MiniMax does not support token-based reasoning budgets"
+    if runtime.reasoning_effort is not None and (
+        model != DEFAULT_MODEL
+        or runtime.reasoning_effort not in {"low", "medium", "high", "xhigh", "max"}
+    ):
+        return "MiniMax reasoning_effort requires MiniMax-M3.1-Flash and a documented effort"
+    if runtime.reasoning == "disabled" and model != "MiniMax-M3":
+        return "MiniMax reasoning cannot be disabled for this model"
+    if runtime.reasoning == "enabled" and model not in {DEFAULT_MODEL, "MiniMax-M3"}:
+        return "MiniMax explicit thinking is not verified for this exact model ID"
     return None
 
 
@@ -103,6 +130,48 @@ def observe_http_error(
 
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    from eslams.agents import ProviderCallError
+    from eslams.providers.minimax_privacy import (
+        _action_contains_credential,
+        _credential_variants,
+        _scrub_receipt,
+        _scrub_text,
+    )
+
+    secrets = _credential_variants(api_key)
+    receipt: dict[str, Any] | None = None
+    failure: ProviderCallError | TimeoutError
+    try:
+        error = configuration_error(agent.model, agent.runtime_config)
+        if error:
+            raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                    provider=PROVIDER_ID, model=agent.model)
+        text, receipt = _complete(agent, api_key, prompt)
+        try:
+            contaminated = _action_contains_credential(text, secrets)
+        except (ValueError, RecursionError, OverflowError):
+            contaminated = True
+        if contaminated:
+            raise ProviderCallError("MiniMax action failed credential exclusion",
+                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
+                model=agent.model,
+                receipt={**receipt, "outcome": "provider_response_schema_mismatch"})
+        return text, _scrub_receipt(receipt, secrets)
+    except ProviderCallError as exc:
+        failure = ProviderCallError(_scrub_text(str(exc), secrets),
+            error_kind=exc.error_kind, status_code=exc.status_code,
+            provider=PROVIDER_ID, model=agent.model,
+            retry_after_seconds=exc.retry_after_seconds, retry_permitted=exc.retry_permitted,
+            receipt=_scrub_receipt(exc.receipt, secrets))
+    except TimeoutError:
+        failure = (ProviderCallError("MiniMax response inspection timed out",
+            error_kind="provider_timeout", provider=PROVIDER_ID, model=agent.model,
+            receipt=_scrub_receipt({**receipt, "outcome": "provider_timeout"}, secrets))
+            if receipt is not None else TimeoutError("MiniMax request timed out"))
+    raise failure from None
+
+
+def _complete(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     # Lazy imports keep provider-specific behavior out of the shared agent and
     # avoid a circular import while reusing its safe transport/receipt contract.
     from eslams.agents import (
@@ -133,13 +202,22 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     }
     if runtime and runtime.reasoning_effort is not None:
         payload["reasoning_effort"] = runtime.reasoning_effort
+    if runtime and runtime.reasoning != "auto":
+        payload["thinking"] = {
+            "type": "disabled" if runtime.reasoning == "disabled" else "adaptive",
+        }
     # M3 temperature/top_p are fixed by the service. Never send an ineffective
     # sampling control, an invented thinking budget, tools or a fallback route.
-    response = _post_json(
-        _provider_endpoint(CHAT_COMPLETIONS_ENDPOINT, runtime),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        payload=payload, runtime_config=runtime, control_key=f"minimax:{agent.model}",
-    )
+    try:
+        response = _post_json(
+            _provider_endpoint(CHAT_COMPLETIONS_ENDPOINT, runtime),
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            payload=payload, runtime_config=runtime, control_key=f"minimax:{agent.model}",
+        )
+    except ProviderCallError as exc:
+        # Even truncated or encoded transport prose can disclose part of a key.
+        exc.args = ("MiniMax transport or HTTP request failed",)
+        raise
     data = _response_json_with_receipt(
         response, provider=PROVIDER_ID, model=agent.model,
         capabilities=agent.capabilities, runtime_config=runtime,
@@ -212,6 +290,8 @@ def _completed_message(
     if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
         fail("provider_response_schema_mismatch", "MiniMax response requires exactly one choice")
     choice = choices[0]
+    if type(choice.get("index")) is not int or choice["index"] != 0:
+        fail("provider_response_schema_mismatch", "MiniMax returned an invalid choice index")
     if choice.get("error") is not None:
         receipt["finish_status"] = "failed"
         fail("provider_unavailable", "MiniMax reported an error in the response choice")
@@ -231,7 +311,7 @@ def _completed_message(
         fail("provider_response_schema_mismatch", "MiniMax did not return completed text")
     if (not isinstance(message, dict) or message.get("role") != "assistant"
             or not isinstance(message.get("content"), str) or not message["content"].strip()
-            or message.get("tool_calls")):
+            or message.get("tool_calls") or message.get("function_call")):
         fail("provider_response_schema_mismatch", "MiniMax has no completed assistant text")
     if "<think>" in message["content"] or "</think>" in message["content"]:
         fail("provider_response_schema_mismatch", "MiniMax did not separate reasoning from text")
