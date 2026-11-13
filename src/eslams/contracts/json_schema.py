@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from eslams._build_provenance import core_source_commit
-from eslams.contracts.integrity import ATTEMPT_KINDS, FAILURE_CLASSES
+from eslams.contracts.integrity import ACTION_PROVENANCE_VALUES, ATTEMPT_KINDS, FAILURE_CLASSES
 from eslams.contracts.pricing import no_secret_example as price_card_no_secret_example
 from eslams.contracts.provider import GATEWAY_MODES, PROVIDER_OUTCOMES
 from eslams.contracts.topology import cooperative_topology
@@ -598,7 +598,7 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "episodeId": {"type": "string"},
                 "turnId": {"type": "integer"},
                 "seatId": {"type": "string"},
-                "provenance": {"enum": ["provider_action", "local_action", "fallback_action"]},
+                "provenance": {"enum": list(ACTION_PROVENANCE_VALUES)},
                 "logicalActionId": {"type": "string"},
                 "successfulAttemptEventId": {"type": ["string", "null"]},
                 "metadata": {"type": "object"},

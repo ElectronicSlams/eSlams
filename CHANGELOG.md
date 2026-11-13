@@ -7,6 +7,16 @@
   fixture tests. Unsupported reasoning/routing controls fail locally; unknown
   accounting and model identity remain unknown. Package version is unchanged.
 
+## Unreleased — chess continuation
+
+- Add explicit, chess-only continuation from a verified interrupted archive.
+  Reconstruct the accepted prefix without provider calls; keep new receipts
+  separate from byte-preserved historical receipts and record private lineage.
+  Continued runs are labeled and cannot enter official evaluation.
+- Extend action provenance with `reconstructed_action`; consumers must not
+  count reconstructed actions as newly paid or proven provider actions.
+  See [chess continuation](docs/CHESS_CONTINUATION.md) for integration boundaries.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

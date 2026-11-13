@@ -20,7 +20,8 @@ export type FailureClass =
 export type ActionProvenance =
   | "provider_action"
   | "local_action"
-  | "fallback_action";
+  | "fallback_action"
+  | "reconstructed_action";
 
 export type ProviderAttemptKind =
   | "primary"
