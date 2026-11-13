@@ -40,6 +40,8 @@ class ActionProvenance(str, Enum):
     PROVIDER_ACTION = "provider_action"
     LOCAL_ACTION = "local_action"
     FALLBACK_ACTION = "fallback_action"
+    # Deterministic historical projection, never a new provider action.
+    RECONSTRUCTED_ACTION = "reconstructed_action"
 
 
 FAILURE_CLASSES: tuple[str, ...] = tuple(item.value for item in FailureClass)

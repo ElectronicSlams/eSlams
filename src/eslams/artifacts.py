@@ -238,6 +238,7 @@ class ArtifactBuildInput:
     agent_io: list[dict[str, Any]]
     errors: list[dict[str, Any]]
     provider_receipts: list[dict[str, Any]] = field(default_factory=list)
+    continuation_files: dict[str, bytes] = field(default_factory=dict)
     run_metadata: dict[str, Any] = field(default_factory=dict)
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
@@ -442,6 +443,15 @@ def _write_artifact_directory(build: ArtifactBuildInput, artifact_dir: Path) -> 
         artifact_dir / "receipts/provider_receipts.jsonl",
         (_canonical_hashed_payload(row) for row in build.provider_receipts),
     )
+    for relative, content in build.continuation_files.items():
+        if relative not in {
+            "continuation/lineage.json", "continuation/source_prefix.json",
+            "continuation/source_provider_receipts.jsonl",
+        }:
+            raise ValueError("unsupported continuation evidence path")
+        destination = artifact_dir / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
     _write_json(artifact_dir / "timings/timings.json", _timings_sidecar(build))
     _write_json(
         artifact_dir / "environment/lockfile.json",
@@ -879,6 +889,10 @@ class ArtifactValidator:
                 manifest=manifest,
             )
         errors.extend(_validate_file_table(artifact_dir, manifest, file_entries))
+        if profile != "public_replay_package":
+            from eslams.continuation import validate_continuation_artifact
+
+            errors.extend(validate_continuation_artifact(artifact_dir, manifest))
         signature_status, signature_errors = _validate_runner_signature(
             artifact_dir,
             manifest,
@@ -1604,6 +1618,13 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
             "agent_error_count_by_player": score.agent_error_count_by_player,
             "illegal_action_count_by_player": score.illegal_action_count_by_player,
         }
+    if score.metrics.get("continuation"):
+        public_score.update({
+            "execution_label": "continued",
+            "reconstructed_turns": score.metrics.get("reconstructed_turns"),
+            "incremental_turns": score.metrics.get("incremental_turns"),
+            "accounting_scope": "incremental_only",
+        })
     return PublicResultSummary(
         run_id=score.run_id,
         arena_id=arena_id,
@@ -1675,7 +1696,8 @@ def _case_publication_eligible(score: ScoreSummary) -> bool:
     context = score.metrics.get("suite_context")
     case_id = context.get("case_id") if isinstance(context, dict) else None
     return bool(
-        isinstance(case_id, str) and case_id.strip()
+        not score.metrics.get("continuation")
+        and isinstance(case_id, str) and case_id.strip()
         and score.match_valid_for_scoring
         and score.integrity_status == "valid"
         and score.usage_complete

@@ -8,6 +8,7 @@
 | Private/public custody and verification claims | [PUBLIC_CUSTODY.md](PUBLIC_CUSTODY.md), [SECURITY.md](../SECURITY.md) |
 | Platform Labs handoff | [LABS_PAGE_CONTRACT.md](LABS_PAGE_CONTRACT.md) |
 | Act protocol and failure/deadline behavior | [PROTOCOL.md](PROTOCOL.md) |
+| Chess continuation, lineage and accounting | [CHESS_CONTINUATION.md](CHESS_CONTINUATION.md) |
 | Artifact profiles, signatures and migration boundaries | [ARTIFACTS.md](ARTIFACTS.md) |
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
 | Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |

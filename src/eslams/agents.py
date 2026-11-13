@@ -1792,6 +1792,12 @@ def _http_provider_receipt(
         "provider",
         "model",
         "locked_model_id",
+        # Preserve optional bridge identity attestations so a contradictory raw
+        # field cannot disappear before continuation's exact pin checks.
+        "requested_model",
+        "model_version_id",
+        "route_key",
+        "route_sha256",
         "model_identity_source",
         "endpoint_kind",
         "parser_version",

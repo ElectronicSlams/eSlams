@@ -1,11 +1,21 @@
 # Changelog
 
-## Unreleased — 0.7.1 adapter work
+## v0.8.0 - 2026-11-13
 
 - Add the direct Krutrim Cloud text adapter with explicit model IDs, native CLI
   dispatch/preflight, full history, conservative raw-wire receipts and keyless
   fixture tests. Unsupported reasoning/routing controls fail locally; unknown
-  accounting and model identity remain unknown. Package version is unchanged.
+  accounting and model identity remain unknown.
+
+### Chess continuation
+
+- Add explicit, chess-only continuation from a verified interrupted archive.
+  Reconstruct the accepted prefix without provider calls; keep new receipts
+  separate from byte-preserved historical receipts and record private lineage.
+  Continued runs are labeled and cannot enter official evaluation.
+- Extend action provenance with `reconstructed_action`; consumers must not
+  count reconstructed actions as newly paid or proven provider actions.
+  See [chess continuation](docs/CHESS_CONTINUATION.md) for integration boundaries.
 
 ## v0.7.0 - 2026-11-04
 
