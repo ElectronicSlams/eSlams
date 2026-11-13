@@ -117,6 +117,30 @@ def test_packaged_runtime_has_no_local_development_fallback(tmp_path, monkeypatc
     assert identity["coreRef"] == "local-development"
 
 
+def test_packaged_runner_refuses_local_target_before_agent_calls(tmp_path, monkeypatch):
+    from test_chess_continuation import Scripted, continuation, run_child, source_run
+
+    from eslams import continuation as runtime
+
+    # Importing synthetic helpers must not activate the other module's fixture.
+    assert runtime.chess_continuation_engine_identity is chess_continuation_engine_identity
+    source, _ = source_run(tmp_path / "source")
+    source_bytes = source.artifact_path.read_bytes()
+    target = continuation(source)
+    assert target.target_engine_identity["coreRef"] == "local-development"
+    agent = Scripted()
+    child_dir = tmp_path / "child"
+    monkeypatch.setattr(build, "BUILD_PATH", tmp_path / "absent.json")
+    monkeypatch.setattr(build._build_provenance, "PACKAGED_CORE_COMMIT", "a" * 40)
+
+    with pytest.raises(ValueError, match="requires trusted build evidence"):
+        run_child(child_dir, target, agent=agent)
+
+    assert agent.calls == []
+    assert not child_dir.exists()
+    assert source.artifact_path.read_bytes() == source_bytes
+
+
 def test_source_manifest_rejects_links(tmp_path):
     (tmp_path / "source.py").write_text("# synthetic\n")
     (tmp_path / "alias.py").symlink_to(tmp_path / "source.py")

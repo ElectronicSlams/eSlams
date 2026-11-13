@@ -20,6 +20,20 @@ from eslams.runner import RunConfig, Runner
 MOVES = ["f2f3", "e7e5", "g2g4", "d8h4"]
 
 
+@pytest.fixture(autouse=True, scope="function")
+def synthetic_continuation_runtime(monkeypatch):
+    """These synthetic game tests use local targets, even inside an extracted sdist.
+
+    Only this module substitutes runtime identity resolution. Installed-build trust
+    and packaged-runtime refusal are exercised without this fixture in
+    test_continuation_build.py; production resolution remains unchanged.
+    """
+    monkeypatch.setattr(
+        "eslams.continuation.chess_continuation_engine_identity",
+        local_chess_continuation_engine_identity,
+    )
+
+
 class Scripted(MockProviderAgent):
     id = "fixture"
     version = "1"
