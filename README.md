@@ -25,7 +25,7 @@ adapter. Continuation reconstructs a complete accepted move prefix without new
 provider calls, preserves the original failed execution and historical receipts,
 and starts new inference at the next ply. Continued artifacts carry explicit
 lineage and reconstructed-action provenance; they do not become official evals.
-See [chess continuation](docs/CHESS_CONTINUATION.md) for integration requirements.
+See [chess continuation](https://github.com/ElectronicSlams/eSlams/blob/main/docs/CHESS_CONTINUATION.md) for integration requirements.
 
 Model execution retains the 0.7.0 policy: no implicit Core thinking/output budget,
 no game-specific reasoning choice, full supplied history and conservative
