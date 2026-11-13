@@ -143,6 +143,15 @@ The installed resolver below verifies build evidence, while image provisioning
 and release custody remain Platform responsibilities. Local success is not a
 production deployment claim.
 
+For the reviewed legacy 0.7.0 source, `execution.coreSourceSha256` identifies
+the immutable published source-distribution archive. In an installed target,
+`targetEngine.coreSourceSha256` instead hashes the complete installed Python
+file manifest. These digests have distinct meanings and must not be compared or
+substituted. A repeated continuation inherits its immediate source's verified
+target identity, including that runtime-manifest meaning. Platform must preserve
+the provenance kind and independently bind package, runtime-build and image
+identities in its release evidence.
+
 ## Ledger and lineage boundaries
 
 The child artifact contains:

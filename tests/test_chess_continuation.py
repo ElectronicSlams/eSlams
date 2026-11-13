@@ -13,7 +13,7 @@ from eslams.continuation import (
     local_chess_continuation_engine_identity,
     prepare_chess_continuation,
 )
-from eslams.contracts.versions import RUNNER_VERSION
+from eslams.contracts.versions import CORE_PACKAGE_VERSION, RUNNER_VERSION
 from eslams.protocol import ActResponse
 from eslams.runner import RunConfig, Runner
 
@@ -74,7 +74,7 @@ def pins(result):
         "artifactSha256": digest_bytes(result.artifact_path.read_bytes()),
     }
     execution = {
-        "coreVersion": "0.7.0",
+        "coreVersion": CORE_PACKAGE_VERSION,
         "coreRef": "120847e60ffd3acc06fc17ad71d3b1413665163e",
         "coreSourceSha256": "1" * 64,
         "arenaSlug": "chess",
