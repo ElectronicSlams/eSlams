@@ -12,6 +12,7 @@ The integration surface in `eslams.continuation` is:
 ```python
 from eslams.continuation import (
     ChessContinuation,
+    chess_continuation_child_execution,
     local_chess_continuation_engine_identity,
     prepare_chess_continuation,
 )
@@ -23,6 +24,9 @@ descriptor = prepare_chess_continuation(
 target_engine_identity = local_chess_continuation_engine_identity(
     wrapper_version=execution_spec["wrapperVersion"],
 )
+child_execution = chess_continuation_child_execution(
+    descriptor, turn_limit_policy="native-arena-horizon",
+)
 child_platform_run_id = "platform_child_run"
 child_platform_match_id = "platform_child_match"
 continuation = ChessContinuation(
@@ -31,14 +35,16 @@ continuation = ChessContinuation(
     target_engine_identity=target_engine_identity,
     child_platform_run_id=child_platform_run_id,
     match_id=child_platform_match_id,
+    child_execution=child_execution,
 )
 # Supply new agents configured from trusted model/route pins, and the same
-# arena, seed, turn limit and execution parameters as the source descriptor.
+# arena, seed and model parameters as the source descriptor. The separately
+# approved child policy resolves the execution cutoff; source pins stay frozen.
 result = Runner().run(RunConfig(
     arena_id="chess",
     agents=agents,
     seed=execution_spec["seed"],
-    max_turns=execution_spec["maxTurns"],
+    max_turns=child_execution["maxTurns"],
     wrapper_version=execution_spec["wrapperVersion"],
     scoring_policy_version=execution_spec["scoringPolicyVersion"],
     time_budget_ms=source_requested_time_budget_ms,
@@ -79,6 +85,50 @@ Set `time_budget_ms` to the verified source metadata's
 `effective_time_budget_ms` (including `None`). A source with different requested
 and effective budgets is not accepted. Continuation forbids `overwrite=True`
 and requires a new output destination; it never replaces a source archive.
+
+## Explicit child execution budget (Core 0.8.1)
+
+The source descriptor is still `chess-continuation/v1`, including its actual
+historical `execution.maxTurns`. It is never relabeled or changed to increase a
+child's allowance. New executions use `chess-continuation-lineage/v2` and record
+`childExecution` plus its canonical `childExecutionSha256` independently:
+
+```json
+{
+  "schemaVersion": "chess-continuation-child-execution/v1",
+  "turnLimitPolicy": "native-arena-horizon",
+  "maxTurns": 240
+}
+```
+
+The public `chess_continuation_child_execution` helper accepts only two policies:
+
+- `preserve-source` (default): retain the source execution cutoff exactly.
+- `native-arena-horizon`: derive the existing standard chess arena's horizon,
+  currently 240 plies. The source arena version and public rules digest must
+  match the runtime and the source cutoff must not exceed that horizon. No
+  caller-selected turn count, new game rule, output cap or time budget is accepted.
+
+The object has exactly these three fields. `ChessContinuation.child_execution`
+accepts the resolved object, defensively validates/copies it and defaults to an
+explicit `preserve-source` object when omitted. The runner requires
+`RunConfig.max_turns` to match the resolved child budget. Artifact validation
+binds the same budget to manifest `run_metadata.max_turns`, the lineage digest
+and the executed trace length. Platform must separately include the object and
+digest in the reviewed, admitted and published child claim. A digest binds the
+chosen policy but is not authorization by itself.
+
+For example, an 88-ply source with a 160-ply caller cutoff can explicitly resume
+with 240 while retaining 160 in its immutable source descriptor. Chess already
+terminates at its own 240-ply draw horizon, so this removes an execution cutoff,
+not a chess rule. A child without the new policy still truncates at 160 if the
+board is nonterminal, remains invalid and cannot be treated as a completed game
+or a newly supported continuation source.
+
+Readers continue to validate historical v1 lineage using its source cutoff.
+Only v2 targets can execute the new policy; v1 lineage cannot carry child budget
+fields. Repeated continuation freezes the immediate source's actual child
+budget, including 240, while the ancestor descriptor retains its original 160.
 
 ## Frozen descriptor
 
@@ -121,13 +171,16 @@ engine. For a repeated continuation, copy the immediate source lineage's
 `targetEngine` fields into the new descriptor's `coreVersion`, `coreRef`,
 `coreSourceSha256`, `runnerVersion`, and `wrapperVersion`. Do not retain the
 original ancestor's engine pins for a child produced by a newer engine. Preserve
-the game, rules, seed, turn-limit, scoring and player pins across the chain.
+the game, rules, seed, scoring and player pins across the chain. The immediate
+source `maxTurns` must equal its verified child execution budget (or the source
+descriptor cutoff for historical v1 lineage), not an older ancestor's cutoff.
 The new `sourcePayloadSha256` binds the immediate source job payload.
 
 Source execution pins never become target-engine pins. The separate target
 identity has schema version `chess-continuation-engine/v1`, with `coreVersion`,
 `coreRef`, `coreSourceSha256`, `runnerVersion`, `wrapperVersion`,
-`continuationContractVersion: "chess-continuation-lineage/v1"`.
+`continuationContractVersion: "chess-continuation-lineage/v2"` for new execution.
+Historical v1 identities remain readable only as historical artifact evidence.
 Installed identities add build-evidence fields documented below; local identities
 add `runnerImageDigest: "local-development"`.
 `targetEngineSha256` binds that identity. For a local source checkout, obtain
@@ -157,6 +210,7 @@ identities in its release evidence.
 The child artifact contains:
 
 - `continuation/lineage.json`: frozen descriptor, source and child identities,
+  explicit child execution policy and digest,
   verified prefix/checkpoint, historical ledger digest/count and explicit
   accounting scopes.
 - `continuation/source_prefix.json`: normalized source prefix evidence, used to

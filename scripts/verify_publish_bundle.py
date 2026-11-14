@@ -20,12 +20,12 @@ from pathlib import Path
 from typing import Any
 
 PROJECT = "eslams-core"
-VERSION = "0.8.0"
-TAG = "v0.8.0"
+VERSION = "0.8.1"
+TAG = "v0.8.1"
 REPOSITORY = "ElectronicSlams/eSlams"
-BUNDLE_NAME = "eslams-core-0.8.0-publish.zip"
-WHEEL = "eslams_core-0.8.0-py3-none-any.whl"
-SDIST = "eslams_core-0.8.0.tar.gz"
+BUNDLE_NAME = "eslams-core-0.8.1-publish.zip"
+WHEEL = "eslams_core-0.8.1-py3-none-any.whl"
+SDIST = "eslams_core-0.8.1.tar.gz"
 MANIFEST = "release-manifest.json"
 MAX_BUNDLE_BYTES = 5 * 1024 * 1024
 MAX_TAR_BYTES = 64 * 1024 * 1024

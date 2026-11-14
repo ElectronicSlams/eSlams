@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8.1 - Unreleased
+
+- Add an explicit, separately hash-bound child execution policy for chess
+  continuation. Native-horizon policy uses the existing 240-ply arena horizon
+  without rewriting the source's historical execution cutoff, rules or history.
+- Version new continuation lineage as v2 while retaining historical v1 readers.
+  Bind child budgets to the manifest and preserve immediate-source budgets across
+  repeated continuation. Omitting the policy still preserves the source cutoff.
+
 ## v0.8.0 - 2026-11-13
 
 - Add the direct Krutrim Cloud text adapter with explicit model IDs, native CLI

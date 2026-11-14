@@ -1,6 +1,6 @@
 name: Publish verified server distributions
 
-# Explicit publisher-only dispatch of exact reviewed 0.8.0 package bytes.
+# Explicit publisher-only dispatch of exact reviewed 0.8.1 package bytes.
 on:
   workflow_dispatch:
     inputs:
@@ -8,7 +8,7 @@ on:
         description: "Draft GitHub release ID containing the verified bundle"
         required: true
       asset_id:
-        description: "ID of eslams-core-0.8.0-publish.zip on that draft release"
+        description: "ID of eslams-core-0.8.1-publish.zip on that draft release"
         required: true
       bundle_sha256:
         description: "Independently verified SHA256 of the complete handoff bundle"
@@ -18,13 +18,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: pypi-eslams-core-0.8.0
+  group: pypi-eslams-core-0.8.1
   cancel-in-progress: false
 
 jobs:
   pypi:
-    name: Publish previously verified 0.8.0 files
-    if: github.repository == 'ElectronicSlams/eSlams' && github.ref == 'refs/tags/v0.8.0'
+    name: Publish previously verified 0.8.1 files
+    if: github.repository == 'ElectronicSlams/eSlams' && github.ref == 'refs/tags/v0.8.1'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: pypi
@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$GITHUB_REPOSITORY" == ElectronicSlams/eSlams ]] || { echo "Publisher identity/input gate failed" >&2; exit 1; }
-          [[ "$GITHUB_REF" == refs/tags/v0.8.0 ]] || { echo "Publisher identity/input gate failed" >&2; exit 1; }
+          [[ "$GITHUB_REF" == refs/tags/v0.8.1 ]] || { echo "Publisher identity/input gate failed" >&2; exit 1; }
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Publisher identity/input gate failed" >&2; exit 1; }
           [[ "$RELEASE_ID" =~ ^[1-9][0-9]*$ ]] || { echo "Publisher identity/input gate failed" >&2; exit 1; }
           [[ "$ASSET_ID" =~ ^[1-9][0-9]*$ ]] || { echo "Publisher identity/input gate failed" >&2; exit 1; }
@@ -59,11 +59,11 @@ jobs:
           metadata="$RUNNER_TEMP/eslams-release.json"
           bundle="$RUNNER_TEMP/eslams-server-bundle.zip"
           echo "Resolve immutable package tag"
-          remote_commit="$(gh api "repos/$GITHUB_REPOSITORY/commits/v0.8.0" --jq .sha)"
+          remote_commit="$(gh api "repos/$GITHUB_REPOSITORY/commits/v0.8.1" --jq .sha)"
           echo "Read selected draft release metadata"
           gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" > "$metadata"
           common=(--release-json "$metadata" --release-id "$RELEASE_ID" --asset-id "$ASSET_ID"
-                  --tag v0.8.0 --commit "$GITHUB_SHA" --remote-commit "$remote_commit")
+                  --tag v0.8.1 --commit "$GITHUB_SHA" --remote-commit "$remote_commit")
           python3 -I scripts/verify_publish_bundle.py "${common[@]}"
           echo "Download selected verified server bundle"
           gh api "repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID" \
@@ -73,7 +73,7 @@ jobs:
             --out "$GITHUB_WORKSPACE/.publish-verified-dist"
           status="$(curl --silent --show-error --max-time 30 \
             --output "$RUNNER_TEMP/eslams-pypi-before.json" --write-out '%{http_code}' \
-            https://pypi.org/pypi/eslams-core/0.8.0/json)"
+            https://pypi.org/pypi/eslams-core/0.8.1/json)"
           [[ "$status" == 404 ]] || {
             echo 'PyPI version is present or its absence is unverified; stop for reconciliation.'
             exit 1
