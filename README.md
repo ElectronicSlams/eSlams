@@ -21,7 +21,7 @@ overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
 Core 0.8.1 adds explicit native-horizon chess continuation without changing
-historical execution pins. See [the continuation contract](docs/CHESS_CONTINUATION.md).
+historical execution pins. See [the continuation contract](https://github.com/ElectronicSlams/eSlams/blob/main/docs/CHESS_CONTINUATION.md).
 Core 0.8.0 added verified chess continuation and the native Krutrim Cloud text
 adapter. Continuation reconstructs a complete accepted move prefix without new
 provider calls, preserves the original failed execution and historical receipts,

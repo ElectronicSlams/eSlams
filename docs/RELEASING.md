@@ -7,9 +7,10 @@ source pins and v1 readers. It changes no arena rules or model time/output polic
 Version-pinned publisher metadata is prepared consistently; no PyPI dispatch or
 credential change is part of preparing this patch.
 
-Build and verification run in an isolated operator/server workspace. The one approved
-hosted job only verifies the handoff and publishes through the existing PyPI
-trusted publisher; it does not install Core, build packages or run the suite.
+Build and verification run in an isolated operator/server workspace. GitHub
+verified-asset delivery is separate from optional PyPI publication. The existing
+publisher-only hosted job verifies its handoff; it does not install Core, build
+packages or run the suite, and must not be dispatched for this held proposal.
 The 0.8.0 base includes verified chess continuation and the already reviewed
 Krutrim adapter. Stronger OpenRouter backend enforcement remains deferred.
 Invalid raw diagnostic score fields are retained as documented in README.
@@ -37,16 +38,35 @@ verification-receipt digest and the two artifact filenames/sizes/digests. Keep
 full logs and dependency receipts separately; do not upload secrets or unrelated
 research/model data.
 
-## Publisher-only side
+## GitHub delivery first, only after approval
 
-After independent review and server acceptance, update the repository with the
-reviewed source and matching `v0.8.1` tag. Commit CI-skip instructions prevent
-ordinary hosted push/PR CI; do not invoke other hosted workflows. Keep the
-release in draft while publishing. Upload the sealed bundle to that draft,
-independently verify its digest, and explicitly dispatch `publish.yml` **on the
-v0.8.1 tag** with draft release ID, asset ID and bundle SHA256. There is no
-release-event trigger or historical default ref in the new publisher workflow.
-Do not invoke the old rebuilding workflow.
+The owner requested GitHub delivery first and deferred PyPI. After the owner
+confirms this proposal's version/scope, independent review and all required
+guarded checks must pass against the exact clean commit. Only then may an
+authorized operator push reviewed source, create its matching `v0.8.1` tag and
+draft release, and upload the checksum-verified wheel/sdist and release evidence.
+Commit CI-skip instructions prevent ordinary hosted push/PR CI; do not invoke
+other hosted workflows. Independently read back the asset identities and hashes,
+then publish the GitHub release when authorized. The sealed bundle may accompany
+the verified distributions, but uploading it does not authorize PyPI dispatch.
+
+Document the exact source commit, package hashes, local/isolated verification
+receipt and GitHub release URL. This is GitHub artifact delivery, not a claim of
+PyPI availability, Platform rollout or Rust parity. PyPI success is not a
+prerequisite for the owner's GitHub-first route. Platform must independently pin
+and validate the published distributions and resulting runtime image.
+
+## Optional PyPI publication: blocked, no retry authorized
+
+The earlier PyPI publisher encountered an inactive-organization denial. Do not
+dispatch or retry `publish.yml`, create credentials, or broaden publisher trust
+as part of this patch. The owner will handle PyPI separately. The version-pinned
+publisher metadata remains prepared for consistency, not permission to execute.
+
+If the owner separately resolves that blocker and authorizes publication later,
+the existing publisher-only workflow accepts only the reviewed tag, release/asset
+IDs and sealed bundle digest. There is no release-event trigger or historical
+default ref. Do not invoke the old rebuilding workflow.
 
 The hosted verifier checks the authenticated draft asset metadata, exact tag and
 source commit, complete bundle hash, closed manifest, both artifact hashes,
@@ -65,9 +85,10 @@ OIDC authentication failure is a blocker, not permission to create credentials
 or broaden trust. Do not dispatch a replacement job blindly after a partial
 upload; inspect PyPI file hashes and reconcile first.
 
-After success, verify both public PyPI files match the server hashes, install
+If a separately authorized PyPI publication later succeeds, verify both public
+PyPI files match the server hashes, install
 from PyPI in a fresh environment, and check version/provenance/schema/CLI smoke.
-Only then publish the GitHub release notes. No cross-file atomic upload guarantee
-is claimed. Record actual workflow run, final source commit, package hashes,
-installation receipt and release URL. A successful Python publication is not a
-Platform rollout or a Rust parity claim.
+Add that distinct result to the already verified GitHub release evidence. No
+cross-file atomic upload guarantee is claimed. Record the actual workflow run,
+source commit, package hashes, installation receipt and PyPI status. A successful
+Python publication is not a Platform rollout or a Rust parity claim.
