@@ -1,16 +1,16 @@
-# Python 0.8.1 proposed release handoff
+# Python 0.8.1 GitHub release handoff
 
-This patch is not released. Publication is on hold pending owner confirmation of
-the version and scope. The 0.8.1 change adds only an explicit native-horizon child
+The owner approved the 0.8.1 scope and GitHub-only publication on 2026-11-14.
+The 0.8.1 change adds only an explicit native-horizon child
 execution budget and v2 continuation lineage, preserving immutable historical
 source pins and v1 readers. It changes no arena rules or model time/output policy.
 Version-pinned publisher metadata is prepared consistently; no PyPI dispatch or
-credential change is part of preparing this patch.
+credential change is part of this release.
 
 Build and verification run in an isolated operator/server workspace. GitHub
 verified-asset delivery is separate from optional PyPI publication. The existing
 publisher-only hosted job verifies its handoff; it does not install Core, build
-packages or run the suite, and must not be dispatched for this held proposal.
+packages or run the suite, and must not be dispatched for this GitHub-only release.
 The 0.8.0 base includes verified chess continuation and the already reviewed
 Krutrim adapter. Stronger OpenRouter backend enforcement remains deferred.
 Invalid raw diagnostic score fields are retained as documented in README.
@@ -38,11 +38,11 @@ verification-receipt digest and the two artifact filenames/sizes/digests. Keep
 full logs and dependency receipts separately; do not upload secrets or unrelated
 research/model data.
 
-## GitHub delivery first, only after approval
+## Approved GitHub delivery first
 
-The owner requested GitHub delivery first and deferred PyPI. After the owner
-confirms this proposal's version/scope, independent review and all required
-guarded checks must pass against the exact clean commit. Only then may an
+The owner requested GitHub delivery first and deferred PyPI. Independent review
+and all required guarded checks must pass against the exact clean release
+commit, including after a merge changes its provenance. Only then may an
 authorized operator push reviewed source, create its matching `v0.8.1` tag and
 draft release, and upload the checksum-verified wheel/sdist and release evidence.
 Commit CI-skip instructions prevent ordinary hosted push/PR CI; do not invoke

@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.8.1 - Unreleased
+## v0.8.1 - 2026-11-14
 
 - Add an explicit, separately hash-bound child execution policy for chess
   continuation. Native-horizon policy uses the existing 240-ply arena horizon
