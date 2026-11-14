@@ -20,7 +20,9 @@ secret seeds, private scenario sets, and hidden eval variants so agents cannot
 overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
-Core 0.8.0 adds verified chess continuation and the native Krutrim Cloud text
+Core 0.8.1 adds explicit native-horizon chess continuation without changing
+historical execution pins. See [the continuation contract](https://github.com/ElectronicSlams/eSlams/blob/main/docs/CHESS_CONTINUATION.md).
+Core 0.8.0 added verified chess continuation and the native Krutrim Cloud text
 adapter. Continuation reconstructs a complete accepted move prefix without new
 provider calls, preserves the original failed execution and historical receipts,
 and starts new inference at the next ply. Continued artifacts carry explicit
@@ -109,7 +111,7 @@ python3 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-Core 0.8.0 requires Python 3.10+. Supported-version release checks must accompany
+Core 0.8.1 requires Python 3.10+. Supported-version release checks must accompany
 the final package; local candidate results are not a promise that every OS was tested.
 Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
 configuration names; Core does not load `.env` automatically. Export selected

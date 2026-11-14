@@ -83,7 +83,7 @@ def main() -> None:
                             str(out / "portable-bytes.json")], 90),
         ("build", [python, "-m", "build", "--no-isolation", "--outdir", str(out / "dist")], 90),
     ]
-    receipt: dict[str, object] = {"source_commit": commit, "version": "0.8.0",
+    receipt: dict[str, object] = {"source_commit": commit, "version": "0.8.1",
         "platform": platform.platform(), "python": sys.version,
         "steps": [], "status": "in_progress",
         "excluded": "previously denied elapsed-deadline listener fixtures not opened or retried"}

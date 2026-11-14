@@ -24,12 +24,12 @@ def archive_zip(files):
     return data.getvalue()
 
 
-def artifacts(*, version="0.8.0", commit=COMMIT):
+def artifacts(*, version="0.8.1", commit=COMMIT):
     metadata = (f"Metadata-Version: 2.4\nName: eslams-core\nVersion: {version}\n"
                 "Requires-Python: >=3.10\n\n")
     provenance = f'PACKAGED_CORE_COMMIT: str | None = "{commit}"\n'
     wheel = archive_zip([
-        ("eslams_core-0.8.0.dist-info/METADATA", metadata),
+        ("eslams_core-0.8.1.dist-info/METADATA", metadata),
         ("eslams/_build_provenance.py", provenance),
     ])
     raw = io.BytesIO()
@@ -37,17 +37,17 @@ def artifacts(*, version="0.8.0", commit=COMMIT):
         for name, body in [("PKG-INFO", metadata),
                            ("src/eslams/_build_provenance.py", provenance)]:
             body = body.encode()
-            entry = tarfile.TarInfo(f"eslams_core-0.8.0/{name}")
+            entry = tarfile.TarInfo(f"eslams_core-0.8.1/{name}")
             entry.size = len(body)
             archive.addfile(entry, io.BytesIO(body))
     return {V["WHEEL"]: wheel, V["SDIST"]: gzip.compress(raw.getvalue(), mtime=0)}
 
 
-def bundle(*, mutate=None, version="0.8.0", commit=COMMIT, extra=()):
+def bundle(*, mutate=None, version="0.8.1", commit=COMMIT, extra=()):
     files = artifacts(version=version, commit=commit)
     manifest = {
         "schema_version": "eslams.pypi-handoff.v1", "project": "eslams-core",
-        "version": "0.8.0", "tag": "v0.8.0", "source_commit": COMMIT,
+        "version": "0.8.1", "tag": "v0.8.1", "source_commit": COMMIT,
         "verification": {"status": "passed", "receipt_sha256": "0" * 64},
         "artifacts": [{"filename": name, "sha256": V["digest"](data), "size": len(data)}
                       for name, data in files.items()],
@@ -66,7 +66,7 @@ def test_complete_hash_metadata_and_provenance_binding():
 
 
 @pytest.mark.parametrize("mutation", [
-    lambda m: m.update(version="0.8.0rc1"),
+    lambda m: m.update(version="0.8.1rc1"),
     lambda m: m.update(source_commit="b" * 40),
     lambda m: m.update(tag="main"),
     lambda m: m.update(project="other-project"),
@@ -97,7 +97,7 @@ def test_hash_and_source_identity_are_independent_fences():
     with pytest.raises(ValueError, match="provenance"):
         verify(bundle(commit="b" * 40))
     with pytest.raises(ValueError, match="metadata Version"):
-        verify(bundle(version="0.8.0rc1"))
+        verify(bundle(version="0.8.1rc1"))
 
 
 def test_symlink_member_never_becomes_a_filesystem_link():
@@ -115,7 +115,7 @@ def test_symlink_member_never_becomes_a_filesystem_link():
 
 def test_duplicate_nonfinite_json_and_expansion_limits(monkeypatch):
     with pytest.raises(ValueError, match="duplicate"):
-        V["read_json"](b'{"version":"0.8.0","version":"evil"}')
+        V["read_json"](b'{"version":"0.8.1","version":"evil"}')
     with pytest.raises(ValueError, match="non-finite"):
         V["read_json"](b'{"value":NaN}')
     monkeypatch.setitem(V["sdist_contents"].__globals__, "MAX_TAR_BYTES", 1024)
@@ -124,13 +124,13 @@ def test_duplicate_nonfinite_json_and_expansion_limits(monkeypatch):
 
 
 def release():
-    return {"id": 12, "tag_name": "v0.8.0", "draft": True, "prerelease": False,
+    return {"id": 12, "tag_name": "v0.8.1", "draft": True, "prerelease": False,
             "url": "https://api.github.com/repos/ElectronicSlams/eSlams/releases/12",
             "assets": [{"id": 34, "name": V["BUNDLE_NAME"], "state": "uploaded", "size": 1000}]}
 
 
 def validate(value, **overrides):
-    kwargs = {"release_id": 12, "asset_id": 34, "tag": "v0.8.0", "commit": COMMIT,
+    kwargs = {"release_id": 12, "asset_id": 34, "tag": "v0.8.1", "commit": COMMIT,
               "remote_commit": COMMIT, **overrides}
     return V["validate_metadata"](value, **kwargs)
 
@@ -165,7 +165,7 @@ def test_moved_tag_and_wrong_dispatch_ref_reject():
 
 
 def server_receipt(files, required):
-    return {"source_commit": COMMIT, "version": "0.8.0", "status": "passed",
+    return {"source_commit": COMMIT, "version": "0.8.1", "status": "passed",
             "steps": [{"name": name, "exit_code": 0} for name in sorted(required)],
             "pytest_counts": {"tests": 1253, "errors": 0, "failures": 0, "skipped": 0},
             "artifacts": [{"filename": name, "size": len(data), "sha256": V["digest"](data)}

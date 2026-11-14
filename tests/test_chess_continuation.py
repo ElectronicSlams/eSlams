@@ -9,7 +9,9 @@ from eslams.agents import MockProviderAgent
 from eslams.artifacts import ArtifactValidator
 from eslams.continuation import (
     ChessContinuation,
+    chess_continuation_child_execution,
     digest_bytes,
+    digest_json,
     local_chess_continuation_engine_identity,
     prepare_chess_continuation,
 )
@@ -60,14 +62,14 @@ class Scripted(MockProviderAgent):
         return ActResponse(action=self.moves[request.turn_id])
 
 
-def source_run(tmp_path, *, fail_at=2, moves=None, run_id="source"):
+def source_run(tmp_path, *, fail_at=2, moves=None, run_id="source", max_turns=240):
     agent = Scripted(fail_at, moves)
     result = Runner().run(
         RunConfig(
             arena_id="chess",
             agent_1=agent,
             agent_2=agent,
-            max_turns=240,
+            max_turns=max_turns,
             seed=7,
             output_dir=tmp_path,
             archive=True,
@@ -99,7 +101,7 @@ def pins(result):
         "scoringPolicyVersion": "chess-score:1.0.0",
         "rulesSha256": "2" * 64,
         "seed": 7,
-        "maxTurns": 240,
+        "maxTurns": manifest["run_metadata"]["max_turns"],
         "sourcePayloadSha256": "3" * 64,
         "players": [
             {
@@ -115,7 +117,9 @@ def pins(result):
     }
     lineage_path = result.expanded_path / "continuation/lineage.json"
     if lineage_path.exists():
-        engine = json.loads(lineage_path.read_text())["targetEngine"]
+        lineage = json.loads(lineage_path.read_text())
+        engine = lineage["targetEngine"]
+        execution["rulesSha256"] = lineage["descriptor"]["execution"]["rulesSha256"]
         for key in (
             "coreVersion",
             "coreRef",
@@ -127,8 +131,14 @@ def pins(result):
     return source, execution
 
 
-def continuation(result):
+def continuation(result, *, native_horizon=False):
     identity, execution = pins(result)
+    if native_horizon:
+        from eslams.catalogue import game_catalogue_rows
+
+        execution["rulesSha256"] = digest_json(next(
+            row["public_rules"] for row in game_catalogue_rows() if row["game_id"] == "chess"
+        ))
     descriptor = prepare_chess_continuation(result.artifact_path, identity, execution)
     target = local_chess_continuation_engine_identity(wrapper_version=execution["wrapperVersion"])
     return ChessContinuation(
@@ -137,6 +147,9 @@ def continuation(result):
         target,
         child_platform_run_id="next-" + identity["runId"],
         match_id="next-" + identity["matchId"],
+        child_execution=(chess_continuation_child_execution(
+            descriptor, turn_limit_policy="native-arena-horizon"
+        ) if native_horizon else None),
     )
 
 
@@ -147,7 +160,7 @@ def run_child(tmp_path, cont, *, agent=None, run_id="child", **changes):
             arena_id="chess",
             agent_1=agent,
             agent_2=agent,
-            max_turns=240,
+            max_turns=changes.pop("max_turns", cont.child_execution["maxTurns"]),
             seed=7,
             output_dir=tmp_path,
             archive=True,
@@ -722,3 +735,235 @@ def test_incremental_receipts_must_reconcile_with_executed_suffix(tmp_path, kind
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
     rearchive(child)
     assert ArtifactValidator().validate(child.artifact_path)
+
+
+@pytest.fixture(scope="module")
+def native_horizon_moves():
+    """Synthetic legal play reaching the unchanged arena's own terminal horizon."""
+    import random
+
+    from eslams.arenas.chess import ChessArena
+
+    arena = ChessArena()
+    for seed in range(100):
+        rng = random.Random(seed)
+        state = arena.initial_state(7)
+        moves = []
+        while not state.terminal:
+            action = rng.choice([a for a in arena.legal_actions_for(state, state.active_player)
+                                 if not a.startswith("claim-draw")])
+            moves.append(action)
+            state = arena.apply_action(state, state.active_player, action)
+        if state.turn == arena.max_turns and state.outcome["reason"] == "max_turns":
+            return moves
+    raise AssertionError("synthetic fixture did not reach the native chess horizon")
+
+
+def test_native_horizon_finishes_88_ply_source_without_rewriting_160(
+    tmp_path, native_horizon_moves
+):
+    source, _ = source_run(tmp_path / "source", max_turns=160, fail_at=88,
+                           moves=native_horizon_moves)
+    before = source.artifact_path.read_bytes()
+    cont = continuation(source, native_horizon=True)
+    frozen_descriptor = json.loads(json.dumps(cont.descriptor))
+    assert cont.child_execution == {
+        "schemaVersion": "chess-continuation-child-execution/v1",
+        "turnLimitPolicy": "native-arena-horizon", "maxTurns": 240,
+    }
+    child, agent = run_child(tmp_path / "child", cont,
+                             agent=Scripted(moves=native_horizon_moves))
+    assert source.artifact_path.read_bytes() == before
+    assert cont.descriptor == frozen_descriptor
+    assert cont.descriptor["execution"]["maxTurns"] == 160
+    assert [r.turn_id for r in agent.calls] == list(range(88, 240))
+    assert len(agent.calls[0].history) == 88
+    assert child.replay_events[-1].terminal is True
+    assert child.score.outcome == {"winner": None, "reason": "max_turns"}
+    assert child.score.match_valid_for_scoring is True
+    assert "run_truncated" not in child.score.invalid_reason_codes
+    lineage = json.loads((child.expanded_path / "continuation/lineage.json").read_text())
+    assert lineage["schemaVersion"] == "chess-continuation-lineage/v2"
+    assert lineage["childExecution"] == cont.child_execution
+    assert lineage["childExecutionSha256"] == digest_json(cont.child_execution)
+    assert lineage["descriptor"] == frozen_descriptor
+    assert len(receipt_rows(child)) == 152
+    assert (child.expanded_path / "continuation/source_provider_receipts.jsonl").read_bytes() == (
+        source.expanded_path / "receipts/provider_receipts.jsonl"
+    ).read_bytes()
+    manifest = json.loads((child.expanded_path / "manifest.json").read_text())
+    assert manifest["run_metadata"]["max_turns"] == 240
+    assert manifest["run_metadata"]["requested_time_budget_ms"] is None
+    assert manifest["run_metadata"]["effective_time_budget_ms"] is None
+    assert ArtifactValidator().validate(child.artifact_path) == []
+
+
+def test_preserve_source_never_silently_extends_160(tmp_path, native_horizon_moves):
+    source, _ = source_run(tmp_path / "source", max_turns=160, fail_at=88,
+                           moves=native_horizon_moves)
+    cont = continuation(source)
+    assert cont.child_execution["turnLimitPolicy"] == "preserve-source"
+    assert cont.child_execution["maxTurns"] == 160
+    agent = Scripted(moves=native_horizon_moves)
+    with pytest.raises(ValueError, match="source pins"):
+        run_child(tmp_path / "refused", cont, agent=agent, max_turns=240)
+    assert agent.calls == []
+    child, agent = run_child(tmp_path / "child", cont, agent=agent)
+    assert [r.turn_id for r in agent.calls] == list(range(88, 160))
+    assert child.replay_events[-1].terminal is False
+    assert child.score.match_valid_for_scoring is False
+    assert child.score.invalid_reason_codes == ["run_truncated"]
+    with pytest.raises(ValueError, match="supported interruption"):
+        continuation(child, native_horizon=True)
+
+
+@pytest.mark.parametrize("fault", ["smaller", "larger", "boolean", "float", "extra",
+                                   "unknown_policy", "missing_policy", "unknown_schema"])
+def test_native_horizon_rejects_arbitrary_child_budget(tmp_path, fault):
+    from dataclasses import replace
+
+    source, _ = source_run(tmp_path / "source", max_turns=160)
+    cont = continuation(source, native_horizon=True)
+    child = dict(cont.child_execution)
+    if fault in {"smaller", "larger", "boolean", "float"}:
+        child["maxTurns"] = {"smaller": 200, "larger": 320,
+                             "boolean": True, "float": 240.0}[fault]
+    elif fault == "extra":
+        child["timeBudgetMs"] = None
+    elif fault == "missing_policy":
+        del child["turnLimitPolicy"]
+    elif fault == "unknown_policy":
+        child["turnLimitPolicy"] = "caller-override"
+    else:
+        child["schemaVersion"] = "chess-continuation-child-execution/v0"
+    with pytest.raises(ValueError):
+        replace(cont, child_execution=child)
+
+
+@pytest.mark.parametrize("field,value", [("rulesSha256", "0" * 64),
+                                          ("arenaVersion", "2.0.0"), ("maxTurns", 241)])
+def test_native_horizon_requires_same_rules_and_no_budget_reduction(tmp_path, field, value):
+    source, _ = source_run(tmp_path / "source", max_turns=160)
+    descriptor = continuation(source, native_horizon=True).descriptor
+    descriptor["execution"][field] = value
+    descriptor["executionSpecSha256"] = digest_json(descriptor["execution"])
+    with pytest.raises(ValueError):
+        chess_continuation_child_execution(descriptor, turn_limit_policy="native-arena-horizon")
+
+
+def test_repeated_continuation_uses_immediate_child_240_not_ancestor_160(
+    tmp_path, native_horizon_moves
+):
+    source, _ = source_run(tmp_path / "source", max_turns=160, fail_at=88,
+                           moves=native_horizon_moves)
+    middle, _ = run_child(tmp_path / "middle", continuation(source, native_horizon=True),
+                          agent=Scripted(fail_at=170, moves=native_horizon_moves), run_id="middle")
+    cont = continuation(middle, native_horizon=True)
+    assert cont.descriptor["execution"]["maxTurns"] == 240
+    assert cont.descriptor["prefix"]["acceptedPlyCount"] == 170
+    child, agent = run_child(tmp_path / "child", cont,
+                             agent=Scripted(moves=native_horizon_moves))
+    assert [r.turn_id for r in agent.calls] == list(range(170, 240))
+    lineage = json.loads((child.expanded_path / "continuation/lineage.json").read_text())
+    assert lineage["descriptor"]["execution"]["maxTurns"] == 240
+    assert lineage["parentLineage"]["descriptor"]["execution"]["maxTurns"] == 160
+    assert lineage["parentLineage"]["childExecution"]["maxTurns"] == 240
+    assert child.score.match_valid_for_scoring is True
+    assert len(receipt_rows(child)) == 70
+    assert len(receipt_rows(child, "continuation/source_provider_receipts.jsonl")) == 172
+    assert ArtifactValidator().validate(child.artifact_path) == []
+
+
+@pytest.mark.parametrize("fault", ["budget", "digest", "missing", "manifest", "downgrade"])
+def test_child_budget_tampering_rejected_after_full_rehash(tmp_path, fault):
+    source, _ = source_run(tmp_path / "source", max_turns=160)
+    child, _ = run_child(tmp_path / "child", continuation(source, native_horizon=True))
+    path = child.expanded_path / "continuation/lineage.json"
+    lineage = json.loads(path.read_text())
+    if fault == "budget":
+        lineage["childExecution"]["maxTurns"] = 200
+        lineage["childExecutionSha256"] = digest_json(lineage["childExecution"])
+    elif fault == "digest":
+        lineage["childExecutionSha256"] = "0" * 64
+    elif fault == "missing":
+        del lineage["childExecution"]
+    elif fault == "downgrade":
+        lineage["schemaVersion"] = "chess-continuation-lineage/v1"
+    else:
+        manifest_path = child.expanded_path / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["run_metadata"]["max_turns"] = 160
+        manifest_path.write_text(json.dumps(manifest))
+    path.write_text(json.dumps(lineage))
+    rearchive(child)
+    assert any("child" in error or "legacy lineage" in error
+               for error in ArtifactValidator().validate(child.artifact_path))
+
+
+def test_legacy_v1_lineage_remains_readable_and_resumable(tmp_path):
+    source, _ = source_run(tmp_path / "source")
+    middle, _ = run_child(tmp_path / "middle", continuation(source),
+                          agent=Scripted(fail_at=3), run_id="middle")
+    path = middle.expanded_path / "continuation/lineage.json"
+    lineage = json.loads(path.read_text())
+    lineage["schemaVersion"] = "chess-continuation-lineage/v1"
+    lineage["targetEngine"]["continuationContractVersion"] = lineage["schemaVersion"]
+    lineage["targetEngineSha256"] = digest_json(lineage["targetEngine"])
+    del lineage["childExecution"], lineage["childExecutionSha256"]
+    path.write_text(json.dumps(lineage))
+    rearchive(middle)
+    assert ArtifactValidator().validate(middle.artifact_path) == []
+    child, _ = run_child(tmp_path / "child", continuation(middle))
+    assert child.score.match_valid_for_scoring is True
+    assert ArtifactValidator().validate(child.artifact_path) == []
+
+
+def test_repeated_source_cannot_fall_back_to_ancestor_budget_after_rehash(tmp_path):
+    source, _ = source_run(tmp_path / "source", max_turns=160)
+    middle, _ = run_child(tmp_path / "middle", continuation(source, native_horizon=True),
+                          agent=Scripted(fail_at=3), run_id="middle")
+    child, _ = run_child(tmp_path / "child", continuation(middle))
+    path = child.expanded_path / "continuation/lineage.json"
+    lineage = json.loads(path.read_text())
+    # Even a fully rehashed internally consistent smaller child policy cannot
+    # redefine the immediate source's actual 240-ply execution as ancestor 160.
+    lineage["descriptor"]["execution"]["maxTurns"] = 160
+    lineage["descriptor"]["executionSpecSha256"] = digest_json(lineage["descriptor"]["execution"])
+    lineage["descriptorSha256"] = digest_json(lineage["descriptor"])
+    lineage["childExecution"]["maxTurns"] = 160
+    lineage["childExecutionSha256"] = digest_json(lineage["childExecution"])
+    path.write_text(json.dumps(lineage))
+    manifest_path = child.expanded_path / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["run_metadata"]["max_turns"] = 160
+    manifest_path.write_text(json.dumps(manifest))
+    rearchive(child)
+    assert any("continued source child budget changed" in error
+               for error in ArtifactValidator().validate(child.artifact_path))
+
+
+def test_v1_engine_cannot_execute_new_child_policy(tmp_path):
+    from dataclasses import replace
+
+    source, _ = source_run(tmp_path / "source", max_turns=160)
+    cont = continuation(source, native_horizon=True)
+    legacy = {**cont.target_engine_identity,
+              "continuationContractVersion": "chess-continuation-lineage/v1"}
+    with pytest.raises(ValueError, match="unsupported continuation contract"):
+        replace(cont, target_engine_identity=legacy)
+
+
+def test_child_policy_is_copied_and_runtime_mutation_is_rejected_before_call(tmp_path):
+    from dataclasses import replace
+
+    source, _ = source_run(tmp_path / "source", max_turns=160)
+    original = continuation(source, native_horizon=True)
+    supplied = dict(original.child_execution)
+    cont = replace(original, child_execution=supplied)
+    supplied["maxTurns"] = 200
+    assert cont.child_execution["maxTurns"] == 240
+    cont.child_execution["maxTurns"] = 200
+    agent = Scripted()
+    with pytest.raises(ValueError, match="resolved policy"):
+        run_child(tmp_path / "child", cont, agent=agent)
+    assert agent.calls == []

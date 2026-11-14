@@ -28,7 +28,9 @@ from eslams.state import ArenaState
 from eslams.zip_extract import DEFAULT_ARCHIVE_LIMITS
 
 DESCRIPTOR_VERSION = "chess-continuation/v1"
-LINEAGE_VERSION = "chess-continuation-lineage/v1"
+LEGACY_LINEAGE_VERSION = "chess-continuation-lineage/v1"
+LINEAGE_VERSION = "chess-continuation-lineage/v2"
+CHILD_EXECUTION_VERSION = "chess-continuation-child-execution/v1"
 ENGINE_VERSION = "chess-continuation-engine/v1"
 LINEAGE_PATH = "continuation/lineage.json"
 LEDGER_PATH = "continuation/source_provider_receipts.jsonl"
@@ -148,6 +150,64 @@ def _descriptor(value: Any) -> dict[str, Any]:
     return descriptor
 
 
+def chess_continuation_child_execution(
+    descriptor: dict[str, Any], *, turn_limit_policy: str = "preserve-source"
+) -> dict[str, Any]:
+    """Resolve a child budget without changing any historical execution pins.
+
+    Native-horizon continuation removes only the caller's execution cutoff. It
+    never changes the arena, accepts a caller-selected horizon, or changes a
+    model output/time budget. Platform must bind this result to its admission.
+    """
+    execution = _descriptor(descriptor)["execution"]
+    _require(isinstance(turn_limit_policy, str)
+             and turn_limit_policy in {"preserve-source", "native-arena-horizon"},
+             "unsupported child turn-limit policy")
+    max_turns = execution["maxTurns"]
+    if turn_limit_policy == "native-arena-horizon":
+        from eslams.catalogue import game_catalogue_rows
+
+        arena = ChessArena()
+        _require(execution["arenaVersion"] in {arena.version, f"chess:{arena.version}"},
+                 "native horizon arena version mismatch")
+        rules = next(row["public_rules"] for row in game_catalogue_rows()
+                     if row["game_id"] == "chess")
+        _require(execution["rulesSha256"] == digest_json(rules),
+                 "native horizon rules mismatch")
+        _require(max_turns <= arena.max_turns, "native horizon cannot reduce source budget")
+        max_turns = arena.max_turns
+    return {
+        "schemaVersion": CHILD_EXECUTION_VERSION,
+        "turnLimitPolicy": turn_limit_policy,
+        "maxTurns": max_turns,
+    }
+
+
+def _child_execution(value: Any, descriptor: dict[str, Any]) -> dict[str, Any]:
+    child = _object(value, "child execution")
+    policy = child.get("turnLimitPolicy")
+    _require(isinstance(policy, str), "child turn-limit policy is required")
+    assert isinstance(policy, str)
+    expected = chess_continuation_child_execution(descriptor, turn_limit_policy=policy)
+    _require(type(child.get("maxTurns")) is int and child == expected,
+             "child execution differs from resolved policy")
+    return expected
+
+
+def _lineage_child_execution(lineage: dict[str, Any]) -> dict[str, Any]:
+    descriptor = _descriptor(lineage.get("descriptor"))
+    version = lineage.get("schemaVersion")
+    _require(version in {LEGACY_LINEAGE_VERSION, LINEAGE_VERSION}, "unsupported lineage")
+    if version == LEGACY_LINEAGE_VERSION:
+        _require("childExecution" not in lineage and "childExecutionSha256" not in lineage,
+                 "legacy lineage cannot declare a child budget")
+        return chess_continuation_child_execution(descriptor)
+    child = _child_execution(lineage.get("childExecution"), descriptor)
+    _require(lineage.get("childExecutionSha256") == digest_json(child),
+             "child execution digest")
+    return child
+
+
 def local_chess_continuation_engine_identity(*, wrapper_version: str) -> dict[str, Any]:
     """Bind local execution to actual Python source bytes, without a release claim.
 
@@ -185,11 +245,13 @@ def chess_continuation_engine_identity(*, wrapper_version: str) -> dict[str, Any
     return local_chess_continuation_engine_identity(wrapper_version=wrapper_version)
 
 
-def _engine(value: Any) -> dict[str, Any]:
+def _engine(value: Any, *, allow_legacy: bool = False) -> dict[str, Any]:
     engine = _object(value, "target engine")
     _require(engine.get("schemaVersion") == ENGINE_VERSION, "unsupported target engine")
     _require(
-        engine.get("continuationContractVersion") == LINEAGE_VERSION,
+        engine.get("continuationContractVersion") in (
+            {LEGACY_LINEAGE_VERSION, LINEAGE_VERSION} if allow_legacy else {LINEAGE_VERSION}
+        ),
         "unsupported continuation contract",
     )
     for key in ("coreVersion", "coreRef", "runnerVersion", "wrapperVersion"):
@@ -236,6 +298,7 @@ class ChessContinuation:
     target_engine_identity: dict[str, Any]
     child_platform_run_id: str
     match_id: str
+    child_execution: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         _text(self.child_platform_run_id, "child Platform run ID")
@@ -245,6 +308,11 @@ class ChessContinuation:
         object.__setattr__(
             self, "target_engine_identity", copy.deepcopy(_engine(self.target_engine_identity))
         )
+        object.__setattr__(self, "child_execution", (
+            chess_continuation_child_execution(self.descriptor)
+            if self.child_execution is None
+            else _child_execution(self.child_execution, self.descriptor)
+        ))
 
 
 @dataclass
@@ -261,6 +329,7 @@ class VerifiedChessContinuation:
     child_platform_run_id: str | None = None
     match_id: str | None = None
     ledger_segments: list[dict[str, Any]] | None = None
+    child_execution: dict[str, Any] | None = None
 
     def private_files(self, child_run_id: str) -> dict[str, bytes]:
         ids = _ancestor_ids(self.descriptor["source"], self.parent_lineage)
@@ -269,6 +338,7 @@ class VerifiedChessContinuation:
             "child Core run ID must not reuse any source identity",
         )
         ledger_rows = _rows(self.historical_ledger)
+        child_execution = _child_execution(self.child_execution, self.descriptor)
         lineage = {
             "schemaVersion": LINEAGE_VERSION,
             "descriptor": self.descriptor,
@@ -282,6 +352,8 @@ class VerifiedChessContinuation:
             "prefix": self.descriptor["prefix"],
             "targetEngine": self.target_engine_identity,
             "targetEngineSha256": digest_json(self.target_engine_identity),
+            "childExecution": child_execution,
+            "childExecutionSha256": digest_json(child_execution),
             "historicalLedger": {
                 "path": LEDGER_PATH,
                 "sha256": digest_bytes(self.historical_ledger),
@@ -635,13 +707,15 @@ def _inspect_archive(
                         execution[key] == parent_engine[key], "continued source engine mismatch"
                     )
                 prior_execution = parent_lineage["descriptor"]["execution"]
+                parent_child_execution = _lineage_child_execution(parent_lineage)
+                _require(execution["maxTurns"] == parent_child_execution["maxTurns"],
+                         "continued source child budget changed")
                 for key in (
                     "arenaSlug",
                     "arenaVersion",
                     "variantSlug",
                     "rulesSha256",
                     "seed",
-                    "maxTurns",
                     "players",
                     "scoringPolicyVersion",
                 ):
@@ -752,6 +826,7 @@ def verify_chess_continuation(continuation: ChessContinuation) -> VerifiedChessC
     verified.child_platform_run_id = continuation.child_platform_run_id
     verified.match_id = continuation.match_id
     verified.target_engine_identity = target
+    verified.child_execution = _child_execution(continuation.child_execution, descriptor)
     return verified
 
 
@@ -769,7 +844,7 @@ def validate_continuation_artifact(directory: Path, manifest: dict[str, Any]) ->
             return []
         _require(bool(declared), "lineage not declared")
         lineage = _load_object(directory / LINEAGE_PATH)
-        _require(lineage.get("schemaVersion") == LINEAGE_VERSION, "unsupported lineage")
+        child_execution = _lineage_child_execution(lineage)
         descriptor = _descriptor(lineage.get("descriptor"))
         _require(lineage.get("descriptorSha256") == digest_json(descriptor), "descriptor digest")
         _require(lineage.get("source") == descriptor["source"], "lineage source mismatch")
@@ -788,7 +863,13 @@ def validate_continuation_artifact(directory: Path, manifest: dict[str, Any]) ->
         )
         _require(manifest["run_id"] != descriptor["source"]["coreRunId"], "reused source run ID")
         _require(lineage.get("prefix") == descriptor["prefix"], "lineage prefix mismatch")
-        target = _engine(lineage.get("targetEngine"))
+        target = _engine(lineage.get("targetEngine"), allow_legacy=True)
+        _require(target["continuationContractVersion"] == lineage["schemaVersion"],
+                 "target and lineage contract mismatch")
+        _require(manifest["run_metadata"].get("max_turns") == child_execution["maxTurns"],
+                 "child manifest budget differs from lineage")
+        _require(len(trace) <= child_execution["maxTurns"],
+                 "child trace exceeds execution budget")
         _require(lineage.get("targetEngineSha256") == digest_json(target), "target engine digest")
         packages = _load_object(directory / "environment/package_versions.json")
         _require(
@@ -919,6 +1000,9 @@ def validate_continuation_artifact(directory: Path, manifest: dict[str, Any]) ->
         _require(lineage.get("parentLineageSha256") == digest_json(parent), "parent lineage digest")
         if parent is not None:
             parent = _object(parent, "parent lineage")
+            _require(descriptor["execution"]["maxTurns"]
+                     == _lineage_child_execution(parent)["maxTurns"],
+                     "continued source child budget changed")
             _require(
                 parent.get("child", {}).get("coreRunId") == descriptor["source"]["coreRunId"]
                 and parent.get("child", {}).get("platformRunId") == descriptor["source"]["runId"]

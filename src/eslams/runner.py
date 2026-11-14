@@ -206,7 +206,9 @@ class Runner:
                     config.time_budget_ms != source_metadata.get("effective_time_budget_ms")):
                 raise ValueError("continuation time budget differs from source policy")
             pins = continuation.descriptor["execution"]
-            if (config.seed != pins["seed"] or max_turns != pins["maxTurns"]
+            assert continuation.child_execution is not None
+            if (config.seed != pins["seed"]
+                    or max_turns != continuation.child_execution["maxTurns"]
                     or config.wrapper_version != pins["wrapperVersion"]
                     or (config.scoring_policy_version or f"{arena.id}-score:1.0.0")
                     != pins["scoringPolicyVersion"]):
