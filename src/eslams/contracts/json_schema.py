@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from eslams._build_provenance import core_source_commit
+from eslams.contracts.board_recovery import board_recovery_schemas
+from eslams.contracts.board_recovery import no_secret_examples as board_recovery_examples
 from eslams.contracts.integrity import ACTION_PROVENANCE_VALUES, ATTEMPT_KINDS, FAILURE_CLASSES
 from eslams.contracts.pricing import no_secret_example as price_card_no_secret_example
 from eslams.contracts.provider import GATEWAY_MODES, PROVIDER_OUTCOMES
@@ -19,6 +21,7 @@ from eslams.contracts.versions import (
     ARENA_STEP_RESULT_SCHEMA_VERSION,
     ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ARTIFACT_VALIDATION_SCHEMA_VERSION,
+    BOARD_RECOVERY_VALIDATION_SCHEMA_VERSION,
     CATALOGUE_AVAILABILITY_SCHEMA_VERSION,
     CATALOGUE_GAME_SCHEMA_VERSION,
     CATALOGUE_MODEL_SCHEMA_VERSION,
@@ -88,7 +91,7 @@ def export_schemas(output_dir: Path) -> list[Path]:
 
 
 def schema_filename(version: str) -> str:
-    return f"{version}.schema.json"
+    return f"{version.replace('/', '.')}.schema.json"
 
 
 def schema_for_version(version: str) -> dict[str, Any]:
@@ -100,13 +103,15 @@ def schema_for_version(version: str) -> dict[str, Any]:
 
 def schema_bundle_manifest(schema_paths: list[Path]) -> dict[str, Any]:
     schema_rows = []
+    known_names = {schema_filename(version): version for version in schema_versions()}
     for path in sorted(schema_paths, key=lambda item: item.name):
         if path.name == SCHEMA_BUNDLE_MANIFEST_FILENAME:
             continue
-        version = path.name.removesuffix(".schema.json")
+        name = path.name
+        version = known_names.get(name, name.removesuffix(".schema.json"))
         schema_rows.append(
             {
-                "name": path.name,
+                "name": name,
                 "schema_version": version,
                 "sha256": sha256_file(path),
                 "bytes": path.stat().st_size,
@@ -131,6 +136,7 @@ def schema_bundle_manifest(schema_paths: list[Path]) -> dict[str, Any]:
 
 def no_secret_examples() -> dict[str, dict[str, Any]]:
     return {
+        **board_recovery_examples(),
         MODEL_EXECUTION_POLICY_SCHEMA_VERSION: model_execution_policy(None),
         COOPERATIVE_TOPOLOGY_SCHEMA_VERSION: cooperative_topology().to_dict(),
         COOPERATIVE_RESULT_SCHEMA_VERSION: {
@@ -413,6 +419,7 @@ def _runner_job_request_schema() -> dict[str, Any]:
 
 def _schemas() -> dict[str, dict[str, Any]]:
     return {
+        **board_recovery_schemas(),
         COOPERATIVE_TOPOLOGY_SCHEMA_VERSION: _object_schema(
             COOPERATIVE_TOPOLOGY_SCHEMA_VERSION,
             required=[
@@ -496,6 +503,9 @@ def _schemas() -> dict[str, dict[str, Any]]:
                 "errors": {"type": "array", "items": {"type": "string"}},
                 "signature": {"type": "object"},
                 "deterministic_replay": {"type": "object"},
+                "recovered_position": board_recovery_schemas()[
+                    BOARD_RECOVERY_VALIDATION_SCHEMA_VERSION
+                ],
                 "per_case_run_valid": {"type": ["boolean", "null"]},
                 "per_case_scoring_eligible": {"type": ["boolean", "null"]},
                 "proof_row_publication_eligible": {"type": ["boolean", "null"]},

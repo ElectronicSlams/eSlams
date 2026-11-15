@@ -5,3 +5,4 @@ export * from "./prompt.js";
 export * from "./replay.js";
 export * from "./cooperative.js";
 export * from "./model-execution-policy.js";
+export * from "./board-recovery.js";

@@ -1,11 +1,19 @@
-# Python 0.8.1 GitHub release handoff
+# Python 0.9.0 GitHub release handoff
 
-The owner approved the 0.8.1 scope and GitHub-only publication on 2026-11-14.
-The 0.8.1 change adds only an explicit native-horizon child
-execution budget and v2 continuation lineage, preserving immutable historical
-source pins and v1 readers. It changes no arena rules or model time/output policy.
-Version-pinned publisher metadata is prepared consistently; no PyPI dispatch or
-credential change is part of this release.
+This is the local 0.9.0 candidate for reviewed additive unscored legacy board
+recovery, based on published 0.8.1. The minor version identifies new public APIs
+and closed recovery contracts, not a game-rule or timeout-policy change.
+Only legacy 0.6.2 Tic-Tac-Toe, Connect Four and Othello recovery is added.
+Original artifacts remain private and unchanged; historical assurance remains
+unverified and recovered results remain unscored. New-call receipt pins and safe
+public projection are validated independently. Hanabi, topology, Rust and
+catalogue changes are excluded. Two baseline corrections change tests only.
+Core-lite metadata is generated from Python authority; strict parity must pass.
+Existing chess continuation and its versioned capability guards are preserved.
+
+Publication, tagging, merging, deployment and inference require the coordinator's
+release window. GitHub delivery comes first. Version-pinned publisher metadata
+is prepared consistently; no PyPI dispatch, retry or credential change is allowed.
 
 Build and verification run in an isolated operator/server workspace. GitHub
 verified-asset delivery is separate from optional PyPI publication. The existing
@@ -33,7 +41,7 @@ release. No paid inference is part of the release checks.
 Then run `scripts/build_publish_bundle.py` with that receipt and distribution
 folder. It rejects missing/failed checks and changed artifacts, binds package
 version and source provenance, and creates exactly one new
-`eslams-core-0.8.1-publish.zip`. The manifest contains only source/version,
+`eslams-core-0.9.0-publish.zip`. The manifest contains only source/version,
 verification-receipt digest and the two artifact filenames/sizes/digests. Keep
 full logs and dependency receipts separately; do not upload secrets or unrelated
 research/model data.
@@ -43,7 +51,7 @@ research/model data.
 The owner requested GitHub delivery first and deferred PyPI. Independent review
 and all required guarded checks must pass against the exact clean release
 commit, including after a merge changes its provenance. Only then may an
-authorized operator push reviewed source, create its matching `v0.8.1` tag and
+authorized operator push reviewed source, create its matching `v0.9.0` tag and
 draft release, and upload the checksum-verified wheel/sdist and release evidence.
 Commit CI-skip instructions prevent ordinary hosted push/PR CI; do not invoke
 other hosted workflows. Independently read back the asset identities and hashes,
@@ -76,11 +84,11 @@ inside the mounted workspace for the pinned PyPA Docker action. It never imports
 or executes Core/build code. GitHub CLI handles authenticated asset redirects;
 no custom code forwards a repository token to another host.
 
-The job fails if PyPI 0.8.1 already exists or absence cannot be established. The
+The job fails if PyPI 0.9.0 already exists or absence cannot be established. The
 existing `pypi` environment and job-local `contents:write` / `id-token:write`
 permissions are retained. Draft asset reads require the existing contents scope;
 the job does not perform repository writes. Its dispatch is now restricted to
-the exact `v0.8.1` tag, and no new persistent credential or publisher registration is created.
+the exact `v0.9.0` tag, and no new persistent credential or publisher registration is created.
 OIDC authentication failure is a blocker, not permission to create credentials
 or broaden trust. Do not dispatch a replacement job blindly after a partial
 upload; inspect PyPI file hashes and reconcile first.

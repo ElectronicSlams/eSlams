@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.9.0 - 2026-11-15
+
+- Add closed typed contracts, deterministic schema exports, generated TypeScript
+  and no-secret examples for separately labeled unscored board recovery,
+  non-executing preparation, private lineage and display-only public results.
+  Historical routing/build/provider assurance remains unverified; historical
+  spend and the missing final physical call count remain unknown. See
+  [board recovery](docs/BOARD_RECOVERY.md).
+
+- Support only separately labeled legacy 0.6.2 Tic-Tac-Toe, Connect Four and
+  Othello recovery. Preserve private originals and unverified historical assurance;
+  validate new call receipt pins and expose only safe display-only projections.
+- Generate Core-lite response metadata from Python authority and restore strict
+  deterministic parity without changing game algorithms or historical fixtures.
+- Align two regression tests with the existing interruption/fallback policy;
+  no runtime timeout-policy change is included.
+- Choose a minor version for additive public recovery APIs and contracts. No new
+  Hanabi, topology, Rust or catalogue work is included. GitHub-first delivery;
+  PyPI publication and Platform rollout are separate and are not performed here.
+
 ## v0.8.1 - 2026-11-14
 
 - Add an explicit, separately hash-bound child execution policy for chess
