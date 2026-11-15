@@ -1255,7 +1255,9 @@ def _schemas() -> dict[str, dict[str, Any]]:
                     "enum": ["main_arena", "advanced_arena", "table_mode_pending", "disabled"]
                 },
                 "battlefield": {
-                    "enum": ["solo_benchmark", "head_to_head", "multi_seat", "disabled"]
+                    "enum": [
+                        "solo_benchmark", "head_to_head", "multi_seat", "cooperative", "disabled"
+                    ]
                 },
                 "benchmark": {"enum": ["enabled", "disabled"]},
                 "official": {"enum": ["eligible", "not_eligible", "private_only"]},

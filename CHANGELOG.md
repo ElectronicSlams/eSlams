@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add the cooperative Battlefield surface for Hanabi metadata and consumers.
+  Official eligibility, rules, scoring and historical artifacts are unchanged.
+  Activation requires coordinated Platform support and a separately reviewed
+  Core release and pin update; this does not enable deployed Battlefield runs.
+
 ## v0.8.1 - 2026-11-14
 
 - Add an explicit, separately hash-bound child execution policy for chess

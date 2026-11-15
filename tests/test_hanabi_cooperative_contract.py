@@ -7,8 +7,12 @@ from eslams.arenas.advanced_cards import HANABI_COLORS, HANABI_RANKS, HanabiAren
 from eslams.catalogue import game_catalogue_rows
 from eslams.contracts.json_schema import schema_for_version
 from eslams.contracts.result import validate_result
+from eslams.contracts.surface import BATTLEFIELD_SURFACES, validate_surface
 from eslams.contracts.topology import validate_topology
-from eslams.contracts.versions import COOPERATIVE_RESULT_SCHEMA_VERSION
+from eslams.contracts.versions import (
+    COOPERATIVE_RESULT_SCHEMA_VERSION,
+    GAME_SURFACE_SCHEMA_VERSION,
+)
 
 
 def test_hanabi_cannot_discard_with_full_clues_and_can_discard_after_a_hint():
@@ -49,7 +53,11 @@ def test_cooperative_catalogue_result_schema_and_perfect_game_agree():
     assert topology["winnerRequired"] is False
     assert row["resultContract"]["winnerRequired"] is False
     assert row["resultContract"]["scoreType"] == "cooperative_score"
-    assert row["surface"]["battlefield"] == "disabled"
+    assert row["surface"]["battlefield"] == "cooperative"
+    assert row["surface"]["benchmark"] == "disabled"
+    assert row["surface"]["official"] == "not_eligible"
+    assert validate_surface(row["surface"]) == []
+    Draft202012Validator(schema_for_version(GAME_SURFACE_SCHEMA_VERSION)).validate(row["surface"])
     assert row["core_0_5_validation_errors"] == []
     assert validate_topology(topology) == []
     assert topology["schemaVersion"] == "eslams.game.topology.v2"
@@ -79,3 +87,17 @@ def test_cooperative_catalogue_result_schema_and_perfect_game_agree():
     assert validate_topology(legacy)
     legacy_validator = Draft202012Validator(schema_for_version("eslams.game.topology.v1"))
     assert list(legacy_validator.iter_errors(topology))
+
+
+def test_battlefield_surface_schema_preserves_historical_values_and_rejects_unknown():
+    schema = schema_for_version(GAME_SURFACE_SCHEMA_VERSION)
+    validator = Draft202012Validator(schema)
+    assert set(schema["properties"]["battlefield"]["enum"]) == BATTLEFIELD_SURFACES
+    surface = next(row for row in game_catalogue_rows() if row["game_id"] == "hanabi")["surface"]
+    for mode in ("disabled", "solo_benchmark", "head_to_head", "multi_seat", "cooperative"):
+        payload = {**surface, "battlefield": mode}
+        assert validate_surface(payload) == []
+        validator.validate(payload)
+    unknown = {**surface, "battlefield": "unknown"}
+    assert validate_surface(unknown)
+    assert list(validator.iter_errors(unknown))
