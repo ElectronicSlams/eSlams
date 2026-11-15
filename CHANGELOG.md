@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add closed typed contracts, deterministic schema exports, generated TypeScript
+  and no-secret examples for separately labeled unscored board recovery,
+  non-executing preparation, private lineage and display-only public results.
+  Historical routing/build/provider assurance remains unverified; historical
+  spend and the missing final physical call count remain unknown. See
+  [board recovery](docs/BOARD_RECOVERY.md).
+
 ## v0.8.1 - 2026-11-14
 
 - Add an explicit, separately hash-bound child execution policy for chess
