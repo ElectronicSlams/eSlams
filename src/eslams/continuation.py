@@ -1,4 +1,6 @@
-"""Verified chess continuation. Source custody is distinct from child replay validity.
+"""Verified public deterministic board continuation.
+
+Source custody is distinct from child replay validity.
 
 Only complete, byte-pinned archives are accepted. No state/FEN input is exposed.
 External execution pins are supplied by trusted Platform custody, not inferred.
@@ -15,11 +17,26 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from eslams.arena import validate_seed
+from eslams.arena import Arena, validate_seed
 from eslams.arenas.chess import ChessArena
+from eslams.arenas.connect_four import ConnectFourArena
+from eslams.arenas.othello import OthelloArena
+from eslams.arenas.tic_tac_toe import TicTacToeArena
 from eslams.contracts.provider import (
     provider_attempt_event_id,
     provider_receipt_validation_errors,
+)
+from eslams.contracts.versions import (
+    BOARD_CONTINUATION_CHILD_EXECUTION_SCHEMA_VERSION as BOARD_CHILD_EXECUTION_VERSION,
+)
+from eslams.contracts.versions import (
+    BOARD_CONTINUATION_ENGINE_SCHEMA_VERSION as BOARD_ENGINE_VERSION,
+)
+from eslams.contracts.versions import (
+    BOARD_CONTINUATION_LINEAGE_SCHEMA_VERSION as BOARD_LINEAGE_VERSION,
+)
+from eslams.contracts.versions import (
+    BOARD_CONTINUATION_SCHEMA_VERSION as BOARD_DESCRIPTOR_VERSION,
 )
 from eslams.contracts.versions import CORE_PACKAGE_VERSION, RUNNER_VERSION
 from eslams.events import TraceEvent
@@ -32,6 +49,26 @@ LEGACY_LINEAGE_VERSION = "chess-continuation-lineage/v1"
 LINEAGE_VERSION = "chess-continuation-lineage/v2"
 CHILD_EXECUTION_VERSION = "chess-continuation-child-execution/v1"
 ENGINE_VERSION = "chess-continuation-engine/v1"
+BOARD_ARENAS = frozenset({"tic-tac-toe", "connect-four", "othello"})
+_ARENAS: dict[str, type[Arena]] = {
+    "chess": ChessArena,
+    "tic-tac-toe": TicTacToeArena,
+    "connect-four": ConnectFourArena,
+    "othello": OthelloArena,
+}
+
+
+def _arena(execution: dict[str, Any]) -> Arena:
+    slug = execution.get("arenaSlug")
+    _require(isinstance(slug, str) and slug in _ARENAS, "unsupported continuation arena")
+    assert isinstance(slug, str)
+    return _ARENAS[slug]()
+
+
+def _version(execution: dict[str, Any], chess: str, board: str) -> str:
+    return chess if execution["arenaSlug"] == "chess" else board
+
+
 LINEAGE_PATH = "continuation/lineage.json"
 LEDGER_PATH = "continuation/source_provider_receipts.jsonl"
 PREFIX_PATH = "continuation/source_prefix.json"
@@ -64,7 +101,7 @@ def digest_json(value: Any) -> str:
 
 def _require(condition: bool, message: str) -> None:
     if not condition:
-        raise ValueError("chess continuation: " + message)
+        raise ValueError("continuation: " + message)
 
 
 def _object(value: Any, label: str) -> dict[str, Any]:
@@ -111,8 +148,8 @@ def _execution(value: Any) -> dict[str, Any]:
         _text(execution.get(key), key)
     for key in ("coreSourceSha256", "rulesSha256", "sourcePayloadSha256"):
         _hash(execution.get(key), key)
-    _require(execution.get("arenaSlug") == "chess", "only chess is supported")
-    _require(execution.get("variantSlug") == "standard", "only standard chess is supported")
+    _arena(execution)
+    _require(execution.get("variantSlug") == "standard", "only standard variants are supported")
     validate_seed(execution["seed"])
     limit = execution.get("maxTurns")
     _require(type(limit) is int and limit > 0, "maxTurns must be positive")
@@ -132,12 +169,14 @@ def _execution(value: Any) -> dict[str, Any]:
 
 def _descriptor(value: Any) -> dict[str, Any]:
     descriptor = _object(value, "descriptor")
-    _require(descriptor.get("schemaVersion") == DESCRIPTOR_VERSION, "unsupported descriptor")
+    execution = _execution(descriptor.get("execution"))
+    _require(descriptor.get("schemaVersion") == _version(
+        execution, DESCRIPTOR_VERSION, BOARD_DESCRIPTOR_VERSION
+    ), "unsupported descriptor")
     source = _object(descriptor.get("source"), "source")
     for key in ("matchId", "runId", "artifactId", "artifactKey", "coreRunId"):
         _text(source.get(key), key)
     _hash(source.get("artifactSha256"), "artifactSha256")
-    execution = _execution(descriptor.get("execution"))
     _require(
         descriptor.get("executionSpecSha256") == digest_json(execution),
         "execution spec hash mismatch",
@@ -150,7 +189,7 @@ def _descriptor(value: Any) -> dict[str, Any]:
     return descriptor
 
 
-def chess_continuation_child_execution(
+def _continuation_child_execution(
     descriptor: dict[str, Any], *, turn_limit_policy: str = "preserve-source"
 ) -> dict[str, Any]:
     """Resolve a child budget without changing any historical execution pins.
@@ -167,20 +206,40 @@ def chess_continuation_child_execution(
     if turn_limit_policy == "native-arena-horizon":
         from eslams.catalogue import game_catalogue_rows
 
-        arena = ChessArena()
-        _require(execution["arenaVersion"] in {arena.version, f"chess:{arena.version}"},
+        arena = _arena(execution)
+        _require(execution["arenaVersion"] in {arena.version, f"{arena.id}:{arena.version}"},
                  "native horizon arena version mismatch")
         rules = next(row["public_rules"] for row in game_catalogue_rows()
-                     if row["game_id"] == "chess")
+                     if row["game_id"] == arena.id)
         _require(execution["rulesSha256"] == digest_json(rules),
                  "native horizon rules mismatch")
         _require(max_turns <= arena.max_turns, "native horizon cannot reduce source budget")
         max_turns = arena.max_turns
     return {
-        "schemaVersion": CHILD_EXECUTION_VERSION,
+        "schemaVersion": _version(
+            execution, CHILD_EXECUTION_VERSION, BOARD_CHILD_EXECUTION_VERSION
+        ),
         "turnLimitPolicy": turn_limit_policy,
         "maxTurns": max_turns,
     }
+
+
+def chess_continuation_child_execution(
+    descriptor: dict[str, Any], *, turn_limit_policy: str = "preserve-source"
+) -> dict[str, Any]:
+    """Resolve the historical chess API's child budget, without broadening its scope."""
+    _require(_descriptor(descriptor)["execution"]["arenaSlug"] == "chess",
+             "chess continuation requires chess")
+    return _continuation_child_execution(descriptor, turn_limit_policy=turn_limit_policy)
+
+
+def board_continuation_child_execution(
+    descriptor: dict[str, Any], *, turn_limit_policy: str = "preserve-source"
+) -> dict[str, Any]:
+    """Resolve a pinned public board's budget; never accept a caller-selected horizon."""
+    _require(_descriptor(descriptor)["execution"]["arenaSlug"] in BOARD_ARENAS,
+             "board continuation requires a supported non-chess arena")
+    return _continuation_child_execution(descriptor, turn_limit_policy=turn_limit_policy)
 
 
 def _child_execution(value: Any, descriptor: dict[str, Any]) -> dict[str, Any]:
@@ -188,7 +247,7 @@ def _child_execution(value: Any, descriptor: dict[str, Any]) -> dict[str, Any]:
     policy = child.get("turnLimitPolicy")
     _require(isinstance(policy, str), "child turn-limit policy is required")
     assert isinstance(policy, str)
-    expected = chess_continuation_child_execution(descriptor, turn_limit_policy=policy)
+    expected = _continuation_child_execution(descriptor, turn_limit_policy=policy)
     _require(type(child.get("maxTurns")) is int and child == expected,
              "child execution differs from resolved policy")
     return expected
@@ -197,7 +256,9 @@ def _child_execution(value: Any, descriptor: dict[str, Any]) -> dict[str, Any]:
 def _lineage_child_execution(lineage: dict[str, Any]) -> dict[str, Any]:
     descriptor = _descriptor(lineage.get("descriptor"))
     version = lineage.get("schemaVersion")
-    _require(version in {LEGACY_LINEAGE_VERSION, LINEAGE_VERSION}, "unsupported lineage")
+    current = _version(descriptor["execution"], LINEAGE_VERSION, BOARD_LINEAGE_VERSION)
+    versions = {LEGACY_LINEAGE_VERSION, current} if current == LINEAGE_VERSION else {current}
+    _require(version in versions, "unsupported lineage")
     if version == LEGACY_LINEAGE_VERSION:
         _require("childExecution" not in lineage and "childExecutionSha256" not in lineage,
                  "legacy lineage cannot declare a child budget")
@@ -245,11 +306,36 @@ def chess_continuation_engine_identity(*, wrapper_version: str) -> dict[str, Any
     return local_chess_continuation_engine_identity(wrapper_version=wrapper_version)
 
 
-def _engine(value: Any, *, allow_legacy: bool = False) -> dict[str, Any]:
+def local_board_continuation_engine_identity(*, wrapper_version: str) -> dict[str, Any]:
+    """Describe source bytes only. This is not an installed-build attestation."""
+    return {
+        **local_chess_continuation_engine_identity(wrapper_version=wrapper_version),
+        "schemaVersion": BOARD_ENGINE_VERSION,
+        "continuationContractVersion": BOARD_LINEAGE_VERSION,
+    }
+
+
+def board_continuation_engine_identity(*, wrapper_version: str) -> dict[str, Any]:
+    """Fail closed outside a checkout until a board-specific build contract is reviewed."""
+    from eslams import _build_provenance
+    from eslams.continuation_build import BUILD_PATH
+
+    root = Path(__file__).absolute().parents[2]
+    _require(not BUILD_PATH.exists() and not BUILD_PATH.is_symlink()
+             and _build_provenance.PACKAGED_CORE_COMMIT is None and (root / ".git").exists(),
+             "board continuation requires source checkout; installed execution is unsupported")
+    return local_board_continuation_engine_identity(wrapper_version=wrapper_version)
+
+
+def _engine(
+    value: Any, *, allow_legacy: bool = False, board: bool = False
+) -> dict[str, Any]:
     engine = _object(value, "target engine")
-    _require(engine.get("schemaVersion") == ENGINE_VERSION, "unsupported target engine")
+    _require(engine.get("schemaVersion") == (BOARD_ENGINE_VERSION if board else ENGINE_VERSION),
+             "unsupported target engine")
     _require(
         engine.get("continuationContractVersion") in (
+            {BOARD_LINEAGE_VERSION} if board else
             {LEGACY_LINEAGE_VERSION, LINEAGE_VERSION} if allow_legacy else {LINEAGE_VERSION}
         ),
         "unsupported continuation contract",
@@ -257,6 +343,13 @@ def _engine(value: Any, *, allow_legacy: bool = False) -> dict[str, Any]:
     for key in ("coreVersion", "coreRef", "runnerVersion", "wrapperVersion"):
         _text(engine.get(key), key)
     _hash(engine.get("coreSourceSha256"), "target coreSourceSha256")
+    if board:
+        _require(set(engine) == {
+            "schemaVersion", "coreVersion", "coreRef", "coreSourceSha256", "runnerVersion",
+            "wrapperVersion", "runnerImageDigest", "continuationContractVersion",
+        }, "unsupported board engine fields")
+        _require(engine.get("coreRef") == "local-development",
+                 "installed board execution is unsupported")
     if engine.get("coreRef") == "local-development":
         _require(engine.get("runnerImageDigest") == "local-development",
                  "local engine cannot claim an image digest")
@@ -301,18 +394,38 @@ class ChessContinuation:
     child_execution: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
-        _text(self.child_platform_run_id, "child Platform run ID")
-        _text(self.match_id, "child match ID")
-        # Isolate caller-owned objects; verification takes another snapshot at run time.
-        object.__setattr__(self, "descriptor", copy.deepcopy(_descriptor(self.descriptor)))
-        object.__setattr__(
-            self, "target_engine_identity", copy.deepcopy(_engine(self.target_engine_identity))
-        )
-        object.__setattr__(self, "child_execution", (
-            chess_continuation_child_execution(self.descriptor)
-            if self.child_execution is None
-            else _child_execution(self.child_execution, self.descriptor)
-        ))
+        _initialize_continuation(self, board=False)
+
+
+@dataclass(frozen=True)
+class BoardContinuation:
+    """Source-checkout continuation for three allowlisted public deterministic boards."""
+
+    source_archive: Path
+    descriptor: dict[str, Any]
+    target_engine_identity: dict[str, Any]
+    child_platform_run_id: str
+    match_id: str
+    child_execution: dict[str, Any] | None = None
+
+    def __post_init__(self) -> None:
+        _initialize_continuation(self, board=True)
+
+
+def _initialize_continuation(value: ChessContinuation | BoardContinuation, *, board: bool) -> None:
+    _text(value.child_platform_run_id, "child Platform run ID")
+    _text(value.match_id, "child match ID")
+    descriptor = copy.deepcopy(_descriptor(value.descriptor))
+    slug = descriptor["execution"]["arenaSlug"]
+    _require(slug in BOARD_ARENAS if board else slug == "chess", "continuation API arena mismatch")
+    object.__setattr__(value, "descriptor", descriptor)
+    object.__setattr__(value, "target_engine_identity", copy.deepcopy(
+        _engine(value.target_engine_identity, board=board)
+    ))
+    object.__setattr__(value, "child_execution", (
+        _continuation_child_execution(descriptor) if value.child_execution is None
+        else _child_execution(value.child_execution, descriptor)
+    ))
 
 
 @dataclass
@@ -340,7 +453,9 @@ class VerifiedChessContinuation:
         ledger_rows = _rows(self.historical_ledger)
         child_execution = _child_execution(self.child_execution, self.descriptor)
         lineage = {
-            "schemaVersion": LINEAGE_VERSION,
+            "schemaVersion": _version(
+                self.descriptor["execution"], LINEAGE_VERSION, BOARD_LINEAGE_VERSION
+            ),
             "descriptor": self.descriptor,
             "descriptorSha256": digest_json(self.descriptor),
             "source": self.descriptor["source"],
@@ -387,6 +502,14 @@ class VerifiedChessContinuation:
             PREFIX_PATH: canonical_json(self.prefix).encode("utf-8") + b"\n",
             LEDGER_PATH: self.historical_ledger,
         }
+
+    def projected_history(self, child_run_id: str) -> list[dict[str, Any]]:
+        """Use child identities in model-visible reconstructed history, never source IDs."""
+        return [
+            {**row, "action_provenance": "reconstructed_action",
+             "logical_action_id": f"{child_run_id}:episode_001:{row['player']}:{index:06d}"}
+            for index, row in enumerate(self.history)
+        ]
 
     def projected_traces(self, child_run_id: str) -> list[TraceEvent]:
         traces = []
@@ -450,9 +573,9 @@ def _normalize_prefix(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _reconstruct(
     prefix: list[dict[str, Any]], execution: dict[str, Any]
 ) -> tuple[list[ArenaState], list[dict[str, Any]]]:
-    arena = ChessArena()
+    arena = _arena(execution)
     _require(
-        execution["arenaVersion"] in {arena.version, f"chess:{arena.version}"},
+        execution["arenaVersion"] in {arena.version, f"{arena.id}:{arena.version}"},
         "unsupported source arena version",
     )
     state = arena.initial_state(execution["seed"])
@@ -610,10 +733,11 @@ def _inspect_archive(
             )
             source = {**source, "coreRunId": manifest["run_id"]}
             score = _load_object(directory / "scores/score.json")
-            _require(score.get("arena_id") == "chess", "source is not chess")
+            _require(score.get("arena_id") == execution["arenaSlug"], "source arena mismatch")
             _require(
                 manifest["arena_version"]
-                in {execution["arenaVersion"], "chess:" + execution["arenaVersion"]},
+                in {execution["arenaVersion"],
+                    execution["arenaSlug"] + ":" + execution["arenaVersion"]},
                 "arena pin mismatch",
             )
             for external, internal in (
@@ -773,7 +897,9 @@ def _inspect_archive(
                 "source receipt run ID mismatch",
             )
             descriptor = {
-                "schemaVersion": DESCRIPTOR_VERSION,
+                "schemaVersion": _version(
+                    execution, DESCRIPTOR_VERSION, BOARD_DESCRIPTOR_VERSION
+                ),
                 "source": source,
                 "execution": execution,
                 "executionSpecSha256": digest_json(execution),
@@ -796,7 +922,7 @@ def _inspect_archive(
             )
 
 
-def prepare_chess_continuation(
+def _prepare_continuation(
     source_archive: Path, source_identity: dict[str, Any], execution_spec: dict[str, Any]
 ) -> dict[str, Any]:
     """Derive a descriptor from trusted custody pins and a fully verified archive."""
@@ -808,14 +934,47 @@ def prepare_chess_continuation(
     return _inspect_archive(Path(source_archive), source, execution).descriptor
 
 
+def prepare_chess_continuation(
+    source_archive: Path, source_identity: dict[str, Any], execution_spec: dict[str, Any]
+) -> dict[str, Any]:
+    """Prepare a chess descriptor; retained unchanged as the chess-only public API."""
+    _require(_execution(execution_spec)["arenaSlug"] == "chess", "chess API requires chess")
+    return _prepare_continuation(source_archive, source_identity, execution_spec)
+
+
+def prepare_board_continuation(
+    source_archive: Path, source_identity: dict[str, Any], execution_spec: dict[str, Any]
+) -> dict[str, Any]:
+    """Prepare a current public-board archive; historical compatibility is not inferred."""
+    _require(_execution(execution_spec)["arenaSlug"] in BOARD_ARENAS,
+             "board API requires a supported non-chess arena")
+    return _prepare_continuation(source_archive, source_identity, execution_spec)
+
+
 def verify_chess_continuation(continuation: ChessContinuation) -> VerifiedChessContinuation:
+    _require(isinstance(continuation, ChessContinuation), "chess API requires ChessContinuation")
+    return verify_continuation(continuation)
+
+
+def verify_board_continuation(continuation: BoardContinuation) -> VerifiedChessContinuation:
+    _require(isinstance(continuation, BoardContinuation), "board API requires BoardContinuation")
+    return verify_continuation(continuation)
+
+
+def verify_continuation(
+    continuation: ChessContinuation | BoardContinuation,
+) -> VerifiedChessContinuation:
     descriptor = copy.deepcopy(_descriptor(continuation.descriptor))
     verified = _inspect_archive(
         Path(continuation.source_archive), descriptor["source"], descriptor["execution"]
     )
     _require(verified.descriptor == descriptor, "descriptor does not match source")
-    target = copy.deepcopy(_engine(continuation.target_engine_identity))
-    actual = chess_continuation_engine_identity(wrapper_version=target["wrapperVersion"])
+    board = isinstance(continuation, BoardContinuation)
+    slug = descriptor["execution"]["arenaSlug"]
+    _require(slug in BOARD_ARENAS if board else slug == "chess", "continuation API arena mismatch")
+    target = copy.deepcopy(_engine(continuation.target_engine_identity, board=board))
+    identity = board_continuation_engine_identity if board else chess_continuation_engine_identity
+    actual = identity(wrapper_version=target["wrapperVersion"])
     _require(target == actual, "target identity does not match verified runtime source bytes")
     ids = _ancestor_ids(descriptor["source"], verified.parent_lineage)
     _require(
@@ -828,6 +987,109 @@ def verify_chess_continuation(continuation: ChessContinuation) -> VerifiedChessC
     verified.target_engine_identity = target
     verified.child_execution = _child_execution(continuation.child_execution, descriptor)
     return verified
+
+
+def _validate_lineage_chain(
+    lineage: dict[str, Any], ledger: bytes, states: list[ArenaState]
+) -> None:
+    """Validate every embedded ancestry node, not only its enclosing JSON hash.
+
+    This is internal consistency, not authoritative rereading of ancestor
+    archives. Their source-prefix byte digests still require external custody.
+    """
+    chain: list[dict[str, Any]] = []
+    node: dict[str, Any] | None = lineage
+    while node is not None:
+        _require(len(chain) < 256, "continuation ancestry exceeds limit")
+        chain.append(node)
+        _require("parentLineage" in node, "ancestor parent lineage field missing")
+        raw_parent = node.get("parentLineage")
+        node = None if raw_parent is None else _object(raw_parent, "parent lineage")
+
+    root_execution = _descriptor(lineage.get("descriptor"))["execution"]
+    all_segments = _object(lineage.get("historicalLedger"), "historical ledger")["segments"]
+    for index, node in enumerate(chain):
+        descriptor = _descriptor(node.get("descriptor"))
+        execution = descriptor["execution"]
+        _require(node.get("descriptorSha256") == digest_json(descriptor),
+                 "ancestor descriptor digest")
+        _require(node.get("source") == descriptor["source"]
+                 and node.get("prefix") == descriptor["prefix"], "ancestor source/prefix mismatch")
+        for key in ("arenaSlug", "arenaVersion", "variantSlug", "rulesSha256", "seed", "players",
+                    "scoringPolicyVersion"):
+            _require(execution[key] == root_execution[key], "ancestor execution pins changed")
+        child_execution = _lineage_child_execution(node)
+        target = _engine(node.get("targetEngine"), allow_legacy=True,
+                         board=execution["arenaSlug"] in BOARD_ARENAS)
+        _require(target["continuationContractVersion"] == node["schemaVersion"]
+                 and node.get("targetEngineSha256") == digest_json(target),
+                 "ancestor target engine mismatch")
+        _require(node.get("accounting") == {
+            "historical": "source_and_ancestors",
+            "incremental": "receipts/provider_receipts.jsonl",
+            "aggregateScope": "incremental_only",
+        }, "ancestor accounting scope mismatch")
+        verification = _object(node.get("sourceVerification"), "ancestor source verification")
+        _require(verification.get("archiveBytesVerifiedAtPreparation") is True
+                 and verification.get("childValidatorScope") == "internal_lineage_only"
+                 and verification.get("publicationRequiresAuthoritativeSourceReread") is True,
+                 "ancestor source verification scope mismatch")
+        custody_pins = verification.get("externalCustodyPins")
+        _require(isinstance(custody_pins, list)
+                 and all(isinstance(pin, str) and bool(pin.strip()) for pin in custody_pins),
+                 "ancestor external custody pins missing")
+        count = descriptor["prefix"]["acceptedPlyCount"]
+        _require(count < len(states) and not states[count].terminal
+                 and descriptor["prefix"]["checkpointStateSha256"]
+                 == _raw_state_hash(states[count].state_hash), "ancestor checkpoint mismatch")
+        historical = _object(node.get("historicalLedger"), "ancestor historical ledger")
+        segments = historical.get("segments")
+        expected_segments = all_segments[:len(all_segments) - index]
+        _require(isinstance(segments, list) and bool(segments) and segments == expected_segments,
+                 "ancestor ledger segments mismatch")
+        assert isinstance(segments, list)
+        for raw_segment in segments:
+            segment = _object(raw_segment, "ancestor ledger segment")
+            for field in ("byteCount", "receiptCount", "acceptedPlyCount"):
+                _require(type(segment.get(field)) is int and segment[field] >= 0,
+                         "invalid ancestor ledger segment count")
+        size = sum(segment["byteCount"] for segment in segments)
+        data = ledger[:size]
+        _require(type(historical.get("receiptCount")) is int
+                 and historical["receiptCount"] >= 0, "invalid ancestor receipt count")
+        _require(size <= len(ledger) and historical.get("path") == LEDGER_PATH
+                 and historical.get("sha256") == digest_bytes(data)
+                 and historical.get("receiptCount") == len(_rows(data)), "ancestor ledger digest")
+        _require(segments[-1].get("sourceCoreRunId") == descriptor["source"]["coreRunId"]
+                 and segments[-1].get("sourceArtifactId") == descriptor["source"]["artifactId"]
+                 and segments[-1].get("acceptedPlyCount") == count,
+                 "ancestor ledger source binding mismatch")
+        child = _object(node.get("child"), "ancestor child")
+        for key in ("coreRunId", "platformRunId", "matchId"):
+            _text(child.get(key), "ancestor child " + key)
+        parent = chain[index + 1] if index + 1 < len(chain) else None
+        _require(node.get("parentLineageSha256") == digest_json(parent), "ancestor parent digest")
+        ids = _ancestor_ids(descriptor["source"], parent)
+        _require(child["coreRunId"] not in ids["coreRunId"] | ids["runId"]
+                 and child["platformRunId"] not in ids["runId"]
+                 and child["matchId"] not in ids["matchId"], "ancestor reused identity")
+        if parent is None:
+            _require(len(segments) == 1, "ancestral ledger requires parent lineage")
+            continue
+        parent_descriptor = _descriptor(parent.get("descriptor"))
+        parent_child = _object(parent.get("child"), "ancestor parent child")
+        parent_target = _object(parent.get("targetEngine"), "ancestor parent engine")
+        _require(descriptor["source"]["coreRunId"] == parent_child.get("coreRunId")
+                 and descriptor["source"]["runId"] == parent_child.get("platformRunId")
+                 and descriptor["source"]["matchId"] == parent_child.get("matchId"),
+                 "ancestor parent identity mismatch")
+        for key in ("coreVersion", "coreRef", "coreSourceSha256",
+                    "runnerVersion", "wrapperVersion"):
+            _require(execution[key] == parent_target.get(key), "ancestor source engine mismatch")
+        _require(execution["maxTurns"] == _lineage_child_execution(parent)["maxTurns"],
+                 "ancestor source child budget changed")
+        _require(parent_descriptor["prefix"]["acceptedPlyCount"] <= count
+                 and count <= child_execution["maxTurns"], "ancestor prefix count changed")
 
 
 def validate_continuation_artifact(directory: Path, manifest: dict[str, Any]) -> list[str]:
@@ -863,7 +1125,11 @@ def validate_continuation_artifact(directory: Path, manifest: dict[str, Any]) ->
         )
         _require(manifest["run_id"] != descriptor["source"]["coreRunId"], "reused source run ID")
         _require(lineage.get("prefix") == descriptor["prefix"], "lineage prefix mismatch")
-        target = _engine(lineage.get("targetEngine"), allow_legacy=True)
+        target = _engine(lineage.get("targetEngine"), allow_legacy=True,
+                         board=descriptor["execution"]["arenaSlug"] in BOARD_ARENAS)
+        arena = _arena(descriptor["execution"])
+        _require(manifest.get("arena_version") == f"{arena.id}:{arena.version}",
+                 "child arena differs from lineage")
         _require(target["continuationContractVersion"] == lineage["schemaVersion"],
                  "target and lineage contract mismatch")
         _require(manifest["run_metadata"].get("max_turns") == child_execution["maxTurns"],
@@ -913,6 +1179,8 @@ def validate_continuation_artifact(directory: Path, manifest: dict[str, Any]) ->
             len(replay) >= len(prefix) + 1 and len(public) >= len(prefix),
             "prefix projections missing",
         )
+        _require(replay[0].get("state_hash") == states[0].state_hash,
+                 "child initial state differs from lineage")
         for index, source_row in enumerate(prefix):
             child_row = trace[index]
             _require(
@@ -963,6 +1231,9 @@ def validate_continuation_artifact(directory: Path, manifest: dict[str, Any]) ->
             segment = _object(raw_segment, "ledger segment")
             count = segment.get("byteCount")
             _require(type(count) is int and count >= 0, "invalid ledger segment length")
+            for field in ("receiptCount", "acceptedPlyCount"):
+                _require(type(segment.get(field)) is int and segment[field] >= 0,
+                         "invalid ledger segment count")
             assert isinstance(count, int)
             data = ledger[offset : offset + count]
             _require(
@@ -1012,6 +1283,7 @@ def validate_continuation_artifact(directory: Path, manifest: dict[str, Any]) ->
             )
         else:
             _require(len(segments) == 1, "ancestral ledger requires parent lineage")
+        _validate_lineage_chain(lineage, ledger, states)
         _check_receipts(ledger_rows, descriptor["execution"])
         ancestors = _ancestor_ids(descriptor["source"], parent)
         _require(
