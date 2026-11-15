@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import copy
+import importlib.util
 import json
 from dataclasses import replace
 from pathlib import Path
 
 import jsonschema
 import pytest
+from test_chess_continuation import Scripted, pins, rearchive, receipt_rows
 
 from eslams.arenas import registry
 from eslams.artifacts import ArtifactValidator
@@ -34,7 +36,6 @@ from eslams.contracts.board_continuation import (
 )
 from eslams.protocol import ActResponse
 from eslams.runner import RunConfig, Runner
-from tests.test_chess_continuation import Scripted, pins, rearchive, receipt_rows
 
 ARENAS = sorted(BOARD_ARENAS)
 
@@ -378,10 +379,11 @@ def _rewrite_lineage(result, mutate):
 ])
 def test_every_parent_lineage_is_validated_after_outer_rehash(tmp_path, chess, fault, monkeypatch):
     if chess:
+        from test_chess_continuation import continuation as prepare
+        from test_chess_continuation import run_child as resume
+        from test_chess_continuation import source_run as start
+
         from eslams.continuation import local_chess_continuation_engine_identity
-        from tests.test_chess_continuation import continuation as prepare
-        from tests.test_chess_continuation import run_child as resume
-        from tests.test_chess_continuation import source_run as start
         monkeypatch.setattr("eslams.continuation.chess_continuation_engine_identity",
                             local_chess_continuation_engine_identity)
         source, _ = start(tmp_path / "source", fail_at=1)
@@ -501,10 +503,11 @@ def test_board_runtime_rejects_schema_invalid_engine_and_verification(tmp_path, 
 @pytest.mark.parametrize("arena_id", [*ARENAS, "chess"])
 def test_provider_history_uses_fresh_child_identity_not_source_ids(tmp_path, arena_id, monkeypatch):
     if arena_id == "chess":
+        from test_chess_continuation import continuation as prepare
+        from test_chess_continuation import run_child as resume
+        from test_chess_continuation import source_run as start
+
         from eslams.continuation import local_chess_continuation_engine_identity
-        from tests.test_chess_continuation import continuation as prepare
-        from tests.test_chess_continuation import run_child as resume
-        from tests.test_chess_continuation import source_run as start
         monkeypatch.setattr("eslams.continuation.chess_continuation_engine_identity",
                             local_chess_continuation_engine_identity)
         source, _ = start(tmp_path / "source", run_id="private-source-identity-canary")
@@ -522,8 +525,12 @@ def test_provider_history_uses_fresh_child_identity_not_source_ids(tmp_path, are
 
 
 def test_generated_board_types_and_compile_fixtures_have_no_schema_drift():
-    from scripts.generate_board_continuation_types import generated_files
-    for path, expected in generated_files().items():
+    source = Path(__file__).resolve().parents[1] / "scripts/generate_board_continuation_types.py"
+    spec = importlib.util.spec_from_file_location("board_type_generator_fixture", source)
+    assert spec is not None and spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    for path, expected in generator.generated_files().items():
         assert path.read_text() == expected
 
 
