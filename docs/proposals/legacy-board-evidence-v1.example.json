@@ -1,0 +1,34 @@
+{
+  "schema_version": "legacy-board-evidence/v1",
+  "archive_sha256": "03d1a3dd838a9e959caa8ae0210d57c0436400f4545cd14582fe219a351df30d",
+  "arena": {
+    "slug": "tic-tac-toe",
+    "version": "1.0.0"
+  },
+  "verified": {
+    "listed_member_digests": true,
+    "legal_prefix": true,
+    "archive_internal_receipt_association": true
+  },
+  "prefix": {
+    "action_count": 1,
+    "final_state_sha256": "sha256:34ae1e8b0c0b4ca9057cab2893c5e5e01b5d5dde632e2752b9f65963914caccb",
+    "terminal": false
+  },
+  "final_attempt": {
+    "archive_error": "http_502_bad_gateway",
+    "failed_receipt_present": false,
+    "provider_execution": "unknown",
+    "physical_call_count": "unknown",
+    "spend": "unknown"
+  },
+  "assurance": {
+    "signed_build": "unverified",
+    "route": "unverified",
+    "platform_case": "unverified",
+    "provider_authenticity": "unverified"
+  },
+  "executable": false,
+  "scoring_eligible": false,
+  "official_admission": false
+}

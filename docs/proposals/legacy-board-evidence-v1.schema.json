@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Experimental archive-internal legacy board evidence, never admission",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "legacy-board-evidence/v1"
+    },
+    "archive_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "arena": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "slug": {
+          "enum": [
+            "tic-tac-toe",
+            "connect-four",
+            "othello"
+          ]
+        },
+        "version": {
+          "enum": [
+            "1.0.0",
+            "1.0.1"
+          ]
+        }
+      },
+      "required": [
+        "slug",
+        "version"
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "slug": {
+              "const": "tic-tac-toe"
+            },
+            "version": {
+              "const": "1.0.0"
+            }
+          }
+        },
+        {
+          "properties": {
+            "slug": {
+              "const": "connect-four"
+            },
+            "version": {
+              "const": "1.0.0"
+            }
+          }
+        },
+        {
+          "properties": {
+            "slug": {
+              "const": "othello"
+            },
+            "version": {
+              "const": "1.0.1"
+            }
+          }
+        }
+      ]
+    },
+    "verified": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "listed_member_digests": {
+          "const": true
+        },
+        "legal_prefix": {
+          "const": true
+        },
+        "archive_internal_receipt_association": {
+          "const": true
+        }
+      },
+      "required": [
+        "listed_member_digests",
+        "legal_prefix",
+        "archive_internal_receipt_association"
+      ]
+    },
+    "prefix": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "action_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "final_state_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "terminal": {
+          "const": false
+        }
+      },
+      "required": [
+        "action_count",
+        "final_state_sha256",
+        "terminal"
+      ]
+    },
+    "final_attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "archive_error": {
+          "const": "http_502_bad_gateway"
+        },
+        "failed_receipt_present": {
+          "const": false
+        },
+        "provider_execution": {
+          "const": "unknown"
+        },
+        "physical_call_count": {
+          "const": "unknown"
+        },
+        "spend": {
+          "const": "unknown"
+        }
+      },
+      "required": [
+        "archive_error",
+        "failed_receipt_present",
+        "provider_execution",
+        "physical_call_count",
+        "spend"
+      ]
+    },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "signed_build": {
+          "const": "unverified"
+        },
+        "route": {
+          "const": "unverified"
+        },
+        "platform_case": {
+          "const": "unverified"
+        },
+        "provider_authenticity": {
+          "const": "unverified"
+        }
+      },
+      "required": [
+        "signed_build",
+        "route",
+        "platform_case",
+        "provider_authenticity"
+      ]
+    },
+    "executable": {
+      "const": false
+    },
+    "scoring_eligible": {
+      "const": false
+    },
+    "official_admission": {
+      "const": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "archive_sha256",
+    "arena",
+    "verified",
+    "prefix",
+    "final_attempt",
+    "assurance",
+    "executable",
+    "scoring_eligible",
+    "official_admission"
+  ]
+}

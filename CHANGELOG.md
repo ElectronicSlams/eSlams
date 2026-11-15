@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add an experimental offline legacy board evidence inspector with a closed,
+  non-executable report. It verifies archive-internal receipt associations and
+  deterministic prefixes without changing runner admission, scoring, source
+  bytes, route identity, or unknown final-attempt accounting.
+
 ## v0.8.1 - 2026-11-14
 
 - Add an explicit, separately hash-bound child execution policy for chess
