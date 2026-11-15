@@ -21,7 +21,7 @@ overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
 Core 0.9.0 adds separately labeled, unscored legacy board recovery for Tic-Tac-Toe,
-Connect Four and Othello. See [board recovery](docs/BOARD_RECOVERY.md). Historical
+Connect Four and Othello. See [board recovery](https://github.com/ElectronicSlams/eSlams/blob/main/docs/BOARD_RECOVERY.md). Historical
 assurance remains unverified and originals remain private and unchanged.
 
 Core 0.8.1 adds explicit native-horizon chess continuation without changing
