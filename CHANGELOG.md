@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Add source-checkout-only verified continuation for standard Tic-Tac-Toe,
+  Connect Four and Othello, with separate versioned board contracts, schemas
+  and TypeScript interfaces. Preserve chess compatibility and all archive,
+  provenance, provider-receipt, privacy and scoring safeguards. Installed board
+  execution and historical archive conversion remain unsupported.
+- Harden shared chess/board internal lineage validation across every ancestor,
+  including empty-prefix seed binding, and keep source logical action IDs out
+  of model-visible continuation history.
+
+
 ## v0.8.1 - 2026-11-14
 
 - Add an explicit, separately hash-bound child execution policy for chess

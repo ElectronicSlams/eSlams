@@ -29,9 +29,11 @@ from eslams.artifacts import (
     write_artifact,
 )
 from eslams.continuation import (
+    BOARD_ARENAS,
+    BoardContinuation,
     ChessContinuation,
     new_call_matches_pin,
-    verify_chess_continuation,
+    verify_continuation,
 )
 from eslams.contracts.integrity import ActionProvenance, FailureClass
 from eslams.contracts.provider import (
@@ -105,7 +107,7 @@ class RunConfig:
     on_illegal_action: str = "invalid-match"
     execution_profile: Literal["interactive", "smoke", "official_eval"] = "interactive"
     overwrite: bool = False
-    continuation: ChessContinuation | None = None
+    continuation: ChessContinuation | BoardContinuation | None = None
 
     def __post_init__(self) -> None:
         if self.cancellation is not None and not isinstance(self.cancellation, threading.Event):
@@ -161,8 +163,8 @@ class RunConfig:
                 raise ValueError("continuation requires a new output; overwrite is forbidden")
             if self.execution_profile == "official_eval":
                 raise ValueError("official_eval rejects continuation")
-            if self.arena_id != "chess":
-                raise ValueError("continuation supports only chess")
+            if self.arena_id not in BOARD_ARENAS | {"chess"}:
+                raise ValueError("unsupported continuation arena")
             if self.on_agent_error != "invalid-match" or self.on_illegal_action != "invalid-match":
                 raise ValueError("continuation requires invalid-match failure policies")
         if self.execution_profile == "official_eval":
@@ -191,7 +193,7 @@ class Runner:
         _validate_failure_policy("on_illegal_action", config.on_illegal_action)
         validate_seed(config.seed)
         arena = registry.create(config.arena_id)
-        continuation = (verify_chess_continuation(config.continuation)
+        continuation = (verify_continuation(config.continuation)
                         if config.continuation is not None else None)
         agents = _agents_for_arena(arena, config)
         if config.execution_profile == "official_eval":
@@ -207,7 +209,8 @@ class Runner:
                 raise ValueError("continuation time budget differs from source policy")
             pins = continuation.descriptor["execution"]
             assert continuation.child_execution is not None
-            if (config.seed != pins["seed"]
+            if (config.arena_id != pins["arenaSlug"]
+                    or config.seed != pins["seed"]
                     or max_turns != continuation.child_execution["maxTurns"]
                     or config.wrapper_version != pins["wrapperVersion"]
                     or (config.scoring_policy_version or f"{arena.id}-score:1.0.0")
@@ -276,7 +279,7 @@ class Runner:
         if continuation is not None:
             continuation_files = continuation.private_files(run_id)
             state = continuation.state
-            history = continuation.history
+            history = continuation.projected_history(run_id)
             trace_events = continuation.projected_traces(run_id)
             for index, row in enumerate(continuation.prefix):
                 projected = trace_events[index]

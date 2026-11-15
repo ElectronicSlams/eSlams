@@ -18,3 +18,6 @@
 
 The lab guide pins Core 0.6.2 and requires Python 3.10+. Release changes and
 migration boundaries are recorded in [CHANGELOG.md](../CHANGELOG.md). Local validation and green tests do not confer Official trust.
+
+- [Public-board continuation preview](BOARD_CONTINUATION.md): source-checkout-only,
+  separate from chess and not a legacy-source migration or production release.
