@@ -115,8 +115,23 @@ call count is permitted. Historical spend and historical final physical call
 count are the literal `unknown`; aggregate scope is `incremental_only`.
 
 Reconstructed actions are labeled `reconstructed_action` and reference no newly
-paid successful attempt. New calls keep separate receipts and are counted once.
+paid successful attempt. New calls keep separate receipts and are counted once. Every future receipt must
+declare the exact prospective requested provider/model/version/route, including
+failed or non-applied attempts. Failed responses may lack resolved identity;
+contradictory declarations remain retained audit evidence but fail recovery
+validation and cannot receive its verified internal-validation marker.
 A complete future ledger does not retroactively complete the historical ledger.
+The child receipt reader uses standard artifact member-byte limits, independently
+of the legacy inspector's narrow action-row bound, so multiple same-route physical
+attempts do not turn a legal completed recovery into an invalid archive.
+
+Every derived public sidecar, summary, display frame, reasoning row and embedded
+HTML preview is regenerated and compared with the validated native replay. Extra
+fields, changed participant claims and mismatched labels fail validation. Generic
+replay participants carry no model identity claim; the dedicated recovery result
+separately labels historical requests and prospective execution identities.
+Recorded request histories, including a final failed attempt, must contain only
+the exact child-labeled action history.
 
 `recovery/public_result.json` uses the dedicated public-result contract. It
 contains the required unverified label, the requested historical model IDs,

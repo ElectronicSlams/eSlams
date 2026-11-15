@@ -1579,7 +1579,9 @@ def _public_replay_manifest(build: ArtifactBuildInput, arena_id: str) -> dict[st
             player_id=player_id,
             seat=player_id,
             label=player_id.replace("_", " ").title(),
-            model_identity=_model_identity_by_player(build.agent_version).get(player_id, {}),
+            model_identity=({} if build.score.metrics.get("execution_mode")
+                            == "unscored_recovered_position" else
+                            _model_identity_by_player(build.agent_version).get(player_id, {})),
         )
         for player_id in sorted(build.score.scores_by_player)
     ]

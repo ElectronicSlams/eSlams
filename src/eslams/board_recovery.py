@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import json
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -27,18 +28,22 @@ from eslams.contracts.board_recovery import (
     validate_board_recovery_preparation,
     validate_board_recovery_public_result,
 )
-from eslams.events import TraceEvent
+from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.hashing import canonical_json
 from eslams.legacy_board_evidence import (
     ARENAS,
     EvidenceError,
     LegacyBoardSnapshot,
     equal,
+    finite_float,
+    invalid_constant,
+    pairs,
     read,
     read_legacy_board_snapshot,
     require,
 )
 from eslams.state import ArenaState
+from eslams.zip_extract import DEFAULT_ARCHIVE_LIMITS
 
 MODE = "unscored_recovered_position"
 LABEL = "Recovered position; historical model routing unverified"
@@ -306,12 +311,25 @@ def verify_recovered_position(request: RecoveredPosition) -> VerifiedRecoveredPo
     return VerifiedRecoveredPosition(request, snapshot)
 
 
+def recovery_attempt_declares_pin(row: dict[str, Any], player: dict[str, Any]) -> bool:
+    """Requested future routing is pinned even for failed or non-applied attempts.
+
+    A failed response may lack resolved model attestation. A contradictory
+    declaration is not missing evidence and cannot receive recovery validation.
+    """
+    return (row.get("provider") == player["provider"]
+            and row.get("model") == player["providerModelId"]
+            and ("requested_model" not in row
+                 or row["requested_model"] == player["providerModelId"])
+            and row.get("locked_model_id") in {None, player["modelVersionId"]}
+            and all(row.get(wire) == player[pin] for wire, pin in (
+                ("model_version_id", "modelVersionId"), ("route_key", "routeKey"),
+                ("route_sha256", "routeSha256"))))
+
+
 def recovery_call_matches_pin(receipts: list[dict[str, Any]], player: dict[str, Any]) -> bool:
     return new_call_matches_pin(receipts, player) and all(
-        row.get("provider") == player["provider"] and all(row.get(wire) == player[pin]
-            for wire, pin in (("model_version_id", "modelVersionId"),
-                              ("route_key", "routeKey"), ("route_sha256", "routeSha256")))
-        for row in receipts)
+        recovery_attempt_declares_pin(row, player) for row in receipts)
 
 
 def validate_recovered_position_artifact(directory: Path, manifest: dict[str, Any]) -> list[str]:
@@ -357,13 +375,24 @@ def _validate_recovered_position_artifact(directory: Path, manifest: dict[str, A
             and metadata.get("execution_label") == LABEL
             and metadata.get("accounting_scope") == "incremental_only"
             and manifest.get("verification_level") == "Local Artifact"
+            and manifest.get("verification_level_key") == "local_artifact"
+            and manifest.get("verification_level_label") == "Local Artifact"
             and metadata.get("recovery_contract_version") == lineage["schemaVersion"]
             and not metadata.get("continuation")
-            and metadata.get("execution_profile") != "official_eval", "recovery_mode_missing")
+            and metadata.get("execution_profile") in {"interactive", "smoke"}
+            and metadata.get("on_agent_error") == "invalid-match"
+            and metadata.get("on_illegal_action") == "invalid-match"
+            and manifest.get("artifact_profile") == "runner_bundle"
+            and manifest.get("artifact_profile_key") == "runner_bundle"
+            and manifest.get("artifact_profile_label") == "Runner Bundle"
+            and manifest.get("scoring_safety_reason") == REASON,
+            "recovery_mode_missing")
     require(manifest["run_id"] == child["coreRunId"]
             and metadata.get("case_id") == child["platformRunId"]
             and metadata.get("recovery_platform_run_id") == child["platformRunId"]
             and metadata.get("recovery_match_id") == child["matchId"], "child_identity_mismatch")
+    require(manifest.get("scoring_policy_version") == pins["scoringPolicyVersion"],
+            "scoring_policy_mismatch")
     require(metadata.get("max_turns") == pins["maxTurns"]
             and metadata.get("requested_time_budget_ms") == pins["timeBudgetMs"]
             and metadata.get("effective_time_budget_ms") == pins["timeBudgetMs"],
@@ -384,8 +413,12 @@ def _validate_recovered_position_artifact(directory: Path, manifest: dict[str, A
     from eslams.artifacts import _canonical_hashed_payload
     from eslams.runner import _replay_event
 
-    initial = _replay_event(child["coreRunId"], "episode_001", state, None, [],
-                            arena=arena, actor_player=None, state_hash_before=None).to_dict()
+    initial_event = _replay_event(child["coreRunId"], "episode_001", state, None, [],
+                                  arena=arena, actor_player=None, state_hash_before=None)
+    native_events = [initial_event]
+    initial = initial_event.to_dict()
+    expected_history: list[dict[str, Any]] = []
+    histories: dict[int, list[dict[str, Any]]] = {}
     require(equal(replay[0], initial), "initial_replay_projection")
     require(replay[0].get("state_hash") == state.state_hash
             and replay[0].get("run_id") == child["coreRunId"]
@@ -407,6 +440,10 @@ def _validate_recovered_position_artifact(directory: Path, manifest: dict[str, A
                     and equal(row.get("reconstruction"),
                               projected[index].auditor["reconstruction"]),
                     "copied_prefix_mismatch")
+        if not is_old:
+            histories[index] = copy.deepcopy(expected_history)
+            require(equal(row.get("request", {}).get("history"), expected_history),
+                    "model_visible_history_mismatch")
         next_state = arena.apply_action(state, state.active_player, row["action"])
         require(row.get("state_hash_after") == next_state.state_hash
                 and equal(row.get("state_after"), next_state.to_dict()), "trace_state_after")
@@ -426,12 +463,14 @@ def _validate_recovered_position_artifact(directory: Path, manifest: dict[str, A
                     and projection.get("markers") == [], "projection_mismatch")
             require(projection.get("successful_attempt_event_id") == (
                 None if is_old else row.get("successful_attempt_event_id")), "receipt_projection")
-        expected_replay = _replay_event(
+        native_event = _replay_event(
             child["coreRunId"], "episode_001", next_state, row["action"], [], arena=arena,
             actor_player=state.active_player, state_hash_before=state.state_hash,
             action_provenance=provenance, logical_action_id=logical,
             successful_attempt_event_id=None if is_old else row.get("successful_attempt_event_id"),
-        ).to_dict()
+        )
+        native_events.append(native_event)
+        expected_replay = native_event.to_dict()
         require(equal(replay[index + 1], expected_replay), "replay_projection_extensions")
         if is_old:
             expected_trace = _canonical_hashed_payload(projected[index].view("public"))
@@ -450,15 +489,33 @@ def _validate_recovered_position_artifact(directory: Path, manifest: dict[str, A
         require(equal(replay[index + 1].get("public_state"), next_state.public_state)
                 and replay[index + 1].get("terminal") is next_state.terminal
                 and equal(replay[index + 1].get("outcome"), next_state.outcome), "replay_state")
+        expected_history.append({"turn_id": index, "player": state.active_player,
+                                 "action": row["action"], "state_hash": next_state.state_hash,
+                                 "markers": [], "action_provenance": provenance,
+                                 "logical_action_id": logical})
         state = next_state
-    incremental = read(directory / "receipts/provider_receipts.jsonl", lines=True)
+    histories[len(trace)] = expected_history
+    agent_io = read(directory / "logs/agent_io.jsonl", lines=True)
+    expected_calls = len(trace) - len(prefix) + int(
+        not state.terminal and len(trace) < pins["maxTurns"])
+    require(len(agent_io) == expected_calls, "agent_request_count")
+    for index, io in enumerate(agent_io, start=len(prefix)):
+        request = io.get("request", {})
+        require(io.get("turn_id") == index and request.get("turn_id") == index
+                and request.get("run_id") == child["coreRunId"]
+                and request.get("episode_id") == "episode_001"
+                and equal(request.get("history"), histories[index]),
+                "recorded_request_history_mismatch")
+    incremental = _read_child_receipts(directory / "receipts/provider_receipts.jsonl")
     _check_receipts(incremental, {"players": pins["players"]}, check_pins=False)
     applied = set()
     for receipt in incremental:
-        turn = receipt.get("turn_id")
-        require(type(turn) is int and len(prefix) <= turn <= len(trace)
-                and (not state.terminal or turn < len(trace)), "receipt_turn")
-        player = trace[turn]["active_player"] if turn < len(trace) else state.active_player
+        receipt_turn = receipt.get("turn_id")
+        require(type(receipt_turn) is int and len(prefix) <= receipt_turn <= len(trace)
+                and (not state.terminal or receipt_turn < len(trace)), "receipt_turn")
+        assert isinstance(receipt_turn, int)
+        player = (trace[receipt_turn]["active_player"] if receipt_turn < len(trace)
+                  else state.active_player)
         require(receipt.get("run_id") == child["coreRunId"]
                 and receipt.get("physical_run_id") == child["coreRunId"]
                 and receipt.get("case_id") == child["platformRunId"]
@@ -466,13 +523,14 @@ def _validate_recovered_position_artifact(directory: Path, manifest: dict[str, A
                 and receipt.get("active_player") == player
                 and receipt.get("seat_id") == player
                 and receipt.get("logical_action_id")
-                == f"{child['coreRunId']}:episode_001:{player}:{turn:06d}"
+                == f"{child['coreRunId']}:episode_001:{player}:{receipt_turn:06d}"
                 and receipt.get("case_valid_for_scoring") is False, "receipt_scope")
+        pin = next(p for p in pins["players"] if p["seat"] == player)
+        require(recovery_attempt_declares_pin(receipt, pin), "attempt_route_mismatch")
         if receipt.get("action_applied") is True:
-            pin = next(p for p in pins["players"] if p["seat"] == player)
             require(recovery_call_matches_pin([receipt], pin), "receipt_route")
-            require(turn < len(trace) and receipt["event_id"]
-                    == trace[turn].get("successful_attempt_event_id"), "receipt_action")
+            require(receipt_turn < len(trace) and receipt["event_id"]
+                    == trace[receipt_turn].get("successful_attempt_event_id"), "receipt_action")
             applied.add(receipt["event_id"])
     referenced = [row.get("successful_attempt_event_id") for row in trace[len(prefix):]]
     require(len(set(referenced)) == len(referenced) and set(referenced) == applied,
@@ -481,6 +539,36 @@ def _validate_recovered_position_artifact(directory: Path, manifest: dict[str, A
 
     usage, cost = aggregate_provider_receipts(incremental)
     score = read(directory / "scores/score.json")
+    require(score.get("run_id") == child["coreRunId"]
+            and score.get("arena_id") == arena.id
+            and score.get("verification_level") == "Local Artifact"
+            and score.get("integrity_status") == "invalid"
+            and score.get("usage_complete") is (usage.get("usageComplete") is True)
+            and score.get("cost_complete") is (usage.get("costComplete") is True)
+            and score.get("attempt_ledger_complete")
+            is (usage.get("attemptLedgerComplete") is True), "score_identity_or_integrity")
+    require(score["metrics"].get("integrity_status") == "invalid"
+            and all(score["metrics"].get(field) is score[field]
+                    for field in ("usage_complete", "cost_complete", "attempt_ledger_complete")),
+            "score_integrity_metrics")
+    for field in ("agent_error_count_by_player", "illegal_action_count_by_player",
+                  "fallback_action_count_by_player", "provider_action_count_by_player",
+                  "logical_action_count_by_player"):
+        counts = score.get(field)
+        require(isinstance(counts, dict) and set(counts) == set(arena.players)
+                and all(type(value) is int and value >= 0 for value in counts.values()),
+                "invalid_public_player_counts")
+    statuses = score.get("provider_status_by_player")
+    require(isinstance(statuses, dict) and set(statuses) == set(arena.players)
+            and all(value in {"provider_ok", "provider_usage_unavailable",
+                              "provider_receipt_missing", "agent_error"}
+                    for value in statuses.values()), "invalid_public_provider_status")
+    from eslams.contracts.integrity import INVALID_REASON_CODES
+
+    require(isinstance(score.get("invalid_reason_codes"), list)
+            and all(code in {*INVALID_REASON_CODES, "run_truncated"}
+                    for code in score["invalid_reason_codes"]), "invalid_public_reason_codes")
+    require(equal(score.get("scores_by_player"), arena.score(state)), "board_score_mismatch")
     require(equal(score.get("aggregate_usage"), usage)
             and equal(score.get("aggregate_cost"), cost), "incremental_accounting_mismatch")
     require(score.get("match_valid_for_scoring") is False
@@ -517,5 +605,81 @@ def _validate_recovered_position_artifact(directory: Path, manifest: dict[str, A
                     "per_case_run_valid", "per_case_scoring_eligible",
                     "proof_row_publication_eligible", "aggregate_leaderboard_eligible")),
                 "public_scoring_elevation")
+    require(manifest.get("public_exports") == {
+        "public_manifest": "public/public_manifest.json",
+        "public_result_summary": "public/public_result_summary.json",
+        "public_replay_manifest": "replay/replay_manifest.json",
+        "public_replay_events": "replay/replay_events.jsonl",
+        "public_display_frames": "replay/display_frames.jsonl",
+        "public_reasoning": "public_reasoning/reasoning.jsonl",
+    }, "public_export_scope")
+    _validate_public_surfaces(directory, manifest, score, native_events, arena.id)
     expected_public = public_recovery_result(descriptor, state, len(trace))
     require(equal(read(directory / PUBLIC_PATH), expected_public), "public_recovery_mismatch")
+
+
+def _read_child_receipts(path: Path) -> list[dict[str, Any]]:
+    """Physical attempts are not action rows; retain normal artifact byte bounds."""
+    with path.open("rb") as stream:
+        data = stream.read(DEFAULT_ARCHIVE_LIMITS.member_bytes + 1)
+    require(len(data) <= DEFAULT_ARCHIVE_LIMITS.member_bytes, "child_ledger_byte_limit")
+    result = []
+    for line in data.splitlines():
+        require(0 < len(line) <= 1024 * 1024, "child_ledger_line_limit")
+        value = json.loads(line, object_pairs_hook=pairs, parse_constant=invalid_constant,
+                           parse_float=finite_float)
+        require(isinstance(value, dict), "child_receipt_object_required")
+        result.append(value)
+    return result
+
+
+def _validate_public_surfaces(directory: Path, manifest: dict[str, Any], score: dict[str, Any],
+                              native_events: list[ReplayEvent], arena_id: str) -> None:
+    """Regenerate closed derived projections; no extension can smuggle private fields."""
+    from eslams.artifacts import (
+        ArtifactBuildInput,
+        _official_result_summary,
+        _public_reasoning_rows,
+        _public_replay_manifest,
+        _public_result_summary,
+    )
+    from eslams.contracts.artifact import PublicArtifactManifest
+    from eslams.replay import _scoring_from_public_summary, _write_replay
+    from eslams.replay_projection import display_frame_rows
+
+    summary = ScoreSummary(**score)
+    build = ArtifactBuildInput(
+        run_id=manifest["run_id"], arena_version=manifest["arena_version"],
+        agent_version=manifest["agent_version"], score=summary, trace_events=[],
+        replay_events=native_events, metrics=summary.metrics, runner_log="", agent_io=[], errors=[],
+    )
+    expected_summary = _public_result_summary(summary, arena_id).to_dict()
+    objects = {
+        "public/public_result_summary.json": expected_summary,
+        "scores/official_result.json": _official_result_summary(summary, arena_id),
+        "replay/replay_manifest.json": _public_replay_manifest(build, arena_id),
+        "public/public_manifest.json": PublicArtifactManifest(
+            run_id=manifest["run_id"], artifact_id="see-manifest", arena_id=arena_id,
+            artifact_profile="runner_bundle", artifact_kind="recovered_position",
+            replay_manifest_path="replay/replay_manifest.json",
+            replay_events_path="replay/replay_events.jsonl",
+            display_frames_path="replay/display_frames.jsonl",
+            public_result_summary_path="public/public_result_summary.json",
+            notes=["Artifact id is recorded in manifest.json to avoid recursive hashing."],
+        ).to_dict(),
+    }
+    for relative, expected in objects.items():
+        require(equal(read(directory / relative), expected), "public_projection_mismatch")
+    for relative, expected_rows in (
+        ("replay/display_frames.jsonl", display_frame_rows(native_events)),
+        ("public_reasoning/reasoning.jsonl", _public_reasoning_rows(native_events)),
+    ):
+        require(equal(read(directory / relative, lines=True), expected_rows),
+                "public_projection_mismatch")
+    with tempfile.TemporaryDirectory(prefix="recovery-html-check-") as temporary:
+        generated = _write_replay(Path(temporary) / "index.html",
+                                  json.loads(canonical_json(
+                                      [event.to_dict() for event in native_events])),
+                                  scoring=_scoring_from_public_summary(expected_summary))
+        require((directory / "replay/index.html").read_bytes() == generated.read_bytes(),
+                "public_html_mismatch")

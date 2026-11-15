@@ -435,6 +435,17 @@ class Runner:
                     markers.extend(["agent_crash", "model_identity_mismatch"])
                     if response is not None:
                         response.metadata["error_kind"] = "model_identity_mismatch"
+            if recovery is not None:
+                # Preserve the new logical request even if its final attempt fails.
+                # This records intent/history, not proof that a physical call ran.
+                agent_io.append({
+                    "turn_id": state.turn, "agent_id": getattr(agent, "id", "agent"),
+                    "request": request.to_dict(),
+                    "response": response.to_dict() if response else None,
+                    "latency_ms": latency_ms, "markers": markers,
+                    "provider_receipt": receipt if isinstance(receipt, dict) else None,
+                    "action_provenance": None, "logical_action_id": logical_action_id,
+                })
             if _has_agent_error(markers):
                 agent_error_count[player_id] += 1
                 failure_class = _failure_class_from_response(response, markers)
@@ -671,19 +682,26 @@ class Runner:
                     successful_attempt_event_id=successful_attempt_event_id,
                 )
             )
-            agent_io.append(
-                {
-                    "turn_id": state.turn,
-                    "agent_id": getattr(agent, "id", "agent"),
-                    "request": request.to_dict(),
+            if recovery is not None:
+                agent_io[-1].update({
                     "response": response.to_dict() if response else None,
-                    "latency_ms": latency_ms,
-                    "markers": markers,
                     "provider_receipt": receipt if isinstance(receipt, dict) else None,
                     "action_provenance": action_provenance.value,
-                    "logical_action_id": logical_action_id,
-                }
-            )
+                })
+            else:
+                agent_io.append(
+                    {
+                        "turn_id": state.turn,
+                        "agent_id": getattr(agent, "id", "agent"),
+                        "request": request.to_dict(),
+                        "response": response.to_dict() if response else None,
+                        "latency_ms": latency_ms,
+                        "markers": markers,
+                        "provider_receipt": receipt if isinstance(receipt, dict) else None,
+                        "action_provenance": action_provenance.value,
+                        "logical_action_id": logical_action_id,
+                    }
+                )
             history.append(
                 {
                     "turn_id": state.turn,
