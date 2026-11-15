@@ -209,11 +209,12 @@ def surface_for_game(game_id: str) -> GameSurface:
     if game_id == "hanabi":
         return GameSurface(
             arena="advanced_arena",
-            battlefield="disabled",
+            battlefield="cooperative",
             benchmark="disabled",
             official="not_eligible",
             public_reason=(
-                "Cooperative team scoring; competitive head-to-head results do not apply."
+                "Cooperative team scoring requires a compatible Battlefield consumer; "
+                "competitive head-to-head results do not apply."
             ),
         )
     if game_id in SOLO_SCORE_GAMES:

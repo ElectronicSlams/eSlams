@@ -8,7 +8,7 @@ from typing import Any
 from eslams.contracts.versions import GAME_SURFACE_SCHEMA_VERSION
 
 ARENA_SURFACES = {"main_arena", "advanced_arena", "table_mode_pending", "disabled"}
-BATTLEFIELD_SURFACES = {"solo_benchmark", "head_to_head", "multi_seat", "disabled"}
+BATTLEFIELD_SURFACES = {"solo_benchmark", "head_to_head", "multi_seat", "cooperative", "disabled"}
 BENCHMARK_SURFACES = {"enabled", "disabled"}
 OFFICIAL_SURFACES = {"eligible", "not_eligible", "private_only"}
 

@@ -685,8 +685,20 @@ are exported by `packages/core-contracts`.
 Hanabi has two controlled seats, no environment seat, no individual winner or
 draw, and identical team scores for both seats. A perfect game still has
 `winner: null`. Display the team score; do not enter the seats as opponents in
-a head-to-head leaderboard. Its `battlefield` and `benchmark` surfaces are
-disabled and its Official surface is not eligible.
+a head-to-head leaderboard. Its `battlefield` surface is `cooperative`; its
+`benchmark` surface remains disabled and its Official surface is not eligible.
+The additive `cooperative` value in `eslams.game.surface.v1` identifies the required
+consumer behavior, not a claim that a deployed Platform supports it. Historical
+surface values, including `disabled`, remain readable.
+
+This source change is unreleased. Released Core 0.8.1 still declares Hanabi's
+Battlefield surface disabled. Platform must retain that admission gate until a
+coordinated release provides cooperative ingestion, team-score display and replay
+handling, then regenerates contracts/catalogue and aligns its Core package and
+runner image pins. Discuss the release version and scope separately before
+activation; do not enable Hanabi by patching a deployed catalogue. Existing
+artifacts, ruleset 1.1.0, two-player/60-turn limits and score semantics are unchanged:
+the raw team score is 0–6 and both seats receive the same normalized score.
 
 ## Initial-state budget scope
 
