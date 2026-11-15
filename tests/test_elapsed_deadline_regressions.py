@@ -9,7 +9,12 @@ import httpx
 import pytest
 from test_model_agents import _request
 
-from eslams.agents import FunctionAgent, ModelProviderAgent, _provider_semaphore
+from eslams.agents import (
+    FunctionAgent,
+    ModelProviderAgent,
+    ProviderCallError,
+    _provider_semaphore,
+)
 from eslams.artifacts import ArtifactValidator
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.deadlines import action_deadline
@@ -34,6 +39,7 @@ def _server(mode):
                 self.send_response(200)
                 self.send_header("content-type", "application/json")
                 self.send_header("content-length", str(len(body)))
+                self.send_header("x-request-id", "deadline-fixture-request")
                 self.end_headers()
                 if mode == "trickle":
                     for byte in body:
@@ -92,9 +98,10 @@ def test_http_bridge_works_inside_an_existing_event_loop_and_after_cancelled_cal
         assert bounded_post(url, headers={}, json={}, timeout=1).json() == {"action": 0}
 
 
-def test_provider_runtime_deadline_records_failed_attempt_and_bounds_queue_retry_waits(monkeypatch):
+@pytest.mark.parametrize("mode", ["headers", "trickle"])
+def test_provider_runtime_deadline_records_failed_attempt(monkeypatch, mode):
     monkeypatch.setenv("OPENAI_API_KEY", "fake-local-key")
-    with _server("trickle") as (url, _):
+    with _server(mode) as (url, _):
         agent = ModelProviderAgent(
             "openai",
             "gpt-test",
@@ -102,16 +109,33 @@ def test_provider_runtime_deadline_records_failed_attempt_and_bounds_queue_retry
             runtime_config=ProviderRuntimeConfig(
                 timeout_ms=250,
                 read_timeout_ms=2000,
+                max_retries=2,
                 gateway_base_url=url,
                 gateway_mode="generic_base_url",
             ),
         )
         start = time.monotonic()
-        with pytest.raises(TimeoutError):
+        # Once headers arrive, the typed failure preserves their observed evidence.
+        expected_error = ProviderCallError if mode == "trickle" else TimeoutError
+        with pytest.raises(expected_error) as exc:
             agent.act(_request())
         assert time.monotonic() - start < 0.8
-        assert agent.last_receipt["outcome"] == "provider_timeout"
+        if mode == "trickle":
+            assert exc.value.error_kind == "provider_timeout"
+            assert exc.value.status_code == 200
+        receipt = agent.last_receipt
+        assert receipt["outcome"] == "provider_timeout"
+        assert receipt["status_code"] == (200 if mode == "trickle" else None)
+        assert receipt["request_id"] == ("deadline-fixture-request" if mode == "trickle" else None)
+        assert receipt["usage"] == {}
+        assert receipt["pricing"]["status"] == "cost_unavailable"
+        assert receipt["estimated_cost"]["status"] == "cost_unavailable"
+        # Optional retries must not replay an attempt with unknown remote work.
         assert len(agent.attempt_receipts) == 1
+
+
+def test_provider_runtime_deadline_bounds_queue_retry_waits(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "fake-local-key")
     # A full concurrency slot cannot wait beyond the same elapsed attempt deadline.
     agent = ModelProviderAgent(
         "openai",
