@@ -15,6 +15,7 @@ from eslams.arena import Arena
 from eslams.arenas import registry
 from eslams.arenas.matrix_games import RockPaperScissorsArena
 from eslams.arenas.poker import LeducHoldemArena, LimitTexasHoldemArena, NoLimitTexasHoldemArena
+from eslams.contracts.versions import NATIVE_MANIFEST_SCHEMA_VERSION
 from eslams.hashing import canonical_json, sha256_json, sha256_text
 from eslams.native_auction import NativeSealedBidAuction
 from eslams.native_observation import closed_fact_bytes, seat_facts
@@ -33,7 +34,7 @@ _ACTIONS = frozenset((
     "rock", "paper", "scissors", "cooperate", "defect",
 ))
 _STREETS = frozenset(("preflop", "board", "flop", "turn", "river", "showdown"))
-NATIVE_ARTIFACT_KIND = "eslams.native-match.public.v1"
+NATIVE_ARTIFACT_KIND = NATIVE_MANIFEST_SCHEMA_VERSION
 DEMO_MAX_BLOCKS = 20  # Local journal harness bound only; not a proposed release limit.
 
 

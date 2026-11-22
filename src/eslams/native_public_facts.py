@@ -5,11 +5,20 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import Any
 
 from eslams.state import ArenaState
 
-Check = Callable[[Any], bool]
+
+@dataclass(frozen=True)
+class Check:
+    check: Callable[[Any], bool]
+    schema: dict[str, Any]
+
+    def __call__(self, value: Any) -> bool:
+        return self.check(value)
+
 _SEATS = ("player_1", "player_2", "player_3", "player_4")
 _CARD = r"(?:10|[2-9TJQKA])[CDHS]"
 _DOU = rf"(?:{_CARD}|BJ|RJ)"
@@ -17,29 +26,39 @@ _TILE = r"[BCD][1-9]"
 
 
 def _number(a: int, b: int = 1000) -> Check:
-    return lambda v: type(v) is int and a <= v <= b
+    return Check(lambda v: type(v) is int and a <= v <= b,
+                 {"type": "integer", "minimum": a, "maximum": b})
 
 
 def _one(*options: Any) -> Check:
-    return lambda v: any(type(v) is type(a) and v == a for a in options)
+    return Check(lambda v: any(type(v) is type(a) and v == a for a in options),
+                 {"enum": list(options)})
 
 
 def _pattern(pattern: str) -> Check:
-    return lambda v: type(v) is str and len(v) <= 100 and re.fullmatch(pattern, v) is not None
+    return Check(
+        lambda v: type(v) is str and len(v) <= 100 and re.fullmatch(pattern, v) is not None,
+        {"type": "string", "maxLength": 100, "pattern": f"^(?:{pattern})$"},
+    )
 
 
 def _many(item: Check, limit: int) -> Check:
-    return lambda v: isinstance(v, list) and len(v) <= limit and all(item(x) for x in v)
+    return Check(lambda v: isinstance(v, list) and len(v) <= limit and all(item(x) for x in v),
+                 {"type": "array", "maxItems": limit, "items": item.schema})
 
 
 def _obj(**keys: Check) -> Check:
-    return lambda v: isinstance(v, dict) and set(v) == set(keys) and all(
-        options(v[k]) for k, options in keys.items()
+    return Check(
+        lambda v: isinstance(v, dict) and set(v) == set(keys) and all(
+            options(v[k]) for k, options in keys.items()
+        ),
+        {"type": "object", "properties": {name: check.schema for name, check in keys.items()},
+         "required": list(keys), "additionalProperties": False},
     )
 
 
 def _nullable(rule: Check) -> Check:
-    return lambda v: v is None or rule(v)
+    return Check(lambda v: v is None or rule(v), {"anyOf": [{"type": "null"}, rule.schema]})
 
 
 def _count(seats: int) -> Check:
@@ -118,14 +137,32 @@ _MOVE: dict[str, Check] = {
 _FACT_KINDS = {"round_opened", "redacted_unit_action", "round_settled"}
 
 
-def valid_shared_facts(game: str, kind: str, facts: Any) -> bool:
-    if game not in _TABLE or kind not in _FACT_KINDS:
-        return isinstance(facts, dict) and not facts
+def _layout(game: str, kind: str) -> dict[str, Check]:
     layout = dict(_TABLE[game])
     if kind == "redacted_unit_action":
         layout["move"] = _MOVE[game]
     if game == "blackjack" and kind == "round_settled":
         layout["dealer_hand"] = _many(_number(1, 11), 18)
+    return layout
+
+
+def shared_fact_schema(kind: str | None = None) -> dict[str, Any]:
+    """Shared field shapes without state or private rules claims."""
+    kinds = [kind] if kind is not None else sorted(_FACT_KINDS)
+    choices = [_obj().schema]
+    for name in kinds:
+        if name in _FACT_KINDS:
+            for game in sorted(_TABLE):
+                candidate = _obj(**_layout(game, name)).schema
+                if candidate not in choices:
+                    choices.append(candidate)
+    return {"anyOf": choices} if len(choices) > 1 else choices[0]
+
+
+def valid_shared_facts(game: str, kind: str, facts: Any) -> bool:
+    if game not in _TABLE or kind not in _FACT_KINDS:
+        return isinstance(facts, dict) and not facts
+    layout = _layout(game, kind)
     if not _obj(**layout)(facts):
         return False
     return game != "bridge" or bool(facts["contract"]["target"] == facts["contract"]["level"] + 6)
