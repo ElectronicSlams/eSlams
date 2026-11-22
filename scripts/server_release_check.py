@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -83,7 +84,12 @@ def main() -> None:
                             str(out / "portable-bytes.json")], 90),
         ("build", [python, "-m", "build", "--no-isolation", "--outdir", str(out / "dist")], 90),
     ]
-    receipt: dict[str, object] = {"source_commit": commit, "version": "0.9.0",
+    version_match = re.search(
+        r'^version = "([0-9]+\.[0-9]+\.[0-9]+)"$', (root / "pyproject.toml").read_text(), re.M,
+    )
+    if version_match is None:
+        raise ValueError("unrecognized source release version")
+    receipt: dict[str, object] = {"source_commit": commit, "version": version_match.group(1),
         "platform": platform.platform(), "python": sys.version,
         "steps": [], "status": "in_progress",
         "excluded": "previously denied elapsed-deadline listener fixtures not opened or retried"}

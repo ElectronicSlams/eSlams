@@ -1,3 +1,18 @@
+# GitHub-first 0.9.1 handoff
+
+Run release checks from the exact clean 0.9.1 source commit with declared
+runtime/build dependencies, including the native local policy and replay tests.
+Record artifact digests, embedded source commit, full server verification and
+isolated wheel/sdist consumer receipts. The release assets are the reviewed
+wheel, sdist and sanitized release evidence. Check both exact draft/GitHub
+downloads against the receipt before public release. This release does not
+enable hosted agents or Platform traffic.
+
+The previous OIDC workflow and sealed verifier below are limited to **0.9.0**.
+They must not be run or edited to dispatch 0.9.1. Do not alter PyPI accounts,
+credentials, trust, or publish from the old bundle script. The 0.9.1 route is
+GitHub-only unless a separate publication plan is explicitly authorized.
+
 # Python 0.9.0 GitHub release handoff
 
 This is the local 0.9.0 candidate for reviewed additive unscored legacy board

@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.9.1
+
+- Add separately versioned native multi-unit matches for 22 arenas, with a
+  3-unit block, keyless CLI, trusted local Python seat policies, sealed per-seat
+  history, and authenticated settled-boundary continuation.
+- Add explicit validation and offline public-journal rendering for native
+  artifacts. Disallowed private facts and unscored interrupted results remain
+  outside the public score. Ordinary v1 match/artifact handling remains unchanged.
+- Add private-field-safe native Auction; original registered rules and historical
+  scoring are unchanged. No new provider, PyPI, Rust, or hosted Platform rollout
+  is included. See [native matches](docs/NATIVE_MATCHES.md).
+
 ## v0.9.0 - 2026-11-15
 
 - Add closed typed contracts, deterministic schema exports, generated TypeScript

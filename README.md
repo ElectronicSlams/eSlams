@@ -20,6 +20,10 @@ secret seeds, private scenario sets, and hidden eval variants so agents cannot
 overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
+Core 0.9.1 adds opt-in [native multi-unit matches](https://github.com/ElectronicSlams/eSlams/blob/v0.9.1/docs/NATIVE_MATCHES.md)
+for 22 arenas, with a keyless local CLI and a trusted Python seat-policy API.
+Native artifacts use separate validation and do not enable hosted play.
+
 Core 0.9.0 adds separately labeled, unscored legacy board recovery for Tic-Tac-Toe,
 Connect Four and Othello. See [board recovery](https://github.com/ElectronicSlams/eSlams/blob/main/docs/BOARD_RECOVERY.md). Historical
 assurance remains unverified and originals remain private and unchanged.
@@ -115,7 +119,7 @@ python3 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-Core 0.9.0 requires Python 3.10+. Supported-version release checks must accompany
+Core 0.9.1 requires Python 3.10+. Supported-version release checks must accompany
 the final package; local candidate results are not a promise that every OS was tested.
 Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
 configuration names; Core does not load `.env` automatically. Export selected
