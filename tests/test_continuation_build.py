@@ -30,7 +30,8 @@ def installed(tmp_path, monkeypatch):
     monkeypatch.setattr(build, "BUILD_PATH", path)
     monkeypatch.setattr(build, "WRAPPER_ROOT", wrapper)
     monkeypatch.setattr(build._build_provenance, "PACKAGED_CORE_COMMIT", "a" * 40)
-    monkeypatch.setattr(build.os, "geteuid", lambda: 10001)
+    # Install a synthetic Unix identity on Windows too; production must fail closed there.
+    monkeypatch.setattr(build.os, "geteuid", lambda: 10001, raising=False)
     # Model a protected image filesystem without changing local OS ownership.
     monkeypatch.setattr(build, "_protected", lambda *args, **kwargs: None)
     evidence = build.build_chess_continuation_evidence(
@@ -152,21 +153,31 @@ def test_source_manifest_rejects_links(tmp_path):
     (10001, stat.S_IFREG | 0o644), (0, stat.S_IFREG | 0o666),
     (0, stat.S_IFLNK | 0o777), (0, stat.S_IFIFO | 0o644),
 ])
-def test_protection_rejects_runtime_writable_or_nonregular_file(monkeypatch, uid, mode):
+def test_protection_rejects_runtime_writable_or_nonregular_file(
+    tmp_path, monkeypatch, uid, mode
+):
     monkeypatch.setattr(Path, "lstat", lambda self: SimpleNamespace(st_uid=uid, st_mode=mode))
     with pytest.raises(ValueError):
-        build._protected(Path("/protected/evidence.json"))
+        build._protected(tmp_path / "protected" / "evidence.json")
 
 
-def test_protection_checks_every_ancestor(monkeypatch):
+def test_protection_checks_every_ancestor(tmp_path, monkeypatch):
+    ancestor = tmp_path / "opt"
+
     def info(path):
         mode = stat.S_IFREG | 0o644 if path.name == "build.json" else stat.S_IFDIR | 0o755
-        if path == Path("/opt"):
+        if path == ancestor:
             mode |= 0o002
         return SimpleNamespace(st_uid=0, st_mode=mode)
     monkeypatch.setattr(Path, "lstat", info)
     with pytest.raises(ValueError, match="runtime writes"):
-        build._protected(Path("/opt/eslams-continuation/build.json"))
+        build._protected(ancestor / "eslams-continuation" / "build.json")
+
+
+def test_installed_identity_fails_closed_without_effective_uid(monkeypatch):
+    monkeypatch.delattr(build.os, "geteuid", raising=False)
+    with pytest.raises(ValueError, match="requires POSIX effective-user checks"):
+        build.installed_chess_continuation_engine_identity()
 
 
 def test_build_writer_requires_packaged_ref_and_actual_imported_root(installed):

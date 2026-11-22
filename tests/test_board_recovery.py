@@ -455,7 +455,7 @@ def test_rehashed_public_surface_extensions_rejected(tmp_path: Path, relative: s
     child, _ = run_child(tmp_path / "child", path, prep)
     target = child.expanded_path / relative
     if relative.endswith(".html"):
-        target.write_text(target.read_text() + "\n" + CANARY)
+        target.write_text(target.read_text(encoding="utf-8") + "\n" + CANARY, encoding="utf-8")
     elif relative.endswith(".jsonl"):
         rows = [json.loads(line) for line in target.read_text().splitlines()]
         rows[0]["sourceIds"] = {"artifactKey": CANARY}

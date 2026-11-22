@@ -148,7 +148,12 @@ def installed_chess_continuation_engine_identity() -> dict[str, Any]:
     from eslams.continuation import ENGINE_VERSION, LINEAGE_VERSION
 
     try:
-        _require(os.geteuid() != 0, "runtime must not run as root")
+        effective_uid = getattr(os, "geteuid", None)
+        if effective_uid is None:
+            raise ValueError(
+                "chess continuation build: installed identity requires POSIX effective-user checks"
+            )
+        _require(effective_uid() != 0, "runtime must not run as root")
         _protected(BUILD_PATH)
         _require(BUILD_PATH.stat().st_size <= MAX_BUILD_BYTES, "evidence too large")
         with BUILD_PATH.open("rb") as stream:
