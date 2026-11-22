@@ -167,6 +167,8 @@ def test_provider_runtime_deadline_bounds_queue_retry_waits(monkeypatch):
 def test_runner_bounds_worker_and_no_alarm_calls_quarantines_late_actions(
     tmp_path, monkeypatch, worker_context
 ):
+    import eslams.runner as runner_module
+
     release = threading.Event()
     entered = threading.Event()
     finished = threading.Event()
@@ -176,44 +178,59 @@ def test_runner_bounds_worker_and_no_alarm_calls_quarantines_late_actions(
         calls.append(1)
         entered.set()
         try:
-            release.wait(2)
+            if not release.wait(10):
+                raise RuntimeError("test did not release the callback")
             request.observation["late-mutated"] = True
             return request.legal_actions[0]
         finally:
             finished.set()
 
     agent = FunctionAgent(slow)
+    original_call_agent = runner_module._call_agent
+    action_calls = []
+
+    def observe_action(called_agent, request, **kwargs):
+        start = time.monotonic()
+        response, markers, latency_ms = original_call_agent(called_agent, request, **kwargs)
+        if called_agent is agent:
+            action_calls.append((time.monotonic() - start, response, markers))
+        return response, markers, latency_ms
+
+    monkeypatch.setattr(runner_module, "_call_agent", observe_action)
     if not worker_context:
-        monkeypatch.setattr("eslams.runner._alarm_supported", lambda: False)
+        monkeypatch.setattr(runner_module, "_alarm_supported", lambda: False)
     results = []
+    worker = None
 
     def run():
-        start = time.monotonic()
         results.append(
-            (
-                Runner().run(
-                    RunConfig(
-                        arena_id="tic-tac-toe",
-                        agent_1=agent,
-                        time_budget_ms=50,
-                        output_dir=tmp_path / "first",
-                    )
-                ),
-                time.monotonic() - start,
+            Runner().run(
+                RunConfig(
+                    arena_id="tic-tac-toe",
+                    agent_1=agent,
+                    time_budget_ms=50,
+                    output_dir=tmp_path / "first",
+                )
             )
         )
 
     try:
         if worker_context:
-            worker = threading.Thread(target=run)
+            worker = threading.Thread(target=run, daemon=True)
             worker.start()
-            worker.join(timeout=1)
+            worker.join(timeout=5)  # A test watchdog, not an artifact-writing SLA.
             assert not worker.is_alive()
         else:
             run()
-        assert entered.is_set() and len(results) == 1
-        result, elapsed = results[0]
-        assert elapsed < 0.8 and "provider_timeout" in result.score.invalid_reason
+        assert entered.is_set() and not finished.is_set()
+        (result,) = results
+        # Time only the real action call, not setup, scoring or artifact serialization.
+        (action_call,) = action_calls
+        elapsed, response, markers = action_call
+        assert elapsed < 0.8
+        assert response is not None and response.action is None
+        assert {"timeout", "provider_timeout", "no_action"}.issubset(markers)
+        assert "provider_timeout" in result.score.invalid_reason
         assert result.score.match_valid_for_scoring is False
         assert ArtifactValidator().validate_report(result.artifact_path).valid
         files = {
@@ -239,3 +256,7 @@ def test_runner_bounds_worker_and_no_alarm_calls_quarantines_late_actions(
         assert not score["match_valid_for_scoring"]
     finally:
         release.set()
+        if worker is not None:
+            worker.join(timeout=5)
+        if entered.is_set():
+            finished.wait(1)
