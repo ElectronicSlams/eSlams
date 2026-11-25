@@ -1511,9 +1511,9 @@ def _provider_agent(
     if provider not in defaults:
         return None
     if provider == "sarvam-ai":
-        from eslams.providers.sarvam import validate_model
+        from eslams.providers.sarvam import validate_model as validate_sarvam_model
 
-        validate_model(model)
+        validate_sarvam_model(model)
     default_model, env_name = defaults[provider]
     return ModelProviderAgent(
         provider=provider,

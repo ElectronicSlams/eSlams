@@ -107,7 +107,6 @@ def provider_preflight(
         mistral_configuration_error(model, runtime_config)
         if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"} else None
     )
-    registry_model = "" if mistral_error and not isinstance(model, str) else model
     provider = cohere.canonical_provider(provider) or provider
     if provider == "cohere":
         cohere.validate_model(model)
@@ -115,9 +114,10 @@ def provider_preflight(
     sarvam_error: dict[str, Any] | None = None
     normalized_provider = provider.replace("_", "-")
     if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "sarvam-ai":
-        from eslams.providers.sarvam import validate_configuration, validate_model
+        from eslams.providers.sarvam import validate_configuration
+        from eslams.providers.sarvam import validate_model as validate_sarvam_model
 
-        validate_model(model)
+        validate_sarvam_model(model)
         try:
             validate_configuration(model, runtime_config)
         except ProviderCallError as exc:
@@ -127,9 +127,13 @@ def provider_preflight(
     writer_config_error = (
         writer.configuration_error(runtime_config) if provider in writer.ALIASES else None
     )
-    from eslams.providers.minimax import configuration_error
-    minimax_error = configuration_error(model, runtime_config) if provider == "minimax" else None
-    registry_model = "" if minimax_error and not isinstance(model, str) else model
+    from eslams.providers.minimax import configuration_error as minimax_configuration_error
+    minimax_error = (
+        minimax_configuration_error(model, runtime_config) if provider == "minimax" else None
+    )
+    registry_model = (
+        "" if (mistral_error or minimax_error) and not isinstance(model, str) else model
+    )
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -314,7 +318,7 @@ def provider_preflight(
         "readiness": {
             "configuration_ready": (checks["adapter_available"] is True
                                     and credential_error is None and configuration_error is None
-                                    and config_error is None
+                                    and config_error is None and sarvam_error is None
                                     and mistral_error is None
                                     and writer_config_error is None
                                     and minimax_error is None),

@@ -445,9 +445,9 @@ class ModelProviderAgent:
         if self.provider in {"sarvam", "sarvam_ai"}:
             self.provider = "sarvam-ai"
         if self.provider == "sarvam-ai":
-            from eslams.providers.sarvam import validate_model
+            from eslams.providers.sarvam import validate_model as validate_sarvam_model
 
-            validate_model(self.model)
+            validate_sarvam_model(self.model)
         if self.provider in writer.ALIASES:
             self.provider = "writer"
             writer.validate_model(self.model)
