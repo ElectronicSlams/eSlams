@@ -15,10 +15,15 @@ convenience properties.
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `apodex:<model>` | `APODEX_API_KEY` | Direct Core Chat Completions | `choices[0].message.content` | response `model` |
+| `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The proposed 0.7.1 [Apodex adapter](providers/APODEX.md) accepts only the two
 documented Core model IDs. Apodex Deep Research models run server-side tools and
 are outside this adapter. The package version remains 0.7.0 pending release review.
+
+The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
+undocumented reasoning/accounting/region semantics unknown. See the
+[Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
