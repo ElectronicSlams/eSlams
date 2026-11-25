@@ -91,6 +91,7 @@ def test_documented_success_native_defaults_full_history_and_privacy(monkeypatch
     assert call["timeout"].read is None
     receipt = result.metadata["provider_receipt"]
     assert result.action == 1
+    assert "raw_action_text" not in result.metadata
     assert receipt["provider"] == "sarvam-ai"
     assert receipt["model"] == "sarvam-105b"
     assert receipt["locked_model_id"] == "sarvam-105b"
@@ -441,3 +442,13 @@ def test_cli_run_dispatches_native_adapter_and_public_artifacts_are_private_safe
         text = path.read_text(encoding="utf-8")
         assert SECRET not in text
         assert "private-reasoning-fixture" not in text
+
+
+def test_no_escaped_secret_in_action_prose(monkeypatch):
+    data = wire()
+    message = data["choices"][0]["message"]
+    secret = "".join(f"\\u{ord(char):04x}" for char in SECRET)
+    message["content"] = secret + "\n" + message["content"]
+    mock_wire(monkeypatch, data)
+    with pytest.raises(ProviderCallError):
+        agent().act(request())

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 
 from eslams.contracts.provider import ProviderRuntimeConfig
-from eslams.model_actions import extract_json
+from eslams.model_actions import action_text_matches
 from eslams.provider_credentials import contains_credentials, credential_redaction
 
 if TYPE_CHECKING:
@@ -88,17 +88,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     with credential_redaction(api_key, os.getenv(API_KEY_ENV, "").strip()):
         try:
             text, receipt = _call(agent, api_key, prompt)
-            try:
-                credential_echo = (
-                    contains_credentials(text) or _contains_decoded_credentials(extract_json(text))
-                )
-            except (ValueError, RecursionError):
-                raise core.ProviderCallError(
-                    "Sarvam action text could not be inspected safely",
-                    error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
-                    model=agent.model, receipt=receipt,
-                ) from None
-            if credential_echo:
+            if action_text_matches(text, contains_credentials):
                 raise core.ProviderCallError(
                     "Sarvam action text contains a configured credential; no action accepted",
                     error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
@@ -114,17 +104,6 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             ) from None
         except TimeoutError:
             raise TimeoutError("Sarvam provider timed out") from None
-
-
-def _contains_decoded_credentials(value: Any) -> bool:
-    if isinstance(value, str):
-        return contains_credentials(value)
-    if isinstance(value, list):
-        return any(_contains_decoded_credentials(item) for item in value)
-    if isinstance(value, dict):
-        return any(contains_credentials(key) or _contains_decoded_credentials(item)
-                   for key, item in value.items())
-    return False
 
 
 def validate_model(model: str) -> None:
