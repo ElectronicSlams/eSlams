@@ -225,18 +225,17 @@ def action_text_matches(text: str, matches: Callable[[str], bool]) -> bool:
     def matches_normalized(value: str) -> bool:
         if matches(value):
             return True
-        # One layer may come from embedded action JSON and another from a
-        # provider escaping individual characters in the returned field.
-        for _ in range(2):
+        # Bound the work even when a provider repeatedly escapes its output.
+        for _ in range(8):
             normalized = _JSON_ESCAPE_RUN.sub(
                 lambda match: str(json.loads('"' + match.group(0) + '"')), value,
             )
             if normalized == value:
-                break
+                return False
             if matches(normalized):
                 return True
             value = normalized
-        return False
+        return True  # Still nested after the inspection limit.
 
     try:
         if matches_normalized(text):
