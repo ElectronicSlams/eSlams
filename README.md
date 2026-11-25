@@ -726,6 +726,8 @@ StepFun uses direct Chat Completions at `api.stepfun.ai`; see the
 [StepFun contract notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/STEPFUN.md) for region, model variants,
 reasoning and accounting limits. StepFun requires an explicit nonblank model ID.
 
+| `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` |
+
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
 `usage.cost`, and Bedrock uses Converse. OpenRouter provider fallback is

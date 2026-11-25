@@ -18,6 +18,8 @@
 | StepFun direct API scope and fixture provenance | [STEPFUN.md](providers/STEPFUN.md) |
 
 | Inception Labs Mercury direct adapter (planned 0.7.1) | [INCEPTION.md](INCEPTION.md) |
+
+| Reka direct adapter research and usage | [PROVIDER_REKA.md](PROVIDER_REKA.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

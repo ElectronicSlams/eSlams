@@ -1452,6 +1452,9 @@ def _provider_agent(
     defaults = {
         "qwen": ("", "DASHSCOPE_API_KEY"),
         moonshot.PROVIDER_ID: (moonshot.DEFAULT_MODEL, moonshot.API_KEY_ENV),
+        "reka": ("", "REKA_API_KEY"),
+        "reka-ai": ("", "REKA_API_KEY"),
+        "reka_ai": ("", "REKA_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),

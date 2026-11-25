@@ -26,6 +26,8 @@ model discovery through `MOONSHOT_API_KEY`.
 | `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
 
 | `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
+
+| `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` | Reka Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [StepFun adapter notes](providers/STEPFUN.md) document endpoint/region scope,

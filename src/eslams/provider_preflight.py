@@ -32,6 +32,10 @@ from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
 from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
 from eslams.providers.stepfun import validate_model_id as validate_stepfun_model_id
+from eslams.providers.reka import API_KEY_ENV as REKA_API_KEY_ENV
+from eslams.providers.reka import MODELS_ENDPOINT as REKA_MODELS_ENDPOINT
+from eslams.providers.reka import configuration_error as reka_configuration_error
+from eslams.providers.reka import credential_echo as reka_credential_echo
 
 DEFAULT_PROVIDER_ENV = {
     "qwen": "DASHSCOPE_API_KEY",
@@ -46,12 +50,14 @@ DEFAULT_PROVIDER_ENV = {
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "upstage": "UPSTAGE_API_KEY",
     "stepfun": STEPFUN_API_KEY_ENV,
+    "reka-ai": REKA_API_KEY_ENV,
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
     moonshot.PROVIDER_ID: moonshot.MODELS_ENDPOINT,
     "arcee-ai": ARCEE_MODELS_ENDPOINT,
+    "reka-ai": REKA_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -116,6 +122,9 @@ def provider_preflight(
         validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
+    configuration_error = (
+        reka_configuration_error(model, runtime_config) if record.provider == "reka-ai" else None
+    )
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
@@ -403,6 +412,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             if provider == moonshot.PROVIDER_ID and api_key in raw:
                 raise _discovery_schema_error(provider)
             if provider == "inception" and inception_credential_echo(raw, api_key):
+                raise _discovery_schema_error(provider)
+            if provider == "reka-ai" and reka_credential_echo(raw):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
