@@ -14,7 +14,12 @@ convenience properties.
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `ant-group:<model>` (also `bailing`) | `ANT_LING_API_KEY` | direct Ant Ling Chat Completions | `choices[0].message.content` | response `model` |
+
+The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
+undocumented reasoning/accounting/region semantics unknown. See the
+[Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
 
 The [Ant Ling guide](providers/ANT_LING.md) records current direct API evidence,
 Ling/Ring lifecycle, the separate InclusionAI routed namespace, supported
