@@ -20,6 +20,11 @@ secret seeds, private scenario sets, and hidden eval variants so agents cannot
 overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
+Core 1.0.0 brings the independently reviewed native provider adapters into
+the full Python Core and adds trusted local UCI engines for standard chess.
+Use fixed-depth Stockfish play through the CLI or library, then validate and
+export the replay with Core's existing artifact commands.
+
 Core 0.9.1 adds opt-in [native multi-unit matches](https://github.com/ElectronicSlams/eSlams/blob/v0.9.1/docs/NATIVE_MATCHES.md)
 for 22 arenas, with a keyless local CLI and a trusted Python seat-policy API.
 Native artifacts use separate validation and do not enable hosted play.
@@ -119,7 +124,7 @@ python3 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-Core 0.9.1 requires Python 3.10+. Supported-version release checks must accompany
+Core 1.0.0 requires Python 3.10+. Supported-version release checks must accompany
 the final package; local candidate results are not a promise that every OS was tested.
 Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
 configuration names; Core does not load `.env` automatically. Export selected
@@ -222,7 +227,7 @@ The [Kuaishou / KwaiPilot KAT adapter](https://github.com/ElectronicSlams/eSlams
 uses `kwaipilot:<model>` or `kuaishou:<endpoint-id>` with `STREAMLAKE_API_KEY`.
 Select the documented service region explicitly when using China endpoints.
 
-The next-release native `perceptron:<explicit-model-id>` adapter uses
+The native `perceptron:<explicit-model-id>` adapter uses
 `PERCEPTRON_API_KEY` and direct text Chat Completions. See the
 [Perceptron guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PERCEPTRON.md) for configuration checks, reasoning controls,
 official sources, and the limits of offline validation.
@@ -751,7 +756,7 @@ minimal environment, so use an executable and engine assets you have verified.
 
 ## Provider Support
 
-The proposed 0.7.1 [native Cohere adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/cohere.md) adds
+The [native Cohere adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/cohere.md) adds
 `cohere:<model>` (alias `cohere-ai:<model>`) with `COHERE_API_KEY`.
 It uses Chat v2 and retains unknown served identity and monetary cost explicitly.
 
@@ -772,7 +777,7 @@ Core has native HTTP adapters for the provider routes below:
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 | `contextual-ai:<model>` | `CONTEXTUAL_API_KEY` |
 
-The proposed 0.7.1 [Contextual AI Generate adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/CONTEXTUAL_AI.md)
+The [Contextual AI Generate adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/CONTEXTUAL_AI.md)
 supports direct text without retrieval using the provider-owned integration's
 empty knowledge source. Specify the model explicitly (documented: `v1`, `v2`)
 and use `reasoning=auto`; identity, usage, cost and live availability remain
@@ -793,13 +798,13 @@ reasoning and accounting limits. StepFun requires an explicit nonblank model ID.
 
 | `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` |
 
-The proposed 0.7.1 [BytePlus ModelArk adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BYTEPLUS.md) targets
+The [BytePlus ModelArk adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BYTEPLUS.md) targets
 the direct ap-southeast-1 service. Supply an explicit model or deployment ID;
 Volcengine Ark and Coding Plan use different services.
 
 | `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` |
 
-The proposed 0.7.1 [Shanghai AI Lab adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/SHANGHAI_AI_LAB.md) calls the
+The [Shanghai AI Lab adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/SHANGHAI_AI_LAB.md) calls the
 Atria service with an explicit model ID. Reasoning controls are unverified and
 rejected; missing identity and accounting stay unknown. The package remains 0.7.0.
 

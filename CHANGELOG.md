@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## v1.0.0
+
+- Add trusted local UCI engines for standard chess through Python Core. Use
+  fixed-depth search, engine subprocess cleanup on timeout or cancellation,
+  and the existing replay and artifact validation commands.
+- Include 45 adapter PRs in the existing full Core. Verify provider wire
+  behavior with offline fixtures, reject pending completions, and filter
+  credential echoes from public action fields and receipts.
 
 - Preserve DeepSeek usage receipts when action JSON exceeds structural inspection
   limits or exhausts parser depth; scan and redact credentials iteratively.
@@ -21,7 +28,7 @@
   malformed/partial responses and action text, including custom key-variable
   selection and credentials rotated during a request.
 - Document the official AI21 direct API contract, model lifecycle evidence and
-  remaining account/availability verification limits. No package version bump.
+  remaining account/availability verification limits.
 
 - Add a native Kuaishou / KwaiPilot KAT text adapter through StreamLake's direct
   pay-as-you-go API, with explicit service-region selection, exact model IDs,
@@ -37,7 +44,7 @@
 
 - Add the NAVER Cloud CLOVA Studio native Chat Completions v3 adapter with explicit
   model IDs, documented HCX-007 reasoning controls, bounded transport and sanitized
-  receipts. See [NAVER setup and evidence](docs/providers/NAVER.md). No version bump.
+  receipts. See [NAVER setup and evidence](docs/providers/NAVER.md).
 
 - Add a native Perceptron text Chat Completions adapter with explicit model IDs,
   provider-specific reasoning validation, CLI/preflight wiring, documented
