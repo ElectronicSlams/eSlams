@@ -503,3 +503,26 @@ def test_private_transport_causes_are_not_exposed_in_tracebacks(monkeypatch, fai
         a.act(request())
     public = "".join(traceback.format_exception(error.value)) + json.dumps(a.attempt_receipts)
     assert primary not in public and secondary not in public
+
+
+@pytest.mark.parametrize("duplicate_field", [False, True])
+def test_unicode_escaped_action_credentials_are_rejected_without_public_diagnostics(
+    monkeypatch, duplicate_field,
+):
+    native = agent()
+    canary = "OpaqueReviewCredentialCanary"
+    monkeypatch.setenv(native.api_key_env, canary)
+    body = json.loads(FIXTURE.read_text())
+    message = body["choices"][0]["message"]
+    ending = ',"public_explanation":"safe"' if duplicate_field else ""
+    message["content"] = (
+        '{"action":1,"public_explanation":"' + chr(92) + 'u004f' + canary[1:] + '"' + ending + "}"
+    )
+    monkeypatch.setattr(
+        "eslams.agents.bounded_post", lambda *args, **kwargs: httpx.Response(200, json=body),
+    )
+    with pytest.raises(ProviderCallError) as caught:
+        native.act(request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert canary not in str(caught.value) + json.dumps(native.attempt_receipts)
+    assert native.last_receipt["usage"]["total_tokens"] is not None

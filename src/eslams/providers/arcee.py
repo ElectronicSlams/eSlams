@@ -17,7 +17,7 @@ from eslams.agents import (
     _response_json_with_receipt,
 )
 from eslams.contracts.provider import ProviderRuntimeConfig
-from eslams.model_actions import extract_json
+from eslams.providers.action_privacy import validate_provider_action_text
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -66,19 +66,6 @@ def _contains_credential(value: str, credentials: tuple[str, ...]) -> bool:
     return any(credential in value for credential in credentials)
 
 
-def _action_contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
-    if isinstance(value, str):
-        return _contains_credential(value, credentials)
-    if isinstance(value, dict):
-        return any(
-            _contains_credential(key, credentials) or _action_contains_credential(item, credentials)
-            for key, item in value.items()
-        )
-    if isinstance(value, list):
-        return any(_action_contains_credential(item, credentials) for item in value)
-    return False
-
-
 def _private_receipt(value: Any, credentials: tuple[str, ...]) -> Any:
     if isinstance(value, str):
         # Dropping the entire field avoids turning a redacted model identifier
@@ -121,23 +108,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     except TimeoutError:
         raise TimeoutError("Arcee request timed out") from None
     receipt = _protect_receipt(receipt, credentials)
-    try:
-        private_action = (
-            _contains_credential(text, credentials)
-            or _action_contains_credential(extract_json(text), credentials)
-        )
-    except (ValueError, RecursionError):
-        raise ProviderCallError(
-            "Arcee action text could not be safely inspected; no action accepted",
-            error_kind="provider_response_schema_mismatch", provider=PROVIDER, model=agent.model,
-            receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
-        ) from None
-    if private_action:
-        raise ProviderCallError(
-            "Arcee returned credential material in action text; no action accepted",
-            error_kind="provider_response_schema_mismatch", provider=PROVIDER, model=agent.model,
-            receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
-        )
+    validate_provider_action_text(text, credentials, receipt,
+                                  provider=PROVIDER, model=agent.model)
     return text, receipt
 
 
