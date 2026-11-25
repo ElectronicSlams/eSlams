@@ -386,14 +386,20 @@ def test_cli_run_and_public_artifact_privacy(monkeypatch, tmp_path, capsys, alia
                 assert "PRIVATE_HEADER_SENTINEL" not in text
 
 
-@pytest.mark.parametrize("escaped", (False, True))
-def test_successful_response_cannot_echo_active_credential(monkeypatch, escaped):
+@pytest.mark.parametrize("echo", ("plain", "escaped", "prose", "double_escaped"))
+def test_successful_response_cannot_echo_active_credential(monkeypatch, echo):
     body = fixture()
     credential = KEY
     act_request = request()
-    output = json.dumps({"action": act_request.legal_actions[0], "public_explanation": credential})
-    if escaped:
-        output = output.replace(credential, "".join(f"\\u{ord(char):04x}" for char in credential))
+    action = {"action": act_request.legal_actions[0]}
+    encoded = "".join(f"\\u{ord(char):04x}" for char in credential)
+    if echo == "prose":
+        output = encoded + "\n" + json.dumps(action)
+    else:
+        action["public_explanation"] = encoded if echo == "double_escaped" else credential
+        output = json.dumps(action)
+        if echo == "escaped":
+            output = output.replace(credential, encoded)
     body["choices"][0]["message"]["content"] = output
     stub(monkeypatch, httpx.Response(200, json=body))
     selected = agent()
@@ -422,6 +428,7 @@ def test_active_credential_cannot_be_published_as_remote_identifier(monkeypatch,
     monkeypatch.setattr("eslams.agents.bounded_post", post)
     if status == 200:
         response = selected.act(request())
+        assert "raw_action_text" not in response.metadata
         assert credential not in json.dumps(response.metadata)
     else:
         with pytest.raises(ProviderCallError) as caught:

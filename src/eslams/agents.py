@@ -33,6 +33,7 @@ from eslams.deadlines import (
 from eslams.hashing import sha256_json
 from eslams.http_io import TotalTimeout, bounded_post, response_observation
 from eslams.model_actions import (
+    action_text_matches,
     coerce_action,
     extract_json,
     find_legal_action,
@@ -612,7 +613,12 @@ class ModelProviderAgent:
                 metadata={
                     "provider": self.provider,
                     "model": self.model,
-                    **({"raw_action_text": text[:500]} if self.provider != "krutrim" else {}),
+                    **(
+                        {"raw_action_text": text[:500]}
+                        if self.provider in {
+                            "openai", "anthropic", "google", "gemini", "openrouter", "bedrock",
+                        } else {}
+                    ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
                 },
@@ -2888,24 +2894,7 @@ def _drop_credential_identifiers(receipt: dict[str, Any], credential: str) -> No
 
 
 def _action_contains_credential(text: str, credential: str) -> bool:
-    """Check raw metadata and decoded JSON values before returning an action."""
-    if credential in text:
-        return True
-    try:
-        pending = [extract_json(text)]
-    except (ValueError, RecursionError):
-        # Oversized or deeply nested action JSON cannot be checked safely.
-        return True
-    while pending:
-        value = pending.pop()
-        if isinstance(value, str) and credential in value:
-            return True
-        if isinstance(value, dict):
-            pending.extend(value.keys())
-            pending.extend(value.values())
-        elif isinstance(value, list):
-            pending.extend(value)
-    return False
+    return action_text_matches(text, lambda value: credential in value)
 
 
 def _parse_model_action(
