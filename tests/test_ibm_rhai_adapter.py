@@ -115,9 +115,12 @@ def test_model_must_be_explicit_and_exact(model):
 
 
 def test_authors_and_watsonx_do_not_select_this_host():
-    for name in ("ibm", "ibm-granite", "watsonx"):
+    for name in ("ibm", "ibm-granite"):
         assert _provider_agent(f"{name}:{MODEL}") is None
         assert load_provider_registry().resolve(name, MODEL).provider != PROVIDER
+    watsonx = _provider_agent(f"watsonx:{MODEL}")
+    assert watsonx is not None and watsonx.provider == "watsonx"
+    assert load_provider_registry().resolve("watsonx", MODEL).provider != PROVIDER
 
 
 def test_wire_policy_history_identity_and_usage(monkeypatch):

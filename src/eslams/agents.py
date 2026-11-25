@@ -39,6 +39,7 @@ from eslams.model_actions import (
     extract_json,
     find_legal_action,
     invalid_action_retry_prompt,
+    normalized_text_matches,
     parse_model_action,
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
@@ -785,7 +786,7 @@ class ModelProviderAgent:
                     )
                     # A timeout does not prove remote work stopped or was rejected.
                     # Never replay it automatically, even with optional safe retries.
-                    if action_text_matches(str(exc), matches_credential):
+                    if normalized_text_matches(str(exc), matches_credential):
                         raise TimeoutError("provider timed out") from None
                     raise exc from None
                 except ProviderCallError as exc:
@@ -795,9 +796,9 @@ class ModelProviderAgent:
                     exc.retry_permitted = retryable
                     if exc.receipt is not None:
                         exc.receipt = _redact_provider_receipt_ids(exc.receipt, matches_credential)
-                    if action_text_matches(str(exc), matches_credential):
+                    if normalized_text_matches(str(exc), matches_credential):
                         exc.args = ("provider request failed",)
-                    if isinstance(exc.model, str) and action_text_matches(
+                    if isinstance(exc.model, str) and normalized_text_matches(
                         exc.model, matches_credential,
                     ):
                         exc.model = None
@@ -984,7 +985,7 @@ class ModelProviderAgent:
         if self.provider == "baidu":
             from eslams.providers.baidu import call as call_baidu
 
-            return call(self, api_key, prompt)
+            return call_baidu(self, api_key, prompt)
         if self.provider == ai21.PROVIDER_ID:
             return ai21.call(self, api_key, prompt)
         if self.provider in {"kuaishou", "kwaipilot"}:
@@ -1014,9 +1015,9 @@ class ModelProviderAgent:
         if self.provider == "morph":
             return morph.call(self, api_key, prompt)
         if self.provider == "huawei":
-            from eslams.providers.huawei import call
+            from eslams.providers.huawei import call as call_huawei
 
-            return call_baidu(self, api_key, prompt)
+            return call_huawei(self, api_key, prompt)
         if self.provider == "tencent-hunyuan":
             from eslams.providers.tencent_hunyuan import call as call_tencent_hunyuan
 
@@ -2146,7 +2147,7 @@ def _redact_provider_receipt_ids(
         "locked_model_id", "served_model_name",
     ):
         value = result.get(name)
-        if isinstance(value, str) and action_text_matches(value, matches_credential):
+        if isinstance(value, str) and normalized_text_matches(value, matches_credential):
             result[name] = None
             if name == "locked_model_id":
                 result["model_identity_source"] = None

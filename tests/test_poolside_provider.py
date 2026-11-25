@@ -447,7 +447,7 @@ def test_action_json_escaping_cannot_hide_echoed_credential(monkeypatch, encodin
     assert response.action == 1
     assert secret not in response.public_explanation
     assert "[redacted]" in response.public_explanation
-    assert secret not in json.loads(response.metadata["raw_action_text"])["public_explanation"]
+    assert "raw_action_text" not in response.metadata
 
 
 def test_runner_preserves_receipts_and_never_applies_truncated_action(monkeypatch, tmp_path):

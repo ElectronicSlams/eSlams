@@ -1686,10 +1686,10 @@ def _provider_agent(
             version=model, runtime_config=runtime_config,
         )
     if provider == "huawei":
-        from eslams.providers.huawei import API_KEY_ENV
+        from eslams.providers.huawei import API_KEY_ENV as HUAWEI_API_KEY_ENV
 
         return ModelProviderAgent(
-            provider=provider, model=model, api_key_env=KRUTRIM_API_KEY_ENV,
+            provider=provider, model=model, api_key_env=HUAWEI_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
     if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"}:

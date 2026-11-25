@@ -221,33 +221,35 @@ def _looks_incomplete(buffer: str) -> bool:
 _JSON_ESCAPE_RUN = re.compile(r'(?:\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))+')
 
 
+def normalized_text_matches(value: str, matches: Callable[[str], bool]) -> bool:
+    """Inspect a single provider string without parsing it as an action."""
+    if matches(value):
+        return True
+    # Bound the work even when a provider repeatedly escapes its output.
+    for _ in range(8):
+        url_decoded = unquote(value)
+        if url_decoded != value and matches(url_decoded):
+            return True
+        normalized = _JSON_ESCAPE_RUN.sub(
+            lambda match: str(json.loads('"' + match.group(0) + '"')), url_decoded,
+        )
+        if normalized == value:
+            return False
+        if matches(normalized):
+            return True
+        value = normalized
+    return True  # Still nested after the inspection limit.
+
+
 def action_text_matches(text: str, matches: Callable[[str], bool]) -> bool:
     """Inspect wire prose and parsed action fields before accepting an action."""
-    def matches_normalized(value: str) -> bool:
-        if matches(value):
-            return True
-        # Bound the work even when a provider repeatedly escapes its output.
-        for _ in range(8):
-            url_decoded = unquote(value)
-            if url_decoded != value and matches(url_decoded):
-                return True
-            normalized = _JSON_ESCAPE_RUN.sub(
-                lambda match: str(json.loads('"' + match.group(0) + '"')), url_decoded,
-            )
-            if normalized == value:
-                return False
-            if matches(normalized):
-                return True
-            value = normalized
-        return True  # Still nested after the inspection limit.
-
     try:
-        if matches_normalized(text):
+        if normalized_text_matches(text, matches):
             return True
         pending = [extract_json(text)]
         while pending:
             value = pending.pop()
-            if isinstance(value, str) and matches_normalized(value):
+            if isinstance(value, str) and normalized_text_matches(value, matches):
                 return True
             if isinstance(value, dict):
                 pending.extend(value.keys())
