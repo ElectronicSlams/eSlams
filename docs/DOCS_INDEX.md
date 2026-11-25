@@ -12,7 +12,7 @@
 | Chess continuation, lineage and accounting | [CHESS_CONTINUATION.md](CHESS_CONTINUATION.md) |
 | Artifact profiles, signatures and migration boundaries | [ARTIFACTS.md](ARTIFACTS.md) |
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
-| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md), [Azure Foundry](AZURE_FOUNDRY.md), [native xAI](PROVIDER_XAI.md) |
+| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md), [Azure Foundry](AZURE_FOUNDRY.md), [native xAI](PROVIDER_XAI.md), [Z.ai/Zhipu](PROVIDER_ZAI.md) |
 | Liquid AI direct text adapter and source evidence | [LIQUID_AI.md](LIQUID_AI.md) |
 
 | Kuaishou / KwaiPilot KAT direct text adapter | [providers/KUAISHOU.md](providers/KUAISHOU.md) |
@@ -38,6 +38,9 @@
 | Red Hat AI Inference on IBM Cloud host adapter | [PROVIDER_IBM_RHAI.md](PROVIDER_IBM_RHAI.md) |
 | Native Cohere adapter research and limits | [Cohere](providers/cohere.md) |
 | Writer direct API contract and limitations | [WRITER.md](WRITER.md) |
+| Fireworks direct inference and fixture provenance | [FIREWORKS.md](FIREWORKS.md) |
+| Snowflake Cortex adapter and official wire references | [providers/SNOWFLAKE.md](providers/SNOWFLAKE.md) |
+| Poolside direct inference and verified contract limits | [POOLSIDE.md](POOLSIDE.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

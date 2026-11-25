@@ -807,6 +807,22 @@ MiniMax calls its [direct Chat Completions API](https://github.com/ElectronicSla
 separated reasoning and no model or provider fallback. Select an explicit model such as
 `MiniMax-M3.1-Flash`; configuration preflight is offline unless `--live` is selected.
 
+| `fireworks:<model-resource>` | `FIREWORKS_API_KEY` |
+
+Fireworks uses direct Chat Completions with an explicit `accounts/.../models/...`
+resource. See the [Fireworks guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/FIREWORKS.md) for aliases, native reasoning,
+keyless checks, usage and discovery limits. No default model is selected.
+
+| `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` |
+
+Snowflake also requires `SNOWFLAKE_ACCOUNT_URL`. See the
+[Snowflake guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/SNOWFLAKE.md) for authentication, exact model IDs,
+region policy, and completion/accounting limitations. `cortex` and `snowflake-cortex`
+are provider aliases; a model is always required.
+
+The next-release [Baichuan adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BAICHUAN.md) additionally accepts
+`baichuan-ai:<exact-model>` and `baichuan:<exact-model>` using `BAICHUAN_API_KEY`.
+
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
 `usage.cost`, and Bedrock uses Converse. OpenRouter provider fallback is

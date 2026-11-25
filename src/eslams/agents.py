@@ -33,6 +33,7 @@ from eslams.deadlines import (
 from eslams.hashing import sha256_json
 from eslams.http_io import TotalTimeout, bounded_post, response_observation
 from eslams.model_actions import (
+    action_text_matches,
     coerce_action,
     extract_json,
     find_legal_action,
@@ -45,18 +46,23 @@ from eslams.providers import (
     ModelCapabilities,
     ai21,
     azure,
+    baichuan,
     cohere,
     contextual,
+    databricks,
+    fireworks,
     load_provider_registry,
     longcat,
     moonshot,
     morph,
     nvidia,
+    poolside,
     qwen,
     relace,
     upstage,
     writer,
     xai,
+    zai,
 )
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
@@ -76,6 +82,8 @@ from eslams.providers.mistral import complete as complete_mistral
 from eslams.providers.mistral import configuration_error as mistral_configuration_error
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.perplexity import call as call_perplexity
+from eslams.providers.perplexity import validate_config as validate_perplexity_config
 from eslams.providers.reka import call as call_reka
 from eslams.providers.reka import configuration_error as reka_configuration_error
 from eslams.providers.sarvam import call as call_sarvam
@@ -87,12 +95,15 @@ from eslams.providers.shanghai_ai_lab import (
 from eslams.providers.shanghai_ai_lab import (
     validate_configuration as validate_shanghai_ai_lab,
 )
+from eslams.providers.snowflake import call as call_snowflake
+from eslams.providers.snowflake import canonical_provider
 from eslams.providers.stepfun import ENDPOINT_KIND as STEPFUN_ENDPOINT_KIND
 from eslams.providers.stepfun import PARSER_VERSION as STEPFUN_PARSER_VERSION
 from eslams.providers.stepfun import call as call_stepfun
 from eslams.providers.stepfun import usage_fields as stepfun_usage_fields
 from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
 from eslams.providers.tencent_hunyuan import ALIASES as HUNYUAN_ALIASES
+from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
 
 
 class AgentError(RuntimeError):
@@ -568,6 +579,22 @@ class ModelProviderAgent:
         if self.provider == "minimax":
             from eslams.providers.minimax import require_model
             require_model(self.model)
+        self.provider = canonical_provider(self.provider)
+        self.provider = zai.canonical_provider(self.provider.lower())
+        if self.provider in fireworks.PROVIDER_ALIASES:
+            self.provider = fireworks.PROVIDER_ID
+        if databricks.is_databricks(self.provider):
+            self.provider = databricks.PROVIDER_ID
+        from eslams.providers.iflytek import canonical_provider as canonical_iflytek_provider
+        self.provider = canonical_iflytek_provider(self.provider)
+        self.provider = poolside.normalize_provider(self.provider.lower())
+        self.provider = canonical_xiaomi_provider(self.provider.lower())
+        if self.provider in baichuan.ALIASES:
+            self.provider = baichuan.PROVIDER_ID
+        if self.provider == baichuan.PROVIDER_ID and not isinstance(self.model, str):
+            raise ValueError("Baichuan requires an exact provider-native model ID")
+        if self.provider == "perplexity":
+            validate_perplexity_config(self.model, self.runtime_config)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -708,6 +735,15 @@ class ModelProviderAgent:
                 provider_attempt += 1
                 try:
                     text, receipt = self._call_provider(api_key, prompt)
+                    _drop_credential_identifiers(receipt, api_key)
+                    if _action_contains_credential(text, api_key):
+                        raise ProviderCallError(
+                            "provider returned credential material in its action",
+                            error_kind="provider_response_schema_mismatch",
+                            provider=self.provider,
+                            model=self.model,
+                            receipt=receipt,
+                        )
                 except TimeoutError:
                     self._remember_receipt(
                         _failure_receipt(
@@ -727,6 +763,8 @@ class ModelProviderAgent:
                     # Never replay it automatically, even with optional safe retries.
                     raise
                 except ProviderCallError as exc:
+                    if exc.receipt is not None:
+                        _drop_credential_identifiers(exc.receipt, api_key)
                     failure_receipt = (
                         {
                             **exc.receipt,
@@ -873,6 +911,16 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == fireworks.PROVIDER_ID:
+            return fireworks.call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+        if self.provider in zai.ENDPOINTS:
+            return zai.call(self, api_key, prompt)
+        if self.provider == "iflytek":
+            from eslams.providers.iflytek import call
+
+            return call(self, api_key, prompt)
+        if self.provider == baichuan.PROVIDER_ID:
+            return baichuan.call(self, api_key, prompt)
         if self.provider == "liquid-ai":
             from eslams.providers.liquid import call
 
@@ -976,6 +1024,10 @@ class ModelProviderAgent:
             return call_ibm_rhai(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "writer":
             return writer.call(self, api_key, prompt)
+        if self.provider == databricks.PROVIDER_ID:
+            return databricks.call(self, api_key, prompt)
+        if self.provider == "poolside":
+            return poolside.call(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == moonshot.PROVIDER_ID:
@@ -986,6 +1038,14 @@ class ModelProviderAgent:
             return call_sarvam(self, api_key, prompt)
         if self.provider == "minimax":
             return call_minimax(self, api_key, prompt)
+        if self.provider == "snowflake":
+            return call_snowflake(self, api_key, prompt)
+        if self.provider == "xiaomi":
+            from eslams.providers.xiaomi import call_mimo
+
+            return call_mimo(self, api_key, prompt, system=_SYSTEM_INSTRUCTIONS)
+        if self.provider == "perplexity":
+            return call_perplexity(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1508,6 +1568,7 @@ def _post_json(
     control_key: str,
     header_factory: Callable[[dict[str, Any]], dict[str, str]] | None = None,
     response_handler: Callable[[httpx.Response], None] | None = None,
+    handle_http_errors: bool = True,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
     check_cancelled()
@@ -1564,7 +1625,7 @@ def _post_json(
             ) from exc
     if response_handler is not None:
         response_handler(response)
-    if response.status_code >= 400:
+    if response.status_code >= 400 and handle_http_errors:
         kind = _provider_error_kind(response.status_code)
         if provider == moonshot.PROVIDER_ID:
             kind = moonshot.http_error_kind(response, kind)
@@ -1616,6 +1677,7 @@ def _post_json(
             or response.headers.get("x-amzn-requestid") or response.headers.get("x-trace-id")
             or response.headers.get("x-global-transaction-id")
             or response.headers.get("x-tc-requestid")
+            or response.headers.get("x-bc-request-id")
             or receipt.get("request_id"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
@@ -1741,10 +1803,12 @@ def _capture_error_body_observations(
             provenance["cost_observation_status"] = "reported_unverified"
     # Error-body pricing never supplies a trusted rate card or a measured cost.
     # Quoted observations remain diagnostic; canonical cost stays unknown.
-    safe_rejection = (
-        longcat.safe_rate_rejection(data, response.status_code)
-        if provider == longcat.PROVIDER_ID else _safe_rate_rejection(data, response.status_code)
-    )
+    if provider == longcat.PROVIDER_ID:
+        safe_rejection = longcat.safe_rate_rejection(data, response.status_code)
+    elif provider in zai.ENDPOINTS:
+        safe_rejection = zai.safe_rate_rejection(data, response.status_code)
+    else:
+        safe_rejection = _safe_rate_rejection(data, response.status_code)
     return (safe_rejection
             and not provenance["work_observation_present"])
 
@@ -1766,7 +1830,8 @@ def _raise_observed_transport_failure(
         headers.get("x-request-id") or headers.get("request-id")
         or headers.get("x-ncp-clovastudio-request-id")
         or headers.get("x-amzn-requestid") or headers.get("x-trace-id")
-        or headers.get("x-global-transaction-id") or headers.get("x-tc-requestid"),
+        or headers.get("x-global-transaction-id") or headers.get("x-tc-requestid")
+        or headers.get("x-bc-request-id"),
     )
     receipt["gateway_request_id"] = _http_error_identifier(
         headers.get("cf-aig-request-id") or headers.get("x-gateway-request-id"),
@@ -2021,7 +2086,8 @@ def _receipt(
         "status_code": response.status_code,
         "request_id": _http_error_identifier(response.headers.get("x-request-id")
         or response.headers.get("request-id")
-        or response.headers.get("x-cloud-trace-context")),
+        or response.headers.get("x-cloud-trace-context")
+        or response.headers.get("x-bc-request-id")),
         "gateway_mode": runtime_config.gateway_mode if runtime_config else "disabled",
         "gateway_request_id": _http_error_identifier(response.headers.get("cf-aig-request-id")
         or response.headers.get("x-gateway-request-id")),
@@ -2388,6 +2454,7 @@ def _endpoint_kind(provider: str) -> str:
         "byteplus": "byteplus_modelark_chat_completions",
         "mistral-ai": "mistral_chat_completions",
         "cohere": "cohere_chat_v2",
+        baichuan.PROVIDER_ID: baichuan.ENDPOINT_KIND,
         "openai": "openai_responses",
         "apodex": "apodex_chat_completions",
         "xai": "xai_responses",
@@ -2404,6 +2471,9 @@ def _endpoint_kind(provider: str) -> str:
         "sensetime": "sensenova_chat_completions",
         "ibm-rhai": "ibm_rhai_chat_completions",
         "writer": "writer_chat",
+        "fireworks": fireworks.ENDPOINT_KIND,
+        databricks.PROVIDER_ID: databricks.ENDPOINT_KIND,
+        "poolside": poolside.ENDPOINT_KIND,
         "bedrock": "bedrock_converse",
         moonshot.PROVIDER_ID: "moonshot_chat_completions",
         "upstage": upstage.ENDPOINT_KIND,
@@ -2416,6 +2486,12 @@ def _endpoint_kind(provider: str) -> str:
         "shanghai-ai-lab": "shanghai_ai_lab_atria_chat_completions",
         "sarvam-ai": "sarvam_chat_completions_v1",
         "minimax": "minimax_chat_completions",
+        "zai": "zai_chat_completions",
+        "zhipu": "zhipu_chat_completions",
+        "snowflake": "snowflake_chat_completions",
+        "iflytek": "iflytek_chat_completions",
+        "xiaomi": "xiaomi_chat_completions",
+        "perplexity": "perplexity_agent",
         "krutrim": "krutrim_chat_completions",
         "kuaishou": "streamlake_chat_completions",
         "kwaipilot": "streamlake_chat_completions",
@@ -2437,6 +2513,7 @@ def _parser_version(provider: str) -> str:
         "byteplus": "byteplus-modelark-chat-raw-v1",
         "mistral-ai": "mistral-chat-completions-raw-v1",
         "cohere": "cohere-chat-raw-v1",
+        baichuan.PROVIDER_ID: baichuan.PARSER_VERSION,
         "openai": "openai-responses-raw-v2",
         "apodex": "apodex-chat-completions-raw-v1",
         "xai": "xai-responses-raw-v1",
@@ -2453,6 +2530,9 @@ def _parser_version(provider: str) -> str:
         "sensetime": "sensenova-chat-completions-raw-v1",
         "ibm-rhai": "ibm-rhai-chat-completions-raw-v1",
         "writer": "writer-chat-raw-v1",
+        "fireworks": fireworks.PARSER_VERSION,
+        databricks.PROVIDER_ID: databricks.PARSER_VERSION,
+        "poolside": poolside.PARSER_VERSION,
         "bedrock": "bedrock-converse-raw-v1",
         moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
         "upstage": upstage.PARSER_VERSION,
@@ -2465,6 +2545,12 @@ def _parser_version(provider: str) -> str:
         "shanghai-ai-lab": "shanghai-ai-lab-atria-chat-raw-v1",
         "sarvam-ai": "sarvam-chat-completions-raw-v1",
         "minimax": "minimax-chat-completions-raw-v1",
+        "zai": "zai-chat-completions-raw-v1",
+        "zhipu": "zhipu-chat-completions-raw-v1",
+        "snowflake": "snowflake-chat-completions-raw-v1",
+        "iflytek": "iflytek-chat-completions-raw-v1",
+        "xiaomi": "xiaomi-chat-completions-raw-v1",
+        "perplexity": "perplexity-agent-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
         "kuaishou": "streamlake-chat-completions-raw-v1",
         "kwaipilot": "streamlake-chat-completions-raw-v1",
@@ -2481,13 +2567,23 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == "cohere":
         return cohere.normalize_usage(usage)
     if provider == "sarvam-ai":
-        from eslams.providers.sarvam import normalize_usage
+        from eslams.providers.sarvam import normalize_usage as normalize_sarvam_usage
 
-        return normalize_usage(usage)
+        return normalize_sarvam_usage(usage)
+    if provider == fireworks.PROVIDER_ID:
+        return fireworks.normalize_usage(usage)
+    if provider in zai.ENDPOINTS:
+        return zai.normalize_usage(usage)
+    if provider == databricks.PROVIDER_ID:
+        return databricks.normalize_usage(usage)
+    if provider == "iflytek":
+        from eslams.providers.iflytek import normalize_usage as normalize_iflytek_usage
+
+        return normalize_iflytek_usage(usage)
     if provider == "minimax":
-        from eslams.providers.minimax import normalize_usage
+        from eslams.providers.minimax import normalize_usage as normalize_minimax_usage
 
-        return normalize_usage(usage)
+        return normalize_minimax_usage(usage)
     if provider == moonshot.PROVIDER_ID:
         usage = moonshot.usage_for_receipt(usage)
     if provider == longcat.PROVIDER_ID:
@@ -2499,15 +2595,15 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == ai21.PROVIDER_ID:
         return ai21.normalize_usage(usage)
     if provider in {"kuaishou", "kwaipilot"}:
-        from eslams.providers.kuaishou import normalize_usage
+        from eslams.providers.kuaishou import normalize_usage as normalize_kuaishou_usage
 
-        return normalize_usage(usage)
+        return normalize_kuaishou_usage(usage)
     if provider == "morph":
         usage = morph.usage_fields(usage)
     if provider == "huawei":
-        from eslams.providers.huawei import normalize_usage
+        from eslams.providers.huawei import normalize_usage as normalize_huawei_usage
 
-        return normalize_usage(usage)
+        return normalize_huawei_usage(usage)
     if provider == "tencent-hunyuan":
         from eslams.providers.tencent_hunyuan import (
             normalize_usage as normalize_usage_tencent_hunyuan,
@@ -2522,6 +2618,18 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         from eslams.providers.krutrim import normalize_usage as normalize_usage_krutrim
 
         return normalize_usage_krutrim(usage)
+    if provider == "poolside":
+        return poolside.normalize_usage(usage)
+    if provider == "xiaomi":
+        from eslams.providers.xiaomi import normalize_usage as normalize_xiaomi_usage
+
+        return normalize_xiaomi_usage(usage)
+    if provider == baichuan.PROVIDER_ID:
+        return baichuan.normalize_usage(usage)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import normalize_usage as normalize_krutrim_usage
+
+        return normalize_krutrim_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     if provider == "deepseek":
@@ -2714,6 +2822,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
                 "reka-ai",
                 "sakana",
                 "sensetime",
+                "snowflake",
                 "upstage",
             } else _optional_bool(raw_inclusion)
         )
@@ -3102,12 +3211,16 @@ def _check_provider_completion(
     elif provider in {
         "openrouter", "liquid-ai", "relace", moonshot.PROVIDER_ID, "upstage", "sarvam-ai",
         "stepfun", "inception", "reka-ai", "azure", longcat.PROVIDER_ID, "sensetime", "nvidia",
+        "fireworks", databricks.PROVIDER_ID, "snowflake", "poolside",
     }:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
             error = error or first.get("error")
-            reason = first.get("finish_reason")
+            reason = first.get(
+                "finish_reason",
+                first.get("finishReason") if provider == databricks.PROVIDER_ID else None,
+            )
             message = first.get("message")
             refused = reason == "content_filter" or (
                 isinstance(message, dict) and bool(message.get("refusal"))
@@ -3361,7 +3474,8 @@ def _response_json_with_receipt(
                 or response.headers.get("x-amzn-requestid")
                 or response.headers.get("x-trace-id")
                 or response.headers.get("x-global-transaction-id")
-                or response.headers.get("x-tc-requestid")),
+                or response.headers.get("x-tc-requestid")
+                or response.headers.get("x-bc-request-id")),
                 "gateway_request_id": _http_error_identifier(
                     response.headers.get("cf-aig-request-id")
                     or response.headers.get("x-gateway-request-id")),
@@ -3417,6 +3531,22 @@ def _redact_sensitive_text(value: str) -> str:
             redacted,
         )
     return redacted[:500]
+
+
+def _drop_credential_identifiers(receipt: dict[str, Any], credential: str) -> None:
+    """Discard credential echoes before provider-supplied identifiers become public."""
+    if not credential:
+        return
+    for name in ("request_id", "gateway_request_id", "provider_response_id", "locked_model_id"):
+        value = receipt.get(name)
+        if isinstance(value, str) and credential in value:
+            receipt[name] = None
+            if name == "locked_model_id":
+                receipt["model_identity_source"] = None
+
+
+def _action_contains_credential(text: str, credential: str) -> bool:
+    return action_text_matches(text, lambda value: credential in value)
 
 
 def _parse_model_action(

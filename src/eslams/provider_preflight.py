@@ -10,15 +10,19 @@ import eslams.arenas  # noqa: F401
 from eslams.agents import ModelProviderAgent, ProviderCallError
 from eslams.arena import registry
 from eslams.contracts.provider import ProviderRuntimeConfig
+from eslams.contracts.usage import aggregate_provider_receipts
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import (
     ai21,
     azure,
+    baichuan,
     cohere,
     contextual,
+    databricks,
     deepseek,
+    fireworks,
     load_provider_registry,
     longcat,
     moonshot,
@@ -33,6 +37,7 @@ from eslams.providers import (
 from eslams.providers.arcee import API_KEY_ENV as ARCEE_API_KEY_ENV
 from eslams.providers.arcee import MODELS_ENDPOINT as ARCEE_MODELS_ENDPOINT
 from eslams.providers.arcee import validate_configuration as validate_arcee_configuration
+from eslams.providers.baichuan import API_KEY_ENV as BAICHUAN_API_KEY_ENV
 from eslams.providers.huawei import API_KEY_ENV as HUAWEI_API_KEY_ENV
 from eslams.providers.huawei import MODELS_ENDPOINT as HUAWEI_MODELS_ENDPOINT
 from eslams.providers.huawei import contains_credential as huawei_contains_credential
@@ -50,6 +55,12 @@ from eslams.providers.mistral import configuration_error as mistral_configuratio
 from eslams.providers.mistral import contains_credential as mistral_contains_credential
 from eslams.providers.mistral import discovery_guard as mistral_discovery_guard
 from eslams.providers.nvidia import validate_options as validate_nvidia_options
+from eslams.providers.perplexity import API_KEY_ENV as PERPLEXITY_API_KEY_ENV
+from eslams.providers.perplexity import MODELS_ENDPOINT as PERPLEXITY_MODELS_ENDPOINT
+from eslams.providers.perplexity import discover_models as discover_perplexity_models
+from eslams.providers.perplexity import validate_config as validate_perplexity_config
+from eslams.providers.poolside import API_KEY_ENV, MODELS_ENDPOINT
+from eslams.providers.poolside import configuration_error as poolside_configuration_error
 from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
 from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
 from eslams.providers.qwen import validate_controls as qwen_validate_controls
@@ -61,6 +72,7 @@ from eslams.providers.reka import configuration_error as reka_configuration_erro
 from eslams.providers.reka import credential_echo as reka_credential_echo
 from eslams.providers.sensenova import configuration_error as sensenova_configuration_error
 from eslams.providers.shanghai_ai_lab import validate_configuration as validate_shanghai_ai_lab
+from eslams.providers.snowflake import connection_settings as snowflake_connection_settings
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
 from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
@@ -68,6 +80,7 @@ from eslams.providers.stepfun import validate_model_id as validate_stepfun_model
 from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
 from eslams.providers.writer import API_KEY_ENV as WRITER_API_KEY_ENV
 from eslams.providers.writer import MODELS_ENDPOINT as WRITER_MODELS_ENDPOINT
+from eslams.providers.zai import API_KEY_ENVS
 
 DEFAULT_PROVIDER_ENV = {
     "deepseek": deepseek.API_KEY_ENV,
@@ -84,6 +97,9 @@ DEFAULT_PROVIDER_ENV = {
     "xai": xai.API_KEY_ENV,
     "cohere": "COHERE_API_KEY",
     "writer": WRITER_API_KEY_ENV,
+    **API_KEY_ENVS,
+    "poolside": API_KEY_ENV,
+    "baichuan-ai": BAICHUAN_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -104,6 +120,12 @@ DEFAULT_PROVIDER_ENV = {
     "ibm-rhai": "IBM_RHAI_API_KEY",
     "sarvam-ai": "SARVAM_API_KEY",
     "minimax": MINIMAX_API_KEY_ENV,
+    "fireworks": fireworks.API_KEY_ENV,
+    databricks.PROVIDER_ID: databricks.API_KEY_ENV,
+    "snowflake": "SNOWFLAKE_TOKEN",
+    "iflytek": "IFLYTEK_API_PASSWORD",
+    "xiaomi": "MIMO_API_KEY",
+    "perplexity": PERPLEXITY_API_KEY_ENV,
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
     "kuaishou": "STREAMLAKE_API_KEY",
     "kwaipilot": "STREAMLAKE_API_KEY",
@@ -128,6 +150,7 @@ _MODELS_ENDPOINTS = {
     "mistral-ai": MISTRAL_MODELS_ENDPOINT,
     "xai": xai.MODELS_ENDPOINT,
     "writer": WRITER_MODELS_ENDPOINT,
+    "poolside": MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "apodex": "https://api.apodex.ai/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
@@ -139,6 +162,8 @@ _MODELS_ENDPOINTS = {
     "sakana": sakana.MODELS_ENDPOINT,
     "morph": morph.MODELS_ENDPOINT,
     "stepfun": STEPFUN_MODELS_ENDPOINT,
+    "xiaomi": "https://api.xiaomimimo.com/v1/models",
+    "perplexity": PERPLEXITY_MODELS_ENDPOINT,
 }
 
 
@@ -161,6 +186,11 @@ def provider_preflight(
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
+    provider = provider.lower()
+    if provider in baichuan.ALIASES and not isinstance(model, str):
+        raise ValueError("Baichuan requires an exact provider-native model ID")
+    if provider == "perplexity":
+        validate_perplexity_config(model, runtime_config)
     provider = longcat.normalize_provider(provider)
     if provider == longcat.PROVIDER_ID:
         longcat.validate_configuration(model, runtime_config)
@@ -388,6 +418,21 @@ def provider_preflight(
             validate_controls(model, runtime_config or ProviderRuntimeConfig(), max_output_tokens)
         except ValueError as exc:
             control_error = str(exc)
+    connection_error = None
+    if record.provider == "snowflake":
+        try:
+            snowflake_connection_settings()
+            checks["account_endpoint_configured"] = True
+        except ValueError as exc:
+            checks["account_endpoint_configured"] = False
+            connection_error = str(exc)
+    databricks_error = None
+    if record.provider == databricks.PROVIDER_ID:
+        try:
+            databricks.invocation_endpoint(model)
+        except ValueError as exc:
+            databricks_error = str(exc)
+        checks["workspace_endpoint_configured"] = databricks_error is None
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
@@ -395,6 +440,15 @@ def provider_preflight(
     option_error = (
         validate_nvidia_options(model, runtime_config) if record.provider == "nvidia" else None
     )
+    poolside_error = (
+        poolside_configuration_error(model, runtime_config) if record.provider == "poolside" else None
+    )
+    baichuan_error = None
+    if record.provider == baichuan.PROVIDER_ID:
+        try:
+            baichuan.validate_controls(model, runtime_config)
+        except ProviderCallError as exc:
+            baichuan_error = _public_error(exc, provider=provider, model=model)
 
     if sarvam_error is not None:
         error = sarvam_error
@@ -404,6 +458,8 @@ def provider_preflight(
         error = {"error_class": "provider_request_rejected", "message": writer_config_error}
     elif option_error:
         error = {"error_class": "provider_request_rejected", "message": option_error}
+    elif poolside_error:
+        error = {"error_class": "provider_request_rejected", "message": poolside_error}
     elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
@@ -417,6 +473,8 @@ def provider_preflight(
         error = {"error_class": "provider_request_rejected", "message": mistral_error}
     elif minimax_error:
         error = {"error_class": "provider_request_rejected", "message": minimax_error}
+    elif baichuan_error is not None:
+        error = baichuan_error
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -427,6 +485,8 @@ def provider_preflight(
             "error_class": "provider_request_rejected",
             "message": f"model {model!r} is not registered for text game actions",
         }
+    elif databricks_error:
+        error = {"error_class": "provider_request_rejected", "message": databricks_error}
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
     elif control_error:
@@ -434,6 +494,8 @@ def provider_preflight(
     elif adapter_configuration_error:
         error = {"error_class": "provider_request_rejected",
                  "message": adapter_configuration_error}
+    elif connection_error:
+        error = {"error_class": "provider_request_rejected", "message": connection_error}
     elif not live:
         warnings.append("This configuration preflight did not verify live provider availability.")
     elif not credential_environment or not credential_present:
@@ -525,6 +587,16 @@ def provider_preflight(
                         isinstance(usage.get("reasoning_included_in_output"), bool)
                         and usage.get("usage_validation_errors") == []
                     )
+                if record.provider == baichuan.PROVIDER_ID and isinstance(usage, dict):
+                    checks["usage_extraction"] = (
+                        checks["usage_extraction"] is True
+                        and not usage.get("usage_validation_errors")
+                    )
+                if record.provider == "perplexity":
+                    checks["usage_extraction"] = (
+                        isinstance(receipt, dict)
+                        and aggregate_provider_receipts([receipt])[0]["usageComplete"] is True
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -547,6 +619,10 @@ def provider_preflight(
     )
     # This host has numeric counters but no verified reasoning-inclusion contract.
     usage_complete = checks["usage_extraction"] is True and record.provider != "ibm-rhai"
+    if record.provider == baichuan.PROVIDER_ID:
+        usage = receipt.get("usage") if isinstance(receipt, dict) else None
+        usage_complete = (usage_complete and isinstance(usage, dict)
+                          and isinstance(usage.get("reasoning_included_in_output"), bool))
     payload: dict[str, Any] = {
         "provider": provider,
         "model": model,
@@ -563,6 +639,8 @@ def provider_preflight(
                 and adapter_configuration_error is None and option_error is None
                 and config_error is None and sarvam_error is None and mistral_error is None
                 and writer_config_error is None and minimax_error is None
+                and connection_error is None and databricks_error is None
+                and poolside_error is None and baichuan_error is None
                 and (record.provider != "watsonx" or error is None)
             ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
@@ -642,6 +720,8 @@ def provider_models_live(provider: str) -> list[str] | None:
         from eslams.providers.apodex import redaction_credentials
 
         apodex_credentials = redaction_credentials(api_key)
+    if provider == "perplexity":
+        return discover_perplexity_models(api_key)
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -650,6 +730,8 @@ def provider_models_live(provider: str) -> list[str] | None:
     elif provider == "google":
         headers["x-goog-api-key"] = api_key
         params["pageSize"] = "1000"
+    elif provider == "xiaomi":
+        headers["api-key"] = api_key
     else:
         headers["Authorization"] = f"Bearer {api_key}"
     models: list[str] = []
@@ -729,6 +811,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             if provider == "mistral-ai" and mistral_contains_credential(raw, api_key):
                 raise _discovery_schema_error(provider)
             if provider == "xai" and xai.contains_credential(raw):
+                raise _discovery_schema_error(provider)
+            if provider == "poolside" and api_key in raw:
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

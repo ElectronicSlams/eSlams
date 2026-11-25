@@ -28,6 +28,23 @@ Mistral AI is also available through its direct API; see the
 For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
 [research, setup and limits](PROVIDER_XAI.md).
 
+See the [Perplexity Agent adapter](PERPLEXITY.md) for the explicit-model,
+tool-free REST path. It requires `PERPLEXITY_API_KEY` and an exact model ID.
+
+Databricks native serving-endpoint chat is documented in [DATABRICKS.md](DATABRICKS.md),
+including explicit workspace/deployment configuration, reasoning, and accounting limits.
+
+eSlams Core has native provider support for OpenAI, Anthropic, Google Gemini,
+OpenRouter, Amazon Bedrock, Fireworks, and [Z.ai and Zhipu](PROVIDER_ZAI.md).
+Snowflake Cortex uses account-scoped credentials and endpoints. See
+[Snowflake Cortex](providers/SNOWFLAKE.md) for its native wire details.
+The adapters use documented REST response envelopes.
+
+[Xiaomi MiMo](providers/XIAOMI_MIMO.md) supports explicit native thinking controls
+and has offline REST fixture coverage.
+
+See [direct Baichuan](providers/BAICHUAN.md) for availability and accounting limits.
+
 ## Provider Matrix
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
@@ -50,6 +67,9 @@ For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
 | `ibm-rhai:<exact-model-id>` | `IBM_RHAI_API_KEY` | IBM project-scoped Chat Completions | `choices[0].message.content` | response `model` |
 | `mistral-ai:<model>` (alias `mistral`) | `MISTRAL_API_KEY` | native Chat Completions | string or typed text chunks in `choices[0].message.content` | response `model` |
 | `writer:<model>` | `WRITER_API_KEY` | Writer `/v1/chat` | `choices[0].message.content` | response `model` |
+
+| `zai:<model>` | `ZAI_API_KEY` | Z.ai Chat Completions | `choices[0].message.content` | response `model` |
+| `zhipu:<model>` | `ZHIPU_API_KEY` | Zhipu China Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
 | `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
@@ -66,6 +86,15 @@ For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
 | `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` | Atria Chat Completions | `choices[0].message.content` | reported model only; null when absent |
 | `sarvam:<model>` / `sarvam-ai:<model>` | `SARVAM_API_KEY` | Sarvam V1 Chat Completions | `choices[0].message.content` | response `model` |
 | `minimax:<model>` | `MINIMAX_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
+
+| `fireworks:<model-resource>` | `FIREWORKS_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `databricks:<endpoint>` | `DATABRICKS_TOKEN` | Model Serving Chat Completions | `choices[0].message.content` | response `model`, if supplied |
+| `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` | Cortex Chat Completions | `choices[0].message.content` with `finish_reason=stop` | response `model` only |
+| `iflytek:<model>` | `IFLYTEK_API_PASSWORD` | Spark HTTP | `choices[0].message.content` | optional response `model`; otherwise unknown |
+| `poolside:<model-id>` | `POOLSIDE_API_KEY` | Poolside-hosted Chat Completions | `choices[0].message.content` | response `model` |
+| `xiaomi:<model>` (`mimo`, `xiaomi-mimo`) | `MIMO_API_KEY` | MiMo direct Chat Completions | `choices[0].message.content` | response `model` |
+| `baichuan-ai:<model>` (`baichuan` alias) | `BAICHUAN_API_KEY` | Baichuan Chat Completions | `choices[0].message.content` | response `model`, if supplied |
+| `perplexity:<model>` | `PERPLEXITY_API_KEY` | Agent REST API | typed `output[].content[]` text | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `ai21-labs:<model-id>` | `AI21_API_KEY` | AI21 Studio Chat Completions | `choices[0].message.content` | unknown in documented envelope |
 
@@ -129,6 +158,21 @@ The [MiniMax adapter guide](providers/MINIMAX.md) records current official API
 research, regions, reasoning preservation, retry limits and keyless test coverage
 for the 0.7.1 adapter work. Its configuration preflight is advisory and makes no
 inference request unless `--live` is explicitly requested.
+
+The [Fireworks adapter guide](FIREWORKS.md) documents aliases, exact model resources,
+explicit native reasoning controls, accounting, fixture provenance and discovery limits.
+
+Snowflake requires an account origin as well. See [Snowflake Cortex](providers/SNOWFLAKE.md)
+for the verified wire contract, provider aliases, configuration, and limitations.
+
+The [Spark adapter guide](providers/IFLYTEK.md) records exact X2/v1 routing,
+aliases, authentication, reasoning controls, provider model upgrades, and
+accounting limits. It adds no live inference during configuration preflight.
+
+The [Poolside adapter notes](POOLSIDE.md) record current official sources,
+thinking controls, exact-model requirements, accounting unknowns and restricted
+reference documentation. Poolside uses the native hosted endpoint directly.
+
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

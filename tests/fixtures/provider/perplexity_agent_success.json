@@ -1,0 +1,26 @@
+{
+  "id": "resp_perplexity_fixture",
+  "created_at": 1779391438,
+  "model": "perplexity/kimi-k3",
+  "object": "response",
+  "status": "completed",
+  "output": [
+    {
+      "id": "msg_perplexity_fixture",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {"type": "output_text", "text": "{\"action\": 1, \"confidence\": 0.8, \"public_explanation\": \"Selected a legal move.\"}", "annotations": []}
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 100,
+    "output_tokens": 20,
+    "total_tokens": 120,
+    "input_tokens_details": {"cache_read_input_tokens": 10, "cache_creation_input_tokens": 5},
+    "tool_calls_details": {},
+    "cost": {"currency": "USD", "input_cost": 0.0003, "output_cost": 0.0003, "total_cost": 0.0006}
+  }
+}

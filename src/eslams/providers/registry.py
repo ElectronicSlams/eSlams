@@ -16,6 +16,7 @@ from eslams.providers.huawei import model_records as huawei_model_records
 from eslams.providers.inception import PROVIDER_ALIASES as INCEPTION_ALIASES
 from eslams.providers.morph import capability_records as morph_capability_records
 from eslams.providers.morph import is_specialized as morph_is_specialized
+from eslams.providers.zai import ALIASES as ZAI_ALIASES
 
 REQUESTED_PROVIDER_ORGANIZATIONS: tuple[tuple[str, str], ...] = (
     ("qwen", "Alibaba / Qwen"),
@@ -159,6 +160,16 @@ PROVIDER_ALIASES = {
     "cohere-ai": "cohere",
     "writer-ai": "writer",
     "writerai": "writer",
+    "fireworks-ai": "fireworks",
+    "snowflake-cortex": "snowflake",
+    "cortex": "snowflake",
+    "spark": "iflytek",
+    "iflytek-spark": "iflytek",
+    "xfyun": "iflytek",
+    "poolside-ai": "poolside",
+    "poolsideai": "poolside",
+    "mimo": "xiaomi",
+    "xiaomi-mimo": "xiaomi",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",
@@ -192,8 +203,7 @@ PROVIDER_ALIASES = {
     "tencent-coding-plan": "tencent",
     "tencent-tokenhub": "tencent",
     "volcengine": "bytedance",
-    "zhipuai": "zhipu",
-    "zhipuai-coding-plan": "zhipu",
+    **ZAI_ALIASES,
     "bailing": "ant-group",
     **INCEPTION_ALIASES,
     "gigachat": "sber",

@@ -135,6 +135,7 @@ async def _bounded_post(
                     "x-request-id", "request-id", "x-amzn-requestid", "x-global-transaction-id",
                     "x-tc-requestid",
                     "x-ncp-clovastudio-request-id",
+                    "x-bc-request-id",
                     "cf-aig-request-id", "x-gateway-request-id",
                 )
                 _observed.append(ResponseObservation(

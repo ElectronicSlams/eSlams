@@ -230,6 +230,40 @@
 - Document the verified MiniMax API, regions and model lifecycle caveats; add
   deterministic keyless wire and privacy regressions for the 0.7.1 adapter work.
 
+- Add a native Fireworks Chat Completions adapter for the 0.7.1 review: explicit
+  model resources, CLI/preflight aliases, native reasoning controls, sanitized
+  attempt receipts, validated usage and zero default retries. Include documented
+  raw-wire fixtures and deterministic error, privacy and artifact regressions.
+  Package/contract versions remain unchanged; live availability is unverified.
+
+- Add native Z.ai international and Zhipu China standard Chat Completions adapters,
+  explicit reasoning controls, conservative accounting and deterministic wire tests.
+- Remove the `zhipuai-coding-plan` catalogue alias so it cannot activate standard
+  API billing. Coding Plan endpoints remain unsupported. See `docs/PROVIDER_ZAI.md`.
+
+- Add a native Snowflake Cortex Chat Completions adapter with explicit account
+  configuration, exact native model IDs, and `cortex`/`snowflake-cortex` aliases.
+- Preserve full history, native defaults, explicit reasoning controls, sanitized
+  per-attempt receipts, unknown accounting, and zero default retries. Reject
+  refusals, truncated output, and responses without an explicit terminal stop.
+- Add deterministic Snowflake wire/CLI/preflight/privacy tests and official API
+  research notes in `docs/providers/SNOWFLAKE.md`. No package version change.
+
+- Add a native Poolside-hosted Chat Completions adapter with explicit model IDs,
+  CLI/preflight/discovery aliases, native thinking on/off controls, sanitized
+  attempt receipts and deterministic wire regressions. Missing accounting stays
+  unknown; native costs and safe automatic retries remain unverified. See
+  `docs/POOLSIDE.md` for official sources and restricted-reference limitations.
+
+- Add the Xiaomi MiMo direct Chat Completions adapter (`xiaomi`, `mimo`,
+  `xiaomi-mimo`), `MIMO_API_KEY`, and Models discovery. Preserve exact model IDs,
+  provider defaults and full supplied history. Retain unknown identity/accounting
+  and sanitized failure receipts; reject filtered, truncated and tool-call output.
+  See [the MiMo guide](docs/providers/XIAOMI_MIMO.md) for sources and scope.
+
+- Send an explicit typed message item to the Perplexity Agent API. Retain and
+  test rejection of mixed search/tool output and unverified model-specific efforts.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

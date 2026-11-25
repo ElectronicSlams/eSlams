@@ -52,16 +52,19 @@ from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
-from eslams.providers import azure, load_provider_registry, moonshot, writer
+from eslams.providers import azure, fireworks, load_provider_registry, moonshot, writer
 from eslams.providers.byteplus import API_KEY_ENV as BYTEPLUS_API_KEY_ENV
 from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
 from eslams.providers.deepseek import validate_model as validate_deepseek_model
+from eslams.providers.poolside import API_KEY_ENV, normalize_provider
 from eslams.providers.sensenova import API_KEY_ENV as SENSENOVA_API_KEY_ENV
 from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.providers.xai import canonical_provider
 from eslams.providers.xai import validate_model as validate_xai_model
+from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
+from eslams.providers.zai import canonical_provider as canonical_zai_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1473,6 +1476,16 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    from eslams.providers.snowflake import canonical_provider as canonical_snowflake_provider
+
+    if value.split(":", 1)[0].lower() == "perplexity":
+        from eslams.providers.perplexity import API_KEY_ENV as PERPLEXITY_API_KEY_ENV
+
+        model = value.split(":", 1)[1] if ":" in value else ""
+        return ModelProviderAgent(
+            provider="perplexity", model=model, api_key_env=PERPLEXITY_API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     from eslams.providers import longcat
 
     if value.lower().split(":", 1)[0] == "sakana":
@@ -1507,6 +1520,12 @@ def _provider_agent(
         "reka_ai": ("", "REKA_API_KEY"),
         "mistral-ai": ("", "MISTRAL_API_KEY"),
         "xai": ("", "XAI_API_KEY"),
+        "zai": ("glm-5.3", "ZAI_API_KEY"),
+        "zhipu": ("glm-5.3", "ZHIPU_API_KEY"),
+        "poolside": ("", API_KEY_ENV),
+        "baichuan": ("", "BAICHUAN_API_KEY"),
+        "baichuan-ai": ("", "BAICHUAN_API_KEY"),
+        "baichuan_ai": ("", "BAICHUAN_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1530,11 +1549,36 @@ def _provider_agent(
         "shanghai-ai-lab": ("", "ATRIA_API_KEY"),
         "sarvam-ai": ("sarvam-105b", "SARVAM_API_KEY"),
         "minimax": ("", "MINIMAX_API_KEY"),
+        "snowflake": ("", "SNOWFLAKE_TOKEN"),
+        "iflytek": ("spark-x", "IFLYTEK_API_PASSWORD"),
+        "xiaomi": ("mimo-v2.6-flash", "MIMO_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
+    provider = canonical_snowflake_provider(provider)
+    if provider == "snowflake" and not model.strip():
+        raise ValueError("Snowflake requires an explicit native model ID: snowflake:<model>")
+    provider = canonical_zai_provider(provider.lower())
+    if provider in fireworks.PROVIDER_ALIASES:
+        if not model:
+            raise ValueError("Fireworks requires an explicit model resource: fireworks:<model>")
+        return ModelProviderAgent(
+            provider=fireworks.PROVIDER_ID, model=model, api_key_env=fireworks.API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    from eslams.providers import databricks
+
+    if databricks.is_databricks(provider):
+        provider = databricks.PROVIDER_ID
+        if not model:
+            raise ValueError("Databricks requires an explicit serving endpoint name")
+        defaults[provider] = (model, databricks.API_KEY_ENV)
+    from eslams.providers.iflytek import canonical_provider as canonical_iflytek_provider
+    provider = canonical_iflytek_provider(provider)
+    provider = normalize_provider(provider.lower())
+    provider = canonical_xiaomi_provider(provider)
     original_provider = provider
     provider = moonshot.canonical_provider(provider)
     provider = canonicalize_provider(provider)
@@ -1625,7 +1669,7 @@ def _provider_agent(
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV as KRUTRIM_API_KEY_ENV
         return ModelProviderAgent(
-            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            provider=provider, model=model, api_key_env=KRUTRIM_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
     if provider == "perceptron":
@@ -1659,9 +1703,13 @@ def _provider_agent(
         from eslams.providers.sarvam import validate_model as validate_sarvam_model
 
         validate_sarvam_model(model)
+    if provider == "poolside" and not model.strip():
+        raise ValueError("Poolside requires an explicit model: poolside:<model-id>")
     default_model, env_name = defaults[provider]
     if provider == "sensetime" and not model.strip():
         raise ValueError("SenseNova requires an explicit nonblank model ID")
+    if provider in {"baichuan", "baichuan-ai", "baichuan_ai"} and not model.strip():
+        raise ValueError("Baichuan requires an exact provider-native model ID")
     return ModelProviderAgent(
         provider=(original_provider if provider == moonshot.PROVIDER_ID else provider),
         model=model or default_model,
