@@ -42,6 +42,7 @@ DEFAULT_PROVIDER_ENV = {
     "naver": "CLOVASTUDIO_API_KEY",
     "contextual-ai": contextual.API_KEY_ENV,
     "sakana": sakana.API_KEY_ENV,
+    "ant-group": "ANT_LING_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -108,6 +109,11 @@ def provider_preflight(
         provider = "perceptron"
         perceptron.validate_settings(model, runtime_config)
     provider_registry = load_provider_registry()
+    normalized_provider = provider.strip().replace("_", "-")
+    if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "ant-group":
+        from eslams.providers.ant_ling import validate_config
+
+        validate_config(model, runtime_config or ProviderRuntimeConfig())
     record = provider_registry.resolve(provider, registry_model)
     if record.provider == contextual.PROVIDER_ID:
         contextual.validate_configuration(model, runtime_config, max_output_tokens)

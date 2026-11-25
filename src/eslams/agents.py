@@ -428,6 +428,12 @@ class ModelProviderAgent:
             from eslams.providers.sakana import validate_config
 
             validate_config(self.model, self.runtime_config or ProviderRuntimeConfig())
+        if self.provider in {"ant-group", "bailing"}:
+            from eslams.providers.ant_ling import validate_config
+
+            self.provider = "ant-group"
+            validate_config(self.model, self.runtime_config or ProviderRuntimeConfig(),
+                            self.temperature)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -720,6 +726,10 @@ class ModelProviderAgent:
             from eslams.providers.sakana import call_sakana
 
             return call_sakana(self, api_key, prompt)
+        if self.provider == "ant-group":
+            from eslams.providers.ant_ling import call
+
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -2094,6 +2104,7 @@ def _endpoint_kind(provider: str) -> str:
         "perceptron": "perceptron_chat_completions",
         "contextual-ai": "contextual_generate",
         "sakana": "sakana_chat_completions",
+        "ant-group": "ant_ling_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -2116,6 +2127,7 @@ def _parser_version(provider: str) -> str:
         "perceptron": "perceptron-chat-completions-raw-v1",
         "contextual-ai": "contextual-generate-raw-v1",
         "sakana": "sakana-namazu-chat-completions-raw-v1",
+        "ant-group": "ant-ling-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 

@@ -60,6 +60,15 @@
   Fugu routing is excluded; region and live billing remain unverified. See
   `docs/PROVIDER_SAKANA.md`. No package version change.
 
+- Add a direct Ant Ling (`ant-group`, CLI alias `bailing`) text adapter with
+  explicit model IDs, documented thinking controls, disabled search, sanitized
+  attempt receipts, and offline CLI/preflight/raw-wire regression coverage.
+  Keep routed InclusionAI identities separate, record Ling/Ring deprecations,
+  and preserve unknown accounting and model evidence without substitution.
+- Harden Ant Ling preflight alias validation and scrub additional configured
+  credentials from provider identifiers, errors, partial responses, and action
+  text without enabling credential fallback.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

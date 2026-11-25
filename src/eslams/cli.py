@@ -1469,6 +1469,14 @@ def _provider_agent(
             provider="sakana", model=model, api_key_env=API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    provider, separator, model = value.partition(":")
+    if provider.lower() in {"ant-group", "bailing"}:
+        from eslams.providers.ant_ling import API_KEY_ENV, PROVIDER_ID
+
+        return ModelProviderAgent(
+            provider=PROVIDER_ID, model=model if separator else "", api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     defaults = {
         "deepseek": ("deepseek-flash", "DEEPSEEK_API_KEY"),
         "ai21-labs": ("", "AI21_API_KEY"),

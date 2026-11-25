@@ -242,6 +242,9 @@ def load_provider_registry() -> ProviderRegistry:
     overrides["models"] = [
         *overrides.get("models", []), *_load_package_json("perceptron.json")["models"],
     ]
+    overrides["models"] = [
+        *overrides.get("models", []), *_load_package_json("ant_ling.json").get("models", []),
+    ]
     return _registry_from_payloads(generated, overrides)
 
 
