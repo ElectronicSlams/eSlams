@@ -784,3 +784,15 @@ def test_official_index_effort_aliases_are_accepted_and_forwarded(monkeypatch, m
     calls = respond(monkeypatch)
     agent(model=model, runtime_config=ProviderRuntimeConfig(reasoning_effort=effort)).act(request())
     assert calls[0][1]["json"]["reasoning_effort"] == effort
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = respond(monkeypatch, status=202)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1
