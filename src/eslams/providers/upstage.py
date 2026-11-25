@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from eslams.providers.action_privacy import validate_provider_action_text
+
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
     from eslams.contracts.provider import ProviderRuntimeConfig
@@ -111,13 +113,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             exc.receipt = _scrub_receipt(exc.receipt, credentials)
         raise
     receipt = _scrub_receipt(receipt, credentials)
-    if _scrub_echoes(text, credentials) is None:
-        # Never rewrite credential-bearing prose into an apparently valid action.
-        raise ProviderCallError(
-            "Upstage answer contains a credential echo; no action accepted",
-            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
-            model=agent.model, receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
-        )
+    validate_provider_action_text(text, credentials, receipt,
+                                  provider=PROVIDER_ID, model=agent.model)
     return text, receipt
 
 
