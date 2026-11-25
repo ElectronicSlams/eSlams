@@ -1,0 +1,24 @@
+{
+  "id": "chatcmpl-fireworks-wire-fixture",
+  "object": "chat.completion",
+  "created": 0,
+  "model": "accounts/fireworks/models/wire-fixture",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1}",
+        "reasoning_content": "private-reasoning-wire-fixture"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16,
+    "prompt_tokens_details": {"cached_tokens": 3},
+    "completion_tokens_details": {"reasoning_tokens": 2}
+  }
+}

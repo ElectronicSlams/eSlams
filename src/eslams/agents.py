@@ -33,6 +33,7 @@ from eslams.deadlines import (
 from eslams.hashing import sha256_json
 from eslams.http_io import TotalTimeout, bounded_post, response_observation
 from eslams.model_actions import (
+    action_text_matches,
     coerce_action,
     extract_json,
     find_legal_action,
@@ -41,7 +42,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, fireworks, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -402,6 +403,8 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        if self.provider in fireworks.PROVIDER_ALIASES:
+            self.provider = fireworks.PROVIDER_ID
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -499,6 +502,15 @@ class ModelProviderAgent:
                 provider_attempt += 1
                 try:
                     text, receipt = self._call_provider(api_key, prompt)
+                    _drop_credential_identifiers(receipt, api_key)
+                    if _action_contains_credential(text, api_key):
+                        raise ProviderCallError(
+                            "provider returned credential material in its action",
+                            error_kind="provider_response_schema_mismatch",
+                            provider=self.provider,
+                            model=self.model,
+                            receipt=receipt,
+                        )
                 except TimeoutError:
                     self._remember_receipt(
                         _failure_receipt(
@@ -518,6 +530,8 @@ class ModelProviderAgent:
                     # Never replay it automatically, even with optional safe retries.
                     raise
                 except ProviderCallError as exc:
+                    if exc.receipt is not None:
+                        _drop_credential_identifiers(exc.receipt, api_key)
                     failure_receipt = (
                         {
                             **exc.receipt,
@@ -600,7 +614,12 @@ class ModelProviderAgent:
                 metadata={
                     "provider": self.provider,
                     "model": self.model,
-                    **({"raw_action_text": text[:500]} if self.provider != "krutrim" else {}),
+                    **(
+                        {"raw_action_text": text[:500]}
+                        if self.provider in {
+                            "openai", "anthropic", "google", "gemini", "openrouter", "bedrock",
+                        } else {}
+                    ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
                 },
@@ -647,6 +666,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == fireworks.PROVIDER_ID:
+            return fireworks.call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -2000,6 +2021,7 @@ def _endpoint_kind(provider: str) -> str:
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
+        "fireworks": fireworks.ENDPOINT_KIND,
         "bedrock": "bedrock_converse",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
@@ -2012,12 +2034,15 @@ def _parser_version(provider: str) -> str:
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
+        "fireworks": fireworks.PARSER_VERSION,
         "bedrock": "bedrock-converse-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == fireworks.PROVIDER_ID:
+        return fireworks.normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
@@ -2553,7 +2578,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider == "openrouter":
+    elif provider in {"openrouter", "fireworks"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
@@ -2851,6 +2876,22 @@ def _redact_sensitive_text(value: str) -> str:
             redacted,
         )
     return redacted[:500]
+
+
+def _drop_credential_identifiers(receipt: dict[str, Any], credential: str) -> None:
+    """Discard credential echoes before provider-supplied identifiers become public."""
+    if not credential:
+        return
+    for name in ("request_id", "gateway_request_id", "provider_response_id", "locked_model_id"):
+        value = receipt.get(name)
+        if isinstance(value, str) and credential in value:
+            receipt[name] = None
+            if name == "locked_model_id":
+                receipt["model_identity_source"] = None
+
+
+def _action_contains_credential(text: str, credential: str) -> bool:
+    return action_text_matches(text, lambda value: credential in value)
 
 
 def _parse_model_action(
