@@ -10,6 +10,8 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
+from eslams.providers.action_privacy import validate_provider_action_text
+
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
     from eslams.contracts.provider import ProviderRuntimeConfig
@@ -58,17 +60,6 @@ def credential_echo(value: str, primary: str) -> bool:
     return any(secret in value for secret in _credential_values(primary))
 
 
-def _contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
-    if isinstance(value, str):
-        return any(secret in value for secret in credentials)
-    if isinstance(value, dict):
-        return any(_contains_credential(key, credentials) or _contains_credential(item, credentials)
-                   for key, item in value.items())
-    if isinstance(value, list):
-        return any(_contains_credential(item, credentials) for item in value)
-    return False
-
-
 def _private_receipt(receipt: dict[str, Any], credentials: tuple[str, ...]) -> dict[str, Any]:
     def scrub(value: Any) -> Any:
         if isinstance(value, str):
@@ -88,7 +79,6 @@ def _private_receipt(receipt: dict[str, Any], credentials: tuple[str, ...]) -> d
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams.agents import ProviderCallError
-    from eslams.model_actions import extract_json
 
     credentials = _credential_values(api_key)
     try:
@@ -102,18 +92,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         # observations. Removing an echoed ID must never authorize replay.
         raise
     sanitized = _private_receipt(receipt, credentials)
-    try:
-        private_text = (_contains_credential(text, credentials)
-                        or _contains_credential(extract_json(text), credentials))
-    except (ValueError, RecursionError):
-        private_text = True
-    if private_text:
-        raise ProviderCallError(
-            "Inception response failed privacy validation; no action accepted",
-            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
-            model=agent.model,
-            receipt={**sanitized, "outcome": "provider_response_schema_mismatch"},
-        )
+    validate_provider_action_text(text, credentials, sanitized,
+                                  provider=PROVIDER_ID, model=agent.model)
     return text, sanitized
 
 
