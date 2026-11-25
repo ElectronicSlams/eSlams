@@ -444,11 +444,15 @@ def test_cli_run_dispatches_native_adapter_and_public_artifacts_are_private_safe
         assert "private-reasoning-fixture" not in text
 
 
-def test_no_escaped_secret_in_action_prose(monkeypatch):
+@pytest.mark.parametrize("double_escaped", [False, True])
+def test_no_escaped_secret_in_action_prose(monkeypatch, double_escaped):
     data = wire()
     message = data["choices"][0]["message"]
     secret = "".join(f"\\u{ord(char):04x}" for char in SECRET)
-    message["content"] = secret + "\n" + message["content"]
+    if double_escaped:
+        message["content"] = json.dumps({"action": 1, "public_explanation": secret})
+    else:
+        message["content"] = secret + "\n" + message["content"]
     mock_wire(monkeypatch, data)
     with pytest.raises(ProviderCallError):
         agent().act(request())
