@@ -12,6 +12,7 @@ from eslams.arena import registry
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.contracts.usage import aggregate_provider_receipts
 from eslams.execution_policy import model_execution_policy
+from eslams.model_actions import normalized_text_matches
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import (
@@ -776,7 +777,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 row.get("name" if provider == "google" else "id")
                 if isinstance(row, dict) else None
             )
-            if not isinstance(raw, str) or not raw.strip():
+            if (not isinstance(raw, str) or not raw.strip()
+                    or normalized_text_matches(raw, lambda text: api_key in text)):
                 raise _discovery_schema_error(provider)
             if provider == "deepseek" and deepseek.has_credential_echo(
                 raw, deepseek.credential_values(api_key),
@@ -866,13 +868,46 @@ def _discovery_schema_error(provider: str) -> ProviderCallError:
     )
 
 
+_PUBLIC_ERROR_MESSAGES = {
+    "action_response_unparseable": "The provider did not return a legal action.",
+    "provider_adapter_unavailable": "Core has no inference adapter for this provider.",
+    "provider_auth_failed": "Provider authentication failed.",
+    "provider_cancelled": "The provider request was cancelled.",
+    "provider_controlled": "Local policy blocked the provider request.",
+    "provider_discovery_unavailable": (
+        "Model discovery is not implemented; account visibility remains unverified."
+    ),
+    "provider_interrupted": "The provider response was interrupted.",
+    "provider_outcome_unknown": "The provider request outcome is unknown.",
+    "provider_output_truncated": "The provider response was truncated.",
+    "provider_pending": "The provider request is still pending.",
+    "provider_permission_failed": "The provider denied access.",
+    "provider_rate_limited": "The provider rate limit was reached.",
+    "provider_refused": "The provider refused the request.",
+    "provider_request_rejected": "The provider request or configuration was rejected.",
+    "provider_response_schema_mismatch": "The provider returned an invalid response.",
+    "provider_timeout": "The provider request timed out.",
+    "provider_transport_error": "The provider connection failed.",
+    "provider_unavailable": "The provider or requested model is unavailable.",
+}
+
+
 def _public_error(exc: BaseException, *, provider: str, model: str) -> dict[str, Any]:
+    kind = getattr(exc, "error_kind", "provider_timeout")
+    error_class = next((name for name in _PUBLIC_ERROR_MESSAGES if name == kind), "provider_error")
+    message = _PUBLIC_ERROR_MESSAGES.get(error_class, "The provider check failed.")
+    if error_class == "provider_auth_failed":
+        canonical = provider.strip().lower().replace("_", "-")
+        environment = DEFAULT_PROVIDER_ENV.get(PROVIDER_ALIASES.get(canonical, canonical))
+        if environment:
+            message += f" Check the {environment} environment variable."
+    status_code = getattr(exc, "status_code", None)
     return {
         "provider": provider,
         "model": model,
-        "status_code": getattr(exc, "status_code", None),
-        "error_class": getattr(exc, "error_kind", "provider_timeout"),
-        "message": str(exc)[:500],
+        "status_code": status_code if type(status_code) is int else None,
+        "error_class": error_class,
+        "message": message,
     }
 
 

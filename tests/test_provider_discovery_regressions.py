@@ -193,3 +193,58 @@ def test_gpt5_preflight_preserves_native_defaults_without_framework_caps(monkeyp
         monkeypatch.setattr("eslams.agents.bounded_post", post)
         result = provider_preflight("openai", model, "tic-tac-toe", live=True)
         assert result["ok"] and result["checks"]["usage_extraction"] and len(requests) == 1
+
+
+@pytest.mark.parametrize("phase", ["discovery", "inference"])
+def test_preflight_uses_safe_public_messages_for_provider_failures(monkeypatch, capsys, phase):
+    from eslams.agents import ProviderCallError
+
+    secret = "synthetic-preflight-password-953"
+    monkeypatch.setenv("OPENAI_API_KEY", secret)
+
+    def fail(*args, **kwargs):
+        raise ProviderCallError(secret, status_code=401, error_kind="provider_auth_failed")
+
+    if phase == "discovery":
+        monkeypatch.setattr("eslams.provider_preflight.provider_models_live", fail)
+    else:
+        monkeypatch.setattr("eslams.provider_preflight.provider_models_live", lambda _: None)
+        monkeypatch.setattr("eslams.agents.ModelProviderAgent.act", fail)
+    args = [
+        "providers", "preflight", "--provider", "openai", "--model", "gpt-5-mini",
+        "--arena", "tic-tac-toe", "--live",
+    ]
+    if phase == "discovery":
+        args.append("--strict-catalogue")
+    assert main(args) == 1
+    output = capsys.readouterr().out
+    error = json.loads(output)["error"]
+    assert error["error_class"] == "provider_auth_failed"
+    assert error["status_code"] == 401
+    assert "OPENAI_API_KEY" in error["message"]
+    assert secret not in output
+
+
+@pytest.mark.parametrize("encoding", ["plain", "percent"])
+def test_discovery_never_publishes_a_credential_echo_as_a_model_id(monkeypatch, capsys, encoding):
+    secret = "synthetic-preflight-password-953"
+    monkeypatch.setenv("OPENAI_API_KEY", secret)
+    echoed = secret if encoding == "plain" else "".join(f"%{ord(c):02x}" for c in secret)
+    monkeypatch.setattr(
+        "eslams.provider_preflight.httpx.get",
+        lambda *a, **k: httpx.Response(200, json={"data": [{"id": f"gpt-5-mini-20{echoed}"}]}),
+    )
+    monkeypatch.setattr("eslams.agents.bounded_post", lambda *a, **k: pytest.fail("must not infer"))
+    assert main(["providers", "models", "--provider", "openai", "--live"]) == 1
+    models_output = capsys.readouterr().out
+    assert json.loads(models_output)["models"] == []
+    assert secret not in models_output and echoed not in models_output
+    assert main([
+        "providers", "preflight", "--provider", "openai", "--model", "gpt-5-mini",
+        "--arena", "tic-tac-toe", "--live", "--strict-catalogue",
+    ]) == 1
+    preflight_output = capsys.readouterr().out
+    error = json.loads(preflight_output)["error"]
+    assert error["error_class"] == "provider_response_schema_mismatch"
+    assert "available_alternatives" not in error
+    assert secret not in preflight_output and echoed not in preflight_output
