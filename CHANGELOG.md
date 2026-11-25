@@ -5,6 +5,64 @@
 - Reject credential-bearing Cohere completions before action parsing or repair,
   preserving clean text and sanitized receipts without substituting an action.
 
+## v0.9.1
+
+- Add separately versioned native multi-unit matches for 22 arenas, with a
+  3-unit block, keyless CLI, trusted local Python seat policies, sealed per-seat
+  history, and authenticated settled-boundary continuation.
+- Add explicit validation and offline public-journal rendering for native
+  artifacts. Disallowed private facts and unscored interrupted results remain
+  outside the public score. Ordinary v1 match/artifact handling remains unchanged.
+- Add private-field-safe native Auction; original registered rules and historical
+  scoring are unchanged. No new provider, PyPI, Rust, or hosted Platform rollout
+  is included. See [native matches](docs/NATIVE_MATCHES.md).
+
+## v0.9.0 - 2026-11-15
+
+- Add closed typed contracts, deterministic schema exports, generated TypeScript
+  and no-secret examples for separately labeled unscored board recovery,
+  non-executing preparation, private lineage and display-only public results.
+  Historical routing/build/provider assurance remains unverified; historical
+  spend and the missing final physical call count remain unknown. See
+  [board recovery](docs/BOARD_RECOVERY.md).
+
+- Support only separately labeled legacy 0.6.2 Tic-Tac-Toe, Connect Four and
+  Othello recovery. Preserve private originals and unverified historical assurance;
+  validate new call receipt pins and expose only safe display-only projections.
+- Generate Core-lite response metadata from Python authority and restore strict
+  deterministic parity without changing game algorithms or historical fixtures.
+- Align two regression tests with the existing interruption/fallback policy;
+  no runtime timeout-policy change is included.
+- Choose a minor version for additive public recovery APIs and contracts. No new
+  Hanabi, topology, Rust or catalogue work is included. GitHub-first delivery;
+  PyPI publication and Platform rollout are separate and are not performed here.
+
+## v0.8.1 - 2026-11-14
+
+- Add an explicit, separately hash-bound child execution policy for chess
+  continuation. Native-horizon policy uses the existing 240-ply arena horizon
+  without rewriting the source's historical execution cutoff, rules or history.
+- Version new continuation lineage as v2 while retaining historical v1 readers.
+  Bind child budgets to the manifest and preserve immediate-source budgets across
+  repeated continuation. Omitting the policy still preserves the source cutoff.
+
+## v0.8.0 - 2026-11-13
+
+- Add the direct Krutrim Cloud text adapter with explicit model IDs, native CLI
+  dispatch/preflight, full history, conservative raw-wire receipts and keyless
+  fixture tests. Unsupported reasoning/routing controls fail locally; unknown
+  accounting and model identity remain unknown.
+
+### Chess continuation
+
+- Add explicit, chess-only continuation from a verified interrupted archive.
+  Reconstruct the accepted prefix without provider calls; keep new receipts
+  separate from byte-preserved historical receipts and record private lineage.
+  Continued runs are labeled and cannot enter official evaluation.
+- Extend action provenance with `reconstructed_action`; consumers must not
+  count reconstructed actions as newly paid or proven provider actions.
+  See [chess continuation](docs/CHESS_CONTINUATION.md) for integration boundaries.
+
 ## v0.7.0 - 2026-11-04
 
 - Remove implicit framework model-thinking/output budgets and per-game reasoning selection.

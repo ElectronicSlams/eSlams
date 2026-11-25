@@ -44,6 +44,7 @@ from eslams.eval_runtime import (
 )
 from eslams.fixtures import ARTIFACT_FIXTURE_KINDS, create_artifact_fixture
 from eslams.golden import golden_fixture_bundle
+from eslams.native_runner import add_native_cli, native_cli
 from eslams.observation_budgets import all_observation_budget_reports
 from eslams.official import merge_official_results
 from eslams.output import write_text_file
@@ -115,6 +116,7 @@ def _main(argv: list[str] | None = None) -> int:
     sub.add_parser("init", help="Create a local eSlams workspace.")
 
     sub.add_parser("arenas", help="List built-in arenas.")
+    add_native_cli(sub)
 
     arena = sub.add_parser("arena", help="Arena transport helper commands.")
     arena_sub = arena.add_subparsers(dest="arena_command", required=True)
@@ -913,6 +915,8 @@ def _main(argv: list[str] | None = None) -> int:
         for arena_id in registry.list():
             print(arena_id)
         return 0
+    if args.command == "native":
+        return native_cli(args)
     if args.command == "arena":
         return _arena_command(args)
     if args.command == "core":
@@ -1462,6 +1466,13 @@ def _provider_agent(
     if provider == "cohere":
         cohere.validate_model(model)
         defaults[provider] = (model, cohere.API_KEY_ENV)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import API_KEY_ENV
+
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
