@@ -1458,6 +1458,7 @@ def _provider_agent(
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "kuaishou": ("", "STREAMLAKE_API_KEY"),
         "kwaipilot": ("", "STREAMLAKE_API_KEY"),
+        "relace": ("", "RELACE_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)

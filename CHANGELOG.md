@@ -28,6 +28,13 @@
   full history, conservative receipts/retries, and deterministic wire tests.
   See `docs/providers/KUAISHOU.md` for verified contracts and limitations.
 
+- Add a native Relace Open Models text-game adapter with an explicit model ID,
+  full history, native reasoning defaults, no fallback or default retries, and
+  sanitized attempt receipts. Include offline CLI/preflight wiring, explicit
+  model discovery, documented API evidence, and deterministic raw-wire tests.
+- Guard secondary configured credential echoes in Relace receipts, discovery
+  and action text, including custom primary-key names and interrupted bodies.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

@@ -1,7 +1,7 @@
 # Provider Guide
 
-eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+eSlams Core has native, secret-free artifact support for OpenAI,
+Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Relace. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -20,6 +20,8 @@ convenience properties.
 
 | `kuaishou:<model-or-endpoint>` / `kwaipilot:<model-or-endpoint>` | `STREAMLAKE_API_KEY` | StreamLake Chat Completions | `choices[0].message.content` | response `model` |
 
+| `relace:<model-id>` | `RELACE_API_KEY` | Open Models Chat Completions | `choices[0].message.content` | response `model` |
+
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
@@ -27,6 +29,11 @@ undocumented reasoning/accounting/region semantics unknown. See the
 The proposed 0.7.1 [AI21 Labs adapter](providers/AI21.md) requires an explicit
 model ID and rejects unsupported reasoning controls. Its service lifecycle,
 accounting limitations, and fixture provenance are documented separately.
+
+The [Relace adapter](providers/RELACE.md) requires an explicit model ID and
+native reasoning defaults. It preserves full supplied history and does not
+invoke the specialist apply/search endpoints. Its configuration preflight is
+offline; live discovery and inference require explicit commands.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

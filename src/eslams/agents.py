@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, ai21, load_provider_registry
+from eslams.providers import ModelCapabilities, ai21, load_provider_registry, relace
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.deepseek import call as call_deepseek
@@ -429,6 +429,8 @@ class ModelProviderAgent:
             from eslams.providers.krutrim import validate_config
 
             validate_config(self.model, self.runtime_config)
+        if self.provider == "relace":
+            relace.validate_configuration(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -687,6 +689,8 @@ class ModelProviderAgent:
             from eslams.providers.kuaishou import call
 
             return call(self, api_key, prompt)
+        if self.provider == "relace":
+            return relace.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -2045,6 +2049,7 @@ def _endpoint_kind(provider: str) -> str:
         "deepseek": "deepseek_chat_completions",
         "openrouter": "openrouter_chat_completions",
         "liquid-ai": "liquid_chat_completions",
+        "relace": relace.ENDPOINT_KIND,
         "bedrock": "bedrock_converse",
         "krutrim": "krutrim_chat_completions",
         "kuaishou": "streamlake_chat_completions",
@@ -2062,6 +2067,7 @@ def _parser_version(provider: str) -> str:
         "deepseek": "deepseek-chat-completions-raw-v1",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "liquid-ai": "liquid-chat-completions-raw-v1",
+        "relace": relace.PARSER_VERSION,
         "bedrock": "bedrock-converse-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
         "kuaishou": "streamlake-chat-completions-raw-v1",
@@ -2625,7 +2631,7 @@ def _check_provider_completion(
             refused = reason == "content_filter" or (
                 isinstance(message, dict) and bool(message.get("refusal"))
             )
-    elif provider in {"openrouter", "liquid-ai"}:
+    elif provider in {"openrouter", "liquid-ai", "relace"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

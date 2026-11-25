@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import ai21, load_provider_registry
+from eslams.providers import ai21, load_provider_registry, relace
 from eslams.providers.deepseek import (
     API_KEY_ENV,
     MODELS_ENDPOINT,
@@ -37,6 +37,7 @@ DEFAULT_PROVIDER_ENV = {
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
     "kuaishou": "STREAMLAKE_API_KEY",
     "kwaipilot": "STREAMLAKE_API_KEY",
+    "relace": relace.API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
@@ -46,6 +47,7 @@ _MODELS_ENDPOINTS = {
     "openrouter": "https://openrouter.ai/api/v1/models",
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
+    "relace": relace.MODELS_ENDPOINT,
 }
 
 
@@ -88,6 +90,8 @@ def provider_preflight(
         from eslams.providers.kuaishou import validate_configuration
 
         validate_configuration(model, runtime_config)
+    if provider == "relace":
+        relace.validate_configuration(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)
@@ -305,6 +309,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             f"missing API key environment variable {api_key_env}",
             error_kind="provider_auth_failed", provider=provider,
         )
+    relace_credentials = relace.credential_values(api_key) if provider == "relace" else ()
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -358,6 +363,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
             if provider == "deepseek" and has_credential_echo(raw, credential_values(api_key)):
+                raise _discovery_schema_error(provider)
+            if provider == "relace" and relace.contains_credential(raw, relace_credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
