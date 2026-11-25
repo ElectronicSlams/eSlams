@@ -384,3 +384,22 @@ def test_cli_run_and_public_artifact_privacy(monkeypatch, tmp_path, capsys, alia
                 assert KEY not in text and "PRIVATE_REASONING_SENTINEL" not in text
                 assert "PRIVATE_RESPONSE_SENTINEL" not in text
                 assert "PRIVATE_HEADER_SENTINEL" not in text
+
+
+@pytest.mark.parametrize("escaped", (False, True))
+def test_successful_response_cannot_echo_active_credential(monkeypatch, escaped):
+    body = fixture()
+    credential = KEY
+    act_request = request()
+    output = json.dumps({"action": act_request.legal_actions[0], "public_explanation": credential})
+    if escaped:
+        output = output.replace(credential, "".join(f"\\u{ord(char):04x}" for char in credential))
+    body["choices"][0]["message"]["content"] = output
+    stub(monkeypatch, httpx.Response(200, json=body))
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(act_request)
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert credential not in str(error.value)
+    assert credential not in json.dumps(selected.attempt_receipts)
+    assert len(selected.attempt_receipts) == 1
