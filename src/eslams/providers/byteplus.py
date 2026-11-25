@@ -261,7 +261,8 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
         receipt["finish_status"] = "incomplete"
         fail("provider_response_schema_mismatch", "BytePlus did not return a completed text action")
     if (not isinstance(message, dict) or message.get("role") != "assistant"
-            or message.get("tool_calls") or not isinstance(message.get("content"), str)
+            or message.get("tool_calls") or message.get("function_call")
+            or not isinstance(message.get("content"), str)
             or not message["content"].strip()):
         fail("provider_response_schema_mismatch", "BytePlus returned no assistant text action")
     receipt["finish_status"] = "completed"
