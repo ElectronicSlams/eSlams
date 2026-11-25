@@ -38,6 +38,7 @@ DEFAULT_PROVIDER_ENV = {
     "kuaishou": "STREAMLAKE_API_KEY",
     "kwaipilot": "STREAMLAKE_API_KEY",
     "relace": relace.API_KEY_ENV,
+    "naver": "CLOVASTUDIO_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -92,6 +93,10 @@ def provider_preflight(
         validate_configuration(model, runtime_config)
     if provider == "relace":
         relace.validate_configuration(model, runtime_config)
+    if provider == "naver":
+        from eslams.providers.naver import validate_settings
+
+        validate_settings(model, runtime_config or ProviderRuntimeConfig())
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)

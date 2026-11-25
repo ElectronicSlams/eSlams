@@ -35,6 +35,10 @@
 - Guard secondary configured credential echoes in Relace receipts, discovery
   and action text, including custom primary-key names and interrupted bodies.
 
+- Add the NAVER Cloud CLOVA Studio native Chat Completions v3 adapter with explicit
+  model IDs, documented HCX-007 reasoning controls, bounded transport and sanitized
+  receipts. See [NAVER setup and evidence](docs/providers/NAVER.md). No version bump.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

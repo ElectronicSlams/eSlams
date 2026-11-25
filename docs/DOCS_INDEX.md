@@ -16,6 +16,8 @@
 | Liquid AI direct text adapter and source evidence | [LIQUID_AI.md](LIQUID_AI.md) |
 
 | Kuaishou / KwaiPilot KAT direct text adapter | [providers/KUAISHOU.md](providers/KUAISHOU.md) |
+
+| NAVER Cloud HyperCLOVA X adapter and official API evidence | [providers/NAVER.md](providers/NAVER.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

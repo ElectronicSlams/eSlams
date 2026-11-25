@@ -1,0 +1,19 @@
+{
+  "status": {"code": "20000", "message": "OK"},
+  "result": {
+    "message": {
+      "role": "assistant",
+      "content": "{\"action\": 1, \"public_explanation\": \"Selected a legal action.\"}",
+      "thinkingContent": "Private synthetic reasoning; never an action or public receipt."
+    },
+    "finishReason": "stop",
+    "created": 1753362971,
+    "seed": 1561390649,
+    "usage": {
+      "promptTokens": 58,
+      "completionTokens": 631,
+      "totalTokens": 689,
+      "completionTokensDetails": {"thinkingTokens": 366}
+    }
+  }
+}
