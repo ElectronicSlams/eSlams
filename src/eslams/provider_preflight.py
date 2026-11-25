@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry, moonshot
+from eslams.providers import load_provider_registry, moonshot, upstage
 from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
 from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
 from eslams.providers.qwen import validate_controls as qwen_validate_controls
@@ -29,6 +29,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "upstage": "UPSTAGE_API_KEY",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -64,6 +65,13 @@ def provider_preflight(
     provider = canonicalize_qwen_provider(provider)
     if provider == "qwen":
         qwen_validate_model(model)
+    configuration_error = None
+    if provider == upstage.PROVIDER_ID:
+        upstage.validate_model(model)
+        try:
+            upstage.reasoning_effort(runtime_config)
+        except ProviderCallError as exc:
+            configuration_error = _public_error(exc, provider=provider, model=model)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -118,6 +126,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif configuration_error is not None:
+        error = configuration_error
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",

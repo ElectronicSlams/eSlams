@@ -1,7 +1,6 @@
 # Provider Guide
 
-eSlams Core has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Qwen/DashScope. The adapters call raw
+eSlams Core's native providers support secret-free artifacts. The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -20,6 +19,7 @@ model discovery through `MOONSHOT_API_KEY`.
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `upstage:<model>` | `UPSTAGE_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
@@ -36,6 +36,9 @@ pinned_endpoint`.
 For the proposed 0.7.1 Qwen adapter, see [DashScope setup, supported scope,
 regional routing, controls and accounting limits](providers/QWEN.md). `alibaba`,
 `alibaba-cn` and `dashscope` are aliases of `qwen`; region selection is explicit.
+
+See the [Upstage adapter guide](providers/UPSTAGE.md) for current primary sources,
+reasoning controls, retry limits and keyless verification.
 
 ## Setup and Preflight
 

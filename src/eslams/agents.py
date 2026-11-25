@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry, moonshot, qwen
+from eslams.providers import ModelCapabilities, load_provider_registry, moonshot, qwen, upstage
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -408,6 +408,8 @@ class ModelProviderAgent:
         self.provider = qwen.canonicalize_provider(self.provider)
         if self.provider == "qwen":
             qwen.validate_model(self.model)
+        if self.provider == upstage.PROVIDER_ID:
+            upstage.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -610,7 +612,7 @@ class ModelProviderAgent:
                     "model": self.model,
                     **(
                         {"raw_action_text": text[:500]}
-                        if self.provider not in {"krutrim", "moonshot-ai", "qwen"} else {}
+                        if self.provider not in {"krutrim", "moonshot-ai", "qwen", "upstage"} else {}
                     ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
@@ -676,6 +678,8 @@ class ModelProviderAgent:
             return self._call_gemini(api_key, prompt)
         if self.provider == "openrouter":
             return self._call_openrouter(api_key, prompt)
+        if self.provider == upstage.PROVIDER_ID:
+            return upstage.call(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == moonshot.PROVIDER_ID:
@@ -1256,6 +1260,10 @@ def _post_json(
         if provider == moonshot.PROVIDER_ID:
             kind = moonshot.http_error_kind(response, kind)
         retry_after = _retry_after_seconds(response)
+        if provider == upstage.PROVIDER_ID:
+            category_delay = upstage.retry_after_seconds(response)
+            if category_delay is not None:
+                retry_after = max(retry_after or 0.0, category_delay)
         receipt = _failure_receipt(
             provider=provider, model=model, agent_id="", agent_version="", turn_id=0,
             outcome=kind, usage_unavailable_reason="provider_error_usage_unverified",
@@ -2027,6 +2035,7 @@ def _endpoint_kind(provider: str) -> str:
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
         moonshot.PROVIDER_ID: "moonshot_chat_completions",
+        "upstage": upstage.ENDPOINT_KIND,
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2041,6 +2050,7 @@ def _parser_version(provider: str) -> str:
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
+        "upstage": upstage.PARSER_VERSION,
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2213,7 +2223,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "upstage"}
+            else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2585,7 +2596,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", moonshot.PROVIDER_ID}:
+    elif provider in {"openrouter", moonshot.PROVIDER_ID, "upstage"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
