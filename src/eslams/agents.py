@@ -501,6 +501,14 @@ class ModelProviderAgent:
                 provider_attempt += 1
                 try:
                     text, receipt = self._call_provider(api_key, prompt)
+                    if _action_contains_credential(text, api_key):
+                        raise ProviderCallError(
+                            "provider returned credential material in its action",
+                            error_kind="provider_response_schema_mismatch",
+                            provider=self.provider,
+                            model=self.model,
+                            receipt=receipt,
+                        )
                 except TimeoutError:
                     self._remember_receipt(
                         _failure_receipt(
@@ -2862,6 +2870,27 @@ def _redact_sensitive_text(value: str) -> str:
             redacted,
         )
     return redacted[:500]
+
+
+def _action_contains_credential(text: str, credential: str) -> bool:
+    """Check raw metadata and decoded JSON values before returning an action."""
+    if credential in text:
+        return True
+    try:
+        pending = [extract_json(text)]
+    except RecursionError:
+        # Excessively nested JSON cannot be checked safely.
+        return True
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str) and credential in value:
+            return True
+        if isinstance(value, dict):
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return False
 
 
 def _parse_model_action(

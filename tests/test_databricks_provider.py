@@ -434,3 +434,23 @@ def test_redirect_is_not_followed_or_accepted_as_an_action(wire):
     assert selected.last_receipt["status_code"] == 302
     assert len(seen) == 1
     assert SECRET not in json.dumps(selected.last_receipt)
+
+
+@pytest.mark.parametrize("escaped", (False, True))
+def test_successful_response_cannot_echo_active_credential(wire, escaped):
+    body = success()
+    credential = SECRET
+    act_request = _request()
+    output = json.dumps({"action": act_request.legal_actions[0], "public_explanation": credential})
+    if escaped:
+        output = output.replace(credential, "".join(f"\\u{ord(char):04x}" for char in credential))
+    body["choices"][0]["message"]["content"] = output
+    _, replies = wire
+    replies.append(httpx.Response(200, json=body))
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(act_request)
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert credential not in str(error.value)
+    assert credential not in json.dumps(selected.attempt_receipts)
+    assert len(selected.attempt_receipts) == 1
