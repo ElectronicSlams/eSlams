@@ -29,6 +29,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -66,6 +67,10 @@ def provider_preflight(
         if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"} else None
     )
     registry_model = "" if mistral_error and not isinstance(model, str) else model
+    if provider == "krutrim":
+        from eslams.providers.krutrim import validate_config
+
+        validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)
