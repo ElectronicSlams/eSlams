@@ -18,6 +18,8 @@
 | Kuaishou / KwaiPilot KAT direct text adapter | [providers/KUAISHOU.md](providers/KUAISHOU.md) |
 
 | NAVER Cloud HyperCLOVA X adapter and official API evidence | [providers/NAVER.md](providers/NAVER.md) |
+
+| Direct Perceptron contract and research evidence | [PERCEPTRON.md](PERCEPTRON.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

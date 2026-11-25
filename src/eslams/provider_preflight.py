@@ -13,20 +13,13 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import ai21, load_provider_registry, relace
-from eslams.providers.deepseek import (
-    API_KEY_ENV,
-    MODELS_ENDPOINT,
-    canonical_provider,
-    configuration_error,
-    credential_values,
-    has_credential_echo,
-)
+from eslams.providers import ai21, deepseek, load_provider_registry, perceptron, relace
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
-    "deepseek": API_KEY_ENV,
+    "deepseek": deepseek.API_KEY_ENV,
     ai21.PROVIDER_ID: ai21.API_KEY_ENV,
+    "perceptron": perceptron.API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -42,7 +35,8 @@ DEFAULT_PROVIDER_ENV = {
 }
 
 _MODELS_ENDPOINTS = {
-    "deepseek": MODELS_ENDPOINT,
+    "deepseek": deepseek.MODELS_ENDPOINT,
+    "perceptron": perceptron.MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -72,8 +66,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
-    provider = canonical_provider(provider)
-    provider_config_error = (configuration_error(model, runtime_config)
+    provider = deepseek.canonical_provider(provider)
+    provider_config_error = (deepseek.configuration_error(model, runtime_config)
                              if provider == "deepseek" else None)
     registry_model = "" if provider == "deepseek" and not isinstance(model, str) else model
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
@@ -97,6 +91,9 @@ def provider_preflight(
         from eslams.providers.naver import validate_settings
 
         validate_settings(model, runtime_config or ProviderRuntimeConfig())
+    if provider.strip() == "perceptron":
+        provider = "perceptron"
+        perceptron.validate_settings(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)
@@ -326,6 +323,7 @@ def provider_models_live(provider: str) -> list[str] | None:
     else:
         headers["Authorization"] = f"Bearer {api_key}"
     models: list[str] = []
+    credentials = perceptron.credential_values(api_key) if provider == "perceptron" else ()
     cursors: set[str] = set()
     for _ in range(20):
         try:
@@ -367,9 +365,13 @@ def provider_models_live(provider: str) -> list[str] | None:
             )
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
-            if provider == "deepseek" and has_credential_echo(raw, credential_values(api_key)):
+            if provider == "deepseek" and deepseek.has_credential_echo(
+                raw, deepseek.credential_values(api_key),
+            ):
                 raise _discovery_schema_error(provider)
             if provider == "relace" and relace.contains_credential(raw, relace_credentials):
+                raise _discovery_schema_error(provider)
+            if provider == "perceptron" and perceptron.contains_credential(raw, credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

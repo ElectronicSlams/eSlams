@@ -1491,7 +1491,12 @@ def _provider_agent(
         )
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
-
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider == "perceptron":
+        from eslams.providers.perceptron import API_KEY_ENV
         return ModelProviderAgent(
             provider=provider, model=model, api_key_env=API_KEY_ENV,
             version=model, runtime_config=runtime_config,

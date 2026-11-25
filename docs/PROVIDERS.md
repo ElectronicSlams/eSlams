@@ -24,6 +24,8 @@ convenience properties.
 
 | `naver:<model-id>` | `CLOVASTUDIO_API_KEY` | native Chat Completions v3 | `result.message.content` | model pinned in direct endpoint |
 
+| `perceptron:<model>` | `PERCEPTRON_API_KEY` | Direct Chat Completions | `choices[0].message.content` | response `model` |
+
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
@@ -41,6 +43,10 @@ The NAVER adapter requires an explicit model ID and follows its own
 [setup, reasoning controls, regional access and wire evidence](providers/NAVER.md).
 Its defaults preserve full history, provider output limits and provider reasoning policy.
 It does not use the historical per-game reasoning behavior described below.
+
+The next-release [Perceptron adapter and evidence](PERCEPTRON.md) requires an
+explicit model ID and documents native reasoning controls, finality, usage,
+lifecycle, regional uncertainty, and keyless raw-wire validation.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

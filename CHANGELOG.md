@@ -39,6 +39,14 @@
   model IDs, documented HCX-007 reasoning controls, bounded transport and sanitized
   receipts. See [NAVER setup and evidence](docs/providers/NAVER.md). No version bump.
 
+- Add a native Perceptron text Chat Completions adapter with explicit model IDs,
+  provider-specific reasoning validation, CLI/preflight wiring, documented
+  lifecycle and accounting, and deterministic raw-wire/privacy regressions.
+  Preserve native defaults, full history, safe transport, and zero default retries.
+  No paid inference or package version change.
+  Follow-up review rejects credential-bearing discovery IDs, protects configured
+  secondary credentials, and closes whitespace-provider preflight bypasses.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

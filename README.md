@@ -223,6 +223,11 @@ uses `kwaipilot:<model>` or `kuaishou:<endpoint-id>` with `STREAMLAKE_API_KEY`.
 Select the documented service region explicitly when using China endpoints.
 The package version remains 0.7.0 during adapter review.
 
+The next-release native `perceptron:<explicit-model-id>` adapter uses
+`PERCEPTRON_API_KEY` and direct text Chat Completions. See the
+[Perceptron guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PERCEPTRON.md) for configuration checks, reasoning controls,
+official sources, and the limits of offline validation.
+
 Use the verified provider workflow before spending on a run:
 
 ```bash

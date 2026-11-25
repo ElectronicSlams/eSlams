@@ -1,0 +1,21 @@
+{
+  "id": "chatcmpl-perceptron-fixture",
+  "object": "chat.completion",
+  "created": 1790000000,
+  "model": "perceptron-mk1.5",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "{\"action\": 1, \"confidence\": 0.5, \"public_explanation\": \"A legal move.\"}",
+      "reasoning_content": "Private fixture reasoning."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16,
+    "prompt_tokens_details": {"cached_tokens": 3}
+  }
+}
