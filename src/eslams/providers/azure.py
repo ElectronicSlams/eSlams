@@ -10,6 +10,12 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from eslams.providers.action_privacy import (
+    contains_credential,
+    credential_encodings,
+    validate_provider_action_text,
+)
+
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
     from eslams.contracts.provider import ProviderRuntimeConfig
@@ -168,15 +174,33 @@ def _redact_receipt_identifiers(receipt: dict[str, Any], credential: str) -> dic
 def call(agent: ModelProviderAgent, credential: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams.agents import ProviderCallError
 
+    credentials = credential_encodings({
+        credential, os.getenv(API_KEY_ENV, "").strip(),
+        os.getenv("AZURE_AI_AUTH_TOKEN", "").strip(),
+    })
     try:
         text, receipt = _call(agent, credential, prompt)
     except ProviderCallError as exc:
-        # All transport/body/semantic failures cross this boundary, including
-        # partial-body header observations retained by the bounded transport.
         if exc.receipt is not None:
-            exc.receipt = _redact_receipt_identifiers(exc.receipt, credential)
-        raise
-    return text, _redact_receipt_identifiers(receipt, credential)
+            exc.receipt = _safe_receipt(exc.receipt, credential, credentials)
+        if contains_credential(str(exc), credentials):
+            exc.args = ("Azure provider failure",)
+        raise exc from None
+    safe_receipt = _safe_receipt(receipt, credential, credentials)
+    validate_provider_action_text(text, credentials, safe_receipt,
+                                  provider=PROVIDER_ID, model=agent.model)
+    return text, safe_receipt
+
+
+def _safe_receipt(
+    receipt: dict[str, Any], credential: str, credentials: set[str],
+) -> dict[str, Any]:
+    sanitized = _redact_receipt_identifiers(receipt, credential)
+    result = {field: None if contains_credential(value, credentials) else value
+              for field, value in sanitized.items()}
+    if result.get("locked_model_id") is None:
+        result["model_identity_source"] = None
+    return result
 
 
 def _call(agent: ModelProviderAgent, credential: str, prompt: str) -> tuple[str, dict[str, Any]]:
