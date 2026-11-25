@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, load_provider_registry, xai
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -332,6 +332,8 @@ class HttpAgent:
 
 def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
+    if xai.contains_credential(value):
+        return None
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
     sanitized = _sanitize_receipt_value(value)
@@ -409,7 +411,9 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = xai.canonical_provider(self.provider.lower())
+        if self.provider == "xai":
+            xai.validate_model(self.model)
         if self.provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
             from eslams.providers.liquid import validate_config
 
@@ -457,6 +461,9 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "xai":
+                with xai.credential_scope(environment_name=self.api_key_env):
+                    return self._act(request)
             if self.provider == "krutrim":
                 from eslams.providers.krutrim import credential_scope
 
@@ -700,6 +707,8 @@ class ModelProviderAgent:
             return call_shanghai_ai_lab(self, api_key, prompt)
         if self.provider == "mistral-ai":
             return complete_mistral(self, api_key, prompt)
+        if self.provider == "xai":
+            return xai.call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -1602,7 +1611,8 @@ def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]
         "provider": provider,
         "model": model,
         "currency": "USD",
-        "sourceUri": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+        "sourceUri": (xai.COST_SOURCE if provider == "xai" else
+                      "https://openrouter.ai/docs/cookbook/administration/usage-accounting"),
     }
     return {
         "schemaVersion": "eslams.price-card-reference.v1",
@@ -1614,7 +1624,7 @@ def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]
         "sourceUri": identity["sourceUri"],
         "effectiveAt": None,
         "retrievedAt": None,
-        "complete": provider == "openrouter",
+        "complete": provider in {"openrouter", "xai"},
     }
 
 
@@ -2055,6 +2065,7 @@ def _endpoint_kind(provider: str) -> str:
         "mistral-ai": "mistral_chat_completions",
         "openai": "openai_responses",
         "apodex": "apodex_chat_completions",
+        "xai": "xai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
@@ -2072,6 +2083,7 @@ def _parser_version(provider: str) -> str:
         "mistral-ai": "mistral-chat-completions-raw-v1",
         "openai": "openai-responses-raw-v2",
         "apodex": "apodex-chat-completions-raw-v1",
+        "xai": "xai-responses-raw-v1",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
@@ -2100,6 +2112,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         usage = {key: usage[key] for key in (
             "prompt_tokens", "completion_tokens", "total_tokens",
         ) if key in usage}
+    if provider == "xai":
+        usage = xai.usage_fields(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2596,7 +2610,7 @@ def _check_provider_completion(
     status: Any = None
     error = data.get("error")
     refused = False
-    if provider == "openai":
+    if provider in {"openai", "xai"}:
         status = data.get("status")
         details = data.get("incomplete_details")
         reason = details.get("reason") if isinstance(details, dict) else None
@@ -2921,6 +2935,7 @@ _SECRET_TEXT_PATTERNS = (
 
 
 def _redact_sensitive_text(value: str) -> str:
+    value = xai.scrub_text(value)
     redacted = value.replace("\r", " ").replace("\n", " ")
     for pattern in _SECRET_TEXT_PATTERNS:
         redacted = pattern.sub(

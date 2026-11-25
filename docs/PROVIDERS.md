@@ -12,10 +12,14 @@ See [configuration, wire sources and limitations](PROVIDER_IBM_RHAI.md).
 Mistral AI is also available through its direct API; see the
 [Mistral adapter guide](providers/MISTRAL.md) for scope, research and limitations.
 
+For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
+[research, setup and limits](PROVIDER_XAI.md).
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
+| `xai:<model>` (alias `x-ai`) | `XAI_API_KEY` | Responses | typed assistant `output[].content[]` `output_text` parts | response `model` |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |

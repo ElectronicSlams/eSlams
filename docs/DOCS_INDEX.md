@@ -12,11 +12,9 @@
 | Chess continuation, lineage and accounting | [CHESS_CONTINUATION.md](CHESS_CONTINUATION.md) |
 | Artifact profiles, signatures and migration boundaries | [ARTIFACTS.md](ARTIFACTS.md) |
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
-| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |
+| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md), [native xAI](PROVIDER_XAI.md) |
 | Liquid AI direct text adapter and source evidence | [LIQUID_AI.md](LIQUID_AI.md) |
-
 | Shanghai AI Lab Atria adapter scope and evidence | [SHANGHAI_AI_LAB.md](SHANGHAI_AI_LAB.md) |
-
 | Red Hat AI Inference on IBM Cloud host adapter | [PROVIDER_IBM_RHAI.md](PROVIDER_IBM_RHAI.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |

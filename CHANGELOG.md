@@ -35,6 +35,14 @@
 - Reject credential-contaminated Mistral actions before parsing or repair,
   including mixed/full JSON Unicode escapes, without rewriting model actions.
 
+- Add a native xAI Responses adapter (`xai`, alias `x-ai`) with full public
+  history, sanitized attempt receipts, conservative usage accounting, native
+  tick-based cost reporting, keyless wire fixtures, and account model discovery.
+  Require explicit nonblank model IDs, reject unsupported thinking budgets during
+  preflight, and scrub configured primary/secondary credentials from native
+  telemetry, discovery and action text.
+  See `docs/PROVIDER_XAI.md` for supported behavior and limits.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

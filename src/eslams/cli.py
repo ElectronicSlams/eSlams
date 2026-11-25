@@ -52,6 +52,8 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
+from eslams.providers.xai import canonical_provider
+from eslams.providers.xai import validate_model as validate_xai_model
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1353,7 +1355,7 @@ def _providers_command(args: argparse.Namespace) -> int:
         else:
             records = load_provider_registry().list_models(provider=args.provider)
             payload = {
-                "provider": args.provider,
+                "provider": canonical_provider(args.provider),
                 "mode": "registry_only",
                 "ok": True,
                 "models": [record.to_dict() for record in records],
@@ -1448,6 +1450,7 @@ def _provider_agent(
 ) -> ModelProviderAgent | None:
     defaults = {
         "mistral-ai": ("", "MISTRAL_API_KEY"),
+        "xai": ("", "XAI_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1461,7 +1464,9 @@ def _provider_agent(
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    provider = canonical_provider(provider.lower())
+    if provider == "xai":
+        validate_xai_model(model)
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
         return ModelProviderAgent(
             provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",
