@@ -572,3 +572,15 @@ def test_unicode_escaped_action_credentials_are_rejected_without_public_diagnost
     assert caught.value.error_kind == "provider_response_schema_mismatch"
     assert canary not in str(caught.value) + json.dumps(native.attempt_receipts)
     assert native.last_receipt["usage"]["total_tokens"] is not None
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = install_wire(monkeypatch, status=202)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1
