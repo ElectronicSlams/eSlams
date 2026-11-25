@@ -11,6 +11,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from eslams.contracts.provider import ProviderRuntimeConfig
+from eslams.providers.action_privacy import validate_provider_action_text
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -146,12 +147,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             data, provider=PROVIDER_ID, model=agent.model, response=response, receipt=receipt,
         )
         action_text = text(data, model=agent.model)
-        if _contains_credential(action_text, credentials):
-            raise ProviderCallError(
-                "StepFun returned credential material in action text",
-                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
-                model=agent.model,
-            )
+        validate_provider_action_text(action_text, credentials, receipt,
+                                      provider=PROVIDER_ID, model=agent.model)
         return action_text, _clean_receipt(receipt, credentials)
     except ProviderCallError as exc:
         if _contains_credential(str(exc), credentials):
@@ -182,6 +179,7 @@ def text(data: dict[str, Any], *, model: str) -> str:
             if (choice.get("index") == 0 and not isinstance(choice.get("index"), bool)
                     and choice.get("finish_reason") == "stop" and isinstance(message, dict)
                     and message.get("role") == "assistant" and not message.get("tool_calls")
+                    and message.get("function_call") is None
                     and isinstance(message.get("content"), str) and message["content"].strip()):
                 return str(message["content"])
     raise ProviderCallError(

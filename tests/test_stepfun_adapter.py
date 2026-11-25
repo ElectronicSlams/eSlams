@@ -609,3 +609,41 @@ def test_runner_receipt_privacy_and_invalid_truncation(monkeypatch, tmp_path):
             contents = path.read_bytes()
             assert KEY.encode() not in contents
             assert b"private-reasoning-fixture" not in contents
+
+
+@pytest.mark.parametrize("duplicate_field", [False, True])
+def test_unicode_escaped_action_credentials_are_rejected_without_public_diagnostics(
+    monkeypatch, duplicate_field,
+):
+    native = agent()
+    canary = "OpaqueReviewCredentialCanary"
+    monkeypatch.setenv(native.api_key_env, canary)
+    body = wire()
+    message = body["choices"][0]["message"]
+    ending = ',"public_explanation":"safe"' if duplicate_field else ""
+    message["content"] = (
+        '{"action":1,"public_explanation":"' + chr(92) + 'u004f' + canary[1:] + '"' + ending + "}"
+    )
+    monkeypatch.setattr(
+        "eslams.agents.bounded_post", lambda *args, **kwargs: httpx.Response(200, json=body),
+    )
+    with pytest.raises(ProviderCallError) as caught:
+        native.act(_request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert canary not in str(caught.value) + json.dumps(native.attempt_receipts)
+    assert native.last_receipt["usage"]["total_tokens"] is not None
+
+
+def test_unsolicited_legacy_function_call_is_rejected(monkeypatch):
+    native = agent()
+    monkeypatch.setenv(native.api_key_env, "OpaqueReviewCredentialCanary")
+    body = wire()
+    body["choices"][0]["message"]["function_call"] = {"name": "unsupported"}
+    monkeypatch.setattr(
+        "eslams.agents.bounded_post", lambda *args, **kwargs: httpx.Response(200, json=body),
+    )
+    with pytest.raises(ProviderCallError) as caught:
+        native.act(_request())
+    assert caught.value.error_kind in {
+        "provider_response_schema_mismatch", "provider_request_rejected",
+    }
