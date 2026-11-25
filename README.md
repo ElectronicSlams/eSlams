@@ -20,6 +20,11 @@ secret seeds, private scenario sets, and hidden eval variants so agents cannot
 overfit to the public package. Core supports the full public 50-game
 catalogue listed below.
 
+Core 1.0.0 brings the independently reviewed native provider adapters into
+the full Python Core and adds trusted local UCI engines for standard chess.
+Use fixed-depth Stockfish play through the CLI or library, then validate and
+export the replay with Core's existing artifact commands.
+
 Core 0.9.1 adds opt-in [native multi-unit matches](https://github.com/ElectronicSlams/eSlams/blob/v0.9.1/docs/NATIVE_MATCHES.md)
 for 22 arenas, with a keyless local CLI and a trusted Python seat-policy API.
 Native artifacts use separate validation and do not enable hosted play.
@@ -119,7 +124,7 @@ python3 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-Core 0.9.1 requires Python 3.10+. Supported-version release checks must accompany
+Core 1.0.0 requires Python 3.10+. Supported-version release checks must accompany
 the final package; local candidate results are not a promise that every OS was tested.
 Published Core 0.6.1 retains its historical Python 3.9 support. The value-free `.env.example` documents
 configuration names; Core does not load `.env` automatically. Export selected
@@ -217,6 +222,21 @@ before a run when a model is missing from the registry, unavailable from API,
 not marked game-agent-supported, or missing its API key. See
 [the provider guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDERS.md) for the exact wire adapters, model
 identity rules, reasoning behavior, usage semantics, and rate-card contract.
+
+The [Kuaishou / KwaiPilot KAT adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/KUAISHOU.md)
+uses `kwaipilot:<model>` or `kuaishou:<endpoint-id>` with `STREAMLAKE_API_KEY`.
+Select the documented service region explicitly when using China endpoints.
+
+The native `perceptron:<explicit-model-id>` adapter uses
+`PERCEPTRON_API_KEY` and direct text Chat Completions. See the
+[Perceptron guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PERCEPTRON.md) for configuration checks, reasoning controls,
+official sources, and the limits of offline validation.
+
+Baidu Qianfan direct inference is available as `baidu:<exact-model-api-name>`
+(`qianfan` and `baidu-qianfan` aliases), using `QIANFAN_API_KEY`. It requires an
+explicit model and uses the domestic Qianfan endpoint. See the
+[Qianfan guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/BAIDU_QIANFAN.md)
+for account/region scope and verified controls.
 
 Use the verified provider workflow before spending on a run:
 
@@ -708,9 +728,39 @@ without engine evaluation:
 This gives language models enough chess context to make legal decisions without
 smuggling in engine strength.
 
+### Trusted local UCI chess engines
+
+Use a locally installed UCI executable that you trust. For example, to play
+Stockfish as White against the built-in first-legal agent, run:
+
+```sh
+eslams run --arena chess --agent "uci:/absolute/path/to/stockfish" \
+  --opponent first-legal --uci-depth 8 --run-id stockfish-demo --require-scoring-valid
+eslams validate runs/stockfish-demo.eslams
+eslams replay runs/stockfish-demo.eslams --output runs/stockfish-demo.html
+```
+
+Use the same `uci:` syntax with `--opponent` for Black or with
+`--seat-agent PLAYER=AGENT`. The Python entry point is
+`UciChessAgent(Path("/absolute/path/to/stockfish"), depth=8)`, which you can
+pass as a seat in `Runner().run(RunConfig(arena_id="chess", agent_1=engine))`.
+
+Core starts a fresh engine for each move with a fixed depth, one search thread
+and 16 MiB hash where those options are supported. Keep the same engine build
+and depth to reproduce a search. Core checks the move against both the position
+and the arena's legal actions. Each search, including startup, is limited to 30
+seconds or a shorter `--time-budget-ms`. UCI mode is for local, unofficial
+chess runs with local agents on both seats. The executable runs with the
+current user's privileges and a
+minimal environment, so use an executable and engine assets you have verified.
+
 ## Provider Support
 
-Core has direct first-party HTTP adapters for all five provider routes below:
+The [native Cohere adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/cohere.md) adds
+`cohere:<model>` (alias `cohere-ai:<model>`) with `COHERE_API_KEY`.
+It uses Chat v2 and retains unknown served identity and monetary cost explicitly.
+
+Core has native HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -718,7 +768,65 @@ Core has direct first-party HTTP adapters for all five provider routes below:
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` |
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
+| `morph:<model-id>` | `MORPH_API_KEY` |
+
+| `inception:<model>` | `INCEPTION_API_KEY` |
+
+| `writer:<model>` | `WRITER_API_KEY` |
+| `minimax:<model>` | `MINIMAX_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
+| `contextual-ai:<model>` | `CONTEXTUAL_API_KEY` |
+
+The [Contextual AI Generate adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/CONTEXTUAL_AI.md)
+supports direct text without retrieval using the provider-owned integration's
+empty knowledge source. Specify the model explicitly (documented: `v1`, `v2`)
+and use `reasoning=auto`; identity, usage, cost and live availability remain
+unverified. The package version is unchanged pending release review.
+
+| `sakana:sakana-namazu-v1.0` (or explicit `sakana-namazu`) | `SAKANA_API_KEY` |
+
+The [Sakana Namazu adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDER_SAKANA.md) uses Sakana's direct API,
+requires an explicit model ID and excludes Fugu's routed/orchestrated products.
+
+| `stepfun:<model>` | `STEPFUN_API_KEY` |
+
+StepFun uses direct Chat Completions at `api.stepfun.ai`; see the
+[StepFun contract notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/STEPFUN.md) for region, model variants,
+reasoning and accounting limits. StepFun requires an explicit nonblank model ID.
+
+| `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` |
+
+| `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` |
+
+The [BytePlus ModelArk adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BYTEPLUS.md) targets
+the direct ap-southeast-1 service. Supply an explicit model or deployment ID;
+Volcengine Ark and Coding Plan use different services.
+
+| `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` |
+
+The [Shanghai AI Lab adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/SHANGHAI_AI_LAB.md) calls the
+Atria service with an explicit model ID. Reasoning controls are unverified and
+rejected; missing identity and accounting stay unknown. The package remains 0.7.0.
+
+MiniMax calls its [direct Chat Completions API](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/MINIMAX.md) with
+separated reasoning and no model or provider fallback. Select an explicit model such as
+`MiniMax-M3.1-Flash`; configuration preflight is offline unless `--live` is selected.
+
+| `fireworks:<model-resource>` | `FIREWORKS_API_KEY` |
+
+Fireworks uses direct Chat Completions with an explicit `accounts/.../models/...`
+resource. See the [Fireworks guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/FIREWORKS.md) for aliases, native reasoning,
+keyless checks, usage and discovery limits. No default model is selected.
+
+| `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` |
+
+Snowflake also requires `SNOWFLAKE_ACCOUNT_URL`. See the
+[Snowflake guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/SNOWFLAKE.md) for authentication, exact model IDs,
+region policy, and completion/accounting limitations. `cortex` and `snowflake-cortex`
+are provider aliases; a model is always required.
+
+The next-release [Baichuan adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BAICHUAN.md) additionally accepts
+`baichuan-ai:<exact-model>` and `baichuan:<exact-model>` using `BAICHUAN_API_KEY`.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
@@ -727,7 +835,9 @@ disabled explicitly on every request, including without an order. A supplied
 provider order is preserved but is not an authenticated endpoint/build attestation.
 Strict evaluations must require their actual provider/model identity policy;
 Core never substitutes a fallback model. Bedrock model IDs
-retain their literal version separator such as `:0`.
+retain their literal version separator such as `:0`. The 0.7.1 workstream adds
+[Morph general text inference](https://github.com/ElectronicSlams/eSlams/blob/main/docs/MORPH.md) with an explicit model ID;
+specialized Morph editing/search/compaction models are excluded.
 
 The model capability registry covers a broader provider landscape so Core can
 track API availability, text-game support, endpoints, modalities, temperature

@@ -1,0 +1,134 @@
+{
+  "models": [
+    {
+      "provider": "sarvam-ai",
+      "model": "sarvam-105b",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
+      "supported_reasoning_modes": [
+        "native-default",
+        "disabled",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "context_window": 128000,
+      "max_output_tokens": null,
+      "pricing": {},
+      "lifecycle": "active",
+      "sources": [
+        "https://docs.sarvam.ai/api-reference/chat/chat-completions-v1",
+        "https://docs.sarvam.ai/api/token-factory/models/sarvam-105b",
+        "https://docs.sarvam.ai/api/token-factory/how-to/adjust-the-models-thinking-level"
+      ],
+      "last_verified_at": "2026-11-04T00:00:00Z"
+    },
+    {
+      "provider": "sarvam-ai",
+      "model": "sarvam-105b-conversations",
+      "available_from_api": true,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
+      "supported_reasoning_modes": [
+        "native-default",
+        "disabled",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "context_window": 32000,
+      "max_output_tokens": null,
+      "pricing": {},
+      "lifecycle": "active",
+      "sources": [
+        "https://docs.sarvam.ai/api-reference/chat/chat-completions-v1",
+        "https://docs.sarvam.ai/api/token-factory/models/sarvam-105b",
+        "https://docs.sarvam.ai/api/token-factory/how-to/adjust-the-models-thinking-level"
+      ],
+      "last_verified_at": "2026-11-04T00:00:00Z"
+    },
+    {
+      "provider": "sarvam-ai",
+      "model": "sarvam-30b",
+      "available_from_api": false,
+      "game_agent_supported": false,
+      "lifecycle": "deprecated",
+      "pricing": {},
+      "sources": [
+        "https://docs.sarvam.ai/api/token-factory/chat-completions"
+      ],
+      "last_verified_at": "2026-11-04T00:00:00Z"
+    },
+    {
+      "provider": "sarvam-ai",
+      "model": "sarvam/sarvam-m",
+      "available_from_api": false,
+      "game_agent_supported": false,
+      "lifecycle": "deprecated",
+      "pricing": {},
+      "sources": [
+        "https://docs.sarvam.ai/api/token-factory/chat-completions"
+      ],
+      "last_verified_at": "2026-11-04T00:00:00Z"
+    },
+    {
+      "provider": "sarvam-ai",
+      "model": "sarvam-m",
+      "available_from_api": false,
+      "game_agent_supported": false,
+      "lifecycle": "deprecated",
+      "pricing": {},
+      "sources": [
+        "https://docs.sarvam.ai/api/token-factory/chat-completions"
+      ],
+      "last_verified_at": "2026-11-04T00:00:00Z"
+    }
+  ]
+}

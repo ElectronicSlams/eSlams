@@ -1,0 +1,34 @@
+{
+  "models": [
+    {
+      "provider": "perceptron",
+      "model": "perceptron-mk1",
+      "game_agent_supported": true,
+      "lifecycle": "active",
+      "endpoints": ["chat.completions"],
+      "modalities": {"input": ["text", "image", "video"], "output": ["text"]},
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "accepted_control_fields": ["vision_config.enable_thinking"],
+      "supported_reasoning_modes": ["native-default", "enabled", "disabled"],
+      "last_verified_at": "2026-11-04",
+      "sources": ["https://docs.perceptron.inc/perceptron-mk1/api-reference/endpoint/chat-completions"]
+    },
+    {
+      "provider": "perceptron",
+      "model": "perceptron-mk1.5",
+      "game_agent_supported": true,
+      "lifecycle": "active",
+      "endpoints": ["chat.completions"],
+      "modalities": {"input": ["text", "image", "video", "audio"], "output": ["text"]},
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": ["none", "minimal", "low", "medium", "high"],
+      "accepted_control_fields": ["reasoning_effort"],
+      "supported_reasoning_modes": ["native-default", "none", "minimal", "low", "medium", "high"],
+      "default_reasoning_track": "native-default",
+      "last_verified_at": "2026-11-04",
+      "sources": ["https://docs.perceptron.inc/perceptron-mk1.5/models/perceptron-mk1.5", "https://docs.perceptron.inc/perceptron-mk1.5/capabilities/thinking"]
+    }
+  ]
+}

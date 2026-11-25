@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from eslams.agents import ProviderCallError, create_builtin_agent
+from eslams.agents import HttpAgent, ProviderCallError, create_builtin_agent
 from eslams.arena import Arena, validate_seed
 from eslams.arenas import registry
 from eslams.artifacts import (
@@ -45,6 +45,7 @@ from eslams.board_recovery import (
     recovery_call_matches_pin,
     verify_recovered_position,
 )
+from eslams.chess_uci import UciChessAgent
 from eslams.continuation import (
     ChessContinuation,
     new_call_matches_pin,
@@ -899,7 +900,17 @@ def _agents_for_arena(arena: Arena, config: RunConfig) -> dict[str, Any]:
                 f"Arena {arena.id} requires an explicit agent for {player_id}; "
                 "use --seat-agent PLAYER=AGENT or RunConfig.agents for table arenas."
             )
+        if isinstance(value, UciChessAgent) and (
+            arena.id != "chess" or config.environment != "local"
+            or config.execution_profile == "official_eval"
+        ):
+            raise ValueError("UCI engines are available only for local, unofficial chess runs")
         agents[player_id] = _agent(value, seed=config.seed + index)
+    if any(isinstance(agent, UciChessAgent) for agent in agents.values()) and any(
+        isinstance(agent, HttpAgent) or _is_provider_backed_agent(agent)
+        for agent in agents.values()
+    ):
+        raise ValueError("UCI chess runs require local agents on all seats")
     return agents
 
 
@@ -1336,7 +1347,11 @@ def _call_agent(
             cancellation_scope(cancellation),
         ):
             ensure_agent_available(agent)
-            if time_budget_ms is not None and cancellation is None and _alarm_supported():
+            if isinstance(agent, UciChessAgent):
+                # This adapter enforces the shared deadline and cancellation itself.
+                # Let it reap the child before returning an interruption.
+                response = agent.act(request)
+            elif time_budget_ms is not None and cancellation is None and _alarm_supported():
                 with _agent_time_limit(time_budget_ms):
                     response = agent.act(request)
             else:

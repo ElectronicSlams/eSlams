@@ -1,0 +1,26 @@
+{
+  "id": "synthetic-minimax-response",
+  "object": "chat.completion",
+  "model": "MiniMax-M3.1-Flash",
+  "choices": [{
+    "index": 0,
+    "finish_reason": "stop",
+    "message": {
+      "role": "assistant",
+      "name": "MiniMax AI",
+      "content": "{\"action\":1,\"confidence\":0.7,\"public_explanation\":\"Selected a legal action.\"}",
+      "reasoning_content": "synthetic-private-minimax-reasoning",
+      "audio_content": ""
+    }
+  }],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16,
+    "prompt_tokens_details": {"cached_tokens": 3},
+    "completion_tokens_details": {"reasoning_tokens": 2}
+  },
+  "input_sensitive": false,
+  "output_sensitive": false,
+  "base_resp": {"status_code": 0, "status_msg": ""}
+}

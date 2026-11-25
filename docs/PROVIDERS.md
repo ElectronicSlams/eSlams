@@ -1,32 +1,242 @@
 # Provider Guide
 
-eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
-HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
-convenience properties.
+The native adapters below use secret-free artifacts and raw HTTP APIs. Their
+parsers are pinned to documented REST envelopes rather than SDK convenience
+properties.
+
+The 0.7.1-targeted [Moonshot/Kimi native adapter](PROVIDER_MOONSHOT.md) also
+supports direct Chat Completions, regional endpoint selection, and account
+model discovery through `MOONSHOT_API_KEY`.
+
+
+The prospective 0.7.1 IBM Cloud `watsonx` adapter adds direct base-model chat
+with IAM authentication and explicit project/space and region configuration.
+See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
+
+The proposed 0.7.1 [native Cohere adapter](providers/cohere.md) adds
+`cohere:<model>` / `cohere-ai:<model>` using `COHERE_API_KEY` and native Chat v2.
+Its research note documents controls, discovery, accounting, and identity limits.
+
+
+The prospective 0.7.1 `ibm-rhai` adapter adds Red Hat AI Inference on IBM Cloud
+under a distinct hosting namespace. Granite author names do not select a host.
+See [configuration, wire sources and limitations](PROVIDER_IBM_RHAI.md).
+
+Mistral AI is also available through its direct API; see the
+[Mistral adapter guide](providers/MISTRAL.md) for scope, research and limitations.
+
+For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
+[research, setup and limits](PROVIDER_XAI.md).
+
+See the [Perplexity Agent adapter](PERPLEXITY.md) for the explicit-model,
+tool-free REST path. It requires `PERPLEXITY_API_KEY` and an exact model ID.
+
+Databricks native serving-endpoint chat is documented in [DATABRICKS.md](DATABRICKS.md),
+including explicit workspace/deployment configuration, reasoning, and accounting limits.
+
+eSlams Core has native provider support for OpenAI, Anthropic, Google Gemini,
+OpenRouter, Amazon Bedrock, Fireworks, and [Z.ai and Zhipu](PROVIDER_ZAI.md).
+Snowflake Cortex uses account-scoped credentials and endpoints. See
+[Snowflake Cortex](providers/SNOWFLAKE.md) for its native wire details.
+The adapters use documented REST response envelopes.
+
+[Xiaomi MiMo](providers/XIAOMI_MIMO.md) supports explicit native thinking controls
+and has offline REST fixture coverage.
+
+See [direct Baichuan](providers/BAICHUAN.md) for availability and accounting limits.
 
 ## Provider Matrix
-
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
+| `qwen:<model>` | `DASHSCOPE_API_KEY` | native DashScope text generation | `output.choices[0].message.content` | unknown (no native response model field) |
+| `moonshot-ai:<model>` / `kimi:<model>` | `MOONSHOT_API_KEY` | Kimi Chat Completions | `choices[0].message.content` | response `model` |
+| `azure:<deployment>` | `AZURE_AI_API_KEY` (or explicit Entra token) | Azure v1 Chat Completions | `choices[0].message.content` | response `model`; see [setup](AZURE_FOUNDRY.md) |
+
+| `xai:<model>` (alias `x-ai`) | `XAI_API_KEY` | Responses | typed assistant `output[].content[]` `output_text` parts | response `model` |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `liquid-ai:<exact-model>` (alias `liquid`) | `LIQUID_API_KEY` | Liquid direct Chat Completions | `choices[0].message.content` | response `model`, if present |
+
+| `upstage:<model>` | `UPSTAGE_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
+| `inception:<model>` | `INCEPTION_API_KEY` | Direct Mercury Chat Completions | `choices[0].message.content` | response `model` |
+
+| `watsonx:<exact-model-id>` | `WATSONX_API_KEY` (IAM exchange) | IBM `/ml/v1/text/chat` | `choices[0].message.content` | response `model_id` |
+
+| `ibm-rhai:<exact-model-id>` | `IBM_RHAI_API_KEY` | IBM project-scoped Chat Completions | `choices[0].message.content` | response `model` |
+| `mistral-ai:<model>` (alias `mistral`) | `MISTRAL_API_KEY` | native Chat Completions | string or typed text chunks in `choices[0].message.content` | response `model` |
+| `writer:<model>` | `WRITER_API_KEY` | Writer `/v1/chat` | `choices[0].message.content` | response `model` |
+
+| `zai:<model>` | `ZAI_API_KEY` | Z.ai Chat Completions | `choices[0].message.content` | response `model` |
+| `zhipu:<model>` | `ZHIPU_API_KEY` | Zhipu China Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
+| `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
+| `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` | Reka Chat Completions | `choices[0].message.content` | response `model` |
+
+| `meituan:<model>` / `longcat:<model>` | `LONGCAT_API_KEY` | native LongCat Chat Completions | `choices[0].message.content` | response `model` |
+| `baidu:<exact-model-api-name>` | `QIANFAN_API_KEY` | Qianfan Chat Completions | `choices[0].message.content` | response `model` |
+| `tencent-hunyuan:<model>` / `hunyuan:<model>` | `TENCENTCLOUD_SECRET_ID` + `TENCENTCLOUD_SECRET_KEY` | signed native ChatCompletions | `Choices[0].Message.Content` (optional `Response` wrapper) | unknown; no attested model field |
+| `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` | ModelArk Chat, ap-southeast-1 | `choices[0].message.content` | concrete response `model`; an `ep-*` alone leaves weights unknown |
+| `sensetime:<model>` (alias `sensenova`) | `SENSENOVA_API_KEY` | SenseNova Token Plan Chat Completions | `choices[0].message.content` | response `model` |
+| `nvidia:<exact-model-id>` | `NVIDIA_API_KEY` | NVIDIA-hosted Chat Completions | `choices[0].message.content` | response `model` |
+
+| `apodex:<model>` | `APODEX_API_KEY` | Direct Core Chat Completions | `choices[0].message.content` | response `model` |
+| `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` | Atria Chat Completions | `choices[0].message.content` | reported model only; null when absent |
+| `sarvam:<model>` / `sarvam-ai:<model>` | `SARVAM_API_KEY` | Sarvam V1 Chat Completions | `choices[0].message.content` | response `model` |
+| `minimax:<model>` | `MINIMAX_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
+
+| `fireworks:<model-resource>` | `FIREWORKS_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `databricks:<endpoint>` | `DATABRICKS_TOKEN` | Model Serving Chat Completions | `choices[0].message.content` | response `model`, if supplied |
+| `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` | Cortex Chat Completions | `choices[0].message.content` with `finish_reason=stop` | response `model` only |
+| `iflytek:<model>` | `IFLYTEK_API_PASSWORD` | Spark HTTP | `choices[0].message.content` | optional response `model`; otherwise unknown |
+| `poolside:<model-id>` | `POOLSIDE_API_KEY` | Poolside-hosted Chat Completions | `choices[0].message.content` | response `model` |
+| `xiaomi:<model>` (`mimo`, `xiaomi-mimo`) | `MIMO_API_KEY` | MiMo direct Chat Completions | `choices[0].message.content` | response `model` |
+| `baichuan-ai:<model>` (`baichuan` alias) | `BAICHUAN_API_KEY` | Baichuan Chat Completions | `choices[0].message.content` | response `model`, if supplied |
+| `perplexity:<model>` | `PERPLEXITY_API_KEY` | Agent REST API | typed `output[].content[]` text | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
+| `ai21-labs:<model-id>` | `AI21_API_KEY` | AI21 Studio Chat Completions | `choices[0].message.content` | unknown in documented envelope |
+
+| `kuaishou:<model-or-endpoint>` / `kwaipilot:<model-or-endpoint>` | `STREAMLAKE_API_KEY` | StreamLake Chat Completions | `choices[0].message.content` | response `model` |
+
+| `relace:<model-id>` | `RELACE_API_KEY` | Open Models Chat Completions | `choices[0].message.content` | response `model` |
+
+| `naver:<model-id>` | `CLOVASTUDIO_API_KEY` | native Chat Completions v3 | `result.message.content` | model pinned in direct endpoint |
+
+| `perceptron:<model>` | `PERCEPTRON_API_KEY` | Direct Chat Completions | `choices[0].message.content` | response `model` |
+
+| `contextual-ai:<model>` | `CONTEXTUAL_API_KEY` | Generate | `response` string | unavailable (null) |
+
+| `ant-group:<model>` (also `bailing`) | `ANT_LING_API_KEY` | direct Ant Ling Chat Completions | `choices[0].message.content` | response `model` |
+
+| `morph:<model-id>` | `MORPH_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` only |
+
+| `huawei:<model-id>` | `HUAWEI_MAAS_API_KEY` | Huawei MaaS OpenAI-compatible Chat | `choices[0].message.content` | response `model` |
+
+The [StepFun adapter notes](providers/STEPFUN.md) document endpoint/region scope,
+model variants, controls, error handling, usage and raw-wire fixture provenance.
+Step Plan and the Chinese `.com` endpoint are separate contracts, not aliases.
+
+The 0.7.1 candidate [Arcee adapter notes](providers/ARCEE.md) document direct
+endpoint provenance, model discovery, native reasoning defaults, accounting
+limits and deterministic fixture coverage. Arcee requires an explicit model ID.
+
+The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including
+official API sources, exact aliases, reasoning controls and unresolved native
+accounting semantics. LongCat requires an explicit model ID and has no fallback.
+
+For the native Baidu Qianfan adapter, aliases,
+domestic endpoint scope, exact controls, accounting and raw-wire provenance are
+documented in [BAIDU_QIANFAN.md](BAIDU_QIANFAN.md).
+
+See the [Tencent native Hunyuan guide](providers/TENCENT_HUNYUAN.md) for TC3
+signing, separate Tencent products, controls and the announced December 2026
+retirement. This adapter does not enable TokenHub or Coding Plan catalogue routes.
+
+See the [SenseNova adapter notes](providers/SENSENOVA.md) for the verified direct API,
+reasoning limitations, region evidence, and live availability caveat.
+
+The [NVIDIA hosted adapter](providers/NVIDIA.md) requires an explicit
+model ID and is for authorized development/test/evaluation access. The shared
+hosted trial is not verified for production. See its provider guide for aliases,
+reasoning controls, terms, missing accounting and live-entitlement limitations.
+
+The proposed 0.7.1 [Apodex adapter](providers/APODEX.md) accepts only the two
+documented Core model IDs. Apodex Deep Research models run server-side tools and
+are outside this adapter. The package version remains 0.7.0 pending release review.
+
+The proposed 0.7.1 [Shanghai AI Lab adapter](SHANGHAI_AI_LAB.md) uses native
+reasoning defaults and requires an explicit model ID. Its reasoning accounting
+and total usage remain unknown. See that guide for verified service boundaries,
+rejected controls and fixture provenance; legacy InternLM controls do not apply.
+
+See [Sarvam direct API](providers/SARVAM.md) for model IDs, controls, accounting,
+and primary-source research for the proposed 0.7.1 adapter.
+
+The [MiniMax adapter guide](providers/MINIMAX.md) records current official API
+research, regions, reasoning preservation, retry limits and keyless test coverage
+for the 0.7.1 adapter work. Its configuration preflight is advisory and makes no
+inference request unless `--live` is explicitly requested.
+
+The [Fireworks adapter guide](FIREWORKS.md) documents aliases, exact model resources,
+explicit native reasoning controls, accounting, fixture provenance and discovery limits.
+
+Snowflake requires an account origin as well. See [Snowflake Cortex](providers/SNOWFLAKE.md)
+for the verified wire contract, provider aliases, configuration, and limitations.
+
+The [Spark adapter guide](providers/IFLYTEK.md) records exact X2/v1 routing,
+aliases, authentication, reasoning controls, provider model upgrades, and
+accounting limits. It adds no live inference during configuration preflight.
+
+The [Poolside adapter notes](POOLSIDE.md) record current official sources,
+thinking controls, exact-model requirements, accounting unknowns and restricted
+reference documentation. Poolside uses the native hosted endpoint directly.
+
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
 
+The proposed 0.7.1 [AI21 Labs adapter](providers/AI21.md) requires an explicit
+model ID and rejects unsupported reasoning controls. Its service lifecycle,
+accounting limitations, and fixture provenance are documented separately.
+
+The [Relace adapter](providers/RELACE.md) requires an explicit model ID and
+native reasoning defaults. It preserves full supplied history and does not
+invoke the specialist apply/search endpoints. Its configuration preflight is
+offline; live discovery and inference require explicit commands.
+
+The NAVER adapter requires an explicit model ID and follows its own
+[setup, reasoning controls, regional access and wire evidence](providers/NAVER.md).
+Its defaults preserve full history, provider output limits and provider reasoning policy.
+It does not use the historical per-game reasoning behavior described below.
+
+The next-release [Perceptron adapter and evidence](PERCEPTRON.md) requires an
+explicit model ID and documents native reasoning controls, finality, usage,
+lifecycle, regional uncertainty, and keyless raw-wire validation.
+
+The proposed 0.7.1 [Contextual AI adapter](providers/CONTEXTUAL_AI.md) uses the
+standalone Generate endpoint without documents or retrieval. It requires an
+explicit model ID and `reasoning=auto`. Its API supplies no per-request identity,
+usage or cost attestation; all remain unknown. The linked evidence distinguishes
+provider-owned text-only integration support from unverified live availability.
+
+The [Ant Ling guide](providers/ANT_LING.md) records current direct API evidence,
+Ling/Ring lifecycle, the separate InclusionAI routed namespace, supported
+reasoning controls, and account/region/accounting limitations.
+
+The 0.7.1 adapter workstream adds [Morph direct text inference](MORPH.md).
+It requires an explicit model ID and excludes Morph's specialized Apply, search,
+compaction and routing models. Package version remains 0.7.0 pending release review.
+
+See [Huawei MaaS / Pangu](providers/HUAWEI.md) for its verified direct Guiyang
+endpoint, explicit model requirement, thinking controls, and fixture evidence.
+
+See [Writer direct API](WRITER.md) for its verified wire contract, aliases,
+model lifecycle, accounting limitations, and deterministic validation.
+
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
 is the deliberate exception: the literal model ID is part of the signed
 Converse endpoint and is recorded with `model_identity_source:
-pinned_endpoint`.
+pinned_endpoint`. NAVER v3 similarly names the model in the endpoint path, with
+`pinned_endpoint` evidence on successful direct responses. A custom gateway does
+not establish NAVER model identity or region. Neither adapter claims an immutable
+backend revision from a model alias.
+
+For the proposed 0.7.1 Qwen adapter, see [DashScope setup, supported scope,
+regional routing, controls and accounting limits](providers/QWEN.md). `alibaba`,
+`alibaba-cn` and `dashscope` are aliases of `qwen`; region selection is explicit.
+
+See the [Upstage adapter guide](providers/UPSTAGE.md) for current primary sources,
+reasoning controls, retry limits and keyless verification.
 
 ## Setup and Preflight
+
+See [Liquid AI](LIQUID_AI.md) for its direct endpoint, verified sources and
+limitations. Liquid requires an explicit model ID and supports native-default
+reasoning only. It does not reuse third-party catalog IDs or hosted routes.
 
 Set only the credential needed by the selected provider:
 
@@ -236,3 +446,10 @@ Core uses a shared bounded asynchronous HTTP loop behind its synchronous adapter
 API. Expired requests are cancelled and their network streams are closed; it
 also works when the caller already has an asyncio loop or is a worker thread.
 Network concurrency is bounded to 32 active requests in a process.
+## Kuaishou / KwaiPilot KAT (proposed for 0.7.1)
+
+The native `kuaishou:MODEL` and `kwaipilot:MODEL` adapters call StreamLake's
+direct text API with an explicit model/endpoint ID. See the
+[provider-specific contract and setup](providers/KUAISHOU.md), including region,
+reasoning, accounting, and credential-redaction limitations. Kling's media
+products are separate.

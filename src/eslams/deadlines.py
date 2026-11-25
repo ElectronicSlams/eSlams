@@ -7,6 +7,7 @@ are quarantined until they exit, and global capacity bounds abandoned work.
 from __future__ import annotations
 
 import copy
+import math
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -97,9 +98,14 @@ def remaining_seconds(deadline: float | None) -> float | None:
     return remaining
 
 
+def deadline_after(seconds: float) -> float:
+    """Do not grant extra time when deadline arithmetic rounds upward."""
+    return math.nextafter(time.monotonic() + seconds, -math.inf)
+
+
 @contextmanager
 def action_deadline(milliseconds: int | None) -> Iterator[None]:
-    requested = time.monotonic() + milliseconds / 1000 if milliseconds is not None else None
+    requested = deadline_after(milliseconds / 1000) if milliseconds is not None else None
     existing = current_deadline()
     effective = min(requested, existing) if requested is not None and existing is not None else (
         existing if existing is not None else requested

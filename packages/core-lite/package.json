@@ -1,12 +1,12 @@
 {
   "name": "@eslams/core-lite",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@eslams/core-contracts": "0.9.1"
+    "@eslams/core-contracts": "1.0.0"
   }
 }

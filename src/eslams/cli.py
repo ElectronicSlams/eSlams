@@ -25,6 +25,7 @@ from eslams.arena_transport import (
 from eslams.artifacts import ArtifactValidator, public_result_summary_for_score
 from eslams.bench import arena_step_benchmark
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
+from eslams.chess_uci import UciChessAgent
 from eslams.contracts.json_schema import export_schemas
 from eslams.contracts.pricing import PriceCardReference
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -51,7 +52,20 @@ from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
-from eslams.providers import load_provider_registry
+from eslams.providers import azure, fireworks, load_provider_registry, moonshot, writer
+from eslams.providers.byteplus import API_KEY_ENV as BYTEPLUS_API_KEY_ENV
+from eslams.providers.byteplus import canonical_provider as byteplus_provider
+from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
+from eslams.providers.deepseek import validate_model as validate_deepseek_model
+from eslams.providers.poolside import API_KEY_ENV as POOLSIDE_API_KEY_ENV
+from eslams.providers.poolside import normalize_provider
+from eslams.providers.sensenova import API_KEY_ENV as SENSENOVA_API_KEY_ENV
+from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
+from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
+from eslams.providers.xai import canonical_provider
+from eslams.providers.xai import validate_model as validate_xai_model
+from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
+from eslams.providers.zai import canonical_provider as canonical_zai_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -654,12 +668,16 @@ def _main(argv: list[str] | None = None) -> int:
     run.add_argument(
         "--agent",
         default="random",
-        help="Agent for player_1: random (default), first-legal, URL, or provider:model.",
+        help=("Agent for player_1: random (default), first-legal, URL, provider:model, "
+              "or uci:ABSOLUTE_PATH. "
+              "Mistral requires an exact response model ID; use a dated ID such as "
+              "mistral:mistral-small-2603. An alias resolving to a different ID is rejected."),
     )
     run.add_argument(
         "--opponent",
         default="first-legal",
-        help="Agent for player_2: first-legal (default), random, URL, or provider:model.",
+        help=("Agent for player_2: first-legal (default), random, URL, provider:model, "
+              "or uci:ABSOLUTE_PATH."),
     )
     run.add_argument(
         "--seat-agent",
@@ -670,6 +688,10 @@ def _main(argv: list[str] | None = None) -> int:
             "Assign an agent to a named seat; repeat for table arenas. "
             "Overrides --agent/--opponent."
         ),
+    )
+    run.add_argument(
+        "--uci-depth", type=int, default=8,
+        help="Fixed search depth for local UCI chess engines (default: 8).",
     )
     run.add_argument(
         "--run-id", help="Explicit path-safe run ID; existing output requires --overwrite."
@@ -952,8 +974,8 @@ def _main(argv: list[str] | None = None) -> int:
             rate_card_id=args.rate_card_id,
             rate_card_reference=_read_price_card_reference(args.rate_card_reference),
         )
-        agent_1 = _agent_arg(args.agent, runtime_config=provider_runtime)
-        agent_2 = _agent_arg(args.opponent, runtime_config=provider_runtime)
+        agent_1 = _local_run_agent(args.agent, args.uci_depth, provider_runtime)
+        agent_2 = _local_run_agent(args.opponent, args.uci_depth, provider_runtime)
         seat_agents: dict[str, Any] = {}
         for assignment in args.seat_agent:
             player, separator, agent = assignment.partition("=")
@@ -963,7 +985,7 @@ def _main(argv: list[str] | None = None) -> int:
                 )
             if player in seat_agents:
                 raise ValueError(f"duplicate --seat-agent assignment for {player}")
-            seat_agents[player] = _agent_arg(agent, runtime_config=provider_runtime)
+            seat_agents[player] = _local_run_agent(agent, args.uci_depth, provider_runtime)
         agent_1 = seat_agents.get("player_1", agent_1)
         agent_2 = seat_agents.get("player_2", agent_2)
         _print_run_preflight(args, agent_1, agent_2)
@@ -1337,6 +1359,9 @@ def _official_command(args: argparse.Namespace) -> int:
 
 
 def _providers_command(args: argparse.Namespace) -> int:
+    from eslams.providers import cohere
+
+    args.provider = cohere.canonical_provider(args.provider) or args.provider
     if args.providers_command == "preflight":
         payload = provider_preflight(
             args.provider, args.model, args.arena, live=args.live,
@@ -1351,7 +1376,7 @@ def _providers_command(args: argparse.Namespace) -> int:
         else:
             records = load_provider_registry().list_models(provider=args.provider)
             payload = {
-                "provider": args.provider,
+                "provider": canonical_provider(args.provider),
                 "mode": "registry_only",
                 "ok": True,
                 "models": [record.to_dict() for record in records],
@@ -1378,6 +1403,14 @@ def _runner_command(args: argparse.Namespace) -> int:
         print(json.dumps(result.to_dict(), indent=2))
         return 0 if result.validation_status == "valid" else 1
     raise AssertionError(args.runner_command)
+
+
+def _local_run_agent(
+    value: str, uci_depth: int, runtime_config: ProviderRuntimeConfig,
+) -> str | HttpAgent | ModelProviderAgent | UciChessAgent:
+    if value.startswith("uci:"):
+        return UciChessAgent(Path(value[4:]), depth=uci_depth)
+    return _agent_arg(value, runtime_config=runtime_config)
 
 
 def _agent_arg(
@@ -1444,31 +1477,242 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    from eslams.providers.snowflake import canonical_provider as canonical_snowflake_provider
+
+    if value.split(":", 1)[0].lower() == "perplexity":
+        from eslams.providers.perplexity import API_KEY_ENV as PERPLEXITY_API_KEY_ENV
+
+        model = value.split(":", 1)[1] if ":" in value else ""
+        return ModelProviderAgent(
+            provider="perplexity", model=model, api_key_env=PERPLEXITY_API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    from eslams.providers import longcat
+
+    if value.lower().split(":", 1)[0] == "sakana":
+        from eslams.providers.sakana import API_KEY_ENV
+
+        model = value.partition(":")[2]
+        return ModelProviderAgent(
+            provider="sakana", model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    provider, separator, model = value.partition(":")
+    if provider.lower() in {"ant-group", "bailing"}:
+        from eslams.providers.ant_ling import API_KEY_ENV, PROVIDER_ID
+
+        return ModelProviderAgent(
+            provider=PROVIDER_ID, model=model if separator else "", api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    from eslams.providers import cohere
+    from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
+    from eslams.providers.inception import normalize_provider as normalize_inception_provider
+    from eslams.providers.qwen import canonicalize_provider, validate_model
+
     defaults = {
+        "deepseek": ("deepseek-flash", "DEEPSEEK_API_KEY"),
+        "ai21-labs": ("", "AI21_API_KEY"),
+        "ai21": ("", "AI21_API_KEY"),
+        "qwen": ("", "DASHSCOPE_API_KEY"),
+        moonshot.PROVIDER_ID: (moonshot.DEFAULT_MODEL, moonshot.API_KEY_ENV),
+        "reka": ("", "REKA_API_KEY"),
+        "reka-ai": ("", "REKA_API_KEY"),
+        "reka_ai": ("", "REKA_API_KEY"),
+        "mistral-ai": ("", "MISTRAL_API_KEY"),
+        "xai": ("", "XAI_API_KEY"),
+        "zai": ("glm-5.3", "ZAI_API_KEY"),
+        "zhipu": ("glm-5.3", "ZHIPU_API_KEY"),
+        "poolside": ("", POOLSIDE_API_KEY_ENV),
+        "baichuan": ("", "BAICHUAN_API_KEY"),
+        "baichuan-ai": ("", "BAICHUAN_API_KEY"),
+        "baichuan_ai": ("", "BAICHUAN_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
+        "inception": ("", INCEPTION_API_KEY_ENV),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
+        "kuaishou": ("", "STREAMLAKE_API_KEY"),
+        "kwaipilot": ("", "STREAMLAKE_API_KEY"),
+        "relace": ("", "RELACE_API_KEY"),
+        "naver": ("", "CLOVASTUDIO_API_KEY"),
+        "morph": ("", "MORPH_API_KEY"),
+        "upstage": ("", "UPSTAGE_API_KEY"),
+        "stepfun": ("", STEPFUN_API_KEY_ENV),
+        "tencent-hunyuan": ("", "TENCENTCLOUD_SECRET_ID"),
+        "sensetime": ("", SENSENOVA_API_KEY_ENV),
+        "nvidia": ("", "NVIDIA_API_KEY"),
+        "nvidia-nim": ("", "NVIDIA_API_KEY"),
+        "nvidia-hosted": ("", "NVIDIA_API_KEY"),
+        "apodex": ("", "APODEX_API_KEY"),
+        "shanghai-ai-lab": ("", "ATRIA_API_KEY"),
+        "sarvam-ai": ("sarvam-105b", "SARVAM_API_KEY"),
+        "minimax": ("", "MINIMAX_API_KEY"),
+        "snowflake": ("", "SNOWFLAKE_TOKEN"),
+        "iflytek": ("spark-x", "IFLYTEK_API_PASSWORD"),
+        "xiaomi": ("mimo-v2.6-flash", "MIMO_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
-    if provider == "krutrim":
-        from eslams.providers.krutrim import API_KEY_ENV
+    provider = canonical_snowflake_provider(provider)
+    if provider == "snowflake" and not model.strip():
+        raise ValueError("Snowflake requires an explicit native model ID: snowflake:<model>")
+    provider = canonical_zai_provider(provider.lower())
+    if provider in fireworks.PROVIDER_ALIASES:
+        if not model:
+            raise ValueError("Fireworks requires an explicit model resource: fireworks:<model>")
+        return ModelProviderAgent(
+            provider=fireworks.PROVIDER_ID, model=model, api_key_env=fireworks.API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    from eslams.providers import databricks
 
+    if databricks.is_databricks(provider):
+        provider = databricks.PROVIDER_ID
+        if not model:
+            raise ValueError("Databricks requires an explicit serving endpoint name")
+        defaults[provider] = (model, databricks.API_KEY_ENV)
+    from eslams.providers.iflytek import canonical_provider as canonical_iflytek_provider
+    provider = canonical_iflytek_provider(provider)
+    provider = normalize_provider(provider.lower())
+    provider = canonical_xiaomi_provider(provider)
+    original_provider = provider
+    provider = moonshot.canonical_provider(provider)
+    provider = canonicalize_provider(provider)
+    if provider.replace("_", "-") in {"arcee", "arcee-ai"}:
+        if not model.strip():
+            raise ValueError("Arcee requires an explicit exact model ID: arcee-ai:<model>")
+        from eslams.providers.arcee import API_KEY_ENV
+
+        return ModelProviderAgent(
+            provider="arcee-ai", model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    provider = normalize_inception_provider(provider)
+    provider = azure.normalize_provider(provider)
+    if provider == "azure":
+        if not model or not model.strip():
+            raise ValueError("Azure requires an explicit deployment name: azure:<deployment>")
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=azure.credential_environment(),
+            version=model, runtime_config=runtime_config,
+        )
+    provider = canonical_deepseek_provider(provider)
+    if provider == "deepseek":
+        validate_deepseek_model(model)
+    provider = canonical_provider(provider.lower())
+    if provider == "xai":
+        validate_xai_model(model)
+    provider = cohere.canonical_provider(provider) or provider
+    if provider == "cohere":
+        cohere.validate_model(model)
+        defaults[provider] = (model, cohere.API_KEY_ENV)
+    if provider in {"sarvam", "sarvam_ai"}:
+        provider = "sarvam-ai"
+    if provider in writer.ALIASES:
+        provider = "writer"
+        writer.validate_model(model)
+        defaults[provider] = (model, writer.API_KEY_ENV)
+    if provider == "minimax":
+        from eslams.providers.minimax import require_model
+        require_model(model)
+    if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
+        return ModelProviderAgent(
+            provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",
+            version=model, runtime_config=runtime_config,
+        )
+    from eslams.providers.watsonx import normalize_alias
+    from eslams.providers.watsonx import validate_model as validate_watsonx_model
+    provider = normalize_alias(provider.lower())
+    if provider == "watsonx":
+        validate_watsonx_model(model)
+        defaults[provider] = (model, "WATSONX_API_KEY")
+    provider = longcat.normalize_provider(provider)
+    if provider == longcat.PROVIDER_ID:
+        if not model.strip():
+            raise ValueError("LongCat requires an explicit provider-native model ID")
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=longcat.API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider in {"baidu", "qianfan", "baidu-qianfan"}:
+        if not model:
+            raise ValueError("Baidu Qianfan requires an explicit model API name")
+        return ModelProviderAgent(
+            provider="baidu", model=model, api_key_env="QIANFAN_API_KEY",
+            version=model, runtime_config=runtime_config,
+        )
+    if provider.strip().replace("_", "-") in {"hunyuan", "tencent-hunyuan"}:
+        from eslams.providers.tencent_hunyuan import require_model as require_hunyuan_model
+
+        require_hunyuan_model(model)
+        provider = "tencent-hunyuan"
+    if byteplus_provider(provider):
+        if not model:
+            raise ValueError("BytePlus requires an explicit model or ep-* endpoint ID")
+        return ModelProviderAgent(
+            provider="byteplus", model=model, api_key_env=BYTEPLUS_API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider in SENSENOVA_ALIASES:
+        provider = "sensetime"
+    if provider in {"nvidia", "nvidia-nim", "nvidia-hosted"} and not model.strip():
+        raise ValueError("NVIDIA requires an explicit nonblank model ID")
+    from eslams.providers import ibm_rhai
+    provider = ibm_rhai.normalize_alias(provider)
+    if provider == "ibm-rhai":
+        ibm_rhai.validate_model(model)
+        defaults[provider] = (model, ibm_rhai.API_KEY_ENV)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import API_KEY_ENV as KRUTRIM_API_KEY_ENV
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=KRUTRIM_API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider == "perceptron":
+        from eslams.providers.perceptron import API_KEY_ENV
         return ModelProviderAgent(
             provider=provider, model=model, api_key_env=API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    if provider == "contextual-ai":
+        from eslams.providers.contextual import API_KEY_ENV
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider == "huawei":
+        from eslams.providers.huawei import API_KEY_ENV as HUAWEI_API_KEY_ENV
+
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=HUAWEI_API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"}:
+        provider = "mistral-ai"
+        if not model.strip():
+            raise ValueError("Mistral requires a non-empty explicit model ID")
     if provider not in defaults:
         return None
+    if provider == "qwen":
+        validate_model(model)
+    if provider == "sarvam-ai":
+        from eslams.providers.sarvam import validate_model as validate_sarvam_model
+
+        validate_sarvam_model(model)
+    if provider == "poolside" and not model.strip():
+        raise ValueError("Poolside requires an explicit model: poolside:<model-id>")
     default_model, env_name = defaults[provider]
+    if provider == "sensetime" and not model.strip():
+        raise ValueError("SenseNova requires an explicit nonblank model ID")
+    if provider in {"baichuan", "baichuan-ai", "baichuan_ai"} and not model.strip():
+        raise ValueError("Baichuan requires an exact provider-native model ID")
     return ModelProviderAgent(
-        provider=provider,
+        provider=(original_provider if provider == moonshot.PROVIDER_ID else provider),
         model=model or default_model,
         api_key_env=env_name,
         version=model or default_model,
@@ -1534,8 +1778,8 @@ def _action_arg(value: str) -> Any:
 
 def _print_run_preflight(
     args: argparse.Namespace,
-    agent_1: str | HttpAgent | ModelProviderAgent,
-    agent_2: str | HttpAgent | ModelProviderAgent,
+    agent_1: str | HttpAgent | ModelProviderAgent | UciChessAgent,
+    agent_2: str | HttpAgent | ModelProviderAgent | UciChessAgent,
 ) -> None:
     max_turns = args.max_turns if args.max_turns is not None else "arena-default"
     mode = "archive" if args.archive else "expanded"
@@ -1557,16 +1801,19 @@ def _print_provider_warnings(agent: ModelProviderAgent) -> None:
         print(f"warning: {warning}", file=sys.stderr)
     if not os.getenv(agent.api_key_env):
         print(
-            f"warning: missing API key {agent.api_key_env} for {agent.provider}:{agent.model}",
+            f"warning: missing credentials for {agent.provider}:{agent.model}. "
+            "Check the provider setup guide.",
             file=sys.stderr,
         )
 
 
-def _agent_label(agent: str | HttpAgent | ModelProviderAgent) -> str:
+def _agent_label(agent: str | HttpAgent | ModelProviderAgent | UciChessAgent) -> str:
     if isinstance(agent, ModelProviderAgent):
         return f"{agent.provider}:{agent.model}"
     if isinstance(agent, HttpAgent):
         return agent.url
+    if isinstance(agent, UciChessAgent):
+        return agent.id
     return str(agent)
 
 

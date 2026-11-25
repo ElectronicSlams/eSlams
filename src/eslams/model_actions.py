@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import unquote
 
 from eslams.action_descriptors import action_token
 from eslams.arena import _same_json_action
@@ -75,20 +77,30 @@ def parse_model_action(text: str, legal_actions: list[Any]) -> ParsedModelAction
     )
 
 
-def extract_json(text: str) -> Any:
+def _unique_json_fields(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate action JSON field")
+        result[key] = value
+    return result
+
+
+def extract_json(text: str, *, reject_duplicate_fields: bool = False) -> Any:
+    object_hook = _unique_json_fields if reject_duplicate_fields else None
     stripped = text.strip()
     fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", stripped, re.DOTALL)
     if fenced:
         stripped = fenced.group(1)
     try:
-        return json.loads(stripped)
+        return json.loads(stripped, object_pairs_hook=object_hook)
     except json.JSONDecodeError:
         start = stripped.find("{")
         end = stripped.rfind("}")
         if start != -1 and end > start:
             with_json = stripped[start : end + 1]
             try:
-                return json.loads(with_json)
+                return json.loads(with_json, object_pairs_hook=object_hook)
             except json.JSONDecodeError:
                 return None
     return None
@@ -204,3 +216,46 @@ def _looks_incomplete(buffer: str) -> bool:
     if stripped.count("[") > stripped.count("]"):
         return True
     return stripped.endswith((",", ":", '"'))
+
+
+_JSON_ESCAPE_RUN = re.compile(r'(?:\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))+')
+
+
+def normalized_text_matches(value: str, matches: Callable[[str], bool]) -> bool:
+    """Inspect a single provider string without parsing it as an action."""
+    if matches(value):
+        return True
+    # Bound the work even when a provider repeatedly escapes its output.
+    for _ in range(8):
+        url_decoded = unquote(value)
+        if url_decoded != value and matches(url_decoded):
+            return True
+        normalized = _JSON_ESCAPE_RUN.sub(
+            lambda match: str(json.loads('"' + match.group(0) + '"')), url_decoded,
+        )
+        if normalized == value:
+            return False
+        if matches(normalized):
+            return True
+        value = normalized
+    return True  # Still nested after the inspection limit.
+
+
+def action_text_matches(text: str, matches: Callable[[str], bool]) -> bool:
+    """Inspect wire prose and parsed action fields before accepting an action."""
+    try:
+        if normalized_text_matches(text, matches):
+            return True
+        pending = [extract_json(text)]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, str) and normalized_text_matches(value, matches):
+                return True
+            if isinstance(value, dict):
+                pending.extend(value.keys())
+                pending.extend(value.values())
+            elif isinstance(value, list):
+                pending.extend(value)
+    except (ValueError, RecursionError):
+        return True  # The action could not be checked reliably.
+    return False

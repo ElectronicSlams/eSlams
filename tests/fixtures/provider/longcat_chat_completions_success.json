@@ -1,0 +1,23 @@
+{
+  "id": "chatcmpl-longcat-fixture",
+  "object": "chat.completion",
+  "created": 1677652288,
+  "model": "LongCat-2.5",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\":1,\"confidence\":0.8,\"public_explanation\":\"Legal move.\"}",
+        "reasoning_content": "private-longcat-reasoning-fixture"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 20,
+    "completion_tokens": 15,
+    "total_tokens": 35,
+    "completion_tokens_details": {"reasoning_tokens": 78}
+  }
+}

@@ -10,7 +10,13 @@ from pathlib import Path
 from typing import Any, cast
 
 from eslams.hashing import sha256_json
+from eslams.providers.azure import ALIASES
 from eslams.providers.capabilities import ModelCapabilities
+from eslams.providers.huawei import model_records as huawei_model_records
+from eslams.providers.inception import PROVIDER_ALIASES as INCEPTION_ALIASES
+from eslams.providers.morph import capability_records as morph_capability_records
+from eslams.providers.morph import is_specialized as morph_is_specialized
+from eslams.providers.zai import ALIASES as ZAI_ALIASES
 
 REQUESTED_PROVIDER_ORGANIZATIONS: tuple[tuple[str, str], ...] = (
     ("qwen", "Alibaba / Qwen"),
@@ -134,6 +140,36 @@ FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS: tuple[str, ...] = (
 )
 
 PROVIDER_ALIASES = {
+    "deep-seek": "deepseek",
+    "longcat": "meituan",
+    "meituan-longcat": "meituan",
+    "qianfan": "baidu",
+    "baidu-qianfan": "baidu",
+    "hunyuan": "tencent-hunyuan",
+    "byteplus-modelark": "byteplus",
+    "byteplus-ark": "byteplus",
+    "modelark": "byteplus",
+    "sensenova": "sensetime",
+    "sense-nova": "sensetime",
+    "sense-time": "sensetime",
+    "nvidia-nim": "nvidia",
+    "nvidia-hosted": "nvidia",
+    "rhai": "ibm-rhai",
+    "redhat-ai-inference": "ibm-rhai",
+    "x-ai": "xai",
+    "cohere-ai": "cohere",
+    "writer-ai": "writer",
+    "writerai": "writer",
+    "fireworks-ai": "fireworks",
+    "snowflake-cortex": "snowflake",
+    "cortex": "snowflake",
+    "spark": "iflytek",
+    "iflytek-spark": "iflytek",
+    "xfyun": "iflytek",
+    "poolside-ai": "poolside",
+    "poolsideai": "poolside",
+    "mimo": "xiaomi",
+    "xiaomi-mimo": "xiaomi",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",
@@ -156,6 +192,7 @@ PROVIDER_ALIASES = {
     "inflection": "inflection-ai",
     "liquid": "liquid-ai",
     "mistral": "mistral-ai",
+    "kimi": "moonshot-ai",
     "moonshot": "moonshot-ai",
     "moonshotai": "moonshot-ai",
     "moonshotai-cn": "moonshot-ai",
@@ -166,16 +203,16 @@ PROVIDER_ALIASES = {
     "tencent-coding-plan": "tencent",
     "tencent-tokenhub": "tencent",
     "volcengine": "bytedance",
-    "zhipuai": "zhipu",
-    "zhipuai-coding-plan": "zhipu",
+    **ZAI_ALIASES,
     "bailing": "ant-group",
-    "inception": "core42",
+    **INCEPTION_ALIASES,
     "gigachat": "sber",
     "aws": "amazon-aws",
     "bedrock": "bedrock",
-    "azure": "microsoft",
-    "azure-ai": "microsoft",
-    "watsonx": "ibm",
+    **dict.fromkeys(ALIASES, "azure"),
+    "watsonx-ai": "watsonx",
+    "ibm-watsonx": "watsonx",
+    "ibm-watsonx-ai": "watsonx",
     "xverse": "xverse-ai",
 }
 
@@ -230,7 +267,7 @@ class ProviderRegistry:
         if not record.allows_text_game_agent():
             warnings.append(f"provider model {provider}:{model} is not marked game_agent_supported")
         if api_key_env:
-            warnings.append(f"requires API key environment variable {api_key_env}")
+            warnings.append("Provider credentials must be configured for live inference.")
         return warnings
 
 
@@ -238,7 +275,20 @@ class ProviderRegistry:
 def load_provider_registry() -> ProviderRegistry:
     generated = _load_package_json("models.generated.json")
     overrides = _load_package_json("overrides.json")
-    return _registry_from_payloads(generated, overrides)
+    overrides["models"] = [
+        *overrides.get("models", []), *_load_package_json("sarvam.json").get("models", []),
+    ]
+    overrides["models"] = [
+        *overrides.get("models", []), *_load_package_json("perceptron.json")["models"],
+    ]
+    overrides["models"] = [
+        *overrides.get("models", []), *_load_package_json("ant_ling.json").get("models", []),
+    ]
+    overrides = {**overrides, "models": [*morph_capability_records(),
+                                        *overrides.get("models", [])]}
+    return _registry_from_payloads(
+        generated, {**overrides, "models": [*overrides.get("models", []), *huawei_model_records()]},
+    )
 
 
 def load_provider_registry_from_paths(
@@ -275,6 +325,9 @@ def _registry_from_payloads(
             merged = {**records.get(key, {}), **item, "provider": key[0], "model": key[1]}
             records[key] = merged
 
+    for (provider, model), raw_record in records.items():
+        if provider == "morph" and morph_is_specialized(model):
+            raw_record["game_agent_supported"] = False
     models = {key: ModelCapabilities.from_mapping(value) for key, value in records.items()}
     by_slug: dict[str | None, list[tuple[str, str]]] = {}
     for key, record in models.items():

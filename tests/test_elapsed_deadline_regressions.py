@@ -1,5 +1,6 @@
 import asyncio
 import json
+import ssl
 import threading
 import time
 from contextlib import contextmanager
@@ -13,6 +14,8 @@ from eslams.agents import (
     FunctionAgent,
     ModelProviderAgent,
     ProviderCallError,
+    _httpx_timeout,
+    _post_json,
     _provider_semaphore,
 )
 from eslams.artifacts import ArtifactValidator
@@ -23,7 +26,7 @@ from eslams.runner import RunConfig, Runner
 
 
 @contextmanager
-def _server(mode):
+def _server(mode, *, received=None):
     disconnected = threading.Event()
 
     class Handler(BaseHTTPRequestHandler):
@@ -32,6 +35,8 @@ def _server(mode):
 
         def do_POST(self):
             self.rfile.read(int(self.headers.get("content-length", "0")))
+            if received is not None:
+                received.set()
             body = b'{"action":0}'
             try:
                 if mode == "headers":
@@ -67,8 +72,16 @@ def _server(mode):
 
 
 @pytest.mark.parametrize("mode", ["headers", "trickle"])
-def test_total_http_deadline_cancels_slow_headers_and_trickled_body_in_worker(mode):
-    with _server(mode) as (url, disconnected):
+def test_total_http_deadline_cancels_slow_headers_and_trickled_body_in_worker(mode, monkeypatch):
+    # This test checks closure of an established socket. Loading the trust store
+    # can consume the entire deadline before a socket exists on a busy host.
+    # Prepare it outside the timed invocation; retain real HTTPX and TCP I/O.
+    original_client = httpx.AsyncClient
+    trust_context = ssl.create_default_context()
+    monkeypatch.setattr("eslams.http_io.httpx.AsyncClient",
+                        lambda **kwargs: original_client(verify=trust_context, **kwargs))
+    received = threading.Event()
+    with _server(mode, received=received) as (url, disconnected):
         failures = []
 
         def invoke():
@@ -84,8 +97,55 @@ def test_total_http_deadline_cancels_slow_headers_and_trickled_body_in_worker(mo
         worker.join(timeout=1)
         assert not worker.is_alive() and len(failures) == 1
         assert failures[0] < 0.8
+        assert received.is_set(), "socket-closure test requires an observed HTTP request"
         # Cancellation closes the socket rather than just abandoning a read thread.
         assert disconnected.wait(1.5)
+
+
+def test_total_deadline_during_client_setup_does_not_imply_server_received_request(monkeypatch):
+    original_client = httpx.AsyncClient
+    entered = threading.Event()
+    release = threading.Event()
+    closed = threading.Event()
+    received = threading.Event()
+
+    class DelayedClient(original_client):
+        def __init__(self, **kwargs):
+            entered.set()
+            assert release.wait(2)
+            super().__init__(verify=False, **kwargs)  # Loopback HTTP only.
+
+        async def __aexit__(self, *args):
+            try:
+                await super().__aexit__(*args)
+            finally:
+                closed.set()
+
+    monkeypatch.setattr("eslams.http_io.httpx.AsyncClient", DelayedClient)
+    with _server("headers", received=received) as (url, disconnected):
+        failures = []
+
+        def invoke():
+            start = time.monotonic()
+            timeout = TotalTimeout(0.25, connect=2, read=2, deadline=start + 0.25)
+            try:
+                bounded_post(url, headers={}, json={}, timeout=timeout)
+            except httpx.TimeoutException:
+                failures.append(time.monotonic() - start)
+
+        worker = threading.Thread(target=invoke)
+        worker.start()
+        try:
+            assert entered.wait(1)
+            worker.join(timeout=1)
+            assert not worker.is_alive() and len(failures) == 1 and failures[0] < 0.8
+            assert not received.is_set()
+            release.set()
+            assert closed.wait(1)
+            assert not received.is_set() and not disconnected.is_set()
+        finally:
+            release.set()
+            worker.join(timeout=1)
 
 
 def test_http_bridge_works_inside_an_existing_event_loop_and_after_cancelled_calls():
@@ -132,6 +192,26 @@ def test_provider_runtime_deadline_records_failed_attempt(monkeypatch, mode):
         assert receipt["estimated_cost"]["status"] == "cost_unavailable"
         # Optional retries must not replay an attempt with unknown remote work.
         assert len(agent.attempt_receipts) == 1
+
+
+@pytest.mark.parametrize(("now", "milliseconds"), [(1000.0, 12345), (202.0, 54321)])
+def test_provider_runtime_deadline_respects_operator_limit_on_static_clock(
+    monkeypatch, now, milliseconds,
+):
+    monkeypatch.setattr(time, "monotonic", lambda: now)
+    runtime = ProviderRuntimeConfig(timeout_ms=milliseconds)
+    assert 0 < _httpx_timeout(runtime).read <= milliseconds / 1000
+
+    def post(url, *, headers, json, timeout):
+        assert 0 < timeout.read <= milliseconds / 1000
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    response = _post_json(
+        "https://fixture.invalid", headers={}, payload={}, runtime_config=runtime,
+        control_key="openai:deadline-fixture",
+    )
+    assert response.status_code == 200
 
 
 def test_provider_runtime_deadline_bounds_queue_retry_waits(monkeypatch):

@@ -14,7 +14,7 @@ def test_package_metadata_and_legacy_sealed_publisher_are_independent():
     match = re.search(r'^version = "([^"]+)"$',
                       (ROOT / "pyproject.toml").read_text(), re.MULTILINE)
     assert match is not None
-    assert match.group(1) == __version__ == CORE_PACKAGE_VERSION == "0.9.1"
+    assert match.group(1) == __version__ == CORE_PACKAGE_VERSION == "1.0.0"
     verifier = runpy.run_path(str(ROOT / "scripts/verify_publish_bundle.py"))
     assert verifier["VERSION"] == "0.9.0"
     assert verifier["TAG"] == "v0.9.0"

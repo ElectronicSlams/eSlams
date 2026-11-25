@@ -1,0 +1,25 @@
+{
+  "id": "sarvam-fixture-completion",
+  "object": "chat.completion",
+  "created": 1735689600,
+  "model": "sarvam-105b",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1}",
+        "reasoning_content": "private-reasoning-fixture-never-publish"
+      },
+      "logprobs": {}
+    }
+  ],
+  "service_tier": null,
+  "system_fingerprint": null,
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16
+  }
+}

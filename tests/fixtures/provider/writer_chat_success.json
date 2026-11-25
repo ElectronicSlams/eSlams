@@ -1,0 +1,28 @@
+{
+  "id": "57e4f58f-f7b1-41d8-be17-a6279c073aad",
+  "object": "chat.completion",
+  "choices": [{
+    "index": 0,
+    "finish_reason": "stop",
+    "message": {
+      "content": "{\"action\": 0}",
+      "role": "assistant",
+      "refusal": null,
+      "tool_calls": [],
+      "graph_data": {"sources": [], "status": "finished", "subqueries": []},
+      "llm_data": null,
+      "web_search_data": null
+    }
+  }],
+  "created": 1715361795,
+  "model": "palmyra-x5",
+  "usage": {
+    "prompt_tokens": 40,
+    "total_tokens": 340,
+    "completion_tokens": 300,
+    "prompt_token_details": {"cached_tokens": 0},
+    "completion_token_details": {"reasoning_tokens": 0}
+  },
+  "system_fingerprint": "v1",
+  "service_tier": "standard"
+}

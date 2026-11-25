@@ -1,0 +1,27 @@
+{
+  "id": "chatcmpl-redacted-azure",
+  "object": "chat.completion",
+  "created": 1728073417,
+  "model": "o1-2024-12-17",
+  "choices": [{
+    "index": 0,
+    "finish_reason": "stop",
+    "logprobs": null,
+    "message": {
+      "role": "assistant",
+      "content": "{\"action\":0,\"confidence\":0.8,\"public_explanation\":\"Selected a legal action.\"}",
+      "refusal": null,
+      "tool_calls": null,
+      "function_call": null
+    },
+    "content_filter_results": {"hate": {"filtered": false, "severity": "safe"}}
+  }],
+  "usage": {
+    "prompt_tokens": 20,
+    "completion_tokens": 1843,
+    "total_tokens": 1863,
+    "completion_tokens_details": {"audio_tokens": null, "reasoning_tokens": 448},
+    "prompt_tokens_details": {"audio_tokens": null, "cached_tokens": 0}
+  },
+  "prompt_filter_results": [{"prompt_index": 0, "content_filter_results": {"hate": {"filtered": false, "severity": "safe"}}}]
+}

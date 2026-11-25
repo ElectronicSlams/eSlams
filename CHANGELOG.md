@@ -1,5 +1,276 @@
 # Changelog
 
+## v1.0.0
+
+- Add trusted local UCI engines for standard chess through Python Core. Use
+  fixed-depth search, engine subprocess cleanup on timeout or cancellation,
+  and the existing replay and artifact validation commands.
+- Include 45 adapter PRs in the existing full Core. Verify provider wire
+  behavior with offline fixtures, reject pending completions, and filter
+  credential echoes from public action fields and receipts.
+
+- Preserve DeepSeek usage receipts when action JSON exceeds structural inspection
+  limits or exhausts parser depth; scan and redact credentials iteratively.
+- Reject missing DeepSeek model IDs and unsupported explicit reasoning budgets;
+  remove primary/secondary credential echoes across native receipt paths.
+- Add a native DeepSeek Chat Completions adapter with conservative identity, usage,
+  safe retry and interruption handling; see `docs/providers/DEEPSEEK.md` for scope
+  and synthetic fixture provenance. No live service availability is claimed.
+- Add a native Liquid AI direct text adapter (`liquid-ai`, alias `liquid`) with
+  explicit model selection, full history, native-default reasoning, sanitized
+  attempt receipts and deterministic raw-wire tests. See `docs/LIQUID_AI.md`.
+
+- Add a native AI21 Labs Jamba Chat Completions adapter with explicit model
+  selection, CLI/preflight support, credential-safe receipts, and deterministic
+  wire tests. Reject unsupported reasoning controls and ambiguous automatic
+  retries; preserve missing model identity, usage details and cost as unknown.
+- Protect AI21 primary and configured secondary credentials in IDs, errors,
+  malformed/partial responses and action text, including custom key-variable
+  selection and credentials rotated during a request.
+- Document the official AI21 direct API contract, model lifecycle evidence and
+  remaining account/availability verification limits.
+
+- Add a native Kuaishou / KwaiPilot KAT text adapter through StreamLake's direct
+  pay-as-you-go API, with explicit service-region selection, exact model IDs,
+  full history, conservative receipts/retries, and deterministic wire tests.
+  See `docs/providers/KUAISHOU.md` for verified contracts and limitations.
+
+- Add a native Relace Open Models text-game adapter with an explicit model ID,
+  full history, native reasoning defaults, no fallback or default retries, and
+  sanitized attempt receipts. Include offline CLI/preflight wiring, explicit
+  model discovery, documented API evidence, and deterministic raw-wire tests.
+- Guard secondary configured credential echoes in Relace receipts, discovery
+  and action text, including custom primary-key names and interrupted bodies.
+
+- Add the NAVER Cloud CLOVA Studio native Chat Completions v3 adapter with explicit
+  model IDs, documented HCX-007 reasoning controls, bounded transport and sanitized
+  receipts. See [NAVER setup and evidence](docs/providers/NAVER.md).
+
+- Add a native Perceptron text Chat Completions adapter with explicit model IDs,
+  provider-specific reasoning validation, CLI/preflight wiring, documented
+  lifecycle and accounting, and deterministic raw-wire/privacy regressions.
+  Preserve native defaults, full history, safe transport, and zero default retries.
+  No paid inference or package version change.
+  Follow-up review rejects credential-bearing discovery IDs, protects configured
+  secondary credentials, and closes whitespace-provider preflight bypasses.
+
+- Add a native Contextual AI Generate adapter with explicit model selection,
+  full supplied history, no retrieval/tools or automatic transport replay, and
+  credential-safe receipts. Preserve missing identity/accounting as unknown;
+  reject unsupported reasoning controls. See `docs/providers/CONTEXTUAL_AI.md`
+  for pinned API evidence and limitations. Package version remains 0.7.0.
+- Harden Contextual AI preflight validation across provider spellings and prevent
+  echoes of secondary configured credentials without adding authentication fallback.
+
+- Add a direct Sakana Namazu text adapter with explicit model/thinking controls,
+  full supplied history, disabled tools, credential-safe receipts and raw-wire tests.
+  Fugu routing is excluded; region and live billing remain unverified. See
+  `docs/PROVIDER_SAKANA.md`. No package version change.
+
+- Add a direct Ant Ling (`ant-group`, CLI alias `bailing`) text adapter with
+  explicit model IDs, documented thinking controls, disabled search, sanitized
+  attempt receipts, and offline CLI/preflight/raw-wire regression coverage.
+  Keep routed InclusionAI identities separate, record Ling/Ring deprecations,
+  and preserve unknown accounting and model evidence without substitution.
+- Harden Ant Ling preflight alias validation and scrub additional configured
+  credentials from provider identifiers, errors, partial responses, and action
+  text without enabling credential fallback.
+
+- Refresh verified Morph model IDs for November 10 and document rolling aliases,
+  accepted effort aliases and Core's unsupported integer-effort boundary.
+
+- Add native Morph general text Chat Completions with explicit model selection,
+  verified reasoning controls, full history and existing safe transport/receipts.
+  Exclude specialized Morph products from text-game eligibility; retain unknown
+  identity/accounting and prevent credential echoes in action and receipt fields.
+  Protect secondary configured credentials and reject credential echoes in model
+  discovery; revalidate explicit budgets before transport on reconfigured agents.
+  Add raw-wire, CLI, preflight and interrupted-response regressions. No package
+  version change or live inference verification.
+
+- Add a native Qwen / Alibaba Cloud DashScope synchronous text adapter with
+  regional/workspace routing, canonical aliases, sanitized attempt receipts,
+  conservative identity/accounting, explicit caller controls and offline fixtures.
+  See `docs/providers/QWEN.md` for supported routes and limitations.
+- Require explicit Qwen model IDs, reject unrepresentable reasoning controls in
+  preflight and execution, and redact primary/secondary credential echoes from
+  receipt evidence and response metadata, including interrupted responses.
+
+- Add a native Moonshot/Kimi Chat Completions adapter with explicit global/China
+  routing, model-specific reasoning controls, sanitized receipts, offline wire
+  regressions, and CLI/preflight aliases. Keep the 0.7.0 package version and
+  frozen registry unchanged. See `docs/PROVIDER_MOONSHOT.md`.
+
+- Add a native Upstage Chat Completions adapter for 0.7.1, with exact model
+  forwarding, explicit reasoning effort, shared safe transport/receipt custody,
+  keyless wire tests and [provider documentation](docs/providers/UPSTAGE.md).
+- Require explicit Upstage model IDs, validate reasoning controls in preflight,
+  and exclude primary/secondary credential echoes before receipt custody.
+
+- Add the native StepFun direct Chat Completions adapter for 0.7.1 review,
+  with CLI dispatch, offline/live preflight support, documented model controls,
+  conservative usage accounting and deterministic raw-wire/privacy regressions.
+  Keep full supplied history, exact model IDs, zero default retries and native
+  output/reasoning defaults. Step Plan and regional aliases are not inferred.
+  No package version, protocol or arena behavior changes.
+- Require explicit nonblank StepFun model IDs, reject unsupported explicit
+  reasoning budgets before transport, and remove literal primary/secondary
+  credential echoes from receipts without changing safe retry admission.
+
+- Add an Arcee Platform direct Chat Completions adapter, exact-model CLI aliases,
+  preflight/discovery wiring, sanitized receipts and deterministic raw-wire tests.
+  Native reasoning defaults apply; unsupported explicit controls fail before
+  submission. Missing identity/accounting stays unknown. See `docs/providers/ARCEE.md`.
+  Reject blank model IDs and unsupported controls in preflight, and discard
+  credential echoes from receipt identifiers on success and failure paths.
+
+- Add the native Inception Labs Mercury Chat Completions adapter with keyless
+  wire tests, sanitized receipts and explicit-only controls. Separate Inception
+  Labs aliases from Core42/G42. See `docs/INCEPTION.md` for API provenance,
+  accounting limits and retry policy. Package version remains 0.7.0.
+- Require explicit Inception model IDs, reject foreign reasoning budgets during
+  preflight, and exclude primary/secondary credential echoes from Mercury
+  receipts, discovery results and action text, including partial/error responses.
+
+- Add an Azure Foundry direct v1 Chat Completions adapter with explicit deployment
+  identity, API-key/Entra-token authentication, conservative retries and sanitized
+  usage receipts. Azure aliases now select Azure inference instead of the
+  Microsoft publisher catalogue. See `docs/AZURE_FOUNDRY.md` for setup and scope.
+
+- Add the native IBM Cloud watsonx.ai base-model chat adapter, explicit host aliases,
+  IAM API-key exchange, sanitized receipts and deterministic wire tests. Author
+  catalogue names remain separate. See `docs/PROVIDER_WATSONX.md` for configuration,
+  reasoning/accounting limits and unsupported deployment/gateway surfaces.
+
+- Add a native Meituan LongCat Chat Completions adapter with explicit model IDs,
+  aliases, Models discovery, full-history prompts and provider-native reasoning
+  controls. Reuse bounded HTTP transport and private receipts with zero default
+  retries. Preserve unknown identity/accounting and fail closed on incomplete
+  responses. See `docs/providers/LONGCAT.md` for sources and limitations.
+
+- Add a native Baidu Qianfan direct Chat Completions adapter under `baidu`,
+  `qianfan`, and `baidu-qianfan`, requiring an explicit model API name and
+  `QIANFAN_API_KEY`. Preserve native defaults, full supplied history, exact
+  requested/attested identities and incomplete accounting; reject filtered,
+  truncated, malformed and tool-call responses before action parsing.
+- Add deterministic Qianfan wire, transport, discovery, CLI and artifact-privacy
+  regressions, with official source provenance in `docs/BAIDU_QIANFAN.md`.
+- Reject blank Qianfan models at construction/preflight, validate explicit
+  reasoning budgets before discovery/transport, and remove primary/secondary
+  credential echoes from success and failure receipts, discovery and final text.
+
+- Exclude opaque and encoded Tencent transport credential diagnostics and private exception contexts; retain the unresolved native host/lifecycle review limitations.
+
+- Add the signed native Tencent Hunyuan ChatCompletions adapter under
+  `tencent-hunyuan` / `hunyuan`, with offline raw-wire tests and lifecycle docs.
+  Preserve unknown identity/accounting and reject unsupported controls. Tencent
+  announces retirement of this legacy API on 2026-12-21; TokenHub and Coding
+  Plan remain separate, unsupported inference routes.
+- Require explicit nonblank Hunyuan model IDs for every alias and exclude
+  reflected credential values from success and failure receipt identifiers.
+- Reject raw or decoded/escaped Hunyuan credential echoes in action content
+  before parsing or repair; report local configuration rejection consistently.
+
+- Add a native BytePlus ModelArk direct Chat adapter with explicit model selection,
+  BytePlus aliases, configuration preflight, sanitized receipts, inclusive reasoning
+  usage, fallback rejection and deterministic offline raw-wire tests. See
+  `docs/providers/BYTEPLUS.md` for service boundaries and verification limits.
+- Reject missing/blank BytePlus model IDs and unsupported reasoning budgets in
+  preflight; remove primary/secondary credential echoes from all receipt paths
+  and reject credential-bearing action text before parsing.
+
+- Add an NVIDIA-hosted Chat Completions adapter with explicit model IDs,
+  `nvidia-nim` / `nvidia-hosted` aliases, documented reasoning controls,
+  safe transport and sanitized receipts. Preserve unknown identity/accounting
+  and zero default retries. Hosted API Catalog use is limited by development
+  entitlements; production access is unverified. See `docs/providers/NVIDIA.md`.
+
+- Add an Apodex direct Core text adapter candidate for 0.7.1, with explicit model
+  selection, native reasoning, sanitized receipts, CLI/preflight wiring and
+  deterministic offline wire/privacy tests. Deep Research SKUs are rejected.
+  See `docs/providers/APODEX.md`; no package version change or live inference claim.
+
+- Add a Shanghai AI Lab Atria text adapter proposed for 0.7.1, requiring the
+  exact `Atria-Dawn` model ID and using `ATRIA_API_KEY`. Preserve full history,
+  reject unverified controls, and keep missing identity/accounting unknown.
+  Include deterministic raw-wire, CLI/preflight and credential-custody tests.
+  Protect secondary configured credentials and validate normalized preflight
+  spellings and configuration changed after construction before transport.
+  See `docs/SHANGHAI_AI_LAB.md`; the package version is unchanged.
+
+- Add native Red Hat AI Inference on IBM Cloud chat under `ibm-rhai`, separate
+  from Granite model-author names and watsonx hosting. Includes explicit region
+  and project configuration, conservative accounting, credential-echo protection
+  and deterministic wire/CLI tests. See `docs/PROVIDER_IBM_RHAI.md` for limits.
+
+- Use dated Mistral examples and CLI identity guidance, validate documented per-model efforts, and exclude encoded transport credential diagnostics.
+
+- Add a native Mistral AI Chat Completions adapter (`mistral-ai`, alias `mistral`)
+  with account model discovery, sanitized receipts and offline wire regressions.
+  See `docs/providers/MISTRAL.md` for supported behavior and limitations.
+- Require explicit Mistral model IDs and matching returned identity, reject
+  unsupported reasoning token budgets, and scrub configured primary/secondary
+  credential echoes from provider results.
+- Reject credential-contaminated Mistral actions before parsing or repair,
+  including mixed/full JSON Unicode escapes, without rewriting model actions.
+
+- Add a native xAI Responses adapter (`xai`, alias `x-ai`) with full public
+  history, sanitized attempt receipts, conservative usage accounting, native
+  tick-based cost reporting, keyless wire fixtures, and account model discovery.
+  Require explicit nonblank model IDs, reject unsupported thinking budgets during
+  preflight, and scrub configured primary/secondary credentials from native
+  telemetry, discovery and action text.
+  See `docs/PROVIDER_XAI.md` for supported behavior and limits.
+
+- Reject credential-bearing Cohere completions before action parsing or repair,
+  preserving clean text and sanitized receipts without substituting an action.
+
+- Add a native Sarvam V1 chat adapter with exact model forwarding, explicit
+  reasoning controls, sanitized receipts and deterministic raw-wire tests.
+
+- Reject unsupported MiniMax thinking controls and blank model IDs locally; exclude raw/decoded primary and secondary credential echoes before action parsing and from response/error identifiers.
+
+- Add a native MiniMax direct Chat Completions adapter with CLI/preflight wiring,
+  separated reasoning retained privately for explicit action repairs, and
+  provider-specific error, refusal, truncation and accounting checks. Preserve
+  full supplied history and native defaults; never substitute a model or route.
+- Document the verified MiniMax API, regions and model lifecycle caveats; add
+  deterministic keyless wire and privacy regressions for the 0.7.1 adapter work.
+
+- Add a native Fireworks Chat Completions adapter for the 0.7.1 review: explicit
+  model resources, CLI/preflight aliases, native reasoning controls, sanitized
+  attempt receipts, validated usage and zero default retries. Include documented
+  raw-wire fixtures and deterministic error, privacy and artifact regressions.
+  Package/contract versions remain unchanged; live availability is unverified.
+
+- Add native Z.ai international and Zhipu China standard Chat Completions adapters,
+  explicit reasoning controls, conservative accounting and deterministic wire tests.
+- Remove the `zhipuai-coding-plan` catalogue alias so it cannot activate standard
+  API billing. Coding Plan endpoints remain unsupported. See `docs/PROVIDER_ZAI.md`.
+
+- Add a native Snowflake Cortex Chat Completions adapter with explicit account
+  configuration, exact native model IDs, and `cortex`/`snowflake-cortex` aliases.
+- Preserve full history, native defaults, explicit reasoning controls, sanitized
+  per-attempt receipts, unknown accounting, and zero default retries. Reject
+  refusals, truncated output, and responses without an explicit terminal stop.
+- Add deterministic Snowflake wire/CLI/preflight/privacy tests and official API
+  research notes in `docs/providers/SNOWFLAKE.md`. No package version change.
+
+- Add a native Poolside-hosted Chat Completions adapter with explicit model IDs,
+  CLI/preflight/discovery aliases, native thinking on/off controls, sanitized
+  attempt receipts and deterministic wire regressions. Missing accounting stays
+  unknown; native costs and safe automatic retries remain unverified. See
+  `docs/POOLSIDE.md` for official sources and restricted-reference limitations.
+
+- Add the Xiaomi MiMo direct Chat Completions adapter (`xiaomi`, `mimo`,
+  `xiaomi-mimo`), `MIMO_API_KEY`, and Models discovery. Preserve exact model IDs,
+  provider defaults and full supplied history. Retain unknown identity/accounting
+  and sanitized failure receipts; reject filtered, truncated and tool-call output.
+  See [the MiMo guide](docs/providers/XIAOMI_MIMO.md) for sources and scope.
+
+- Send an explicit typed message item to the Perplexity Agent API. Retain and
+  test rejection of mixed search/tool output and unverified model-specific efforts.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

@@ -20,7 +20,9 @@ from eslams.artifacts import (
     read_member,
     write_artifact,
 )
+from eslams.chess_uci import UciChessAgent
 from eslams.contracts import schema_versions
+from eslams.contracts.versions import CORE_PACKAGE_VERSION
 from eslams.core_contract import core_step, engine_capabilities, prompt_package
 from eslams.protocol import ActRequest, ActResponse
 from eslams.runner import RunConfig, Runner
@@ -37,6 +39,7 @@ __all__ = [
     "RunConfig",
     "Runner",
     "SignatureValidationStatus",
+    "UciChessAgent",
     "core_step",
     "engine_capabilities",
     "extract_provider_usage",
@@ -49,4 +52,4 @@ __all__ = [
     "write_artifact",
 ]
 
-__version__ = "0.9.1"
+__version__ = CORE_PACKAGE_VERSION
