@@ -36,6 +36,7 @@ DEFAULT_PROVIDER_ENV = {
     "apodex": "APODEX_API_KEY",
     "shanghai-ai-lab": "ATRIA_API_KEY",
     "ibm-rhai": "IBM_RHAI_API_KEY",
+    "sarvam-ai": "SARVAM_API_KEY",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -105,6 +106,16 @@ def provider_preflight(
     if provider == "cohere":
         cohere.validate_model(model)
         configuration_error = cohere.configuration_error(model, runtime_config)
+    sarvam_error: dict[str, Any] | None = None
+    normalized_provider = provider.replace("_", "-")
+    if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "sarvam-ai":
+        from eslams.providers.sarvam import validate_configuration, validate_model
+
+        validate_model(model)
+        try:
+            validate_configuration(model, runtime_config)
+        except ProviderCallError as exc:
+            sarvam_error = _public_error(exc, provider=provider, model=model)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -146,7 +157,9 @@ def provider_preflight(
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
 
-    if configuration_error is not None:
+    if sarvam_error is not None:
+        error = sarvam_error
+    elif configuration_error is not None:
         error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif credential_environment is None:
         error = {

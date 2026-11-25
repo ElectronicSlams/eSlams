@@ -40,7 +40,7 @@ from eslams.model_actions import (
     parse_model_action,
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
-from eslams.provider_credentials import provider_key
+from eslams.provider_credentials import contains_credentials, provider_key, redact_credentials
 from eslams.providers import ModelCapabilities, cohere, load_provider_registry, xai
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
@@ -49,6 +49,7 @@ from eslams.providers.mistral import complete as complete_mistral
 from eslams.providers.mistral import configuration_error as mistral_configuration_error
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.sarvam import call as call_sarvam
 from eslams.providers.shanghai_ai_lab import (
     call as call_shanghai_ai_lab,
 )
@@ -334,6 +335,8 @@ def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
     if xai.contains_credential(value):
         return None
+    if isinstance(value, str) and contains_credentials(value):
+        return None
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
     sanitized = _sanitize_receipt_value(value)
@@ -436,6 +439,12 @@ class ModelProviderAgent:
         self.provider = cohere.canonical_provider(self.provider) or self.provider
         if self.provider == "cohere":
             cohere.validate_model(self.model)
+        if self.provider in {"sarvam", "sarvam_ai"}:
+            self.provider = "sarvam-ai"
+        if self.provider == "sarvam-ai":
+            from eslams.providers.sarvam import validate_model
+
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -732,6 +741,8 @@ class ModelProviderAgent:
             return call_ibm_rhai(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == "sarvam-ai":
+            return call_sarvam(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1257,7 +1268,10 @@ def _post_json(
     check_cancelled()
     # None removes only framework limits; omitted wire parameters retain
     # genuine provider defaults/constraints, whose actual ceiling may be unknown.
-    payload = {key: value for key, value in payload.items() if value is not None}
+    payload = {
+        key: value for key, value in payload.items()
+        if value is not None or (provider == "sarvam-ai" and key == "reasoning_effort")
+    }
     for group in ("generationConfig", "inferenceConfig"):
         if isinstance(payload.get(group), dict):
             payload[group] = {
@@ -1315,6 +1329,11 @@ def _post_json(
         body_retry_permitted = _capture_error_body_observations(
             response, provider=provider, receipt=receipt,
         )
+        if provider == "sarvam-ai":
+            from eslams.providers.sarvam import http_error
+
+            kind, body_retry_permitted = http_error(response)
+            receipt["outcome"] = kind
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-amzn-requestid"),
@@ -2080,6 +2099,7 @@ def _endpoint_kind(provider: str) -> str:
         "ibm-rhai": "ibm_rhai_chat_completions",
         "bedrock": "bedrock_converse",
         "shanghai-ai-lab": "shanghai_ai_lab_atria_chat_completions",
+        "sarvam-ai": "sarvam_chat_completions_v1",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2099,6 +2119,7 @@ def _parser_version(provider: str) -> str:
         "ibm-rhai": "ibm-rhai-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "shanghai-ai-lab": "shanghai-ai-lab-atria-chat-raw-v1",
+        "sarvam-ai": "sarvam-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2106,6 +2127,10 @@ def _parser_version(provider: str) -> str:
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == "cohere":
         return cohere.normalize_usage(usage)
+    if provider == "sarvam-ai":
+        from eslams.providers.sarvam import normalize_usage
+
+        return normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
@@ -2653,7 +2678,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", "liquid-ai"}:
+    elif provider in {"openrouter", "liquid-ai", "sarvam-ai"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
@@ -2945,7 +2970,7 @@ _SECRET_TEXT_PATTERNS = (
 
 def _redact_sensitive_text(value: str) -> str:
     value = xai.scrub_text(value)
-    redacted = value.replace("\r", " ").replace("\n", " ")
+    redacted = redact_credentials(value).replace("\r", " ").replace("\n", " ")
     for pattern in _SECRET_TEXT_PATTERNS:
         redacted = pattern.sub(
             lambda match: f"{match.group(1)}[REDACTED]" if match.lastindex else "[REDACTED]",

@@ -1464,6 +1464,7 @@ def _provider_agent(
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "apodex": ("", "APODEX_API_KEY"),
         "shanghai-ai-lab": ("", "ATRIA_API_KEY"),
+        "sarvam-ai": ("sarvam-105b", "SARVAM_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1476,6 +1477,8 @@ def _provider_agent(
     if provider == "cohere":
         cohere.validate_model(model)
         defaults[provider] = (model, cohere.API_KEY_ENV)
+    if provider in {"sarvam", "sarvam_ai"}:
+        provider = "sarvam-ai"
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
         return ModelProviderAgent(
             provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",
@@ -1499,6 +1502,10 @@ def _provider_agent(
             raise ValueError("Mistral requires a non-empty explicit model ID")
     if provider not in defaults:
         return None
+    if provider == "sarvam-ai":
+        from eslams.providers.sarvam import validate_model
+
+        validate_model(model)
     default_model, env_name = defaults[provider]
     return ModelProviderAgent(
         provider=provider,

@@ -4,8 +4,9 @@ The proposed 0.7.1 [native Cohere adapter](providers/cohere.md) adds
 `cohere:<model>` / `cohere-ai:<model>` using `COHERE_API_KEY` and native Chat v2.
 Its research note documents controls, discovery, accounting, and identity limits.
 
-eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+eSlams Core has native, secret-free artifact support for OpenAI,
+Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Sarvam (proposed 0.7.1).
+The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -37,6 +38,8 @@ For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
 | `apodex:<model>` | `APODEX_API_KEY` | Direct Core Chat Completions | `choices[0].message.content` | response `model` |
 
 | `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` | Atria Chat Completions | `choices[0].message.content` | reported model only; null when absent |
+
+| `sarvam:<model>` / `sarvam-ai:<model>` | `SARVAM_API_KEY` | Sarvam V1 Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The proposed 0.7.1 [Apodex adapter](providers/APODEX.md) accepts only the two
@@ -47,6 +50,9 @@ The proposed 0.7.1 [Shanghai AI Lab adapter](SHANGHAI_AI_LAB.md) uses native
 reasoning defaults and requires an explicit model ID. Its reasoning accounting
 and total usage remain unknown. See that guide for verified service boundaries,
 rejected controls and fixture provenance; legacy InternLM controls do not apply.
+
+See [Sarvam direct API](providers/SARVAM.md) for model IDs, controls, accounting,
+and primary-source research for the proposed 0.7.1 adapter.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

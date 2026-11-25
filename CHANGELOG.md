@@ -46,6 +46,9 @@
 - Reject credential-bearing Cohere completions before action parsing or repair,
   preserving clean text and sanitized receipts without substituting an action.
 
+- Add a native Sarvam V1 chat adapter with exact model forwarding, explicit
+  reasoning controls, sanitized receipts and deterministic raw-wire tests.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
