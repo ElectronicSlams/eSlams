@@ -1341,6 +1341,9 @@ def _official_command(args: argparse.Namespace) -> int:
 
 
 def _providers_command(args: argparse.Namespace) -> int:
+    from eslams.providers import cohere
+
+    args.provider = cohere.canonical_provider(args.provider) or args.provider
     if args.providers_command == "preflight":
         payload = provider_preflight(
             args.provider, args.model, args.arena, live=args.live,
@@ -1448,6 +1451,8 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    from eslams.providers import cohere
+
     defaults = {
         "mistral-ai": ("", "MISTRAL_API_KEY"),
         "xai": ("", "XAI_API_KEY"),
@@ -1467,6 +1472,10 @@ def _provider_agent(
     provider = canonical_provider(provider.lower())
     if provider == "xai":
         validate_xai_model(model)
+    provider = cohere.canonical_provider(provider) or provider
+    if provider == "cohere":
+        cohere.validate_model(model)
+        defaults[provider] = (model, cohere.API_KEY_ENV)
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
         return ModelProviderAgent(
             provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",

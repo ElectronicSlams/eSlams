@@ -137,6 +137,7 @@ PROVIDER_ALIASES = {
     "rhai": "ibm-rhai",
     "redhat-ai-inference": "ibm-rhai",
     "x-ai": "xai",
+    "cohere-ai": "cohere",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",

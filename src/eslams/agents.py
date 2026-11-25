@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry, xai
+from eslams.providers import ModelCapabilities, cohere, load_provider_registry, xai
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -433,6 +433,9 @@ class ModelProviderAgent:
             if error:
                 raise ProviderCallError(error, error_kind="provider_request_rejected",
                                         provider=self.provider)
+        self.provider = cohere.canonical_provider(self.provider) or self.provider
+        if self.provider == "cohere":
+            cohere.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -709,6 +712,8 @@ class ModelProviderAgent:
             return complete_mistral(self, api_key, prompt)
         if self.provider == "xai":
             return xai.call(self, api_key, prompt)
+        if self.provider == "cohere":
+            return cohere.call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -2063,6 +2068,7 @@ def _provider_endpoint(
 def _endpoint_kind(provider: str) -> str:
     return {
         "mistral-ai": "mistral_chat_completions",
+        "cohere": "cohere_chat_v2",
         "openai": "openai_responses",
         "apodex": "apodex_chat_completions",
         "xai": "xai_responses",
@@ -2081,6 +2087,7 @@ def _endpoint_kind(provider: str) -> str:
 def _parser_version(provider: str) -> str:
     return {
         "mistral-ai": "mistral-chat-completions-raw-v1",
+        "cohere": "cohere-chat-raw-v1",
         "openai": "openai-responses-raw-v2",
         "apodex": "apodex-chat-completions-raw-v1",
         "xai": "xai-responses-raw-v1",
@@ -2097,6 +2104,8 @@ def _parser_version(provider: str) -> str:
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "cohere":
+        return cohere.normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 

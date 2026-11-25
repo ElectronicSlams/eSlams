@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry, xai
+from eslams.providers import cohere, load_provider_registry, xai
 from eslams.providers.mistral import API_KEY_ENV as MISTRAL_API_KEY_ENV
 from eslams.providers.mistral import MODELS_ENDPOINT as MISTRAL_MODELS_ENDPOINT
 from eslams.providers.mistral import configuration_error as mistral_configuration_error
@@ -25,6 +25,7 @@ from eslams.providers.shanghai_ai_lab import validate_configuration as validate_
 DEFAULT_PROVIDER_ENV = {
     "mistral-ai": MISTRAL_API_KEY_ENV,
     "xai": xai.API_KEY_ENV,
+    "cohere": "COHERE_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -79,7 +80,6 @@ def provider_preflight(
 
         provider = "liquid-ai"
         validate_config(model, runtime_config)
-    configuration_error = None
     if provider == "apodex":
         from eslams.providers.apodex import validate_configuration
 
@@ -101,6 +101,10 @@ def provider_preflight(
         if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"} else None
     )
     registry_model = "" if mistral_error and not isinstance(model, str) else model
+    provider = cohere.canonical_provider(provider) or provider
+    if provider == "cohere":
+        cohere.validate_model(model)
+        configuration_error = cohere.configuration_error(model, runtime_config)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -153,8 +157,6 @@ def provider_preflight(
         error = {"error_class": "provider_request_rejected", "message": config_error}
     elif mistral_error:
         error = {"error_class": "provider_request_rejected", "message": mistral_error}
-    elif configuration_error:
-        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -323,6 +325,8 @@ def provider_models_live(provider: str) -> list[str] | None:
     if provider == "xai" and not xai.credentials_scoped():
         with xai.credential_scope(environment_name=xai.API_KEY_ENV):
             return provider_models_live(provider)
+    if provider == "cohere":
+        return cohere.models_live()
     endpoint = _MODELS_ENDPOINTS.get(provider)
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
     if api_key_env is None:
@@ -431,6 +435,7 @@ def provider_models_live(provider: str) -> list[str] | None:
 def provider_models_result(provider: str) -> dict[str, Any]:
     """JSON-safe live discovery response shared by the CLI and local clients."""
     provider = xai.canonical_provider(provider)
+    provider = cohere.canonical_provider(provider) or provider
     payload: dict[str, Any] = {"provider": provider, "mode": "live", "ok": False, "models": []}
     try:
         models = provider_models_live(provider)
