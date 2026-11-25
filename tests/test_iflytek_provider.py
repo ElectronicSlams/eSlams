@@ -334,3 +334,22 @@ def test_usage_inconsistency_is_reported_and_never_prices(monkeypatch):
     assert usage["usage_validation_errors"] == [
         "provider_total_tokens_inconsistent", "search_prompt_tokens_accounting_unsupported"]
     assert agent.last_receipt["estimated_cost"]["status"] == "cost_unavailable"
+
+
+@pytest.mark.parametrize("escaped", (False, True))
+def test_successful_response_cannot_echo_active_credential(monkeypatch, escaped):
+    body = wire()
+    credential = "synthetic-password"
+    act_request = request()
+    output = json.dumps({"action": act_request.legal_actions[0], "public_explanation": credential})
+    if escaped:
+        output = output.replace(credential, "".join(f"\\u{ord(char):04x}" for char in credential))
+    body["choices"][0]["message"]["content"] = output
+    install(monkeypatch, body)
+    selected = native()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(act_request)
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert credential not in str(error.value)
+    assert credential not in json.dumps(selected.attempt_receipts)
+    assert len(selected.attempt_receipts) == 1
