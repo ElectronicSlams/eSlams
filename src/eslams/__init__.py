@@ -20,6 +20,7 @@ from eslams.artifacts import (
     read_member,
     write_artifact,
 )
+from eslams.chess_uci import UciChessAgent
 from eslams.contracts import schema_versions
 from eslams.core_contract import core_step, engine_capabilities, prompt_package
 from eslams.protocol import ActRequest, ActResponse
@@ -37,6 +38,7 @@ __all__ = [
     "RunConfig",
     "Runner",
     "SignatureValidationStatus",
+    "UciChessAgent",
     "core_step",
     "engine_capabilities",
     "extract_provider_usage",

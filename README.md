@@ -708,6 +708,32 @@ without engine evaluation:
 This gives language models enough chess context to make legal decisions without
 smuggling in engine strength.
 
+### Trusted local UCI chess engines
+
+Use a locally installed UCI executable that you trust. For example, to play
+Stockfish as White against the built-in first-legal agent, run:
+
+```sh
+eslams run --arena chess --agent "uci:/absolute/path/to/stockfish" \
+  --opponent first-legal --uci-depth 8 --run-id stockfish-demo --require-scoring-valid
+eslams validate runs/stockfish-demo.eslams
+eslams replay runs/stockfish-demo.eslams --output runs/stockfish-demo.html
+```
+
+Use the same `uci:` syntax with `--opponent` for Black or with
+`--seat-agent PLAYER=AGENT`. The Python entry point is
+`UciChessAgent(Path("/absolute/path/to/stockfish"), depth=8)`, which you can
+pass as a seat in `Runner().run(RunConfig(arena_id="chess", agent_1=engine))`.
+
+Core starts a fresh engine for each move with a fixed depth, one search thread
+and 16 MiB hash where those options are supported. Keep the same engine build
+and depth to reproduce a search. Core checks the move against both the position
+and the arena's legal actions. Each search, including startup, is limited to 30
+seconds or a shorter `--time-budget-ms`. UCI mode is for local, unofficial
+chess runs with local agents on both seats. The executable runs with the
+current user's privileges and a
+minimal environment, so use an executable and engine assets you have verified.
+
 ## Provider Support
 
 Core has direct first-party HTTP adapters for all five provider routes below:

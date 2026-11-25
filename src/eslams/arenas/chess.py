@@ -191,18 +191,23 @@ def _draw_claim_actions(board: Any) -> list[str]:
 
 
 def _board_from_state(state: ArenaState) -> Any:
-    history = state.public_state.get("san_history")
+    return board_from_fen_and_history(
+        state.public_state["fen"], state.public_state.get("san_history"),
+    )
+
+
+def board_from_fen_and_history(fen: str, history: Any) -> chess.Board:
+    """Preserve the move stack when standard-start history reconstructs the FEN."""
     if isinstance(history, list):
         board = chess.Board()
         try:
             for san in history:
                 board.push_san(str(san))
-            if board.fen() == state.public_state.get("fen"):
+            if board.fen() == fen:
                 return board
         except ValueError:
             pass
-    return chess.Board(state.public_state["fen"])
-
+    return chess.Board(fen)
 
 def _legal_move_details(board: Any) -> list[dict[str, Any]]:
     details: list[dict[str, Any]] = []
