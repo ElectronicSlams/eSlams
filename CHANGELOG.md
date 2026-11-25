@@ -24,6 +24,18 @@
   reasoning budgets before discovery/transport, and remove primary/secondary
   credential echoes from success and failure receipts, discovery and final text.
 
+- Exclude opaque and encoded Tencent transport credential diagnostics and private exception contexts; retain the unresolved native host/lifecycle review limitations.
+
+- Add the signed native Tencent Hunyuan ChatCompletions adapter under
+  `tencent-hunyuan` / `hunyuan`, with offline raw-wire tests and lifecycle docs.
+  Preserve unknown identity/accounting and reject unsupported controls. Tencent
+  announces retirement of this legacy API on 2026-12-21; TokenHub and Coding
+  Plan remain separate, unsupported inference routes.
+- Require explicit nonblank Hunyuan model IDs for every alias and exclude
+  reflected credential values from success and failure receipt identifiers.
+- Reject raw or decoded/escaped Hunyuan credential echoes in action content
+  before parsing or repair; report local configuration rejection consistently.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

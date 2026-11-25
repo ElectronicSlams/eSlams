@@ -47,6 +47,7 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.tencent_hunyuan import ALIASES as HUNYUAN_ALIASES
 
 
 class AgentError(RuntimeError):
@@ -416,6 +417,8 @@ class ModelProviderAgent:
             from eslams.providers.baidu import validate_model
 
             validate_model(self.model)
+        if self.provider.strip().replace("_", "-") in HUNYUAN_ALIASES:
+            self.provider = "tencent-hunyuan"
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -672,6 +675,10 @@ class ModelProviderAgent:
             from eslams.providers.baidu import call
 
             return call(self, api_key, prompt)
+        if self.provider == "tencent-hunyuan":
+            from eslams.providers.tencent_hunyuan import call
+
+            return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -1209,6 +1216,8 @@ def _post_json(
     payload: dict[str, Any],
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    header_factory: Callable[[dict[str, Any]], dict[str, str]] | None = None,
+    response_handler: Callable[[httpx.Response], None] | None = None,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
     check_cancelled()
@@ -1229,7 +1238,7 @@ def _post_json(
         try:
             response = bounded_post(
                 url,
-                headers=headers,
+                headers=header_factory(payload) if header_factory is not None else headers,
                 json=payload,
                 timeout=_httpx_timeout(runtime_config, deadline=deadline),
             )
@@ -1260,6 +1269,8 @@ def _post_json(
                 provider=provider,
                 model=model,
             ) from exc
+    if response_handler is not None:
+        response_handler(response)
     if response.status_code >= 400:
         kind = _provider_error_kind(response.status_code)
         retry_after = _retry_after_seconds(response)
@@ -1280,7 +1291,8 @@ def _post_json(
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-amzn-requestid")
-            or response.headers.get("x-global-transaction-id"),
+            or response.headers.get("x-global-transaction-id")
+            or response.headers.get("x-tc-requestid"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
             response.headers.get("cf-aig-request-id")
@@ -1419,7 +1431,8 @@ def _raise_observed_transport_failure(
     )
     receipt["request_id"] = _http_error_identifier(
         headers.get("x-request-id") or headers.get("request-id")
-        or headers.get("x-amzn-requestid") or headers.get("x-global-transaction-id"),
+        or headers.get("x-amzn-requestid") or headers.get("x-global-transaction-id")
+        or headers.get("x-tc-requestid"),
     )
     receipt["gateway_request_id"] = _http_error_identifier(
         headers.get("cf-aig-request-id") or headers.get("x-gateway-request-id"),
@@ -2042,6 +2055,7 @@ def _endpoint_kind(provider: str) -> str:
         "bedrock": "bedrock_converse",
         "watsonx": "watsonx_text_chat",
         longcat.PROVIDER_ID: longcat.ENDPOINT_KIND,
+        "tencent-hunyuan": "tencent_hunyuan_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2057,6 +2071,7 @@ def _parser_version(provider: str) -> str:
         "bedrock": "bedrock-converse-raw-v1",
         "watsonx": "watsonx-text-chat-raw-v1",
         longcat.PROVIDER_ID: longcat.PARSER_VERSION,
+        "tencent-hunyuan": "tencent-hunyuan-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2066,6 +2081,10 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return longcat.normalize_usage(usage)
     if provider == "baidu":
         from eslams.providers.baidu import normalize_usage
+
+        return normalize_usage(usage)
+    if provider == "tencent-hunyuan":
+        from eslams.providers.tencent_hunyuan import normalize_usage
 
         return normalize_usage(usage)
     if provider == "krutrim":
@@ -2859,7 +2878,8 @@ def _response_json_with_receipt(
                 or response.headers.get("request-id")
                 or response.headers.get("x-cloud-trace-context")
                 or response.headers.get("x-amzn-requestid")
-                or response.headers.get("x-global-transaction-id")),
+                or response.headers.get("x-global-transaction-id")
+                or response.headers.get("x-tc-requestid")),
                 "gateway_request_id": _http_error_identifier(
                     response.headers.get("cf-aig-request-id")
                     or response.headers.get("x-gateway-request-id")),

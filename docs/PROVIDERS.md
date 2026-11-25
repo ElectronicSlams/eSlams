@@ -22,6 +22,8 @@ See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 | `meituan:<model>` / `longcat:<model>` | `LONGCAT_API_KEY` | native LongCat Chat Completions | `choices[0].message.content` | response `model` |
 
 | `baidu:<exact-model-api-name>` | `QIANFAN_API_KEY` | Qianfan Chat Completions | `choices[0].message.content` | response `model` |
+
+| `tencent-hunyuan:<model>` / `hunyuan:<model>` | `TENCENTCLOUD_SECRET_ID` + `TENCENTCLOUD_SECRET_KEY` | signed native ChatCompletions | `Choices[0].Message.Content` (optional `Response` wrapper) | unknown; no attested model field |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including
@@ -31,6 +33,10 @@ accounting semantics. LongCat requires an explicit model ID and has no fallback.
 For the native Baidu Qianfan adapter, aliases,
 domestic endpoint scope, exact controls, accounting and raw-wire provenance are
 documented in [BAIDU_QIANFAN.md](BAIDU_QIANFAN.md).
+
+See the [Tencent native Hunyuan guide](providers/TENCENT_HUNYUAN.md) for TC3
+signing, separate Tencent products, controls and the announced December 2026
+retirement. This adapter does not enable TokenHub or Coding Plan catalogue routes.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

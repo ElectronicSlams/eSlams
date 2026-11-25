@@ -138,6 +138,7 @@ PROVIDER_ALIASES = {
     "meituan-longcat": "meituan",
     "qianfan": "baidu",
     "baidu-qianfan": "baidu",
+    "hunyuan": "tencent-hunyuan",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",
