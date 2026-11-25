@@ -146,6 +146,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         data = _response_json_with_receipt(
             response, provider="huawei", model=agent.model,
             capabilities=agent.capabilities, runtime_config=runtime,
+            synchronous=True,
         )
         receipt = _without_credentials(_receipt(
             provider="huawei", model=agent.model, response=response,

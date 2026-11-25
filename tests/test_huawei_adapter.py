@@ -281,8 +281,10 @@ def test_noncomplete_output_never_becomes_action(monkeypatch, reason, kind):
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize("case", ["error", "choice-error", "function-call", "wrong-model", "tools", "reasoning-only", "empty",
-                                  "choices", "object", "role", "index"])
+@pytest.mark.parametrize("case", [
+    "error", "choice-error", "function-call", "wrong-model", "tools", "reasoning-only",
+    "empty", "choices", "object", "role", "index",
+])
 def test_semantic_and_shape_failures(monkeypatch, case):
     payload = body()
     choice = payload["choices"][0]
@@ -588,4 +590,16 @@ def test_all_configured_credentials_are_excluded_from_public_surfaces(
         public = json.dumps(selected.act(request()).to_dict())
     public += json.dumps(selected.attempt_receipts)
     assert all(value not in public for value in credentials.values())
+    assert len(calls) == 1
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = wire(monkeypatch, status=202)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
     assert len(calls) == 1
