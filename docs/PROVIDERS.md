@@ -5,11 +5,17 @@ Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Qwen/DashScope. The ad
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
+The 0.7.1-targeted [Moonshot/Kimi native adapter](PROVIDER_MOONSHOT.md) also
+supports direct Chat Completions, regional endpoint selection, and account
+model discovery through `MOONSHOT_API_KEY`.
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
 | `qwen:<model>` | `DASHSCOPE_API_KEY` | native DashScope text generation | `output.choices[0].message.content` | unknown (no native response model field) |
+
+| `moonshot-ai:<model>` / `kimi:<model>` | `MOONSHOT_API_KEY` | Kimi Chat Completions | `choices[0].message.content` | response `model` |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |

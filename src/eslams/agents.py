@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry, qwen
+from eslams.providers import ModelCapabilities, load_provider_registry, moonshot, qwen
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -403,6 +403,8 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
+        self._moonshot_endpoint = moonshot.chat_endpoint(self.provider)
+        self.provider = moonshot.canonical_provider(self.provider)
         self.provider = qwen.canonicalize_provider(self.provider)
         if self.provider == "qwen":
             qwen.validate_model(self.model)
@@ -608,7 +610,7 @@ class ModelProviderAgent:
                     "model": self.model,
                     **(
                         {"raw_action_text": text[:500]}
-                        if self.provider not in {"qwen", "krutrim"} else {}
+                        if self.provider not in {"krutrim", "moonshot-ai", "qwen"} else {}
                     ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
@@ -676,6 +678,8 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == moonshot.PROVIDER_ID:
+            return moonshot.call(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1249,6 +1253,8 @@ def _post_json(
             ) from exc
     if response.status_code >= 400:
         kind = _provider_error_kind(response.status_code)
+        if provider == moonshot.PROVIDER_ID:
+            kind = moonshot.http_error_kind(response, kind)
         retry_after = _retry_after_seconds(response)
         receipt = _failure_receipt(
             provider=provider, model=model, agent_id="", agent_version="", turn_id=0,
@@ -2020,6 +2026,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        moonshot.PROVIDER_ID: "moonshot_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2033,11 +2040,14 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == moonshot.PROVIDER_ID:
+        usage = moonshot.usage_for_receipt(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
@@ -2575,7 +2585,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider == "openrouter":
+    elif provider in {"openrouter", moonshot.PROVIDER_ID}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
@@ -2677,6 +2687,7 @@ def _body_error_status(error: Any) -> int | None:
     codes = {
         "authentication_error": 401, "invalid_api_key": 401, "permission_error": 403,
         "rate_limit_error": 429, "rate_limit_exceeded": 429,
+        "rate_limit_reached_error": 429, "engine_overloaded_error": 429,
         "overloaded_error": 529, "api_error": 500, "server_error": 500, "server": 500,
         "internal_error": 500, "timeout_error": 504, "timeout": 504,
         "not_found_error": 404, "invalid_request_error": 400,

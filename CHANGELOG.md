@@ -10,6 +10,11 @@
   preflight and execution, and redact primary/secondary credential echoes from
   receipt evidence and response metadata, including interrupted responses.
 
+- Add a native Moonshot/Kimi Chat Completions adapter with explicit global/China
+  routing, model-specific reasoning controls, sanitized receipts, offline wire
+  regressions, and CLI/preflight aliases. Keep the 0.7.0 package version and
+  frozen registry unchanged. See `docs/PROVIDER_MOONSHOT.md`.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import load_provider_registry, moonshot
 from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
 from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
 from eslams.providers.qwen import validate_controls as qwen_validate_controls
@@ -22,6 +22,7 @@ from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
     "qwen": "DASHSCOPE_API_KEY",
+    moonshot.PROVIDER_ID: moonshot.API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -32,6 +33,7 @@ DEFAULT_PROVIDER_ENV = {
 }
 
 _MODELS_ENDPOINTS = {
+    moonshot.PROVIDER_ID: moonshot.MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -139,7 +141,7 @@ def provider_preflight(
         }
     else:
         try:
-            visible_models = provider_models_live(record.provider)
+            visible_models = provider_models_live(provider)
         except ProviderCallError as exc:
             visible_models = None
             discovery_error = _public_error(exc, provider=provider, model=model)
@@ -186,7 +188,8 @@ def provider_preflight(
                           model_execution_policy(time_budget_ms, max_output_tokens)},
             )
             agent = ModelProviderAgent(
-                provider=record.provider,
+                provider=(provider if record.provider == moonshot.PROVIDER_ID
+                          else record.provider),
                 model=model,
                 api_key_env=credential_environment,
                 max_output_tokens=max_output_tokens,
@@ -269,9 +272,11 @@ def provider_models_live(provider: str) -> list[str] | None:
     ``None`` means the adapter has no Models API. Authentication, transport,
     HTTP and malformed/pagination failures raise a diagnostic ProviderCallError.
     """
+    regional_endpoint = moonshot.models_endpoint(provider)
     provider = provider.strip().lower().replace("_", "-")
     provider = PROVIDER_ALIASES.get(provider, provider)
-    endpoint = _MODELS_ENDPOINTS.get(provider)
+    endpoint = (regional_endpoint if provider == moonshot.PROVIDER_ID
+                else _MODELS_ENDPOINTS.get(provider))
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
     if api_key_env is None:
         raise ProviderCallError(
@@ -342,6 +347,8 @@ def provider_models_live(provider: str) -> list[str] | None:
                 if isinstance(row, dict) else None
             )
             if not isinstance(raw, str) or not raw.strip():
+                raise _discovery_schema_error(provider)
+            if provider == moonshot.PROVIDER_ID and api_key in raw:
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
