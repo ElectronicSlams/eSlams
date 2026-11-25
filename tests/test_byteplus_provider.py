@@ -506,7 +506,9 @@ def test_review_mutated_blank_model_and_protocol_diagnostic_fail_closed(monkeypa
     assert calls == [1]
 
 
-@pytest.mark.parametrize("encoding", ["json", "url", "unicode", "fenced-unicode"])
+@pytest.mark.parametrize("encoding", [
+    "json", "url", "unicode", "fenced-unicode", "escaped-prefix", "nested-unicode",
+])
 def test_review_encoded_credential_in_action_text_is_rejected(monkeypatch, encoding):
     secret = 'opaqueCred"slash/plus+back\\key'
     calls = wire(monkeypatch)
@@ -515,9 +517,13 @@ def test_review_encoded_credential_in_action_text_is_rejected(monkeypatch, encod
     content = json.dumps({
         "action": 1, "public_explanation": secret if encoding == "json" else quote(secret, safe=""),
     })
-    if encoding in {"unicode", "fenced-unicode"}:
+    if encoding in {"unicode", "fenced-unicode", "escaped-prefix", "nested-unicode"}:
         escaped = "".join(f"\\u{ord(character):04x}" for character in secret)
         content = '{"action":1,"public_explanation":"' + escaped + '"}'
+    if encoding == "escaped-prefix":
+        content = f'{escaped} {{"action": 1}}'
+    if encoding == "nested-unicode":
+        content = json.dumps({"action": 1, "public_explanation": escaped})
     if encoding == "fenced-unicode":
         content = "```json\n" + content + "\n```"
     data["choices"][0]["message"]["content"] = content
@@ -532,3 +538,9 @@ def test_review_encoded_credential_in_action_text_is_rejected(monkeypatch, encod
         configured.act(_request())
     assert calls == [1]
     assert secret not in json.dumps(configured.attempt_receipts)
+
+
+
+def test_clean_action_does_not_publish_raw_provider_diagnostics(monkeypatch):
+    wire(monkeypatch)
+    assert "raw_action_text" not in agent().act(_request()).metadata
