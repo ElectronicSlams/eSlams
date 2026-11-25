@@ -5,6 +5,7 @@ import threading
 import time
 from contextlib import suppress
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -904,17 +905,22 @@ def test_shared_diagnostics_expose_raw_output_only_for_legacy_providers(
     assert result.metadata.get("raw_action_text") == (text if raw_expected else None)
 
 
-@pytest.mark.parametrize("encoding", ["url", "repeated_escape"])
+@pytest.mark.parametrize("encoding", ["url", "double_url", "url_json", "repeated_escape"])
 def test_shared_native_provider_checks_canonical_alias_with_custom_key(monkeypatch, encoding):
     canonical = "opaque/alternate+fixture:key"
     monkeypatch.setenv("RELACE_API_KEY", canonical)
     monkeypatch.setenv("ESLAMS_FIXTURE_KEY", "opaque-configured-key")
-    if encoding == "url":
-        explanation = "opaque%2Falternate%2Bfixture%3Akey"
+    if encoding in {"url", "double_url"}:
+        explanation = quote(canonical, safe="")
+        if encoding == "double_url":
+            explanation = quote(explanation, safe="")
     else:
         explanation = "".join(f"\\u{ord(character):04x}" for character in canonical)
-        for _ in range(3):
-            explanation = explanation.replace("\\", "\\\\")
+        if encoding == "url_json":
+            explanation = quote(quote(explanation, safe=""), safe="")
+        else:
+            for _ in range(3):
+                explanation = explanation.replace("\\", "\\\\")
 
     def provider_response(self, api_key, prompt):
         assert api_key == "opaque-configured-key"

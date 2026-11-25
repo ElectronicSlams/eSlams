@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any, Callable
-from urllib.parse import unquote, unquote_plus, urlparse, urlsplit
+from urllib.parse import unquote_plus, urlparse, urlsplit
 
 import httpx
 
@@ -556,8 +556,7 @@ class ModelProviderAgent:
         credentials = {value for value in (api_key, canonical_key) if value}
 
         def matches_credential(value: str) -> bool:
-            decoded = unquote(value)
-            return any(key in value or key in decoded for key in credentials)
+            return any(key in value for key in credentials)
 
         prompt = _provider_prompt(
             request, history_window_turns=(
