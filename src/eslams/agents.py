@@ -424,6 +424,10 @@ class ModelProviderAgent:
         if self.provider == "perceptron":
             from eslams.providers.perceptron import validate_settings
             validate_settings(self.model, self.runtime_config)
+        if self.provider == "sakana":
+            from eslams.providers.sakana import validate_config
+
+            validate_config(self.model, self.runtime_config or ProviderRuntimeConfig())
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -712,6 +716,10 @@ class ModelProviderAgent:
             return call(self, api_key, prompt)
         if self.provider == contextual.PROVIDER_ID:
             return contextual.call(self, api_key, prompt)
+        if self.provider == "sakana":
+            from eslams.providers.sakana import call_sakana
+
+            return call_sakana(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -2085,6 +2093,7 @@ def _endpoint_kind(provider: str) -> str:
         "naver": "naver_chat_completions_v3",
         "perceptron": "perceptron_chat_completions",
         "contextual-ai": "contextual_generate",
+        "sakana": "sakana_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -2106,6 +2115,7 @@ def _parser_version(provider: str) -> str:
         "naver": "naver-chat-completions-v3-raw-v1",
         "perceptron": "perceptron-chat-completions-raw-v1",
         "contextual-ai": "contextual-generate-raw-v1",
+        "sakana": "sakana-namazu-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
@@ -2281,7 +2291,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter", "perceptron"}
+            True if provider in {"openai", "openrouter", "perceptron", "sakana"}
             else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True

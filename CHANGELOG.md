@@ -55,6 +55,11 @@
 - Harden Contextual AI preflight validation across provider spellings and prevent
   echoes of secondary configured credentials without adding authentication fallback.
 
+- Add a direct Sakana Namazu text adapter with explicit model/thinking controls,
+  full supplied history, disabled tools, credential-safe receipts and raw-wire tests.
+  Fugu routing is excluded; region and live billing remain unverified. See
+  `docs/PROVIDER_SAKANA.md`. No package version change.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

@@ -13,7 +13,15 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import ai21, contextual, deepseek, load_provider_registry, perceptron, relace
+from eslams.providers import (
+    ai21,
+    contextual,
+    deepseek,
+    load_provider_registry,
+    perceptron,
+    relace,
+    sakana,
+)
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -33,6 +41,7 @@ DEFAULT_PROVIDER_ENV = {
     "relace": relace.API_KEY_ENV,
     "naver": "CLOVASTUDIO_API_KEY",
     "contextual-ai": contextual.API_KEY_ENV,
+    "sakana": sakana.API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
@@ -44,6 +53,7 @@ _MODELS_ENDPOINTS = {
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
     "relace": relace.MODELS_ENDPOINT,
+    "sakana": sakana.MODELS_ENDPOINT,
 }
 
 
@@ -77,9 +87,11 @@ def provider_preflight(
         provider = "liquid-ai"
         validate_config(model, runtime_config)
     if provider == "krutrim":
-        from eslams.providers.krutrim import validate_config
+        from eslams.providers.krutrim import validate_config as validate_krutrim_config
 
-        validate_config(model, runtime_config)
+        validate_krutrim_config(model, runtime_config)
+    if provider == "sakana":
+        sakana.validate_config(model, runtime_config or ProviderRuntimeConfig())
     if provider in {"ai21", ai21.PROVIDER_ID}:
         ai21.validate_config(model, runtime_config)
     if provider in {"kuaishou", "kwaipilot"}:
@@ -315,6 +327,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             error_kind="provider_auth_failed", provider=provider,
         )
     relace_credentials = relace.credential_values(api_key) if provider == "relace" else ()
+    sakana_credentials = sakana.credential_values(api_key) if provider == "sakana" else ()
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -375,6 +388,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             if provider == "relace" and relace.contains_credential(raw, relace_credentials):
                 raise _discovery_schema_error(provider)
             if provider == "perceptron" and perceptron.contains_credential(raw, credentials):
+                raise _discovery_schema_error(provider)
+            if provider == "sakana" and sakana.contains_credential(raw, sakana_credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

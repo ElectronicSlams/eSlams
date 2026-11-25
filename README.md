@@ -746,7 +746,7 @@ minimal environment, so use an executable and engine assets you have verified.
 
 ## Provider Support
 
-Core has direct first-party HTTP adapters for the provider routes below:
+Core has native HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
 | --- | --- |
@@ -762,6 +762,11 @@ supports direct text without retrieval using the provider-owned integration's
 empty knowledge source. Specify the model explicitly (documented: `v1`, `v2`)
 and use `reasoning=auto`; identity, usage, cost and live availability remain
 unverified. The package version is unchanged pending release review.
+
+| `sakana:sakana-namazu-v1.0` (or explicit `sakana-namazu`) | `SAKANA_API_KEY` |
+
+The [Sakana Namazu adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDER_SAKANA.md) uses Sakana's direct API,
+requires an explicit model ID and excludes Fugu's routed/orchestrated products.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
