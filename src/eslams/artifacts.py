@@ -238,6 +238,8 @@ class ArtifactBuildInput:
     agent_io: list[dict[str, Any]]
     errors: list[dict[str, Any]]
     provider_receipts: list[dict[str, Any]] = field(default_factory=list)
+    continuation_files: dict[str, bytes] = field(default_factory=dict)
+    recovery_files: dict[str, bytes] = field(default_factory=dict)
     run_metadata: dict[str, Any] = field(default_factory=dict)
     wrapper_version: str = "legal_action_v1:1.0.0"
     eval_suite_version: str = "public-smoke:1.0.0"
@@ -313,6 +315,7 @@ class ArtifactValidationReport:
     aggregate_leaderboard_eligible: bool | None = None
     aggregate_ineligibility_reason: str | None = None
     schema_version: str = ARTIFACT_VALIDATION_SCHEMA_VERSION
+    recovered_position: dict[str, Any] | None = None
 
     @property
     def valid(self) -> bool:
@@ -349,6 +352,8 @@ class ArtifactValidationReport:
             payload["errors"] = self.errors
         else:
             payload["errors"] = []
+        if self.recovered_position is not None:
+            payload["recovered_position"] = dict(self.recovered_position)
         return payload
 
 
@@ -442,6 +447,25 @@ def _write_artifact_directory(build: ArtifactBuildInput, artifact_dir: Path) -> 
         artifact_dir / "receipts/provider_receipts.jsonl",
         (_canonical_hashed_payload(row) for row in build.provider_receipts),
     )
+    for relative, content in build.continuation_files.items():
+        if relative not in {
+            "continuation/lineage.json", "continuation/source_prefix.json",
+            "continuation/source_provider_receipts.jsonl",
+        }:
+            raise ValueError("unsupported continuation evidence path")
+        destination = artifact_dir / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+    for relative, content in build.recovery_files.items():
+        if relative not in {
+            "recovery/lineage.json", "recovery/source_prefix.json",
+            "recovery/source_provider_receipts.jsonl", "recovery/source.eslams",
+            "recovery/public_result.json",
+        }:
+            raise ValueError("unsupported recovery evidence path")
+        destination = artifact_dir / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
     _write_json(artifact_dir / "timings/timings.json", _timings_sidecar(build))
     _write_json(
         artifact_dir / "environment/lockfile.json",
@@ -479,7 +503,7 @@ def _write_artifact_directory(build: ArtifactBuildInput, artifact_dir: Path) -> 
             artifact_id="see-manifest",
             arena_id=arena_id,
             artifact_profile="runner_bundle",
-            artifact_kind="local_match",
+            artifact_kind="recovered_position" if build.recovery_files else "local_match",
             replay_manifest_path="replay/replay_manifest.json",
             replay_events_path="replay/replay_events.jsonl",
             display_frames_path="replay/display_frames.jsonl",
@@ -522,6 +546,7 @@ def _write_artifact_directory(build: ArtifactBuildInput, artifact_dir: Path) -> 
     unhashed_files = _unhashed_file_entries(artifact_dir)
     artifact_id = sha256_json(files)
     manifest = ArtifactManifest(
+        artifact_kind="recovered_position" if build.recovery_files else "local_match",
         artifact_version=ARTIFACT_VERSION,
         artifact_id=artifact_id,
         run_id=build.run_id,
@@ -879,6 +904,23 @@ class ArtifactValidator:
                 manifest=manifest,
             )
         errors.extend(_validate_file_table(artifact_dir, manifest, file_entries))
+        recovery_present = ((artifact_dir / "recovery").exists()
+                            or manifest.get("artifact_kind") == "recovered_position"
+                            or manifest.get("run_metadata", {}).get("execution_mode")
+                            == "unscored_recovered_position")
+        if recovery_present and profile == "public_replay_package":
+            errors.append("recovered positions require the separate unscored publication reader")
+        if profile != "public_replay_package":
+            from eslams.continuation import validate_continuation_artifact
+
+            if recovery_present:
+                from eslams.board_recovery import validate_recovered_position_artifact
+
+                errors.extend(validate_recovered_position_artifact(artifact_dir, manifest))
+                if (artifact_dir / "continuation").exists():
+                    errors.append("recovery and continuation evidence are mutually exclusive")
+            else:
+                errors.extend(validate_continuation_artifact(artifact_dir, manifest))
         signature_status, signature_errors = _validate_runner_signature(
             artifact_dir,
             manifest,
@@ -893,6 +935,17 @@ class ArtifactValidator:
         errors.extend(replay_errors)
         errors.extend(_profile_specific_errors(artifact_dir, manifest, profile, signature_status))
         errors.extend(_public_safety_errors(artifact_dir, profile))
+        recovered_position = None
+        if recovery_present and not errors and replay_status.status == "verified":
+            from eslams.contracts.board_recovery import validate_board_recovery_validation
+
+            recovered_position = dict(validate_board_recovery_validation({
+                "schemaVersion": "board-recovery-validation/v1", "status": "verified",
+                "lineageSchemaVersion": "board-recovery-lineage/v1",
+                "executionMode": "unscored_recovered_position", "scoringEligible": False,
+                "officialAdmission": False, "validatorScope": "child_internal_source_replay",
+                "publicationRequiresAuthoritativeSourceReread": True,
+            }))
         return _validation_report(
             errors=errors,
             signature=signature_status,
@@ -901,6 +954,7 @@ class ArtifactValidator:
             source_path=source_path,
             artifact_dir=artifact_dir,
             manifest=manifest,
+            recovered_position=recovered_position,
         )
 
 
@@ -1341,6 +1395,7 @@ def _validation_report(
     source_path: Path,
     artifact_dir: Path,
     manifest: dict[str, Any] | None = None,
+    recovered_position: dict[str, Any] | None = None,
 ) -> ArtifactValidationReport:
     level = _optional_manifest_str(manifest, "verification_level")
     level_key = _optional_manifest_str(manifest, "verification_level_key")
@@ -1354,6 +1409,7 @@ def _validation_report(
         level, level_key, level_label = "Untrusted", "untrusted", "Untrusted"
     return ArtifactValidationReport(
         errors=errors,
+        recovered_position=recovered_position,
         signature=signature,
         deterministic_replay=deterministic_replay,
         profile=profile,
@@ -1523,7 +1579,9 @@ def _public_replay_manifest(build: ArtifactBuildInput, arena_id: str) -> dict[st
             player_id=player_id,
             seat=player_id,
             label=player_id.replace("_", " ").title(),
-            model_identity=_model_identity_by_player(build.agent_version).get(player_id, {}),
+            model_identity=({} if build.score.metrics.get("execution_mode")
+                            == "unscored_recovered_position" else
+                            _model_identity_by_player(build.agent_version).get(player_id, {})),
         )
         for player_id in sorted(build.score.scores_by_player)
     ]
@@ -1604,6 +1662,22 @@ def _public_result_summary(score: ScoreSummary, arena_id: str) -> PublicResultSu
             "agent_error_count_by_player": score.agent_error_count_by_player,
             "illegal_action_count_by_player": score.illegal_action_count_by_player,
         }
+    if score.metrics.get("execution_mode") == "unscored_recovered_position":
+        public_score.update({
+            "execution_mode": "unscored_recovered_position",
+            "execution_label": "Recovered position; historical model routing unverified",
+            "reconstructed_turns": score.metrics.get("reconstructed_turns"),
+            "incremental_turns": score.metrics.get("incremental_turns"),
+            "accounting_scope": "incremental_only",
+            "historical_spend": "unknown",
+        })
+    if score.metrics.get("continuation"):
+        public_score.update({
+            "execution_label": "continued",
+            "reconstructed_turns": score.metrics.get("reconstructed_turns"),
+            "incremental_turns": score.metrics.get("incremental_turns"),
+            "accounting_scope": "incremental_only",
+        })
     return PublicResultSummary(
         run_id=score.run_id,
         arena_id=arena_id,
@@ -1675,7 +1749,9 @@ def _case_publication_eligible(score: ScoreSummary) -> bool:
     context = score.metrics.get("suite_context")
     case_id = context.get("case_id") if isinstance(context, dict) else None
     return bool(
-        isinstance(case_id, str) and case_id.strip()
+        not score.metrics.get("continuation")
+        and score.metrics.get("execution_mode") != "unscored_recovered_position"
+        and isinstance(case_id, str) and case_id.strip()
         and score.match_valid_for_scoring
         and score.integrity_status == "valid"
         and score.usage_complete

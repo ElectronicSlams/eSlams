@@ -25,6 +25,7 @@ DEFAULT_PROVIDER_ENV = {
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "tencent-hunyuan": "TENCENTCLOUD_SECRET_ID",
+    "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -58,6 +59,10 @@ def provider_preflight(
     provider = provider.lower()
     if provider.strip().replace("_", "-") in {"hunyuan", "tencent-hunyuan"}:
         provider = "tencent-hunyuan"
+    if provider == "krutrim":
+        from eslams.providers.krutrim import validate_config
+
+        validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
