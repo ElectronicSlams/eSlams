@@ -319,7 +319,8 @@ def test_missing_accounting_identity_and_native_cost(monkeypatch, mutation):
 
 
 @pytest.mark.parametrize("mutation", ["length", "tool_calls", "content_filter", "unknown",
-                                      "missing_finish", "wrong_model", "missing_choices"])
+                                      "missing_finish", "wrong_model", "missing_choices",
+                                      "function_call"])
 def test_incomplete_or_unexpected_envelopes_never_apply_actions(monkeypatch, mutation):
     body = wire()
     if mutation == "missing_choices":
@@ -328,6 +329,8 @@ def test_incomplete_or_unexpected_envelopes_never_apply_actions(monkeypatch, mut
         body["model"] = "other-model"
     elif mutation == "missing_finish":
         body["choices"][0].pop("finish_reason")
+    elif mutation == "function_call":
+        body["choices"][0]["message"]["function_call"] = {"name": "move"}
     else:
         body["choices"][0]["finish_reason"] = mutation
     calls = respond(monkeypatch, body)

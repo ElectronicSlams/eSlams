@@ -138,6 +138,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         if (data.get("object") != "chat.completion" or not isinstance(first, dict)
                 or first.get("finish_reason") != "stop" or not isinstance(message, dict)
                 or message.get("role") != "assistant" or message.get("tool_calls")
+                or message.get("function_call")
                 or not isinstance(text, str) or not text.strip()
                 or _credential_echo(text, keys) or decoded_echo
                 or (data.get("model") is not None and data["model"] != agent.model)):
