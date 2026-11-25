@@ -2,6 +2,45 @@
   "organizations": [],
   "models": [
     {
+      "provider": "meituan",
+      "model": "LongCat-2.5",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "supported_reasoning_modes": [
+        "native-default",
+        "enabled",
+        "disabled"
+      ],
+      "accepted_control_fields": [
+        "thinking",
+        "thinking_budget"
+      ],
+      "default_reasoning_track": "native-default",
+      "reasoning_track_kind": "provider_controlled",
+      "max_output_tokens": 262144,
+      "context_window": 1048576,
+      "lifecycle": "account-dependent",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://longcat.chat/platform/docs/api/chat",
+        "https://longcat.chat/platform/docs/api/model-params"
+      ],
+      "pricing": {}
+    },
+    {
       "provider": "openai",
       "model": "gpt-5-mini",
       "available_from_api": true,

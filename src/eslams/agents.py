@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, load_provider_registry, longcat
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -326,6 +326,8 @@ def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
+    if longcat.credential_echo(value):
+        return None
     sanitized = _sanitize_receipt_value(value)
     return sanitized if isinstance(sanitized, str) else None
 
@@ -401,7 +403,9 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = longcat.normalize_provider(self.provider)
+        if self.provider == longcat.PROVIDER_ID:
+            longcat.validate_model(self.model)
         from eslams.providers.watsonx import normalize_alias, validate_model
         self.provider = normalize_alias(self.provider)
         if self.provider == "watsonx":
@@ -604,7 +608,12 @@ class ModelProviderAgent:
                 metadata={
                     "provider": self.provider,
                     "model": self.model,
-                    **({"raw_action_text": text[:500]} if self.provider != "krutrim" else {}),
+                    **(
+                        {"raw_action_text": text[:500]}
+                        if self.provider in {
+                            "openai", "anthropic", "google", "gemini", "openrouter", "bedrock",
+                        } else {}
+                    ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
                 },
@@ -651,6 +660,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == longcat.PROVIDER_ID:
+            return longcat.complete(self, api_key, prompt, system_instructions=_SYSTEM_INSTRUCTIONS)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -1251,6 +1262,11 @@ def _post_json(
         body_retry_permitted = _capture_error_body_observations(
             response, provider=provider, receipt=receipt,
         )
+        if provider == longcat.PROVIDER_ID and retry_after is None:
+            retry_after = longcat.response_retry_after_seconds(response)
+            receipt["retry_after_ms"] = (
+                round(min(retry_after, 86_400.0) * 1000) if retry_after is not None else None
+            )
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-amzn-requestid")
@@ -1370,7 +1386,11 @@ def _capture_error_body_observations(
             provenance["cost_observation_status"] = "reported_unverified"
     # Error-body pricing never supplies a trusted rate card or a measured cost.
     # Quoted observations remain diagnostic; canonical cost stays unknown.
-    return (_safe_rate_rejection(data, response.status_code)
+    safe_rejection = (
+        longcat.safe_rate_rejection(data, response.status_code)
+        if provider == longcat.PROVIDER_ID else _safe_rate_rejection(data, response.status_code)
+    )
+    return (safe_rejection
             and not provenance["work_observation_present"])
 
 
@@ -2010,6 +2030,7 @@ def _endpoint_kind(provider: str) -> str:
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
         "watsonx": "watsonx_text_chat",
+        longcat.PROVIDER_ID: longcat.ENDPOINT_KIND,
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2023,11 +2044,14 @@ def _parser_version(provider: str) -> str:
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "watsonx": "watsonx-text-chat-raw-v1",
+        longcat.PROVIDER_ID: longcat.PARSER_VERSION,
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == longcat.PROVIDER_ID:
+        return longcat.normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
@@ -2566,7 +2590,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider == "openrouter":
+    elif provider in {"openrouter", longcat.PROVIDER_ID}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

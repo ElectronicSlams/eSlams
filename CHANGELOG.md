@@ -7,6 +7,12 @@
   catalogue names remain separate. See `docs/PROVIDER_WATSONX.md` for configuration,
   reasoning/accounting limits and unsupported deployment/gateway surfaces.
 
+- Add a native Meituan LongCat Chat Completions adapter with explicit model IDs,
+  aliases, Models discovery, full-history prompts and provider-native reasoning
+  controls. Reuse bounded HTTP transport and private receipts with zero default
+  retries. Preserve unknown identity/accounting and fail closed on incomplete
+  responses. See `docs/providers/LONGCAT.md` for sources and limitations.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
