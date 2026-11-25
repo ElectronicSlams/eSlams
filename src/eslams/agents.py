@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry, longcat
+from eslams.providers import ModelCapabilities, load_provider_registry, longcat, nvidia
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.byteplus import canonical_provider as byteplus_provider
@@ -430,6 +430,12 @@ class ModelProviderAgent:
                 raise ValueError(error)
         if self.provider in SENSENOVA_ALIASES:
             self.provider = "sensetime"
+        if self.provider in nvidia.ALIASES:
+            self.provider = nvidia.PROVIDER_ID
+        if self.provider == nvidia.PROVIDER_ID and (
+            not isinstance(self.model, str) or not self.model.strip()
+        ):
+            raise ValueError("NVIDIA requires an explicit nonblank model ID")
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -713,6 +719,8 @@ class ModelProviderAgent:
             return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == nvidia.PROVIDER_ID:
+            return nvidia.call(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -2083,6 +2091,7 @@ def _endpoint_kind(provider: str) -> str:
         "watsonx": "watsonx_text_chat",
         longcat.PROVIDER_ID: longcat.ENDPOINT_KIND,
         "tencent-hunyuan": "tencent_hunyuan_chat_completions",
+        "nvidia": "nvidia_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2101,6 +2110,7 @@ def _parser_version(provider: str) -> str:
         "watsonx": "watsonx-text-chat-raw-v1",
         longcat.PROVIDER_ID: longcat.PARSER_VERSION,
         "tencent-hunyuan": "tencent-hunyuan-chat-completions-raw-v1",
+        "nvidia": "nvidia-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2129,6 +2139,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == "watsonx":
         from eslams.providers.watsonx import normalize_usage
         return normalize_usage(usage)
+    if provider == nvidia.PROVIDER_ID:
+        return nvidia.normalize_usage(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2659,7 +2671,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", longcat.PROVIDER_ID, "sensetime"}:
+    elif provider in {"openrouter", longcat.PROVIDER_ID, "sensetime", "nvidia"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

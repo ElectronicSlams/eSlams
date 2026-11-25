@@ -29,6 +29,8 @@ See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 | `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` | ModelArk Chat, ap-southeast-1 | `choices[0].message.content` | concrete response `model`; an `ep-*` alone leaves weights unknown |
 
 | `sensetime:<model>` (alias `sensenova`) | `SENSENOVA_API_KEY` | SenseNova Token Plan Chat Completions | `choices[0].message.content` | response `model` |
+
+| `nvidia:<exact-model-id>` | `NVIDIA_API_KEY` | NVIDIA-hosted Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including
@@ -45,6 +47,11 @@ retirement. This adapter does not enable TokenHub or Coding Plan catalogue route
 
 See the [SenseNova adapter notes](providers/SENSENOVA.md) for the verified direct API,
 reasoning limitations, region evidence, and live availability caveat.
+
+The [NVIDIA hosted adapter](providers/NVIDIA.md) requires an explicit
+model ID and is for authorized development/test/evaluation access. The shared
+hosted trial is not verified for production. See its provider guide for aliases,
+reasoning controls, terms, missing accounting and live-entitlement limitations.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

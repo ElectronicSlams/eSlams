@@ -1459,6 +1459,9 @@ def _provider_agent(
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "tencent-hunyuan": ("", "TENCENTCLOUD_SECRET_ID"),
         "sensetime": ("", SENSENOVA_API_KEY_ENV),
+        "nvidia": ("", "NVIDIA_API_KEY"),
+        "nvidia-nim": ("", "NVIDIA_API_KEY"),
+        "nvidia-hosted": ("", "NVIDIA_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1498,6 +1501,8 @@ def _provider_agent(
         )
     if provider in SENSENOVA_ALIASES:
         provider = "sensetime"
+    if provider in {"nvidia", "nvidia-nim", "nvidia-hosted"} and not model.strip():
+        raise ValueError("NVIDIA requires an explicit nonblank model ID")
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 

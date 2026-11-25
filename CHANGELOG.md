@@ -44,6 +44,12 @@
   preflight; remove primary/secondary credential echoes from all receipt paths
   and reject credential-bearing action text before parsing.
 
+- Add an NVIDIA-hosted Chat Completions adapter with explicit model IDs,
+  `nvidia-nim` / `nvidia-hosted` aliases, documented reasoning controls,
+  safe transport and sanitized receipts. Preserve unknown identity/accounting
+  and zero default retries. Hosted API Catalog use is limited by development
+  entitlements; production access is unverified. See `docs/providers/NVIDIA.md`.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

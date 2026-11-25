@@ -14,6 +14,7 @@ from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry, longcat
+from eslams.providers.nvidia import validate_options as validate_nvidia_options
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
 from eslams.providers.sensenova import configuration_error as sensenova_configuration_error
@@ -31,6 +32,7 @@ DEFAULT_PROVIDER_ENV = {
     "watsonx": "WATSONX_API_KEY",
     "tencent-hunyuan": "TENCENTCLOUD_SECRET_ID",
     "sensetime": "SENSENOVA_API_KEY",
+    "nvidia": "NVIDIA_API_KEY",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -156,9 +158,14 @@ def provider_preflight(
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
+    option_error = (
+        validate_nvidia_options(model, runtime_config) if record.provider == "nvidia" else None
+    )
 
     if configuration_error is not None:
         error = configuration_error
+    elif option_error:
+        error = {"error_class": "provider_request_rejected", "message": option_error}
     elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
@@ -299,7 +306,7 @@ def provider_preflight(
             "configuration_ready": (
                 checks["adapter_available"] is True and credential_error is None
                 and configuration_error is None and control_error is None
-                and adapter_configuration_error is None
+                and adapter_configuration_error is None and option_error is None
                 and (record.provider != "watsonx" or error is None)
             ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
