@@ -370,3 +370,24 @@ def test_cli_run_rejects_missing_or_blank_model_before_artifact_or_transport(
                  "--output-dir", str(tmp_path)]) == 1
     assert "explicit nonblank model ID" in capsys.readouterr().err
     assert not calls and not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("mode", ["escaped", "encoded_prefix", "plain", "stream_chunk"])
+def test_credential_echo_or_stream_chunk_cannot_supply_action(transport, mode):
+    calls, responses = transport
+    data = wire()
+    message = data["choices"][0]["message"]
+    secret = "synthetic-nvidia-primary"
+    escaped = "".join(f"\\u{ord(char):04x}" for char in secret)
+    if mode == "stream_chunk":
+        data["object"] = "chat.completion.chunk"
+    elif mode == "encoded_prefix":
+        message["content"] = f'{escaped} {{"action": 0}}'
+    else:
+        value = escaped if mode == "escaped" else secret
+        message["content"] = f'{{"action": 0, "public_explanation": "{value}"}}'
+    responses.append(httpx.Response(200, json=data))
+    with pytest.raises(ProviderCallError) as failure:
+        agent().act(_request())
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    assert len(calls) == 1

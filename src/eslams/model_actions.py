@@ -96,7 +96,12 @@ def extract_json(text: str) -> Any:
 
 def action_text_contains_credentials(text: str, credentials: tuple[str, ...]) -> bool:
     """Check wire text and the decoded action fields before public action parsing."""
-    if any(secret and secret in text for secret in credentials):
+    # Core retains the original response text on successful actions, including
+    # surrounding prose ignored by extract_json. Check that text for both plain
+    # credentials and literal JSON Unicode escapes before parsing the action.
+    decoded_text = re.sub(r"\\u([0-9a-fA-F]{4})",
+                          lambda match: chr(int(match[1], 16)), text)
+    if any(secret and (secret in text or secret in decoded_text) for secret in credentials):
         return True
     try:
         pending = [extract_json(text)]
