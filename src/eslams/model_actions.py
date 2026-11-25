@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -204,3 +205,31 @@ def _looks_incomplete(buffer: str) -> bool:
     if stripped.count("[") > stripped.count("]"):
         return True
     return stripped.endswith((",", ":", '"'))
+
+
+_JSON_ESCAPE_RUN = re.compile(r'(?:\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))+')
+
+
+def action_text_matches(text: str, matches: Callable[[str], bool]) -> bool:
+    """Inspect wire prose and parsed action fields before accepting an action."""
+    if matches(text):
+        return True
+    try:
+        decoded = _JSON_ESCAPE_RUN.sub(
+            lambda match: str(json.loads('"' + match.group(0) + '"')), text,
+        )
+        pending = [extract_json(text)]
+    except (ValueError, RecursionError):
+        return True  # The action could not be checked reliably.
+    if decoded != text and matches(decoded):
+        return True
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str) and matches(value):
+            return True
+        if isinstance(value, dict):
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return False

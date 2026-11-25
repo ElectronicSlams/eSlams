@@ -157,7 +157,7 @@ def usage_fields(usage: dict[str, Any]) -> dict[str, Any]:
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams.agents import ProviderCallError
-    from eslams.model_actions import extract_json
+    from eslams.model_actions import action_text_matches
 
     validate_model(agent.model)
     credentials = _credential_values(agent.api_key_env, api_key)
@@ -175,8 +175,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         exc.__context__ = None
         raise exc from None
     receipt = _public_value(receipt, credentials)
-    if (_contains_credential(text, credentials)
-            or _contains_credential(extract_json(text), credentials)):
+    if action_text_matches(text, lambda value: _contains_credential(value, credentials)):
         receipt["outcome"] = "provider_response_schema_mismatch"
         raise ProviderCallError(
             "Writer response contained a configured credential; no action accepted",

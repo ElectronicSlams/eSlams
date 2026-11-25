@@ -601,3 +601,14 @@ def test_credentials_never_enter_persisted_artifacts(
         if path.is_file():
             public = path.read_bytes()
             assert all(value.encode() not in public for value in configured_credentials)
+
+
+def test_no_escaped_secret_in_prose(monkeypatch, wire):
+    data = wire
+    message = data["choices"][0]["message"]
+    secret = "".join(f"\\u{ord(char):04x}" for char in "synthetic-writer-key")
+    message["content"] = secret + "\n" + message["content"]
+    monkeypatch.setenv(API_KEY_ENV, "synthetic-writer-key")
+    respond(monkeypatch, data)
+    with pytest.raises(ProviderCallError):
+        agent().act(request())
