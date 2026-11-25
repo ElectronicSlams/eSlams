@@ -16,6 +16,8 @@
 | Moonshot/Kimi native API, regions and fixture provenance | [PROVIDER_MOONSHOT.md](PROVIDER_MOONSHOT.md) |
 
 | StepFun direct API scope and fixture provenance | [STEPFUN.md](providers/STEPFUN.md) |
+
+| Inception Labs Mercury direct adapter (planned 0.7.1) | [INCEPTION.md](INCEPTION.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

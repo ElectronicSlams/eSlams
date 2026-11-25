@@ -718,6 +718,7 @@ Core has native HTTP adapters for the provider routes below:
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` |
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
+| `inception:<model>` | `INCEPTION_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 | `stepfun:<model>` | `STEPFUN_API_KEY` |
 

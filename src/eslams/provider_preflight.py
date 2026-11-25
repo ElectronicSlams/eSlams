@@ -21,6 +21,12 @@ from eslams.providers.qwen import validate_model as qwen_validate_model
 from eslams.providers.arcee import API_KEY_ENV as ARCEE_API_KEY_ENV
 from eslams.providers.arcee import MODELS_ENDPOINT as ARCEE_MODELS_ENDPOINT
 from eslams.providers.arcee import validate_configuration as validate_arcee_configuration
+from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
+from eslams.providers.inception import MODELS_ENDPOINT as INCEPTION_MODELS_ENDPOINT
+from eslams.providers.inception import configuration_error as inception_configuration_error
+from eslams.providers.inception import credential_echo as inception_credential_echo
+from eslams.providers.inception import normalize_provider as normalize_inception_provider
+from eslams.providers.inception import validate_model_id as validate_inception_model_id
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
@@ -36,6 +42,7 @@ DEFAULT_PROVIDER_ENV = {
     "gemini": "GEMINI_API_KEY",
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
+    "inception": INCEPTION_API_KEY_ENV,
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "upstage": "UPSTAGE_API_KEY",
     "stepfun": STEPFUN_API_KEY_ENV,
@@ -48,6 +55,7 @@ _MODELS_ENDPOINTS = {
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
+    "inception": INCEPTION_MODELS_ENDPOINT,
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
     "stepfun": STEPFUN_MODELS_ENDPOINT,
@@ -98,6 +106,10 @@ def provider_preflight(
             validate_arcee_configuration(model, runtime_config)
         except ValueError as exc:
             configuration_error = str(exc)
+    configuration_error = None
+    if normalize_inception_provider(provider) == "inception":
+        validate_inception_model_id(model)
+        configuration_error = inception_configuration_error(runtime_config)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -156,6 +168,8 @@ def provider_preflight(
         }
     elif configuration_error is not None:
         error = configuration_error
+    elif configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -387,6 +401,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
             if provider == moonshot.PROVIDER_ID and api_key in raw:
+                raise _discovery_schema_error(provider)
+            if provider == "inception" and inception_credential_echo(raw, api_key):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

@@ -45,6 +45,9 @@ from eslams.providers import ModelCapabilities, load_provider_registry, moonshot
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
+from eslams.providers.inception import call as call_inception
+from eslams.providers.inception import normalize_provider as normalize_inception_provider
+from eslams.providers.inception import validate_model_id as validate_inception_model_id
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 from eslams.providers.stepfun import ENDPOINT_KIND as STEPFUN_ENDPOINT_KIND
@@ -420,6 +423,9 @@ class ModelProviderAgent:
             from eslams.providers.arcee import validate_model
 
             validate_model(self.model)
+        self.provider = normalize_inception_provider(self.provider)
+        if self.provider == "inception":
+            validate_inception_model_id(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -626,6 +632,7 @@ class ModelProviderAgent:
                         {"raw_action_text": text[:500]}
                         if self.provider not in {
                             "arcee-ai",
+                            "inception",
                             "krutrim",
                             "moonshot-ai",
                             "qwen",
@@ -705,6 +712,8 @@ class ModelProviderAgent:
             return upstage.call(self, api_key, prompt)
         if self.provider == "stepfun":
             return call_stepfun(self, api_key, prompt)
+        if self.provider == "inception":
+            return call_inception(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == moonshot.PROVIDER_ID:
@@ -2058,6 +2067,7 @@ def _endpoint_kind(provider: str) -> str:
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
+        "inception": "inception_chat_completions",
         "bedrock": "bedrock_converse",
         moonshot.PROVIDER_ID: "moonshot_chat_completions",
         "upstage": upstage.ENDPOINT_KIND,
@@ -2075,6 +2085,7 @@ def _parser_version(provider: str) -> str:
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
+        "inception": "inception-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
         "upstage": upstage.PARSER_VERSION,
@@ -2254,7 +2265,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter", "upstage"}
+            True if provider in {"inception", "openai", "openrouter", "upstage"}
             else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
@@ -2627,7 +2638,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", moonshot.PROVIDER_ID, "upstage", "stepfun"}:
+    elif provider in {"openrouter", moonshot.PROVIDER_ID, "upstage", "stepfun", "inception"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
@@ -2728,7 +2739,7 @@ def _body_error_status(error: Any) -> int | None:
     )
     codes = {
         "authentication_error": 401, "invalid_api_key": 401, "permission_error": 403,
-        "rate_limit_error": 429, "rate_limit_exceeded": 429,
+        "rate_limit_error": 429, "rate_limit_exceeded": 429, "rate_limit_reached": 429,
         "rate_limit_reached_error": 429, "engine_overloaded_error": 429,
         "overloaded_error": 529, "api_error": 500, "server_error": 500, "server": 500,
         "internal_error": 500, "timeout_error": 504, "timeout": 504,

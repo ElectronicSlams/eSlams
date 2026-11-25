@@ -1446,6 +1446,8 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     from eslams.providers.qwen import canonicalize_provider, validate_model
+    from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
+    from eslams.providers.inception import normalize_provider as normalize_inception_provider
 
     defaults = {
         "qwen": ("", "DASHSCOPE_API_KEY"),
@@ -1455,6 +1457,7 @@ def _provider_agent(
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
+        "inception": ("", INCEPTION_API_KEY_ENV),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "upstage": ("", "UPSTAGE_API_KEY"),
         "stepfun": ("", STEPFUN_API_KEY_ENV),
@@ -1475,6 +1478,7 @@ def _provider_agent(
             provider="arcee-ai", model=model, api_key_env=API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    provider = normalize_inception_provider(provider)
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 
