@@ -1520,6 +1520,12 @@ def _provider_agent(
         )
     if provider == "contextual-ai":
         from eslams.providers.contextual import API_KEY_ENV
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider == "huawei":
+        from eslams.providers.huawei import API_KEY_ENV
 
         return ModelProviderAgent(
             provider=provider, model=model, api_key_env=API_KEY_ENV,

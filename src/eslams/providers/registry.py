@@ -11,6 +11,7 @@ from typing import Any, cast
 
 from eslams.hashing import sha256_json
 from eslams.providers.capabilities import ModelCapabilities
+from eslams.providers.huawei import model_records as huawei_model_records
 from eslams.providers.morph import capability_records as morph_capability_records
 from eslams.providers.morph import is_specialized as morph_is_specialized
 
@@ -249,7 +250,9 @@ def load_provider_registry() -> ProviderRegistry:
     ]
     overrides = {**overrides, "models": [*morph_capability_records(),
                                         *overrides.get("models", [])]}
-    return _registry_from_payloads(generated, overrides)
+    return _registry_from_payloads(
+        generated, {**overrides, "models": [*overrides.get("models", []), *huawei_model_records()]},
+    )
 
 
 def load_provider_registry_from_paths(

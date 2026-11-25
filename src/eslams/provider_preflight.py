@@ -23,6 +23,11 @@ from eslams.providers import (
     relace,
     sakana,
 )
+from eslams.providers.huawei import API_KEY_ENV as HUAWEI_API_KEY_ENV
+from eslams.providers.huawei import MODELS_ENDPOINT as HUAWEI_MODELS_ENDPOINT
+from eslams.providers.huawei import contains_credential as huawei_contains_credential
+from eslams.providers.huawei import credential_values as huawei_credential_values
+from eslams.providers.huawei import validate_config as validate_huawei_config
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -45,11 +50,13 @@ DEFAULT_PROVIDER_ENV = {
     "sakana": sakana.API_KEY_ENV,
     "ant-group": "ANT_LING_API_KEY",
     "morph": morph.API_KEY_ENV,
+    "huawei": HUAWEI_API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
     "deepseek": deepseek.MODELS_ENDPOINT,
     "perceptron": perceptron.MODELS_ENDPOINT,
+    "huawei": HUAWEI_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -113,6 +120,9 @@ def provider_preflight(
         perceptron.validate_settings(model, runtime_config)
     if provider == "morph":
         morph.validate_configuration(model, runtime_config or ProviderRuntimeConfig())
+    if provider.strip() == "huawei":
+        provider = "huawei"
+        validate_huawei_config(model, runtime_config or ProviderRuntimeConfig())
     provider_registry = load_provider_registry()
     normalized_provider = provider.strip().replace("_", "-")
     if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "ant-group":
@@ -340,6 +350,9 @@ def provider_models_live(provider: str) -> list[str] | None:
     relace_credentials = relace.credential_values(api_key) if provider == "relace" else ()
     sakana_credentials = sakana.credential_values(api_key) if provider == "sakana" else ()
     discovery_credentials = morph.credential_values(api_key_env) if provider == "morph" else ()
+    huawei_credentials = (
+        huawei_credential_values(api_key, api_key_env) if provider == "huawei" else ()
+    )
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -404,6 +417,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             if provider == "sakana" and sakana.contains_credential(raw, sakana_credentials):
                 raise _discovery_schema_error(provider)
             if provider == "morph" and morph.contains_credentials(raw, discovery_credentials):
+                raise _discovery_schema_error(provider)
+            if provider == "huawei" and huawei_contains_credential(raw, huawei_credentials):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

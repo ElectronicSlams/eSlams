@@ -457,6 +457,10 @@ class ModelProviderAgent:
             validate_settings(self.model, self.runtime_config)
         if self.provider == "morph":
             morph.validate_configuration(self.model, self.runtime_config)
+        if self.provider == "huawei":
+            from eslams.providers.huawei import validate_config
+
+            validate_config(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -747,6 +751,10 @@ class ModelProviderAgent:
             return call(self, api_key, prompt)
         if self.provider == "morph":
             return morph.call(self, api_key, prompt)
+        if self.provider == "huawei":
+            from eslams.providers.huawei import call
+
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -2123,6 +2131,7 @@ def _endpoint_kind(provider: str) -> str:
         "contextual-ai": "contextual_generate",
         "sakana": "sakana_chat_completions",
         "ant-group": "ant_ling_chat_completions",
+        "huawei": "huawei_maas_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -2147,6 +2156,7 @@ def _parser_version(provider: str) -> str:
         "contextual-ai": "contextual-generate-raw-v1",
         "sakana": "sakana-namazu-chat-completions-raw-v1",
         "ant-group": "ant-ling-chat-completions-raw-v1",
+        "huawei": "huawei-maas-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
@@ -2163,6 +2173,10 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return normalize_usage(usage)
     if provider == "morph":
         usage = morph.usage_fields(usage)
+    if provider == "huawei":
+        from eslams.providers.huawei import normalize_usage
+
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     if provider == "deepseek":

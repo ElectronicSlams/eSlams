@@ -31,6 +31,8 @@ properties.
 
 | `morph:<model-id>` | `MORPH_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` only |
 
+| `huawei:<model-id>` | `HUAWEI_MAAS_API_KEY` | Huawei MaaS OpenAI-compatible Chat | `choices[0].message.content` | response `model` |
+
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
@@ -66,6 +68,9 @@ reasoning controls, and account/region/accounting limitations.
 The 0.7.1 adapter workstream adds [Morph direct text inference](MORPH.md).
 It requires an explicit model ID and excludes Morph's specialized Apply, search,
 compaction and routing models. Package version remains 0.7.0 pending release review.
+
+See [Huawei MaaS / Pangu](providers/HUAWEI.md) for its verified direct Guiyang
+endpoint, explicit model requirement, thinking controls, and fixture evidence.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
