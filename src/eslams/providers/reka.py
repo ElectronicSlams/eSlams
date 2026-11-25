@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
+from eslams.providers.action_privacy import validate_provider_action_text
+
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
     from eslams.contracts.provider import ProviderRuntimeConfig
@@ -78,12 +80,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     credentials = _credentials(api_key, agent.api_key_env)
     try:
         text, receipt = _call(agent, api_key, prompt)
-        if _contains_credential(text, credentials):
-            raise ProviderCallError(
-                "Reka response contained credential material; no action accepted",
-                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
-                model=agent.model, receipt=receipt,
-            )
+        validate_provider_action_text(text, credentials, receipt,
+                                      provider=PROVIDER_ID, model=agent.model)
     except ProviderCallError as exc:
         # Covers HTTP errors, malformed JSON and partial-body header observations,
         # before the common agent can publish a receipt or decide on a retry.
@@ -160,7 +158,8 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
         content = message.get("content") if isinstance(message, dict) else None
         if (not isinstance(first, dict) or first.get("finish_reason") != "stop"
                 or not isinstance(message, dict) or message.get("role") != "assistant"
-                or message.get("tool_calls") or not isinstance(content, str) or not content):
+                or message.get("tool_calls") or message.get("function_call") is not None
+                or not isinstance(content, str) or not content):
             raise ProviderCallError(
                 "Reka response has no single completed assistant text message",
                 error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
