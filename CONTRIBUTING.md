@@ -158,7 +158,7 @@ Include:
 
 Runtime floors are HTTPX 0.28.1, FastAPI 0.142.4, Starlette 1.7.0,
 Uvicorn 0.54.0 and cryptography 50.0.2. The dev extra uses pytest 9.1.1+,
-build 1.6.1+, Twine 7+ and setuptools 83+. The setuptools floor upgrades
+build 1.6.1+, Twine 7+ and setuptools 84.1.0+. The setuptools floor upgrades
 older bootstrap copies installed in Python 3.10 virtual environments. Build isolation uses Hatchling 1.32.4+, whose
 Metadata 2.5 output is understood by Twine 7. These are the Core 0.6.2
 requirements; historical wheels retain their original dependency metadata.
@@ -170,5 +170,7 @@ Current [FastAPI](https://pypi.org/project/fastapi/0.142.4/) and
 [Starlette](https://pypi.org/project/starlette/1.7.0/) also require 3.10+.
 Keep CI's pytest temporary root inside the runner-owned temporary directory.
 Dependency audits must run against both current resolution and the declared
-direct floors. An audit failure requires a reviewed fix; no blanket advisory
+direct floors. The audit tool runs under Python 3.12 in a separate virtual environment,
+so the audit tool’s transitive dependencies do not change the Python 3.10 target
+resolution. Both the target and audit tool dependencies are scanned. An audit failure requires a reviewed fix; no blanket advisory
 ignore list is accepted in this consolidation.
