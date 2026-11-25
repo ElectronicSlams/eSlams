@@ -323,7 +323,8 @@ def _text(data: dict[str, Any], receipt: dict[str, Any]) -> str:
         raise _error("Mistral returned an unsupported tool call", "provider_request_rejected")
     if reason != "stop":
         raise _error("Mistral response has no supported terminal finish reason")
-    if (type(choice.get("index")) is not int or choice.get("index") != 0
+    if (data.get("object", "chat.completion") != "chat.completion"
+            or type(choice.get("index")) is not int or choice.get("index") != 0
             or data.get("status") not in (None, "completed")):
         raise _error("Mistral response has an invalid completion envelope")
     message = choice.get("message")

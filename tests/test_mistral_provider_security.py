@@ -152,8 +152,7 @@ def test_primary_and_secondary_ids_are_scrubbed_without_rewriting_clean_actions(
     request = replace(_request(), history=[{"turn": i} for i in range(50)])
     response = agent.act(request)
     assert response.action == 1 and response.public_explanation == "safe explanation"
-    assert response.metadata["raw_action_text"] == payload["choices"][0]["message"]["content"]
-    _assert_scrubbed(json.loads(response.metadata["raw_action_text"]))
+    assert "raw_action_text" not in response.metadata
     _assert_scrubbed(response.public_explanation)
     _assert_scrubbed(response.to_dict())
     _assert_scrubbed(agent.last_receipt)

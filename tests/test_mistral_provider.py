@@ -412,3 +412,11 @@ def test_cli_run_writes_valid_sanitized_native_attempt_artifacts(
     assert receipts[0]["outcome"] == ("provider_unavailable" if failure else "ok")
     assert "fixture-secret-mistral" not in json.dumps(receipts)
     assert PRIVATE not in json.dumps(receipts)
+
+
+def test_no_streaming_object(monkeypatch):
+    data = _success()
+    data["object"] = "chat.completion.chunk"
+    _post(monkeypatch, httpx.Response(200, json=data))
+    with pytest.raises(ProviderCallError):
+        _agent().act(_request())

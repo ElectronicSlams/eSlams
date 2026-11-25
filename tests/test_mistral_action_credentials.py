@@ -133,7 +133,7 @@ def test_uncontaminated_action_text_is_returned_without_rewriting(
     monkeypatch.setenv("SECONDARY_API_KEY", SECONDARY)
     response = _agent().act(_request())
     assert response.action == 1 and response.public_explanation == explanation
-    assert response.metadata["raw_action_text"] == content
+    assert "raw_action_text" not in response.metadata
     assert len(calls) == 1
 
 
