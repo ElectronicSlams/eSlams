@@ -10,7 +10,12 @@ import httpx
 import pytest
 from test_model_agents import _request
 
-from eslams.agents import FunctionAgent, ModelProviderAgent, _provider_semaphore
+from eslams.agents import (
+    FunctionAgent,
+    ModelProviderAgent,
+    ProviderCallError,
+    _provider_semaphore,
+)
 from eslams.artifacts import ArtifactValidator
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.deadlines import action_deadline
@@ -37,6 +42,7 @@ def _server(mode, *, received=None):
                 self.send_response(200)
                 self.send_header("content-type", "application/json")
                 self.send_header("content-length", str(len(body)))
+                self.send_header("x-request-id", "deadline-fixture-request")
                 self.end_headers()
                 if mode == "trickle":
                     for byte in body:
@@ -150,9 +156,10 @@ def test_http_bridge_works_inside_an_existing_event_loop_and_after_cancelled_cal
         assert bounded_post(url, headers={}, json={}, timeout=1).json() == {"action": 0}
 
 
-def test_provider_runtime_deadline_records_failed_attempt_and_bounds_queue_retry_waits(monkeypatch):
+@pytest.mark.parametrize("mode", ["headers", "trickle"])
+def test_provider_runtime_deadline_records_failed_attempt(monkeypatch, mode):
     monkeypatch.setenv("OPENAI_API_KEY", "fake-local-key")
-    with _server("trickle") as (url, _):
+    with _server(mode) as (url, _):
         agent = ModelProviderAgent(
             "openai",
             "gpt-test",
@@ -160,16 +167,33 @@ def test_provider_runtime_deadline_records_failed_attempt_and_bounds_queue_retry
             runtime_config=ProviderRuntimeConfig(
                 timeout_ms=250,
                 read_timeout_ms=2000,
+                max_retries=2,
                 gateway_base_url=url,
                 gateway_mode="generic_base_url",
             ),
         )
         start = time.monotonic()
-        with pytest.raises(TimeoutError):
+        # Once headers arrive, the typed failure preserves their observed evidence.
+        expected_error = ProviderCallError if mode == "trickle" else TimeoutError
+        with pytest.raises(expected_error) as exc:
             agent.act(_request())
         assert time.monotonic() - start < 0.8
-        assert agent.last_receipt["outcome"] == "provider_timeout"
+        if mode == "trickle":
+            assert exc.value.error_kind == "provider_timeout"
+            assert exc.value.status_code == 200
+        receipt = agent.last_receipt
+        assert receipt["outcome"] == "provider_timeout"
+        assert receipt["status_code"] == (200 if mode == "trickle" else None)
+        assert receipt["request_id"] == ("deadline-fixture-request" if mode == "trickle" else None)
+        assert receipt["usage"] == {}
+        assert receipt["pricing"]["status"] == "cost_unavailable"
+        assert receipt["estimated_cost"]["status"] == "cost_unavailable"
+        # Optional retries must not replay an attempt with unknown remote work.
         assert len(agent.attempt_receipts) == 1
+
+
+def test_provider_runtime_deadline_bounds_queue_retry_waits(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "fake-local-key")
     # A full concurrency slot cannot wait beyond the same elapsed attempt deadline.
     agent = ModelProviderAgent(
         "openai",
@@ -201,6 +225,8 @@ def test_provider_runtime_deadline_records_failed_attempt_and_bounds_queue_retry
 def test_runner_bounds_worker_and_no_alarm_calls_quarantines_late_actions(
     tmp_path, monkeypatch, worker_context
 ):
+    import eslams.runner as runner_module
+
     release = threading.Event()
     entered = threading.Event()
     finished = threading.Event()
@@ -210,44 +236,59 @@ def test_runner_bounds_worker_and_no_alarm_calls_quarantines_late_actions(
         calls.append(1)
         entered.set()
         try:
-            release.wait(2)
+            if not release.wait(10):
+                raise RuntimeError("test did not release the callback")
             request.observation["late-mutated"] = True
             return request.legal_actions[0]
         finally:
             finished.set()
 
     agent = FunctionAgent(slow)
+    original_call_agent = runner_module._call_agent
+    action_calls = []
+
+    def observe_action(called_agent, request, **kwargs):
+        start = time.monotonic()
+        response, markers, latency_ms = original_call_agent(called_agent, request, **kwargs)
+        if called_agent is agent:
+            action_calls.append((time.monotonic() - start, response, markers))
+        return response, markers, latency_ms
+
+    monkeypatch.setattr(runner_module, "_call_agent", observe_action)
     if not worker_context:
-        monkeypatch.setattr("eslams.runner._alarm_supported", lambda: False)
+        monkeypatch.setattr(runner_module, "_alarm_supported", lambda: False)
     results = []
+    worker = None
 
     def run():
-        start = time.monotonic()
         results.append(
-            (
-                Runner().run(
-                    RunConfig(
-                        arena_id="tic-tac-toe",
-                        agent_1=agent,
-                        time_budget_ms=50,
-                        output_dir=tmp_path / "first",
-                    )
-                ),
-                time.monotonic() - start,
+            Runner().run(
+                RunConfig(
+                    arena_id="tic-tac-toe",
+                    agent_1=agent,
+                    time_budget_ms=50,
+                    output_dir=tmp_path / "first",
+                )
             )
         )
 
     try:
         if worker_context:
-            worker = threading.Thread(target=run)
+            worker = threading.Thread(target=run, daemon=True)
             worker.start()
-            worker.join(timeout=1)
+            worker.join(timeout=5)  # A test watchdog, not an artifact-writing SLA.
             assert not worker.is_alive()
         else:
             run()
-        assert entered.is_set() and len(results) == 1
-        result, elapsed = results[0]
-        assert elapsed < 0.8 and "provider_timeout" in result.score.invalid_reason
+        assert entered.is_set() and not finished.is_set()
+        (result,) = results
+        # Time only the real action call, not setup, scoring or artifact serialization.
+        (action_call,) = action_calls
+        elapsed, response, markers = action_call
+        assert elapsed < 0.8
+        assert response is not None and response.action is None
+        assert {"timeout", "provider_timeout", "no_action"}.issubset(markers)
+        assert "provider_timeout" in result.score.invalid_reason
         assert result.score.match_valid_for_scoring is False
         assert ArtifactValidator().validate_report(result.artifact_path).valid
         files = {
@@ -273,3 +314,7 @@ def test_runner_bounds_worker_and_no_alarm_calls_quarantines_late_actions(
         assert not score["match_valid_for_scoring"]
     finally:
         release.set()
+        if worker is not None:
+            worker.join(timeout=5)
+        if entered.is_set():
+            finished.wait(1)
