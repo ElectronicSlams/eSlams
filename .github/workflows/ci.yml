@@ -31,6 +31,21 @@ jobs:
         run: python -m pip install -e ".[dev]"
       - name: Test
         run: python -m pytest --basetemp="${{ runner.temp }}/eslams-pytest"
+      - name: Stockfish match and replay
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --retry 3 -o stockfish.tar.gz \
+            https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+          echo '9defc0d4e55d49c65a6d042f3e571a39fcea499ade6dbe741b53b8c65e03611f  stockfish.tar.gz' \
+            | sha256sum --check
+          tar -xf stockfish.tar.gz
+          eslams run --arena chess --agent "uci:$RUNNER_TEMP/stockfish/stockfish-linux-x86-64-universal" \
+            --opponent first-legal --uci-depth 8 --require-scoring-valid --run-id stockfish-ci
+          eslams validate runs/stockfish-ci.eslams
+          eslams replay runs/stockfish-ci.eslams --output runs/stockfish-ci.html
       - name: Versioned arena behavior fingerprints
         run: python scripts/verify_arena_versions.py
       - name: Initial-state observation and prompt budgets

@@ -25,6 +25,7 @@ from eslams.arena_transport import (
 from eslams.artifacts import ArtifactValidator, public_result_summary_for_score
 from eslams.bench import arena_step_benchmark
 from eslams.catalogue import availability_rows, game_catalogue_rows, model_catalogue_rows
+from eslams.chess_uci import UciChessAgent
 from eslams.contracts.json_schema import export_schemas
 from eslams.contracts.pricing import PriceCardReference
 from eslams.contracts.provider import ProviderRuntimeConfig
@@ -656,12 +657,14 @@ def _main(argv: list[str] | None = None) -> int:
     run.add_argument(
         "--agent",
         default="random",
-        help="Agent for player_1: random (default), first-legal, URL, or provider:model.",
+        help=("Agent for player_1: random (default), first-legal, URL, provider:model, "
+              "or uci:ABSOLUTE_PATH."),
     )
     run.add_argument(
         "--opponent",
         default="first-legal",
-        help="Agent for player_2: first-legal (default), random, URL, or provider:model.",
+        help=("Agent for player_2: first-legal (default), random, URL, provider:model, "
+              "or uci:ABSOLUTE_PATH."),
     )
     run.add_argument(
         "--seat-agent",
@@ -672,6 +675,10 @@ def _main(argv: list[str] | None = None) -> int:
             "Assign an agent to a named seat; repeat for table arenas. "
             "Overrides --agent/--opponent."
         ),
+    )
+    run.add_argument(
+        "--uci-depth", type=int, default=8,
+        help="Fixed search depth for local UCI chess engines (default: 8).",
     )
     run.add_argument(
         "--run-id", help="Explicit path-safe run ID; existing output requires --overwrite."
@@ -954,8 +961,8 @@ def _main(argv: list[str] | None = None) -> int:
             rate_card_id=args.rate_card_id,
             rate_card_reference=_read_price_card_reference(args.rate_card_reference),
         )
-        agent_1 = _agent_arg(args.agent, runtime_config=provider_runtime)
-        agent_2 = _agent_arg(args.opponent, runtime_config=provider_runtime)
+        agent_1 = _local_run_agent(args.agent, args.uci_depth, provider_runtime)
+        agent_2 = _local_run_agent(args.opponent, args.uci_depth, provider_runtime)
         seat_agents: dict[str, Any] = {}
         for assignment in args.seat_agent:
             player, separator, agent = assignment.partition("=")
@@ -965,7 +972,7 @@ def _main(argv: list[str] | None = None) -> int:
                 )
             if player in seat_agents:
                 raise ValueError(f"duplicate --seat-agent assignment for {player}")
-            seat_agents[player] = _agent_arg(agent, runtime_config=provider_runtime)
+            seat_agents[player] = _local_run_agent(agent, args.uci_depth, provider_runtime)
         agent_1 = seat_agents.get("player_1", agent_1)
         agent_2 = seat_agents.get("player_2", agent_2)
         _print_run_preflight(args, agent_1, agent_2)
@@ -1382,6 +1389,14 @@ def _runner_command(args: argparse.Namespace) -> int:
     raise AssertionError(args.runner_command)
 
 
+def _local_run_agent(
+    value: str, uci_depth: int, runtime_config: ProviderRuntimeConfig,
+) -> str | HttpAgent | ModelProviderAgent | UciChessAgent:
+    if value.startswith("uci:"):
+        return UciChessAgent(Path(value[4:]), depth=uci_depth)
+    return _agent_arg(value, runtime_config=runtime_config)
+
+
 def _agent_arg(
     value: str,
     *,
@@ -1550,8 +1565,8 @@ def _action_arg(value: str) -> Any:
 
 def _print_run_preflight(
     args: argparse.Namespace,
-    agent_1: str | HttpAgent | ModelProviderAgent,
-    agent_2: str | HttpAgent | ModelProviderAgent,
+    agent_1: str | HttpAgent | ModelProviderAgent | UciChessAgent,
+    agent_2: str | HttpAgent | ModelProviderAgent | UciChessAgent,
 ) -> None:
     max_turns = args.max_turns if args.max_turns is not None else "arena-default"
     mode = "archive" if args.archive else "expanded"
@@ -1578,11 +1593,13 @@ def _print_provider_warnings(agent: ModelProviderAgent) -> None:
         )
 
 
-def _agent_label(agent: str | HttpAgent | ModelProviderAgent) -> str:
+def _agent_label(agent: str | HttpAgent | ModelProviderAgent | UciChessAgent) -> str:
     if isinstance(agent, ModelProviderAgent):
         return f"{agent.provider}:{agent.model}"
     if isinstance(agent, HttpAgent):
         return agent.url
+    if isinstance(agent, UciChessAgent):
+        return agent.id
     return str(agent)
 
 
