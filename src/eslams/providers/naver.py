@@ -129,6 +129,7 @@ def call_provider(
         data = _response_json_with_receipt(
             response, provider="naver", model=agent.model,
             capabilities=agent.capabilities, runtime_config=runtime,
+            synchronous=True,
         )
         result = data.get("result")
         result = result if isinstance(result, dict) else {}

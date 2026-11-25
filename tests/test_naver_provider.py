@@ -386,3 +386,15 @@ def test_live_preflight_mock_and_cli_run_artifact(monkeypatch, capsys, tmp_path)
                  "--opponent", "first-legal", "--output-dir", str(tmp_path)]) == 0
     output = json.loads(capsys.readouterr().out)
     assert ArtifactValidator().validate(Path(output["artifact"])) == []
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = mock_post(monkeypatch, status=202)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1
