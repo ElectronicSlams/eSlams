@@ -1,6 +1,6 @@
 {
   "name": "@eslams/core-contracts",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "files": [
