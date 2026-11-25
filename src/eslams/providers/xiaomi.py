@@ -132,9 +132,10 @@ def completion_text(data: dict[str, Any], *, receipt: dict[str, Any], model: str
         fail("provider_refused", "MiMo refused or filtered the requested action")
     if reason in ("length", "repetition_truncation"):
         fail("provider_output_truncated", "MiMo truncated the response; no action accepted")
-    if reason == "tool_calls" or message.get("tool_calls"):
+    if (reason in ("tool_calls", "function_call") or message.get("tool_calls")
+            or message.get("function_call") is not None):
         fail("provider_request_rejected", "MiMo returned tool calls; no action accepted")
-    if (reason != "stop" or choice.get("index") != 0
+    if (reason != "stop" or choice.get("error") is not None or choice.get("index") != 0
             or not isinstance(choice.get("index"), int)
             or isinstance(choice.get("index"), bool)
             or refusal is not None and not isinstance(refusal, str)
