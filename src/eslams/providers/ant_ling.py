@@ -166,6 +166,7 @@ def _call(
     data = _response_json_with_receipt(
         response, provider=PROVIDER_ID, model=agent.model,
         capabilities=agent.capabilities, runtime_config=runtime,
+        synchronous=True,
     )
     raw_usage = data.get("usage")
     usage = None

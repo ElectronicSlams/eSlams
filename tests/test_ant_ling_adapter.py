@@ -455,3 +455,15 @@ def test_invalid_accounting_is_not_filled_or_priced(monkeypatch, usage):
         assert receipt["usage"]["input_tokens"] is None
         assert receipt["usage"]["output_tokens"] is None
         assert receipt["usage"]["total_tokens"] is None
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = _respond(monkeypatch, _wire(), status=202)
+    selected = _agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(_request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1
