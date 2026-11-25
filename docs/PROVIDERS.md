@@ -13,20 +13,17 @@ model discovery through `MOONSHOT_API_KEY`.
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
 | `qwen:<model>` | `DASHSCOPE_API_KEY` | native DashScope text generation | `output.choices[0].message.content` | unknown (no native response model field) |
-
 | `moonshot-ai:<model>` / `kimi:<model>` | `MOONSHOT_API_KEY` | Kimi Chat Completions | `choices[0].message.content` | response `model` |
+| `azure:<deployment>` | `AZURE_AI_API_KEY` (or explicit Entra token) | Azure v1 Chat Completions | `choices[0].message.content` | response `model`; see [setup](AZURE_FOUNDRY.md) |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `upstage:<model>` | `UPSTAGE_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
-
 | `inception:<model>` | `INCEPTION_API_KEY` | Direct Mercury Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
-
 | `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
-
 | `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` | Reka Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 

@@ -12,13 +12,10 @@
 | Chess continuation, lineage and accounting | [CHESS_CONTINUATION.md](CHESS_CONTINUATION.md) |
 | Artifact profiles, signatures and migration boundaries | [ARTIFACTS.md](ARTIFACTS.md) |
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
-| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |
+| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md), [Azure Foundry](AZURE_FOUNDRY.md) |
 | Moonshot/Kimi native API, regions and fixture provenance | [PROVIDER_MOONSHOT.md](PROVIDER_MOONSHOT.md) |
-
 | StepFun direct API scope and fixture provenance | [STEPFUN.md](providers/STEPFUN.md) |
-
 | Inception Labs Mercury direct adapter (planned 0.7.1) | [INCEPTION.md](INCEPTION.md) |
-
 | Reka direct adapter research and usage | [PROVIDER_REKA.md](PROVIDER_REKA.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |

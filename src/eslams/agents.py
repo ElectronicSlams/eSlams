@@ -41,7 +41,14 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry, moonshot, qwen, upstage
+from eslams.providers import (
+    ModelCapabilities,
+    azure,
+    load_provider_registry,
+    moonshot,
+    qwen,
+    upstage,
+)
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -50,13 +57,13 @@ from eslams.providers.inception import normalize_provider as normalize_inception
 from eslams.providers.inception import validate_model_id as validate_inception_model_id
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.reka import call as call_reka
+from eslams.providers.reka import configuration_error as reka_configuration_error
 from eslams.providers.stepfun import ENDPOINT_KIND as STEPFUN_ENDPOINT_KIND
 from eslams.providers.stepfun import PARSER_VERSION as STEPFUN_PARSER_VERSION
 from eslams.providers.stepfun import call as call_stepfun
 from eslams.providers.stepfun import usage_fields as stepfun_usage_fields
 from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
-from eslams.providers.reka import call as call_reka
-from eslams.providers.reka import configuration_error as reka_configuration_error
 
 
 class AgentError(RuntimeError):
@@ -433,6 +440,7 @@ class ModelProviderAgent:
             error = reka_configuration_error(self.model)
             if error:
                 raise ValueError(error)
+        self.provider = azure.normalize_provider(self.provider)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -639,6 +647,7 @@ class ModelProviderAgent:
                         {"raw_action_text": text[:500]}
                         if self.provider not in {
                             "arcee-ai",
+                            "azure",
                             "inception",
                             "krutrim",
                             "moonshot-ai",
@@ -704,6 +713,8 @@ class ModelProviderAgent:
             from eslams.providers.arcee import call
 
             return call(self, api_key, prompt)
+        if self.provider == "azure":
+            return azure.call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -1303,7 +1314,11 @@ def _post_json(
         kind = _provider_error_kind(response.status_code)
         if provider == moonshot.PROVIDER_ID:
             kind = moonshot.http_error_kind(response, kind)
-        retry_after = _retry_after_seconds(response)
+        if provider == "azure" and azure.is_content_filter_rejection(response):
+            kind = "provider_refused"
+        retry_after = (azure.retry_after_seconds(response) if provider == "azure" else None)
+        if retry_after is None:
+            retry_after = _retry_after_seconds(response)
         if provider == upstage.PROVIDER_ID:
             category_delay = upstage.retry_after_seconds(response)
             if category_delay is not None:
@@ -2072,6 +2087,7 @@ def _provider_endpoint(
 def _endpoint_kind(provider: str) -> str:
     return {
         "qwen": qwen.ENDPOINT_KIND,
+        "azure": azure.ENDPOINT_KIND,
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -2091,6 +2107,7 @@ def _endpoint_kind(provider: str) -> str:
 def _parser_version(provider: str) -> str:
     return {
         "qwen": qwen.PARSER_VERSION,
+        "azure": azure.PARSER_VERSION,
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -2277,7 +2294,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"inception", "openai", "openrouter", "reka-ai", "upstage"}
+            True if provider in {"azure", "inception", "openai", "openrouter", "reka-ai", "upstage"}
             else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
@@ -2650,7 +2667,9 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", moonshot.PROVIDER_ID, "upstage", "stepfun", "inception", "reka-ai"}:
+    elif provider in {
+        "openrouter", moonshot.PROVIDER_ID, "upstage", "stepfun", "inception", "reka-ai", "azure",
+    }:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

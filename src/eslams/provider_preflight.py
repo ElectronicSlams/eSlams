@@ -13,11 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry, moonshot, upstage
-from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
-from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
-from eslams.providers.qwen import validate_controls as qwen_validate_controls
-from eslams.providers.qwen import validate_model as qwen_validate_model
+from eslams.providers import azure, load_provider_registry, moonshot, upstage
 from eslams.providers.arcee import API_KEY_ENV as ARCEE_API_KEY_ENV
 from eslams.providers.arcee import MODELS_ENDPOINT as ARCEE_MODELS_ENDPOINT
 from eslams.providers.arcee import validate_configuration as validate_arcee_configuration
@@ -25,22 +21,26 @@ from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
 from eslams.providers.inception import MODELS_ENDPOINT as INCEPTION_MODELS_ENDPOINT
 from eslams.providers.inception import configuration_error as inception_configuration_error
 from eslams.providers.inception import credential_echo as inception_credential_echo
-from eslams.providers.inception import normalize_provider as normalize_inception_provider
 from eslams.providers.inception import validate_model_id as validate_inception_model_id
+from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
+from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
+from eslams.providers.qwen import validate_controls as qwen_validate_controls
+from eslams.providers.qwen import validate_model as qwen_validate_model
 from eslams.providers.registry import PROVIDER_ALIASES
-from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
-from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
-from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
-from eslams.providers.stepfun import validate_model_id as validate_stepfun_model_id
 from eslams.providers.reka import API_KEY_ENV as REKA_API_KEY_ENV
 from eslams.providers.reka import MODELS_ENDPOINT as REKA_MODELS_ENDPOINT
 from eslams.providers.reka import configuration_error as reka_configuration_error
 from eslams.providers.reka import credential_echo as reka_credential_echo
+from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
+from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
+from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
+from eslams.providers.stepfun import validate_model_id as validate_stepfun_model_id
 
 DEFAULT_PROVIDER_ENV = {
     "qwen": "DASHSCOPE_API_KEY",
     moonshot.PROVIDER_ID: moonshot.API_KEY_ENV,
     "arcee-ai": ARCEE_API_KEY_ENV,
+    "azure": azure.API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -88,48 +88,56 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = canonicalize_qwen_provider(provider)
-    if provider == "qwen":
-        qwen_validate_model(model)
-    configuration_error = None
-    if provider == upstage.PROVIDER_ID:
-        upstage.validate_model(model)
-        try:
-            upstage.reasoning_effort(runtime_config)
-        except ProviderCallError as exc:
-            configuration_error = _public_error(exc, provider=provider, model=model)
     if provider.strip() == "stepfun":
         provider = "stepfun"
-    configuration_error = None
-    if provider == "stepfun":
-        validate_stepfun_model_id(model)
-        try:
-            validate_stepfun_configuration(model, runtime_config)
-        except ValueError as exc:
-            configuration_error = str(exc)
-    configuration_error = None
-    if provider.replace("_", "-") in {"arcee", "arcee-ai"}:
-        try:
-            validate_arcee_configuration(model, runtime_config)
-        except ValueError as exc:
-            configuration_error = str(exc)
-    configuration_error = None
-    if normalize_inception_provider(provider) == "inception":
-        validate_inception_model_id(model)
-        configuration_error = inception_configuration_error(runtime_config)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
         validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
-    configuration_error = (
-        reka_configuration_error(model, runtime_config) if record.provider == "reka-ai" else None
-    )
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
     credential_environment = DEFAULT_PROVIDER_ENV.get(record.provider)
     credential_error = None
+    if record.provider == "qwen":
+        qwen_validate_model(model)
+    elif record.provider == upstage.PROVIDER_ID:
+        upstage.validate_model(model)
+    elif record.provider == "stepfun":
+        validate_stepfun_model_id(model)
+    elif record.provider == "inception":
+        validate_inception_model_id(model)
+
+    configuration_error: dict[str, Any] | None = None
+    try:
+        if record.provider == "qwen":
+            qwen_validate_controls(runtime_config)
+            qwen_generation_endpoint()
+        elif record.provider == upstage.PROVIDER_ID:
+            upstage.reasoning_effort(runtime_config)
+        elif record.provider == "stepfun":
+            validate_stepfun_configuration(model, runtime_config)
+        elif record.provider == "arcee-ai":
+            validate_arcee_configuration(model, runtime_config)
+        elif record.provider == "inception":
+            message = inception_configuration_error(runtime_config)
+            if message is not None:
+                raise ValueError(message)
+        elif record.provider == "reka-ai":
+            message = reka_configuration_error(model, runtime_config)
+            if message is not None:
+                raise ValueError(message)
+        elif record.provider == "azure":
+            credential_environment = azure.credential_environment()
+            azure.endpoint(runtime_config)
+            if not model or not model.strip():
+                raise ValueError("Azure requires an explicit deployment name")
+    except ProviderCallError as exc:
+        configuration_error = _public_error(exc, provider=provider, model=model)
+    except ValueError as exc:
+        configuration_error = {"error_class": "provider_request_rejected", "message": str(exc)}
     credential_present = False
     if credential_environment:
         try:
@@ -159,26 +167,14 @@ def provider_preflight(
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
-    configuration_error = None
 
-    if record.provider == "qwen":
-        try:
-            qwen_validate_controls(runtime_config)
-            qwen_generation_endpoint()
-        except ValueError as exc:
-            configuration_error = str(exc)
-
-    if configuration_error:
-        error = {"error_class": "provider_request_rejected", "message": configuration_error}
+    if configuration_error is not None:
+        error = configuration_error
     elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
-    elif configuration_error is not None:
-        error = configuration_error
-    elif configuration_error:
-        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -189,8 +185,6 @@ def provider_preflight(
             "error_class": "provider_request_rejected",
             "message": f"model {model!r} is not registered for text game actions",
         }
-    elif configuration_error:
-        error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
     elif not live:

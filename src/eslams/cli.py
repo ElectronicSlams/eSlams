@@ -51,7 +51,7 @@ from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
-from eslams.providers import load_provider_registry, moonshot
+from eslams.providers import azure, load_provider_registry, moonshot
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
@@ -1445,9 +1445,9 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
-    from eslams.providers.qwen import canonicalize_provider, validate_model
     from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
     from eslams.providers.inception import normalize_provider as normalize_inception_provider
+    from eslams.providers.qwen import canonicalize_provider, validate_model
 
     defaults = {
         "qwen": ("", "DASHSCOPE_API_KEY"),
@@ -1482,6 +1482,14 @@ def _provider_agent(
             version=model, runtime_config=runtime_config,
         )
     provider = normalize_inception_provider(provider)
+    provider = azure.normalize_provider(provider)
+    if provider == "azure":
+        if not model or not model.strip():
+            raise ValueError("Azure requires an explicit deployment name: azure:<deployment>")
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=azure.credential_environment(),
+            version=model, runtime_config=runtime_config,
+        )
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 

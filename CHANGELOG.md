@@ -46,6 +46,11 @@
   preflight, and exclude primary/secondary credential echoes from Mercury
   receipts, discovery results and action text, including partial/error responses.
 
+- Add an Azure Foundry direct v1 Chat Completions adapter with explicit deployment
+  identity, API-key/Entra-token authentication, conservative retries and sanitized
+  usage receipts. Azure aliases now select Azure inference instead of the
+  Microsoft publisher catalogue. See `docs/AZURE_FOUNDRY.md` for setup and scope.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
