@@ -281,7 +281,7 @@ def test_noncomplete_output_never_becomes_action(monkeypatch, reason, kind):
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize("case", ["error", "wrong-model", "tools", "reasoning-only", "empty",
+@pytest.mark.parametrize("case", ["error", "choice-error", "function-call", "wrong-model", "tools", "reasoning-only", "empty",
                                   "choices", "object", "role", "index"])
 def test_semantic_and_shape_failures(monkeypatch, case):
     payload = body()
@@ -289,6 +289,10 @@ def test_semantic_and_shape_failures(monkeypatch, case):
     if case == "error":
         payload["error_code"] = "ModelArts.81001"
         payload["error_msg"] = SECRET
+    elif case == "choice-error":
+        choice["error"] = {"message": SECRET}
+    elif case == "function-call":
+        choice["message"]["function_call"] = {"name": "unused", "arguments": SECRET}
     elif case == "wrong-model":
         payload["model"] = "different-model"
     elif case == "tools":

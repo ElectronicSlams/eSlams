@@ -204,9 +204,13 @@ def _text(
         reject("provider_output_truncated")
     if reason == "content_filter" or (isinstance(message, dict) and message.get("refusal")):
         reject("provider_refused")
-    if reason == "tool_calls" or (isinstance(message, dict) and message.get("tool_calls")):
+    if reason in ("tool_calls", "function_call") or (
+        isinstance(message, dict)
+        and (message.get("tool_calls") or message.get("function_call") is not None)
+    ):
         reject("provider_request_rejected")
-    if reason != "stop" or not isinstance(message, dict) or message.get("role") != "assistant":
+    if (reason != "stop" or choice.get("error") is not None
+            or not isinstance(message, dict) or message.get("role") != "assistant"):
         reject()
     content = message.get("content")
     if (not isinstance(content, str) or not content.strip()
