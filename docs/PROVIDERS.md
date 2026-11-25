@@ -10,16 +10,12 @@ eSlams Core has native provider support for OpenAI, Anthropic, Google Gemini,
 OpenRouter, Amazon Bedrock, Fireworks, and [Z.ai and Zhipu](PROVIDER_ZAI.md).
 Snowflake Cortex uses account-scoped credentials and endpoints. See
 [Snowflake Cortex](providers/SNOWFLAKE.md) for its native wire details.
-The adapters call raw
-HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
-convenience properties.
+The adapters use documented REST response envelopes.
 
-The unreleased 0.7.1 adapter work also adds native
-[Xiaomi MiMo](providers/XIAOMI_MIMO.md), with offline raw-wire regressions and
-explicit native thinking controls. The package version remains 0.7.0 until release.
+[Xiaomi MiMo](providers/XIAOMI_MIMO.md) supports explicit native thinking controls
+and has offline REST fixture coverage.
 
-The next-release adapter work also adds [direct Baichuan](providers/BAICHUAN.md).
-Its availability and accounting verification limits are documented there.
+See [direct Baichuan](providers/BAICHUAN.md) for availability and accounting limits.
 
 ## Provider Matrix
 
@@ -33,16 +29,13 @@ Its availability and accounting verification limits are documented there.
 | `zhipu:<model>` | `ZHIPU_API_KEY` | Zhipu China Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `fireworks:<model-resource>` | `FIREWORKS_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
-
+| `databricks:<endpoint>` | `DATABRICKS_TOKEN` | Model Serving Chat Completions | `choices[0].message.content` | response `model`, if supplied |
 | `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` | Cortex Chat Completions | `choices[0].message.content` with `finish_reason=stop` | response `model` only |
-
 | `iflytek:<model>` | `IFLYTEK_API_PASSWORD` | Spark HTTP | `choices[0].message.content` | optional response `model`; otherwise unknown |
-
 | `poolside:<model-id>` | `POOLSIDE_API_KEY` | Poolside-hosted Chat Completions | `choices[0].message.content` | response `model` |
-
 | `xiaomi:<model>` (`mimo`, `xiaomi-mimo`) | `MIMO_API_KEY` | MiMo direct Chat Completions | `choices[0].message.content` | response `model` |
-
 | `baichuan-ai:<model>` (`baichuan` alias) | `BAICHUAN_API_KEY` | Baichuan Chat Completions | `choices[0].message.content` | response `model`, if supplied |
+| `perplexity:<model>` | `PERPLEXITY_API_KEY` | Agent REST API | typed `output[].content[]` text | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [Fireworks adapter guide](FIREWORKS.md) documents aliases, exact model resources,

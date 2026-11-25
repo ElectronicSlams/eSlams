@@ -52,9 +52,9 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import fireworks, load_provider_registry
-from eslams.providers.zai import canonical_provider as canonical_zai_provider
 from eslams.providers.poolside import API_KEY_ENV, normalize_provider
 from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
+from eslams.providers.zai import canonical_provider as canonical_zai_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1450,11 +1450,11 @@ def _provider_agent(
     from eslams.providers.snowflake import canonical_provider as canonical_snowflake_provider
 
     if value.split(":", 1)[0].lower() == "perplexity":
-        from eslams.providers.perplexity import API_KEY_ENV
+        from eslams.providers.perplexity import API_KEY_ENV as PERPLEXITY_API_KEY_ENV
 
         model = value.split(":", 1)[1] if ":" in value else ""
         return ModelProviderAgent(
-            provider="perplexity", model=model, api_key_env=API_KEY_ENV,
+            provider="perplexity", model=model, api_key_env=PERPLEXITY_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
     defaults = {

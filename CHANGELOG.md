@@ -13,8 +13,6 @@
 - Remove the `zhipuai-coding-plan` catalogue alias so it cannot activate standard
   API billing. Coding Plan endpoints remain unsupported. See `docs/PROVIDER_ZAI.md`.
 
-## Unreleased — planned 0.7.1
-
 - Add a native Snowflake Cortex Chat Completions adapter with explicit account
   configuration, exact native model IDs, and `cortex`/`snowflake-cortex` aliases.
 - Preserve full history, native defaults, explicit reasoning controls, sanitized
@@ -29,15 +27,11 @@
   unknown; native costs and safe automatic retries remain unverified. See
   `docs/POOLSIDE.md` for official sources and restricted-reference limitations.
 
-## Unreleased — 0.7.1 adapter work
-
 - Add the Xiaomi MiMo direct Chat Completions adapter (`xiaomi`, `mimo`,
   `xiaomi-mimo`), `MIMO_API_KEY`, and Models discovery. Preserve exact model IDs,
   provider defaults and full supplied history. Retain unknown identity/accounting
   and sanitized failure receipts; reject filtered, truncated and tool-call output.
   See [the MiMo guide](docs/providers/XIAOMI_MIMO.md) for sources and scope.
-
-## Unreleased QA correction
 
 - Send an explicit typed message item to the Perplexity Agent API. Retain and
   test rejection of mixed search/tool output and unverified model-specific efforts.

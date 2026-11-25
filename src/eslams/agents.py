@@ -42,17 +42,25 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, baichuan, databricks, fireworks, load_provider_registry, poolside, zai
+from eslams.providers import (
+    ModelCapabilities,
+    baichuan,
+    databricks,
+    fireworks,
+    load_provider_registry,
+    poolside,
+    zai,
+)
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.perplexity import call as call_perplexity
+from eslams.providers.perplexity import validate_config as validate_perplexity_config
 from eslams.providers.snowflake import call as call_snowflake
 from eslams.providers.snowflake import canonical_provider
 from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
-from eslams.providers.perplexity import call as call_perplexity
-from eslams.providers.perplexity import validate_config as validate_perplexity_config
 
 
 class AgentError(RuntimeError):
@@ -636,6 +644,8 @@ class ModelProviderAgent:
                         {"raw_action_text": text[:500]}
                         if self.provider in {
                             "openai", "anthropic", "google", "gemini", "openrouter", "bedrock",
+                            # Poolside scrubs credentials before returning action text.
+                            "poolside",
                         } else {}
                     ),
                     "provider_receipt": self.last_receipt,
@@ -2123,9 +2133,9 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == baichuan.PROVIDER_ID:
         return baichuan.normalize_usage(usage)
     if provider == "krutrim":
-        from eslams.providers.krutrim import normalize_usage
+        from eslams.providers.krutrim import normalize_usage as normalize_krutrim_usage
 
-        return normalize_usage(usage)
+        return normalize_krutrim_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     validation_errors: list[str] = []
