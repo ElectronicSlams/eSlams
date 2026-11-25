@@ -24,6 +24,17 @@
   and project configuration, conservative accounting, credential-echo protection
   and deterministic wire/CLI tests. See `docs/PROVIDER_IBM_RHAI.md` for limits.
 
+- Use dated Mistral examples and CLI identity guidance, validate documented per-model efforts, and exclude encoded transport credential diagnostics.
+
+- Add a native Mistral AI Chat Completions adapter (`mistral-ai`, alias `mistral`)
+  with account model discovery, sanitized receipts and offline wire regressions.
+  See `docs/providers/MISTRAL.md` for supported behavior and limitations.
+- Require explicit Mistral model IDs and matching returned identity, reject
+  unsupported reasoning token budgets, and scrub configured primary/secondary
+  credential echoes from provider results.
+- Reject credential-contaminated Mistral actions before parsing or repair,
+  including mixed/full JSON Unicode escapes, without rewriting model actions.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

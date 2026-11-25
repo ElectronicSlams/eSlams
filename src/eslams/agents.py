@@ -45,6 +45,8 @@ from eslams.providers import ModelCapabilities, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
+from eslams.providers.mistral import complete as complete_mistral
+from eslams.providers.mistral import configuration_error as mistral_configuration_error
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 from eslams.providers.shanghai_ai_lab import (
@@ -421,6 +423,12 @@ class ModelProviderAgent:
         self.provider = normalize_alias(self.provider)
         if self.provider == "ibm-rhai":
             validate_model(self.model)
+        if self.provider.strip().replace("_", "-") in {"mistral", "mistral-ai"}:
+            self.provider = "mistral-ai"
+            error = mistral_configuration_error(self.model, None)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -460,6 +468,11 @@ class ModelProviderAgent:
         self.last_receipt = None
         self.attempt_receipts = []
         request = ActRequest.from_mapping(request.to_dict())
+        if self.provider == "mistral-ai":
+            error = mistral_configuration_error(self.model, self.runtime_config)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider, model=self.model)
         policy = request.metadata.get("model_execution_policy")
         output = policy.get("output", {}) if isinstance(policy, dict) else {}
         requested = output.get("max_tokens") if output.get("mode") == "bounded" else None
@@ -685,6 +698,8 @@ class ModelProviderAgent:
             return call(self, api_key, prompt)
         if self.provider == "shanghai-ai-lab":
             return call_shanghai_ai_lab(self, api_key, prompt)
+        if self.provider == "mistral-ai":
+            return complete_mistral(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -2037,6 +2052,7 @@ def _provider_endpoint(
 
 def _endpoint_kind(provider: str) -> str:
     return {
+        "mistral-ai": "mistral_chat_completions",
         "openai": "openai_responses",
         "apodex": "apodex_chat_completions",
         "anthropic": "anthropic_messages",
@@ -2053,6 +2069,7 @@ def _endpoint_kind(provider: str) -> str:
 
 def _parser_version(provider: str) -> str:
     return {
+        "mistral-ai": "mistral-chat-completions-raw-v1",
         "openai": "openai-responses-raw-v2",
         "apodex": "apodex-chat-completions-raw-v1",
         "anthropic": "anthropic-messages-raw-v2",
@@ -2077,6 +2094,12 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == "ibm-rhai":
         from eslams.providers.ibm_rhai import normalize_usage
         return normalize_usage(usage)
+    if provider == "mistral-ai":
+        # Only documented raw REST token counters; never SDK default zeros or
+        # unverified cache/reasoning/cost extensions. Missing counters stay null.
+        usage = {key: usage[key] for key in (
+            "prompt_tokens", "completion_tokens", "total_tokens",
+        ) if key in usage}
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(

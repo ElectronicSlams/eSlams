@@ -14,10 +14,16 @@ from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
+from eslams.providers.mistral import API_KEY_ENV as MISTRAL_API_KEY_ENV
+from eslams.providers.mistral import MODELS_ENDPOINT as MISTRAL_MODELS_ENDPOINT
+from eslams.providers.mistral import configuration_error as mistral_configuration_error
+from eslams.providers.mistral import contains_credential as mistral_contains_credential
+from eslams.providers.mistral import discovery_guard as mistral_discovery_guard
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.shanghai_ai_lab import validate_configuration as validate_shanghai_ai_lab
 
 DEFAULT_PROVIDER_ENV = {
+    "mistral-ai": MISTRAL_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -32,6 +38,7 @@ DEFAULT_PROVIDER_ENV = {
 }
 
 _MODELS_ENDPOINTS = {
+    "mistral-ai": MISTRAL_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "apodex": "https://api.apodex.ai/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
@@ -83,12 +90,17 @@ def provider_preflight(
     if provider == "ibm-rhai":
         validate_model(model)
         config_error = ibm_configuration_error(runtime_config)
+    mistral_error = (
+        mistral_configuration_error(model, runtime_config)
+        if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"} else None
+    )
+    registry_model = "" if mistral_error and not isinstance(model, str) else model
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
         validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
-    record = provider_registry.resolve(provider, model)
+    record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
@@ -118,7 +130,7 @@ def provider_preflight(
         "response_parsing": False,
         "usage_extraction": False,
     }
-    warnings = provider_registry.warnings_for(provider, model)
+    warnings = provider_registry.warnings_for(provider, registry_model)
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
@@ -133,6 +145,8 @@ def provider_preflight(
         }
     elif config_error:
         error = {"error_class": "provider_request_rejected", "message": config_error}
+    elif mistral_error:
+        error = {"error_class": "provider_request_rejected", "message": mistral_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -254,7 +268,8 @@ def provider_preflight(
         "readiness": {
             "configuration_ready": (checks["adapter_available"] is True
                                     and credential_error is None and configuration_error is None
-                                    and config_error is None),
+                                    and config_error is None
+                                    and mistral_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -283,6 +298,7 @@ def provider_preflight(
     return payload
 
 
+@mistral_discovery_guard
 def provider_models_live(provider: str) -> list[str] | None:
     """Discover every model page, or fail without treating partial results as complete.
 
@@ -369,6 +385,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
             if any(secret in raw for secret in apodex_credentials):
+                raise _discovery_schema_error(provider)
+            if provider == "mistral-ai" and mistral_contains_credential(raw, api_key):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

@@ -654,7 +654,9 @@ def _main(argv: list[str] | None = None) -> int:
     run.add_argument(
         "--agent",
         default="random",
-        help="Agent for player_1: random (default), first-legal, URL, or provider:model.",
+        help=("Agent for player_1: random (default), first-legal, URL, or provider:model. "
+              "Mistral requires an exact response model ID; use a dated ID such as "
+              "mistral:mistral-small-2603. An alias resolving to a different ID is rejected."),
     )
     run.add_argument(
         "--opponent",
@@ -1445,6 +1447,7 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
+        "mistral-ai": ("", "MISTRAL_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1476,6 +1479,10 @@ def _provider_agent(
             provider=provider, model=model, api_key_env=KRUTRIM_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"}:
+        provider = "mistral-ai"
+        if not model.strip():
+            raise ValueError("Mistral requires a non-empty explicit model ID")
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
