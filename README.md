@@ -732,6 +732,9 @@ Snowflake also requires `SNOWFLAKE_ACCOUNT_URL`. See the
 region policy, and completion/accounting limitations. `cortex` and `snowflake-cortex`
 are provider aliases; a model is always required.
 
+The next-release [Baichuan adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BAICHUAN.md) additionally accepts
+`baichuan-ai:<exact-model>` and `baichuan:<exact-model>` using `BAICHUAN_API_KEY`.
+
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
 `usage.cost`, and Bedrock uses Converse. OpenRouter provider fallback is

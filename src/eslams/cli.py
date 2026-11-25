@@ -52,9 +52,9 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import fireworks, load_provider_registry
-from eslams.providers.zai import canonical_provider
+from eslams.providers.zai import canonical_provider as canonical_zai_provider
 from eslams.providers.poolside import API_KEY_ENV, normalize_provider
-from eslams.providers.xiaomi import canonical_provider
+from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1453,6 +1453,9 @@ def _provider_agent(
         "zai": ("glm-5.3", "ZAI_API_KEY"),
         "zhipu": ("glm-5.3", "ZHIPU_API_KEY"),
         "poolside": ("", API_KEY_ENV),
+        "baichuan": ("", "BAICHUAN_API_KEY"),
+        "baichuan-ai": ("", "BAICHUAN_API_KEY"),
+        "baichuan_ai": ("", "BAICHUAN_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1470,7 +1473,7 @@ def _provider_agent(
     provider = canonical_snowflake_provider(provider)
     if provider == "snowflake" and not model.strip():
         raise ValueError("Snowflake requires an explicit native model ID: snowflake:<model>")
-    provider = canonical_provider(provider.lower())
+    provider = canonical_zai_provider(provider.lower())
     if provider in fireworks.PROVIDER_ALIASES:
         if not model:
             raise ValueError("Fireworks requires an explicit model resource: fireworks:<model>")
@@ -1488,7 +1491,7 @@ def _provider_agent(
     from eslams.providers.iflytek import canonical_provider as canonical_iflytek_provider
     provider = canonical_iflytek_provider(provider)
     provider = normalize_provider(provider.lower())
-    provider = canonical_provider(provider)
+    provider = canonical_xiaomi_provider(provider)
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV as KRUTRIM_API_KEY_ENV
 
@@ -1501,6 +1504,8 @@ def _provider_agent(
     if provider == "poolside" and not model.strip():
         raise ValueError("Poolside requires an explicit model: poolside:<model-id>")
     default_model, env_name = defaults[provider]
+    if provider in {"baichuan", "baichuan-ai", "baichuan_ai"} and not model.strip():
+        raise ValueError("Baichuan requires an exact provider-native model ID")
     return ModelProviderAgent(
         provider=provider,
         model=model or default_model,

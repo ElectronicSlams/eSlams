@@ -13,8 +13,9 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import databricks, fireworks, load_provider_registry
+from eslams.providers import baichuan, databricks, fireworks, load_provider_registry
 from eslams.providers.poolside import API_KEY_ENV, MODELS_ENDPOINT, configuration_error
+from eslams.providers.baichuan import API_KEY_ENV as BAICHUAN_API_KEY_ENV
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.zai import API_KEY_ENVS
 from eslams.providers.snowflake import connection_settings as snowflake_connection_settings
@@ -22,6 +23,7 @@ from eslams.providers.snowflake import connection_settings as snowflake_connecti
 DEFAULT_PROVIDER_ENV = {
     **API_KEY_ENVS,
     "poolside": API_KEY_ENV,
+    "baichuan-ai": BAICHUAN_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -67,6 +69,8 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider in baichuan.ALIASES and not isinstance(model, str):
+        raise ValueError("Baichuan requires an exact provider-native model ID")
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -111,13 +115,13 @@ def provider_preflight(
             checks["account_endpoint_configured"] = False
             connection_error = str(exc)
     warnings = provider_registry.warnings_for(provider, model)
-    configuration_error = None
+    databricks_error = None
     if record.provider == databricks.PROVIDER_ID:
         try:
             databricks.invocation_endpoint(model)
         except ValueError as exc:
-            configuration_error = str(exc)
-        checks["workspace_endpoint_configured"] = configuration_error is None
+            databricks_error = str(exc)
+        checks["workspace_endpoint_configured"] = databricks_error is None
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
@@ -125,6 +129,12 @@ def provider_preflight(
     poolside_error = (
         configuration_error(model, runtime_config) if record.provider == "poolside" else None
     )
+    baichuan_error = None
+    if record.provider == baichuan.PROVIDER_ID:
+        try:
+            baichuan.validate_controls(model, runtime_config)
+        except ProviderCallError as exc:
+            baichuan_error = _public_error(exc, provider=provider, model=model)
 
     if poolside_error:
         error = {"error_class": "provider_request_rejected", "message": poolside_error}
@@ -133,6 +143,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif baichuan_error is not None:
+        error = baichuan_error
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -143,8 +155,8 @@ def provider_preflight(
             "error_class": "provider_request_rejected",
             "message": f"model {model!r} is not registered for text game actions",
         }
-    elif configuration_error:
-        error = {"error_class": "provider_request_rejected", "message": configuration_error}
+    elif databricks_error:
+        error = {"error_class": "provider_request_rejected", "message": databricks_error}
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
     elif connection_error:
@@ -222,6 +234,11 @@ def provider_preflight(
                     _is_int(usage.get(key))
                     for key in ("input_tokens", "output_tokens", "total_tokens")
                 )
+                if record.provider == baichuan.PROVIDER_ID and isinstance(usage, dict):
+                    checks["usage_extraction"] = (
+                        checks["usage_extraction"] is True
+                        and not usage.get("usage_validation_errors")
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -242,6 +259,11 @@ def provider_preflight(
         )
         and (not strict_catalogue or not live or checks["account_model_visible"] is not False)
     )
+    usage_complete = checks["usage_extraction"] is True
+    if record.provider == baichuan.PROVIDER_ID:
+        usage = receipt.get("usage") if isinstance(receipt, dict) else None
+        usage_complete = (usage_complete and isinstance(usage, dict)
+                          and isinstance(usage.get("reasoning_included_in_output"), bool))
     payload: dict[str, Any] = {
         "provider": provider,
         "model": model,
@@ -254,13 +276,13 @@ def provider_preflight(
         "readiness": {
             "configuration_ready": (
                 checks["adapter_available"] is True and credential_error is None
-                and connection_error is None and configuration_error is None
-                and poolside_error is None
+                and connection_error is None and databricks_error is None
+                and poolside_error is None and baichuan_error is None
             ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
             "cost_and_official_eligibility": "not_assessed",
             "meaning_of_ok": "configuration ready, and if live, one legal action observed",
         },
@@ -275,7 +297,7 @@ def provider_preflight(
             "schema_version": "eslams.provider.receipt.v2",
             "outcome": receipt.get("outcome") if isinstance(receipt, dict) else "not_called",
             "redaction_version": "provider-receipt-redaction-v1",
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
         },
     }
     if error is not None:

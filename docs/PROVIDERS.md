@@ -15,6 +15,9 @@ The unreleased 0.7.1 adapter work also adds native
 [Xiaomi MiMo](providers/XIAOMI_MIMO.md), with offline raw-wire regressions and
 explicit native thinking controls. The package version remains 0.7.0 until release.
 
+The next-release adapter work also adds [direct Baichuan](providers/BAICHUAN.md).
+Its availability and accounting verification limits are documented there.
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
@@ -35,6 +38,8 @@ explicit native thinking controls. The package version remains 0.7.0 until relea
 | `poolside:<model-id>` | `POOLSIDE_API_KEY` | Poolside-hosted Chat Completions | `choices[0].message.content` | response `model` |
 
 | `xiaomi:<model>` (`mimo`, `xiaomi-mimo`) | `MIMO_API_KEY` | MiMo direct Chat Completions | `choices[0].message.content` | response `model` |
+
+| `baichuan-ai:<model>` (`baichuan` alias) | `BAICHUAN_API_KEY` | Baichuan Chat Completions | `choices[0].message.content` | response `model`, if supplied |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [Fireworks adapter guide](FIREWORKS.md) documents aliases, exact model resources,
