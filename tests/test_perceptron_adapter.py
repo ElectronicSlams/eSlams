@@ -371,7 +371,9 @@ def test_invalid_action_does_not_retry_or_return_fallback(monkeypatch):
     assert instance.last_receipt["usage"]["total_tokens"] == 16
 
 
-@pytest.mark.parametrize("field", ["choices", "message", "content", "role", "index", "tools"])
+@pytest.mark.parametrize("field", [
+    "choices", "message", "content", "role", "index", "tools", "choice_error",
+])
 def test_malformed_native_wire_cannot_become_action(monkeypatch, field):
     data = copy.deepcopy(payload())
     choice = data["choices"][0]
@@ -385,6 +387,8 @@ def test_malformed_native_wire_cannot_become_action(monkeypatch, field):
         choice["message"]["role"] = "user"
     elif field == "index":
         choice["index"] = True
+    elif field == "choice_error":
+        choice["error"] = {"message": KEY}
     else:
         choice["message"]["tool_calls"] = [{"id": "call", "function": {"arguments": KEY}}]
     respond(monkeypatch, data)

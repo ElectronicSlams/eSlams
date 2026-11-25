@@ -155,6 +155,9 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             raise ProviderCallError("invalid Perceptron completion envelope",
                                     error_kind="provider_response_schema_mismatch")
         choice = choices[0]
+        if choice.get("error") is not None:
+            raise ProviderCallError("Perceptron returned a completion error",
+                                    error_kind="provider_response_schema_mismatch")
         message = choice.get("message")
         reason = choice.get("finish_reason")
         receipt["finish_reason"] = reason if reason in (
