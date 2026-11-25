@@ -19,6 +19,11 @@
   spellings and configuration changed after construction before transport.
   See `docs/SHANGHAI_AI_LAB.md`; the package version is unchanged.
 
+- Add native Red Hat AI Inference on IBM Cloud chat under `ibm-rhai`, separate
+  from Granite model-author names and watsonx hosting. Includes explicit region
+  and project configuration, conservative accounting, credential-echo protection
+  and deterministic wire/CLI tests. See `docs/PROVIDER_IBM_RHAI.md` for limits.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

@@ -27,6 +27,7 @@ DEFAULT_PROVIDER_ENV = {
     "liquid-ai": "LIQUID_API_KEY",
     "apodex": "APODEX_API_KEY",
     "shanghai-ai-lab": "ATRIA_API_KEY",
+    "ibm-rhai": "IBM_RHAI_API_KEY",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -75,6 +76,13 @@ def provider_preflight(
             configuration_error = str(exc)
     if provider.strip().replace("_", "-") == "shanghai-ai-lab":
         validate_shanghai_ai_lab(model, runtime_config, max_output_tokens=max_output_tokens)
+    from eslams.providers.ibm_rhai import configuration_error as ibm_configuration_error
+    from eslams.providers.ibm_rhai import normalize_alias, validate_model
+    provider = normalize_alias(provider)
+    config_error = None
+    if provider == "ibm-rhai":
+        validate_model(model)
+        config_error = ibm_configuration_error(runtime_config)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -123,6 +131,8 @@ def provider_preflight(
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif config_error:
+        error = {"error_class": "provider_request_rejected", "message": config_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -156,6 +166,8 @@ def provider_preflight(
                 )
         if visible_models is None and error is None:
             warnings.append(
+                "Model discovery is not implemented; account visibility remains unverified."
+                if record.provider == "ibm-rhai" else
                 "This adapter has no Models API; account visibility remains unverified."
             )
         if visible_models is not None:
@@ -228,6 +240,8 @@ def provider_preflight(
         )
         and (not strict_catalogue or not live or checks["account_model_visible"] is not False)
     )
+    # This host has numeric counters but no verified reasoning-inclusion contract.
+    usage_complete = checks["usage_extraction"] is True and record.provider != "ibm-rhai"
     payload: dict[str, Any] = {
         "provider": provider,
         "model": model,
@@ -239,11 +253,12 @@ def provider_preflight(
         ),
         "readiness": {
             "configuration_ready": (checks["adapter_available"] is True
-                                    and credential_error is None and configuration_error is None),
+                                    and credential_error is None and configuration_error is None
+                                    and config_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
             "cost_and_official_eligibility": "not_assessed",
             "meaning_of_ok": "configuration ready, and if live, one legal action observed",
         },
@@ -258,7 +273,7 @@ def provider_preflight(
             "schema_version": "eslams.provider.receipt.v2",
             "outcome": receipt.get("outcome") if isinstance(receipt, dict) else "not_called",
             "redaction_version": "provider-receipt-redaction-v1",
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
         },
     }
     if error is not None:
@@ -383,7 +398,10 @@ def provider_models_result(provider: str) -> dict[str, Any]:
     try:
         models = provider_models_live(provider)
         if models is None:
+            from eslams.providers.ibm_rhai import normalize_alias
             raise ProviderCallError(
+                "Model discovery is not implemented; account visibility remains unverified"
+                if normalize_alias(provider.lower()) == "ibm-rhai" else
                 "This adapter has no Models API; account visibility remains unverified",
                 error_kind="provider_discovery_unavailable", provider=provider,
             )

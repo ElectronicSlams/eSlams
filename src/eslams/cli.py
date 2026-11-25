@@ -1464,11 +1464,16 @@ def _provider_agent(
             provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",
             version=model, runtime_config=runtime_config,
         )
+    from eslams.providers.ibm_rhai import API_KEY_ENV, normalize_alias, validate_model
+    provider = normalize_alias(provider)
+    if provider == "ibm-rhai":
+        validate_model(model)
+        defaults[provider] = (model, API_KEY_ENV)
     if provider == "krutrim":
-        from eslams.providers.krutrim import API_KEY_ENV
+        from eslams.providers.krutrim import API_KEY_ENV as KRUTRIM_API_KEY_ENV
 
         return ModelProviderAgent(
-            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            provider=provider, model=model, api_key_env=KRUTRIM_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
     if provider not in defaults:

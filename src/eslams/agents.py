@@ -417,6 +417,10 @@ class ModelProviderAgent:
             from eslams.providers.apodex import validate_configuration
 
             validate_configuration(self.model, self.runtime_config)
+        from eslams.providers.ibm_rhai import normalize_alias, validate_model
+        self.provider = normalize_alias(self.provider)
+        if self.provider == "ibm-rhai":
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -693,6 +697,10 @@ class ModelProviderAgent:
             return self._call_gemini(api_key, prompt)
         if self.provider == "openrouter":
             return self._call_openrouter(api_key, prompt)
+        if self.provider == "ibm-rhai":
+            from eslams.providers.ibm_rhai import call as call_ibm_rhai
+
+            return call_ibm_rhai(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         raise ProviderCallError(
@@ -2036,6 +2044,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "liquid-ai": "liquid_chat_completions",
+        "ibm-rhai": "ibm_rhai_chat_completions",
         "bedrock": "bedrock_converse",
         "shanghai-ai-lab": "shanghai_ai_lab_atria_chat_completions",
         "krutrim": "krutrim_chat_completions",
@@ -2051,6 +2060,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "liquid-ai": "liquid-chat-completions-raw-v1",
+        "ibm-rhai": "ibm-rhai-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "shanghai-ai-lab": "shanghai-ai-lab-atria-chat-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
@@ -2064,6 +2074,9 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
+    if provider == "ibm-rhai":
+        from eslams.providers.ibm_rhai import normalize_usage
+        return normalize_usage(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(

@@ -1,0 +1,24 @@
+{
+  "id": "chatcmpl-rhai-redacted",
+  "object": "chat.completion",
+  "created": 1741569952,
+  "model": "granite-4-0-h-small",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16
+  }
+}
