@@ -261,6 +261,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     data = core._response_json_with_receipt(
         response, provider=PROVIDER_ID, model=agent.model, capabilities=capabilities,
         runtime_config=runtime,
+        synchronous=True,
     )
     receipt = core._receipt(
         provider=PROVIDER_ID, model=agent.model, response=response,
