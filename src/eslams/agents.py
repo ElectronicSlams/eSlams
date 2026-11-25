@@ -51,6 +51,8 @@ from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 from eslams.providers.snowflake import call as call_snowflake
 from eslams.providers.snowflake import canonical_provider
 from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
+from eslams.providers.perplexity import call as call_perplexity
+from eslams.providers.perplexity import validate_config as validate_perplexity_config
 
 
 class AgentError(RuntimeError):
@@ -419,6 +421,8 @@ class ModelProviderAgent:
             self.provider = baichuan.PROVIDER_ID
         if self.provider == baichuan.PROVIDER_ID and not isinstance(self.model, str):
             raise ValueError("Baichuan requires an exact provider-native model ID")
+        if self.provider == "perplexity":
+            validate_perplexity_config(self.model, self.runtime_config)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -714,6 +718,8 @@ class ModelProviderAgent:
             from eslams.providers.xiaomi import call_mimo
 
             return call_mimo(self, api_key, prompt, system=_SYSTEM_INSTRUCTIONS)
+        if self.provider == "perplexity":
+            return call_perplexity(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -2070,6 +2076,7 @@ def _endpoint_kind(provider: str) -> str:
         "snowflake": "snowflake_chat_completions",
         "iflytek": "iflytek_chat_completions",
         "xiaomi": "xiaomi_chat_completions",
+        "perplexity": "perplexity_agent",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2091,6 +2098,7 @@ def _parser_version(provider: str) -> str:
         "snowflake": "snowflake-chat-completions-raw-v1",
         "iflytek": "iflytek-chat-completions-raw-v1",
         "xiaomi": "xiaomi-chat-completions-raw-v1",
+        "perplexity": "perplexity-agent-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 

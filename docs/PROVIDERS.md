@@ -1,5 +1,8 @@
 # Provider Guide
 
+See the [Perplexity Agent adapter](PERPLEXITY.md) for the explicit-model,
+tool-free REST path. It requires `PERPLEXITY_API_KEY` and an exact model ID.
+
 Databricks native serving-endpoint chat is documented in [DATABRICKS.md](DATABRICKS.md),
 including explicit workspace/deployment configuration, reasoning, and accounting limits.
 

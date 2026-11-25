@@ -37,6 +37,11 @@
   and sanitized failure receipts; reject filtered, truncated and tool-call output.
   See [the MiMo guide](docs/providers/XIAOMI_MIMO.md) for sources and scope.
 
+## Unreleased QA correction
+
+- Send an explicit typed message item to the Perplexity Agent API. Retain and
+  test rejection of mixed search/tool output and unverified model-specific efforts.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

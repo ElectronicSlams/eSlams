@@ -1449,6 +1449,14 @@ def _provider_agent(
 ) -> ModelProviderAgent | None:
     from eslams.providers.snowflake import canonical_provider as canonical_snowflake_provider
 
+    if value.split(":", 1)[0].lower() == "perplexity":
+        from eslams.providers.perplexity import API_KEY_ENV
+
+        model = value.split(":", 1)[1] if ":" in value else ""
+        return ModelProviderAgent(
+            provider="perplexity", model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     defaults = {
         "zai": ("glm-5.3", "ZAI_API_KEY"),
         "zhipu": ("glm-5.3", "ZHIPU_API_KEY"),

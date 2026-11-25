@@ -10,12 +10,17 @@ import eslams.arenas  # noqa: F401
 from eslams.agents import ModelProviderAgent, ProviderCallError
 from eslams.arena import registry
 from eslams.contracts.provider import ProviderRuntimeConfig
+from eslams.contracts.usage import aggregate_provider_receipts
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import baichuan, databricks, fireworks, load_provider_registry
 from eslams.providers.poolside import API_KEY_ENV, MODELS_ENDPOINT, configuration_error
 from eslams.providers.baichuan import API_KEY_ENV as BAICHUAN_API_KEY_ENV
+from eslams.providers.perplexity import API_KEY_ENV as PERPLEXITY_API_KEY_ENV
+from eslams.providers.perplexity import MODELS_ENDPOINT as PERPLEXITY_MODELS_ENDPOINT
+from eslams.providers.perplexity import discover_models as discover_perplexity_models
+from eslams.providers.perplexity import validate_config as validate_perplexity_config
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.zai import API_KEY_ENVS
 from eslams.providers.snowflake import connection_settings as snowflake_connection_settings
@@ -35,6 +40,7 @@ DEFAULT_PROVIDER_ENV = {
     "snowflake": "SNOWFLAKE_TOKEN",
     "iflytek": "IFLYTEK_API_PASSWORD",
     "xiaomi": "MIMO_API_KEY",
+    "perplexity": PERPLEXITY_API_KEY_ENV,
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -46,6 +52,7 @@ _MODELS_ENDPOINTS = {
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
     "xiaomi": "https://api.xiaomimimo.com/v1/models",
+    "perplexity": PERPLEXITY_MODELS_ENDPOINT,
 }
 
 
@@ -71,6 +78,8 @@ def provider_preflight(
     provider = provider.lower()
     if provider in baichuan.ALIASES and not isinstance(model, str):
         raise ValueError("Baichuan requires an exact provider-native model ID")
+    if provider == "perplexity":
+        validate_perplexity_config(model, runtime_config)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -239,6 +248,11 @@ def provider_preflight(
                         checks["usage_extraction"] is True
                         and not usage.get("usage_validation_errors")
                     )
+                if record.provider == "perplexity":
+                    checks["usage_extraction"] = (
+                        isinstance(receipt, dict)
+                        and aggregate_provider_receipts([receipt])[0]["usageComplete"] is True
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -335,6 +349,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             f"missing API key environment variable {api_key_env}",
             error_kind="provider_auth_failed", provider=provider,
         )
+    if provider == "perplexity":
+        return discover_perplexity_models(api_key)
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
