@@ -595,3 +595,22 @@ def test_artifacts_preserve_usage_and_exclude_private_traces(monkeypatch, tmp_pa
         if path.is_file():
             content = path.read_bytes()
             assert SECRET.encode() not in content and PRIVATE.encode() not in content
+
+
+@pytest.mark.parametrize("escaped", (False, True))
+def test_successful_response_cannot_echo_active_credential(monkeypatch, escaped):
+    body = fixture()
+    credential = SECRET
+    act_request = request()
+    output = json.dumps({"action": act_request.legal_actions[0], "public_explanation": credential})
+    if escaped:
+        output = output.replace(credential, "".join(f"\\u{ord(char):04x}" for char in credential))
+    body["choices"][0]["message"]["content"] = output
+    post_response(monkeypatch, body)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(act_request)
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert credential not in str(error.value)
+    assert credential not in json.dumps(selected.attempt_receipts)
+    assert len(selected.attempt_receipts) == 1
