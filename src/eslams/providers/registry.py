@@ -143,6 +143,8 @@ PROVIDER_ALIASES = {
     "xfyun": "iflytek",
     "poolside-ai": "poolside",
     "poolsideai": "poolside",
+    "mimo": "xiaomi",
+    "xiaomi-mimo": "xiaomi",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",

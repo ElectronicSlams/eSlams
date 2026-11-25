@@ -54,6 +54,7 @@ from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import fireworks, load_provider_registry
 from eslams.providers.zai import canonical_provider
 from eslams.providers.poolside import API_KEY_ENV, normalize_provider
+from eslams.providers.xiaomi import canonical_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1460,6 +1461,7 @@ def _provider_agent(
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "snowflake": ("", "SNOWFLAKE_TOKEN"),
         "iflytek": ("spark-x", "IFLYTEK_API_PASSWORD"),
+        "xiaomi": ("mimo-v2.6-flash", "MIMO_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1486,6 +1488,7 @@ def _provider_agent(
     from eslams.providers.iflytek import canonical_provider as canonical_iflytek_provider
     provider = canonical_iflytek_provider(provider)
     provider = normalize_provider(provider.lower())
+    provider = canonical_provider(provider)
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV as KRUTRIM_API_KEY_ENV
 

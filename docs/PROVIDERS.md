@@ -11,6 +11,10 @@ The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
+The unreleased 0.7.1 adapter work also adds native
+[Xiaomi MiMo](providers/XIAOMI_MIMO.md), with offline raw-wire regressions and
+explicit native thinking controls. The package version remains 0.7.0 until release.
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
@@ -29,6 +33,8 @@ convenience properties.
 | `iflytek:<model>` | `IFLYTEK_API_PASSWORD` | Spark HTTP | `choices[0].message.content` | optional response `model`; otherwise unknown |
 
 | `poolside:<model-id>` | `POOLSIDE_API_KEY` | Poolside-hosted Chat Completions | `choices[0].message.content` | response `model` |
+
+| `xiaomi:<model>` (`mimo`, `xiaomi-mimo`) | `MIMO_API_KEY` | MiMo direct Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [Fireworks adapter guide](FIREWORKS.md) documents aliases, exact model resources,

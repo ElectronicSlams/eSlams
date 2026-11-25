@@ -50,6 +50,7 @@ from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 from eslams.providers.snowflake import call as call_snowflake
 from eslams.providers.snowflake import canonical_provider
+from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
 
 
 class AgentError(RuntimeError):
@@ -413,6 +414,7 @@ class ModelProviderAgent:
         from eslams.providers.iflytek import canonical_provider as canonical_iflytek_provider
         self.provider = canonical_iflytek_provider(self.provider)
         self.provider = poolside.normalize_provider(self.provider.lower())
+        self.provider = canonical_xiaomi_provider(self.provider.lower())
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -702,6 +704,10 @@ class ModelProviderAgent:
             return self._call_bedrock(api_key, prompt)
         if self.provider == "snowflake":
             return call_snowflake(self, api_key, prompt)
+        if self.provider == "xiaomi":
+            from eslams.providers.xiaomi import call_mimo
+
+            return call_mimo(self, api_key, prompt, system=_SYSTEM_INSTRUCTIONS)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -2054,6 +2060,7 @@ def _endpoint_kind(provider: str) -> str:
         "zhipu": "zhipu_chat_completions",
         "snowflake": "snowflake_chat_completions",
         "iflytek": "iflytek_chat_completions",
+        "xiaomi": "xiaomi_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2073,6 +2080,7 @@ def _parser_version(provider: str) -> str:
         "zhipu": "zhipu-chat-completions-raw-v1",
         "snowflake": "snowflake-chat-completions-raw-v1",
         "iflytek": "iflytek-chat-completions-raw-v1",
+        "xiaomi": "xiaomi-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2090,6 +2098,10 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return normalize_usage(usage)
     if provider == "poolside":
         return poolside.normalize_usage(usage)
+    if provider == "xiaomi":
+        from eslams.providers.xiaomi import normalize_usage
+
+        return normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 

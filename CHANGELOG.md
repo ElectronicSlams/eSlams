@@ -29,6 +29,14 @@
   unknown; native costs and safe automatic retries remain unverified. See
   `docs/POOLSIDE.md` for official sources and restricted-reference limitations.
 
+## Unreleased — 0.7.1 adapter work
+
+- Add the Xiaomi MiMo direct Chat Completions adapter (`xiaomi`, `mimo`,
+  `xiaomi-mimo`), `MIMO_API_KEY`, and Models discovery. Preserve exact model IDs,
+  provider defaults and full supplied history. Retain unknown identity/accounting
+  and sanitized failure receipts; reject filtered, truncated and tool-call output.
+  See [the MiMo guide](docs/providers/XIAOMI_MIMO.md) for sources and scope.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
