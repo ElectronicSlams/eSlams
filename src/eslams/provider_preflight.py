@@ -27,6 +27,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -65,6 +66,10 @@ def provider_preflight(
             validate_arcee_configuration(model, runtime_config)
         except ValueError as exc:
             configuration_error = str(exc)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import validate_config
+
+        validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
