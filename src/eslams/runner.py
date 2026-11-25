@@ -14,7 +14,7 @@ import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -27,6 +27,28 @@ from eslams.artifacts import (
     expanded_artifact_path,
     validate_artifact_signing_configuration,
     write_artifact,
+)
+from eslams.board_recovery import (
+    LABEL as RECOVERY_LABEL,
+)
+from eslams.board_recovery import (
+    MODE as RECOVERY_MODE,
+)
+from eslams.board_recovery import (
+    PUBLIC_PATH as RECOVERY_PUBLIC_PATH,
+)
+from eslams.board_recovery import (
+    REASON as RECOVERY_REASON,
+)
+from eslams.board_recovery import (
+    RecoveredPosition,
+    recovery_call_matches_pin,
+    verify_recovered_position,
+)
+from eslams.continuation import (
+    ChessContinuation,
+    new_call_matches_pin,
+    verify_chess_continuation,
 )
 from eslams.contracts.integrity import ActionProvenance, FailureClass
 from eslams.contracts.provider import (
@@ -49,7 +71,7 @@ from eslams.deadlines import (
 )
 from eslams.events import ReplayEvent, ScoreSummary, TraceEvent
 from eslams.execution_policy import model_execution_policy
-from eslams.hashing import sha256_json
+from eslams.hashing import canonical_json, sha256_json
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, make_act_request
 from eslams.state import ArenaState
 
@@ -100,6 +122,8 @@ class RunConfig:
     on_illegal_action: str = "invalid-match"
     execution_profile: Literal["interactive", "smoke", "official_eval"] = "interactive"
     overwrite: bool = False
+    continuation: ChessContinuation | None = None
+    recovered_position: RecoveredPosition | None = None
 
     def __post_init__(self) -> None:
         if self.cancellation is not None and not isinstance(self.cancellation, threading.Event):
@@ -150,6 +174,27 @@ class RunConfig:
             self.on_agent_error == "fallback" or self.on_illegal_action == "fallback"
         ):
             raise ValueError("official_eval rejects fallback failure policies")
+        if self.recovered_position is not None:
+            if self.continuation is not None:
+                raise ValueError("recovery and competitive continuation are mutually exclusive")
+            if (self.execution_profile == "official_eval" or self.official_run_id is not None
+                    or self.verification_level != "Local Artifact"):
+                raise ValueError("recovery cannot claim official or verified model execution")
+            if (self.overwrite or self.on_agent_error != "invalid-match"
+                    or self.on_illegal_action != "invalid-match"):
+                raise ValueError(
+                    "recovery requires a new output and invalid-match failure policies")
+            if self.arena_id not in {"tic-tac-toe", "connect-four", "othello"}:
+                raise ValueError("recovery supports only three public board arenas")
+        if self.continuation is not None:
+            if self.overwrite:
+                raise ValueError("continuation requires a new output; overwrite is forbidden")
+            if self.execution_profile == "official_eval":
+                raise ValueError("official_eval rejects continuation")
+            if self.arena_id != "chess":
+                raise ValueError("continuation supports only chess")
+            if self.on_agent_error != "invalid-match" or self.on_illegal_action != "invalid-match":
+                raise ValueError("continuation requires invalid-match failure policies")
         if self.execution_profile == "official_eval":
             _reject_official_inline_retries(
                 [self.agent_1, self.agent_2, *(self.agents or {}).values()]
@@ -176,10 +221,59 @@ class Runner:
         _validate_failure_policy("on_illegal_action", config.on_illegal_action)
         validate_seed(config.seed)
         arena = registry.create(config.arena_id)
+        continuation = (verify_chess_continuation(config.continuation)
+                        if config.continuation is not None else None)
+        recovery = (verify_recovered_position(config.recovered_position)
+                    if config.recovered_position is not None else None)
         agents = _agents_for_arena(arena, config)
         if config.execution_profile == "official_eval":
             _reject_official_inline_retries(list(agents.values()))
         max_turns = config.max_turns if config.max_turns is not None else arena.max_turns
+        if continuation is not None:
+            if (config.case_id != continuation.child_platform_run_id or
+                    config.run_job_id != continuation.child_platform_run_id):
+                raise ValueError("continuation case/run-job IDs must equal child Platform run ID")
+            source_metadata = continuation.source_manifest["run_metadata"]
+            if (config.time_budget_ms != source_metadata.get("requested_time_budget_ms") or
+                    config.time_budget_ms != source_metadata.get("effective_time_budget_ms")):
+                raise ValueError("continuation time budget differs from source policy")
+            pins = continuation.descriptor["execution"]
+            assert continuation.child_execution is not None
+            if (config.seed != pins["seed"]
+                    or max_turns != continuation.child_execution["maxTurns"]
+                    or config.wrapper_version != pins["wrapperVersion"]
+                    or (config.scoring_policy_version or f"{arena.id}-score:1.0.0")
+                    != pins["scoringPolicyVersion"]):
+                raise ValueError("continuation configuration differs from source pins")
+            for player in pins["players"]:
+                agent = agents[player["seat"]]
+                if (not _is_provider_backed_agent(agent) or
+                        getattr(agent, "model", None) != player["providerModelId"]):
+                    raise ValueError("continuation agent model differs from source pin")
+            target_engine = continuation.target_engine_identity
+            assert target_engine is not None
+            if (config.runner_version != target_engine["runnerVersion"] or
+                    config.wrapper_version != target_engine["wrapperVersion"]):
+                raise ValueError("continuation runner differs from target engine")
+        if recovery is not None:
+            future = recovery.descriptor["prospective"]
+            historical = recovery.descriptor["history"]
+            if (config.arena_id != historical["arenaSlug"] or config.seed != historical["seed"]
+                    or max_turns != future["maxTurns"]
+                    or config.time_budget_ms != future["timeBudgetMs"]
+                    or config.runner_version != future["runnerVersion"]
+                    or config.wrapper_version != future["wrapperVersion"]
+                    or (config.scoring_policy_version or f"{arena.id}-score:1.0.0")
+                    != future["scoringPolicyVersion"]
+                    or config.case_id != recovery.request.child_platform_run_id
+                    or config.run_job_id != recovery.request.child_platform_run_id):
+                raise ValueError("recovery configuration differs from pinned prospective execution")
+            for player in future["players"]:
+                agent = agents[player["seat"]]
+                if (not _is_provider_backed_agent(agent)
+                        or getattr(agent, "provider", None) != player["provider"]
+                        or getattr(agent, "model", None) != player["providerModelId"]):
+                    raise ValueError("recovery agent differs from prospective provider/model pin")
         effective_time_budget_ms = config.time_budget_ms
         suite_context = _suite_context(config)
         match_fingerprint = _match_fingerprint(arena, config, agents, max_turns)
@@ -189,6 +283,13 @@ class Runner:
             run_id=run_id,
             archive=config.archive,
         )
+        if (config.continuation is not None and
+                artifact_path.resolve() == config.continuation.source_archive.resolve()):
+            raise ValueError("continuation must not overwrite its source archive")
+        if config.recovered_position is not None:
+            config.recovered_position.check_ids(run_id)
+            if artifact_path.resolve() == config.recovered_position.source_archive.resolve():
+                raise ValueError("recovery must not overwrite its source archive")
         _refuse_existing_artifact(artifact_path, archive=config.archive, overwrite=config.overwrite)
         episode_id = "episode_001"
         state = arena.initial_state(config.seed)
@@ -222,10 +323,39 @@ class Runner:
             )
             for player in arena.players
         }
-        match_valid_for_scoring = True
-        invalid_reason: str | None = None
+        match_valid_for_scoring = recovery is None
+        invalid_reason: str | None = RECOVERY_REASON if recovery is not None else None
         invalid_reason_codes: list[str] = []
         receipt_event_ids: set[str] = set()
+        continuation_files: dict[str, bytes] = {}
+        if continuation is not None:
+            continuation_files = continuation.private_files(run_id)
+            state = continuation.state
+            history = continuation.history
+            trace_events = continuation.projected_traces(run_id)
+            for index, row in enumerate(continuation.prefix):
+                projected = trace_events[index]
+                replay_events.append(_replay_event(
+                    run_id, episode_id, continuation.states[index + 1], row["action"],
+                    row["markers"], arena=arena, actor_player=row["player"],
+                    state_hash_before=continuation.states[index].state_hash,
+                    action_provenance="reconstructed_action",
+                    logical_action_id=projected.public["logical_action_id"],
+                ))
+        recovery_files: dict[str, bytes] = {}
+        if recovery is not None:
+            recovery_files = recovery.private_files(run_id)
+            state = recovery.state
+            history = recovery.history(run_id)
+            trace_events = recovery.projected_traces(run_id)
+            for index, row in enumerate(recovery.prefix):
+                replay_events.append(_replay_event(
+                    run_id, episode_id, recovery.states[index + 1], row["action"], [],
+                    arena=arena, actor_player=row["player"],
+                    state_hash_before=recovery.states[index].state_hash,
+                    action_provenance="reconstructed_action",
+                    logical_action_id=trace_events[index].public["logical_action_id"],
+                ))
         start = time.perf_counter()
 
         while not state.terminal and state.turn < max_turns:
@@ -289,6 +419,33 @@ class Runner:
                     ]
             elif _is_provider_backed_agent(agent):
                 provider_status[player_id] = "provider_receipt_missing"
+            if continuation is not None and not _has_agent_error(markers):
+                player_pin = next(pin for pin in continuation.descriptor["execution"]["players"]
+                                  if pin["seat"] == player_id)
+                if (not new_call_matches_pin(attempt_receipts, player_pin) or
+                        any(r.get("provider") != getattr(agent, "provider", None)
+                            for r in attempt_receipts)):
+                    markers.extend(["agent_crash", "model_identity_mismatch"])
+                    if response is not None:
+                        response.metadata["error_kind"] = "model_identity_mismatch"
+            if recovery is not None and not _has_agent_error(markers):
+                future_pin = next(p for p in recovery.descriptor["prospective"]["players"]
+                                  if p["seat"] == player_id)
+                if not recovery_call_matches_pin(attempt_receipts, future_pin):
+                    markers.extend(["agent_crash", "model_identity_mismatch"])
+                    if response is not None:
+                        response.metadata["error_kind"] = "model_identity_mismatch"
+            if recovery is not None:
+                # Preserve the new logical request even if its final attempt fails.
+                # This records intent/history, not proof that a physical call ran.
+                agent_io.append({
+                    "turn_id": state.turn, "agent_id": getattr(agent, "id", "agent"),
+                    "request": request.to_dict(),
+                    "response": response.to_dict() if response else None,
+                    "latency_ms": latency_ms, "markers": markers,
+                    "provider_receipt": receipt if isinstance(receipt, dict) else None,
+                    "action_provenance": None, "logical_action_id": logical_action_id,
+                })
             if _has_agent_error(markers):
                 agent_error_count[player_id] += 1
                 failure_class = _failure_class_from_response(response, markers)
@@ -525,19 +682,26 @@ class Runner:
                     successful_attempt_event_id=successful_attempt_event_id,
                 )
             )
-            agent_io.append(
-                {
-                    "turn_id": state.turn,
-                    "agent_id": getattr(agent, "id", "agent"),
-                    "request": request.to_dict(),
+            if recovery is not None:
+                agent_io[-1].update({
                     "response": response.to_dict() if response else None,
-                    "latency_ms": latency_ms,
-                    "markers": markers,
                     "provider_receipt": receipt if isinstance(receipt, dict) else None,
                     "action_provenance": action_provenance.value,
-                    "logical_action_id": logical_action_id,
-                }
-            )
+                })
+            else:
+                agent_io.append(
+                    {
+                        "turn_id": state.turn,
+                        "agent_id": getattr(agent, "id", "agent"),
+                        "request": request.to_dict(),
+                        "response": response.to_dict() if response else None,
+                        "latency_ms": latency_ms,
+                        "markers": markers,
+                        "provider_receipt": receipt if isinstance(receipt, dict) else None,
+                        "action_provenance": action_provenance.value,
+                        "logical_action_id": logical_action_id,
+                    }
+                )
             history.append(
                 {
                     "turn_id": state.turn,
@@ -570,6 +734,7 @@ class Runner:
         )
         complete_case_evidence = (
             match_valid_for_scoring and bool(config.case_id) and model_identity_verified
+            and continuation is None and recovery is None
         )
         for provider_receipt in provider_receipts:
             provider_receipt["case_valid_for_scoring"] = bool(
@@ -601,6 +766,29 @@ class Runner:
             requested_time_budget_ms=config.time_budget_ms,
             effective_time_budget_ms=effective_time_budget_ms,
         )
+        if continuation is not None:
+            score = replace(score, model_identity_verified=False,
+                            scoring_safety_reason="continued_game_not_official_evaluation",
+                            metrics={**score.metrics, "continuation": True,
+                                     "execution_label": "continued",
+                                     "reconstructed_turns": len(continuation.prefix),
+                                     "incremental_turns": (
+                                         len(trace_events) - len(continuation.prefix)),
+                                     "accounting_scope": "incremental_only",
+                                     "model_identity_verified": False})
+        if recovery is not None:
+            score = replace(score, match_valid_for_scoring=False, model_identity_verified=False,
+                            scoring_safety_reason=RECOVERY_REASON,
+                            metrics={**score.metrics, "execution_mode": RECOVERY_MODE,
+                                     "execution_label": RECOVERY_LABEL,
+                                     "reconstructed_turns": len(recovery.prefix),
+                                     "incremental_turns": len(trace_events) - len(recovery.prefix),
+                                     "accounting_scope": "incremental_only",
+                                     "historical_spend": "unknown",
+                                     "historical_final_physical_call_count": "unknown",
+                                     "model_identity_verified": False})
+            recovery_files[RECOVERY_PUBLIC_PATH] = (canonical_json(
+                recovery.public_result(state, len(trace_events))).encode() + b"\n")
         build = ArtifactBuildInput(
             run_id=run_id,
             arena_version=f"{arena.id}:{arena.version}",
@@ -613,6 +801,8 @@ class Runner:
             agent_io=agent_io,
             errors=errors,
             provider_receipts=provider_receipts,
+            continuation_files=continuation_files,
+            recovery_files=recovery_files,
             run_metadata={
                 **suite_context,
                 "requested_time_budget_ms": config.time_budget_ms,
@@ -623,6 +813,17 @@ class Runner:
                 "execution_profile": config.execution_profile,
                 "on_agent_error": config.on_agent_error,
                 "on_illegal_action": config.on_illegal_action,
+                **({"execution_mode": RECOVERY_MODE, "execution_label": RECOVERY_LABEL,
+                    "recovery_contract_version": "board-recovery-lineage/v1",
+                    "accounting_scope": "incremental_only",
+                    "recovery_platform_run_id": recovery.request.child_platform_run_id,
+                    "recovery_match_id": recovery.request.match_id}
+                   if recovery is not None else {}),
+                **({"continuation": True, "execution_label": "continued",
+                    "accounting_scope": "incremental_only",
+                    "continuation_platform_run_id": continuation.child_platform_run_id,
+                    "continuation_match_id": continuation.match_id}
+                   if continuation is not None else {}),
             },
             wrapper_version=config.wrapper_version,
             eval_suite_version=config.eval_suite_version,
