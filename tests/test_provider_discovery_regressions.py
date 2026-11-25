@@ -221,7 +221,7 @@ def test_preflight_uses_safe_public_messages_for_provider_failures(monkeypatch, 
     error = json.loads(output)["error"]
     assert error["error_class"] == "provider_auth_failed"
     assert error["status_code"] == 401
-    assert "OPENAI_API_KEY" in error["message"]
+    assert "Provider authentication failed" in error["message"]
     assert secret not in output
 
 

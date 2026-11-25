@@ -1801,7 +1801,8 @@ def _print_provider_warnings(agent: ModelProviderAgent) -> None:
         print(f"warning: {warning}", file=sys.stderr)
     if not os.getenv(agent.api_key_env):
         print(
-            f"warning: missing API key {agent.api_key_env} for {agent.provider}:{agent.model}",
+            f"warning: missing credentials for {agent.provider}:{agent.model}. "
+            "Check the provider setup guide.",
             file=sys.stderr,
         )
 

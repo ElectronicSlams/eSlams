@@ -503,7 +503,7 @@ def provider_preflight(
     elif not credential_environment or not credential_present:
         error = {
             "error_class": "provider_auth_failed",
-            "message": f"missing API key environment variable {credential_environment}",
+            "message": "Provider credentials are missing. Check the provider setup guide.",
         }
     else:
         try:
@@ -857,6 +857,8 @@ def provider_models_result(provider: str) -> dict[str, Any]:
         payload.update(ok=True, models=models)
     except ProviderCallError as exc:
         payload["error"] = _public_error(exc, provider=provider, model="")
+        if provider == "openai" and payload["error"]["error_class"] == "provider_auth_failed":
+            payload["error"]["message"] = "Provider authentication failed. Check OPENAI_API_KEY."
     return payload
 
 
@@ -896,11 +898,6 @@ def _public_error(exc: BaseException, *, provider: str, model: str) -> dict[str,
     kind = getattr(exc, "error_kind", "provider_timeout")
     error_class = next((name for name in _PUBLIC_ERROR_MESSAGES if name == kind), "provider_error")
     message = _PUBLIC_ERROR_MESSAGES.get(error_class, "The provider check failed.")
-    if error_class == "provider_auth_failed":
-        canonical = provider.strip().lower().replace("_", "-")
-        environment = DEFAULT_PROVIDER_ENV.get(PROVIDER_ALIASES.get(canonical, canonical))
-        if environment:
-            message += f" Check the {environment} environment variable."
     status_code = getattr(exc, "status_code", None)
     return {
         "provider": provider,

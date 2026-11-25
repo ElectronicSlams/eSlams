@@ -267,7 +267,7 @@ class ProviderRegistry:
         if not record.allows_text_game_agent():
             warnings.append(f"provider model {provider}:{model} is not marked game_agent_supported")
         if api_key_env:
-            warnings.append(f"requires API key environment variable {api_key_env}")
+            warnings.append("Provider credentials must be configured for live inference.")
         return warnings
 
 
