@@ -10,7 +10,7 @@ import re
 import threading
 import time
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -47,14 +47,17 @@ from eslams.providers import (
     azure,
     contextual,
     load_provider_registry,
+    longcat,
     moonshot,
     morph,
+    nvidia,
     qwen,
     relace,
     upstage,
 )
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
+from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.providers.deepseek import call as call_deepseek
 from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
 from eslams.providers.deepseek import normalize_usage as normalize_deepseek_usage
@@ -67,11 +70,14 @@ from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 from eslams.providers.reka import call as call_reka
 from eslams.providers.reka import configuration_error as reka_configuration_error
+from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
+from eslams.providers.sensenova import call as call_sensenova
 from eslams.providers.stepfun import ENDPOINT_KIND as STEPFUN_ENDPOINT_KIND
 from eslams.providers.stepfun import PARSER_VERSION as STEPFUN_PARSER_VERSION
 from eslams.providers.stepfun import call as call_stepfun
 from eslams.providers.stepfun import usage_fields as stepfun_usage_fields
 from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
+from eslams.providers.tencent_hunyuan import ALIASES as HUNYUAN_ALIASES
 
 
 class AgentError(RuntimeError):
@@ -353,6 +359,8 @@ def _http_error_identifier(value: Any) -> str | None:
         return None
     if qwen.contains_credential(value):
         return None
+    if longcat.credential_echo(value):
+        return None
     sanitized = _sanitize_receipt_value(value)
     return sanitized if isinstance(sanitized, str) else None
 
@@ -479,6 +487,36 @@ class ModelProviderAgent:
             self.provider = "ant-group"
             ant_ling_validate_config(self.model, self.runtime_config or ProviderRuntimeConfig(),
                             self.temperature)
+        self.provider = longcat.normalize_provider(self.provider)
+        if self.provider == longcat.PROVIDER_ID:
+            longcat.validate_model(self.model)
+        from eslams.providers.watsonx import normalize_alias
+        from eslams.providers.watsonx import validate_model as validate_watsonx_model
+        self.provider = normalize_alias(self.provider)
+        if self.provider == "watsonx":
+            validate_watsonx_model(self.model)
+        if self.provider in {"qianfan", "baidu-qianfan"}:
+            self.provider = "baidu"
+        if self.provider == "baidu":
+            from eslams.providers.baidu import validate_model as validate_baidu_model
+
+            validate_baidu_model(self.model)
+        if self.provider.strip().replace("_", "-") in HUNYUAN_ALIASES:
+            self.provider = "tencent-hunyuan"
+        self.provider = byteplus_provider(self.provider) or self.provider.lower()
+        if self.provider == "byteplus":
+            from eslams.providers.byteplus import model_error
+
+            if error := model_error(self.model):
+                raise ValueError(error)
+        if self.provider in SENSENOVA_ALIASES:
+            self.provider = "sensetime"
+        if self.provider in nvidia.ALIASES:
+            self.provider = nvidia.PROVIDER_ID
+        if self.provider == nvidia.PROVIDER_ID and (
+            not isinstance(self.model, str) or not self.model.strip()
+        ):
+            raise ValueError("NVIDIA requires an explicit nonblank model ID")
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -775,8 +813,10 @@ class ModelProviderAgent:
             return call(self, api_key, prompt)
         if self.provider == "azure":
             return azure.call(self, api_key, prompt)
-        if self.provider == "krutrim":
-            from eslams.providers.krutrim import call
+        if self.provider == longcat.PROVIDER_ID:
+            return longcat.complete(self, api_key, prompt, system_instructions=_SYSTEM_INSTRUCTIONS)
+        if self.provider == "baidu":
+            from eslams.providers.baidu import call as call_baidu
 
             return call(self, api_key, prompt)
         if self.provider == ai21.PROVIDER_ID:
@@ -810,7 +850,21 @@ class ModelProviderAgent:
         if self.provider == "huawei":
             from eslams.providers.huawei import call
 
-            return call(self, api_key, prompt)
+            return call_baidu(self, api_key, prompt)
+        if self.provider == "tencent-hunyuan":
+            from eslams.providers.tencent_hunyuan import call as call_tencent_hunyuan
+
+            return call_tencent_hunyuan(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+        if self.provider == "byteplus":
+            from eslams.providers.byteplus import call as call_byteplus
+
+            return call_byteplus(self, api_key, prompt)
+        if self.provider == "sensetime":
+            return call_sensenova(self, api_key, prompt)
+        if self.provider == "krutrim":
+            from eslams.providers.krutrim import call as call_krutrim
+
+            return call_krutrim(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -829,10 +883,15 @@ class ModelProviderAgent:
             return call_inception(self, api_key, prompt)
         if self.provider == "reka-ai":
             return call_reka(self, api_key, prompt)
+        if self.provider == "watsonx":
+            from eslams.providers.watsonx import call as call_watsonx
+            return call_watsonx(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == moonshot.PROVIDER_ID:
             return moonshot.call(self, api_key, prompt)
+        if self.provider == nvidia.PROVIDER_ID:
+            return nvidia.call(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1353,6 +1412,8 @@ def _post_json(
     payload: dict[str, Any],
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    header_factory: Callable[[dict[str, Any]], dict[str, str]] | None = None,
+    response_handler: Callable[[httpx.Response], None] | None = None,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
     check_cancelled()
@@ -1373,7 +1434,7 @@ def _post_json(
         try:
             response = bounded_post(
                 url,
-                headers=headers,
+                headers=header_factory(payload) if header_factory is not None else headers,
                 json=payload,
                 timeout=_httpx_timeout(runtime_config, deadline=deadline),
             )
@@ -1404,6 +1465,8 @@ def _post_json(
                 provider=provider,
                 model=model,
             ) from exc
+    if response_handler is not None:
+        response_handler(response)
     if response.status_code >= 400:
         kind = _provider_error_kind(response.status_code)
         if provider == moonshot.PROVIDER_ID:
@@ -1429,10 +1492,25 @@ def _post_json(
         if provider == "qwen":
             kind = qwen.annotate_http_error(response, receipt, kind)
             body_retry_permitted = False
+        if provider == longcat.PROVIDER_ID and retry_after is None:
+            retry_after = longcat.response_retry_after_seconds(response)
+            receipt["retry_after_ms"] = (
+                round(min(retry_after, 86_400.0) * 1000) if retry_after is not None else None
+            )
+        if provider == "byteplus":
+            from eslams.providers.byteplus import error_kind
+
+            # Ark quota/burst errors do not attest that replay is safe. Retain
+            # shared custody, but never opt this adapter into automatic retry.
+            body_retry_permitted = False
+            with suppress(ValueError, UnicodeError, RecursionError):
+                kind = error_kind(_strict_provider_json(response), response.status_code)
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-ncp-clovastudio-request-id")
             or response.headers.get("x-amzn-requestid") or response.headers.get("x-trace-id")
+            or response.headers.get("x-global-transaction-id")
+            or response.headers.get("x-tc-requestid")
             or receipt.get("request_id"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
@@ -1440,9 +1518,9 @@ def _post_json(
             or response.headers.get("x-gateway-request-id"),
         )
         if provider in {"kuaishou", "kwaipilot"}:
-            from eslams.providers.kuaishou import error_kind
+            from eslams.providers.kuaishou import error_kind as kuaishou_error_kind
 
-            kind = error_kind(response, kind, receipt)
+            kind = kuaishou_error_kind(response, kind, receipt)
         raise ProviderCallError(
             f"provider returned HTTP {response.status_code}",
             status_code=response.status_code, error_kind=kind,
@@ -1558,7 +1636,11 @@ def _capture_error_body_observations(
             provenance["cost_observation_status"] = "reported_unverified"
     # Error-body pricing never supplies a trusted rate card or a measured cost.
     # Quoted observations remain diagnostic; canonical cost stays unknown.
-    return (_safe_rate_rejection(data, response.status_code)
+    safe_rejection = (
+        longcat.safe_rate_rejection(data, response.status_code)
+        if provider == longcat.PROVIDER_ID else _safe_rate_rejection(data, response.status_code)
+    )
+    return (safe_rejection
             and not provenance["work_observation_present"])
 
 
@@ -1578,7 +1660,8 @@ def _raise_observed_transport_failure(
     receipt["request_id"] = _http_error_identifier(
         headers.get("x-request-id") or headers.get("request-id")
         or headers.get("x-ncp-clovastudio-request-id")
-        or headers.get("x-amzn-requestid") or headers.get("x-trace-id"),
+        or headers.get("x-amzn-requestid") or headers.get("x-trace-id")
+        or headers.get("x-global-transaction-id") or headers.get("x-tc-requestid"),
     )
     receipt["gateway_request_id"] = _http_error_identifier(
         headers.get("cf-aig-request-id") or headers.get("x-gateway-request-id"),
@@ -2195,6 +2278,8 @@ def _endpoint_kind(provider: str) -> str:
         ai21.PROVIDER_ID: ai21.ENDPOINT_KIND,
         "qwen": qwen.ENDPOINT_KIND,
         "azure": azure.ENDPOINT_KIND,
+        "baidu": "baidu_qianfan_chat_completions",
+        "byteplus": "byteplus_modelark_chat_completions",
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -2206,11 +2291,16 @@ def _endpoint_kind(provider: str) -> str:
         "morph": "morph_chat_completions",
         "inception": "inception_chat_completions",
         "reka-ai": "reka_chat_completions",
+        "sensetime": "sensenova_chat_completions",
         "bedrock": "bedrock_converse",
         moonshot.PROVIDER_ID: "moonshot_chat_completions",
         "upstage": upstage.ENDPOINT_KIND,
         "stepfun": STEPFUN_ENDPOINT_KIND,
         "arcee-ai": "arcee_chat_completions",
+        "watsonx": "watsonx_text_chat",
+        longcat.PROVIDER_ID: longcat.ENDPOINT_KIND,
+        "tencent-hunyuan": "tencent_hunyuan_chat_completions",
+        "nvidia": "nvidia_chat_completions",
         "krutrim": "krutrim_chat_completions",
         "kuaishou": "streamlake_chat_completions",
         "kwaipilot": "streamlake_chat_completions",
@@ -2228,6 +2318,8 @@ def _parser_version(provider: str) -> str:
         ai21.PROVIDER_ID: ai21.PARSER_VERSION,
         "qwen": qwen.PARSER_VERSION,
         "azure": azure.PARSER_VERSION,
+        "baidu": "baidu-qianfan-chat-completions-raw-v1",
+        "byteplus": "byteplus-modelark-chat-raw-v1",
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -2239,11 +2331,16 @@ def _parser_version(provider: str) -> str:
         "morph": "morph-chat-completions-raw-v1",
         "inception": "inception-chat-completions-raw-v1",
         "reka-ai": "reka-chat-completions-raw-v1",
+        "sensetime": "sensenova-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
         "upstage": upstage.PARSER_VERSION,
         "stepfun": STEPFUN_PARSER_VERSION,
         "arcee-ai": "arcee-chat-completions-raw-v1",
+        "watsonx": "watsonx-text-chat-raw-v1",
+        longcat.PROVIDER_ID: longcat.PARSER_VERSION,
+        "tencent-hunyuan": "tencent-hunyuan-chat-completions-raw-v1",
+        "nvidia": "nvidia-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
         "kuaishou": "streamlake-chat-completions-raw-v1",
         "kwaipilot": "streamlake-chat-completions-raw-v1",
@@ -2259,10 +2356,12 @@ def _parser_version(provider: str) -> str:
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == moonshot.PROVIDER_ID:
         usage = moonshot.usage_for_receipt(usage)
-    if provider == "krutrim":
-        from eslams.providers.krutrim import normalize_usage
+    if provider == longcat.PROVIDER_ID:
+        return longcat.normalize_usage(usage)
+    if provider == "baidu":
+        from eslams.providers.baidu import normalize_usage as normalize_usage_baidu
 
-        return normalize_usage(usage)
+        return normalize_usage_baidu(usage)
     if provider == ai21.PROVIDER_ID:
         return ai21.normalize_usage(usage)
     if provider in {"kuaishou", "kwaipilot"}:
@@ -2275,6 +2374,20 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         from eslams.providers.huawei import normalize_usage
 
         return normalize_usage(usage)
+    if provider == "tencent-hunyuan":
+        from eslams.providers.tencent_hunyuan import (
+            normalize_usage as normalize_usage_tencent_hunyuan,
+        )
+
+        return normalize_usage_tencent_hunyuan(usage)
+    if provider == "byteplus":
+        from eslams.providers.byteplus import normalize_usage as normalize_usage_byteplus
+
+        return normalize_usage_byteplus(usage)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import normalize_usage as normalize_usage_krutrim
+
+        return normalize_usage_krutrim(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     if provider == "deepseek":
@@ -2283,6 +2396,11 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return _normalize_usage("dashscope_native", qwen.usage_fields(usage))
     if provider == "stepfun":
         usage = stepfun_usage_fields(usage)
+    if provider == "watsonx":
+        from eslams.providers.watsonx import normalize_usage as normalize_usage_watsonx
+        return normalize_usage_watsonx(usage)
+    if provider == nvidia.PROVIDER_ID:
+        return nvidia.normalize_usage(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2449,6 +2567,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
                 "perceptron",
                 "reka-ai",
                 "sakana",
+                "sensetime",
                 "upstage",
             } else _optional_bool(raw_inclusion)
         )
@@ -2836,7 +2955,7 @@ def _check_provider_completion(
             )
     elif provider in {
         "openrouter", "liquid-ai", "relace", moonshot.PROVIDER_ID, "upstage",
-        "stepfun", "inception", "reka-ai", "azure",
+        "stepfun", "inception", "reka-ai", "azure", longcat.PROVIDER_ID, "sensetime", "nvidia",
     }:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
@@ -3093,7 +3212,9 @@ def _response_json_with_receipt(
                 or response.headers.get("x-ncp-clovastudio-request-id")
                 or response.headers.get("x-cloud-trace-context")
                 or response.headers.get("x-amzn-requestid")
-                or response.headers.get("x-trace-id")),
+                or response.headers.get("x-trace-id")
+                or response.headers.get("x-global-transaction-id")
+                or response.headers.get("x-tc-requestid")),
                 "gateway_request_id": _http_error_identifier(
                     response.headers.get("cf-aig-request-id")
                     or response.headers.get("x-gateway-request-id")),

@@ -227,6 +227,12 @@ The next-release native `perceptron:<explicit-model-id>` adapter uses
 [Perceptron guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PERCEPTRON.md) for configuration checks, reasoning controls,
 official sources, and the limits of offline validation.
 
+Baidu Qianfan direct inference is available as `baidu:<exact-model-api-name>`
+(`qianfan` and `baidu-qianfan` aliases), using `QIANFAN_API_KEY`. It requires an
+explicit model and uses the domestic Qianfan endpoint. See the
+[Qianfan guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/BAIDU_QIANFAN.md)
+for account/region scope and verified controls.
+
 Use the verified provider workflow before spending on a run:
 
 ```bash
@@ -777,6 +783,12 @@ StepFun uses direct Chat Completions at `api.stepfun.ai`; see the
 reasoning and accounting limits. StepFun requires an explicit nonblank model ID.
 
 | `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` |
+
+| `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` |
+
+The proposed 0.7.1 [BytePlus ModelArk adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BYTEPLUS.md) targets
+the direct ap-southeast-1 service. Supply an explicit model or deployment ID;
+Volcengine Ark and Coding Plan use different services.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native

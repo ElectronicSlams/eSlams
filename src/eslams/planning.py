@@ -209,4 +209,7 @@ def _provider_env_names(providers: list[str]) -> list[str]:
         "google": "GEMINI_API_KEY",
         "gemini": "GEMINI_API_KEY",
     }
-    return sorted({names[provider] for provider in providers if provider in names})
+    required = {names[provider] for provider in providers if provider in names}
+    if set(providers) & {"hunyuan", "tencent-hunyuan"}:
+        required.update({"TENCENTCLOUD_SECRET_ID", "TENCENTCLOUD_SECRET_KEY"})
+    return sorted(required)

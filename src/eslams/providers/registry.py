@@ -140,6 +140,19 @@ FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS: tuple[str, ...] = (
 
 PROVIDER_ALIASES = {
     "deep-seek": "deepseek",
+    "longcat": "meituan",
+    "meituan-longcat": "meituan",
+    "qianfan": "baidu",
+    "baidu-qianfan": "baidu",
+    "hunyuan": "tencent-hunyuan",
+    "byteplus-modelark": "byteplus",
+    "byteplus-ark": "byteplus",
+    "modelark": "byteplus",
+    "sensenova": "sensetime",
+    "sense-nova": "sensetime",
+    "sense-time": "sensetime",
+    "nvidia-nim": "nvidia",
+    "nvidia-hosted": "nvidia",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",
@@ -181,7 +194,9 @@ PROVIDER_ALIASES = {
     "aws": "amazon-aws",
     "bedrock": "bedrock",
     **dict.fromkeys(ALIASES, "azure"),
-    "watsonx": "ibm",
+    "watsonx-ai": "watsonx",
+    "ibm-watsonx": "watsonx",
+    "ibm-watsonx-ai": "watsonx",
     "xverse": "xverse-ai",
 }
 

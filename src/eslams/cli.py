@@ -53,8 +53,12 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import azure, load_provider_registry, moonshot
+from eslams.providers.byteplus import API_KEY_ENV as BYTEPLUS_API_KEY_ENV
+from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
 from eslams.providers.deepseek import validate_model as validate_deepseek_model
+from eslams.providers.sensenova import API_KEY_ENV as SENSENOVA_API_KEY_ENV
+from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
@@ -1462,6 +1466,8 @@ def _provider_agent(
     *,
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
+    from eslams.providers import longcat
+
     if value.lower().split(":", 1)[0] == "sakana":
         from eslams.providers.sakana import API_KEY_ENV
 
@@ -1505,6 +1511,11 @@ def _provider_agent(
         "morph": ("", "MORPH_API_KEY"),
         "upstage": ("", "UPSTAGE_API_KEY"),
         "stepfun": ("", STEPFUN_API_KEY_ENV),
+        "tencent-hunyuan": ("", "TENCENTCLOUD_SECRET_ID"),
+        "sensetime": ("", SENSENOVA_API_KEY_ENV),
+        "nvidia": ("", "NVIDIA_API_KEY"),
+        "nvidia-nim": ("", "NVIDIA_API_KEY"),
+        "nvidia-hosted": ("", "NVIDIA_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1539,6 +1550,43 @@ def _provider_agent(
             provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",
             version=model, runtime_config=runtime_config,
         )
+    from eslams.providers.watsonx import normalize_alias
+    from eslams.providers.watsonx import validate_model as validate_watsonx_model
+    provider = normalize_alias(provider.lower())
+    if provider == "watsonx":
+        validate_watsonx_model(model)
+        defaults[provider] = (model, "WATSONX_API_KEY")
+    provider = longcat.normalize_provider(provider)
+    if provider == longcat.PROVIDER_ID:
+        if not model.strip():
+            raise ValueError("LongCat requires an explicit provider-native model ID")
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=longcat.API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider in {"baidu", "qianfan", "baidu-qianfan"}:
+        if not model:
+            raise ValueError("Baidu Qianfan requires an explicit model API name")
+        return ModelProviderAgent(
+            provider="baidu", model=model, api_key_env="QIANFAN_API_KEY",
+            version=model, runtime_config=runtime_config,
+        )
+    if provider.strip().replace("_", "-") in {"hunyuan", "tencent-hunyuan"}:
+        from eslams.providers.tencent_hunyuan import require_model
+
+        require_model(model)
+        provider = "tencent-hunyuan"
+    if byteplus_provider(provider):
+        if not model:
+            raise ValueError("BytePlus requires an explicit model or ep-* endpoint ID")
+        return ModelProviderAgent(
+            provider="byteplus", model=model, api_key_env=BYTEPLUS_API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    if provider in SENSENOVA_ALIASES:
+        provider = "sensetime"
+    if provider in {"nvidia", "nvidia-nim", "nvidia-hosted"} and not model.strip():
+        raise ValueError("NVIDIA requires an explicit nonblank model ID")
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
         return ModelProviderAgent(
@@ -1569,6 +1617,8 @@ def _provider_agent(
     if provider == "qwen":
         validate_model(model)
     default_model, env_name = defaults[provider]
+    if provider == "sensetime" and not model.strip():
+        raise ValueError("SenseNova requires an explicit nonblank model ID")
     return ModelProviderAgent(
         provider=(original_provider if provider == moonshot.PROVIDER_ID else provider),
         model=model or default_model,

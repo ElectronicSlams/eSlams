@@ -1,0 +1,18 @@
+{
+  "id": "chatcmpl-redacted-fixture",
+  "model_id": "ibm/granite-4-h-small",
+  "model_version": "4.0.0",
+  "created": 1761350400,
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 0, \"confidence\": 0.8}",
+        "reasoning_content": "PRIVATE_REASONING_FIXTURE"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {"prompt_tokens": 25, "completion_tokens": 12, "total_tokens": 37}
+}

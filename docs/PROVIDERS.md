@@ -8,8 +8,12 @@ The 0.7.1-targeted [Moonshot/Kimi native adapter](PROVIDER_MOONSHOT.md) also
 supports direct Chat Completions, regional endpoint selection, and account
 model discovery through `MOONSHOT_API_KEY`.
 
-## Provider Matrix
 
+The prospective 0.7.1 IBM Cloud `watsonx` adapter adds direct base-model chat
+with IAM authentication and explicit project/space and region configuration.
+See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
+
+## Provider Matrix
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
 | `qwen:<model>` | `DASHSCOPE_API_KEY` | native DashScope text generation | `output.choices[0].message.content` | unknown (no native response model field) |
@@ -23,10 +27,19 @@ model discovery through `MOONSHOT_API_KEY`.
 
 | `upstage:<model>` | `UPSTAGE_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `inception:<model>` | `INCEPTION_API_KEY` | Direct Mercury Chat Completions | `choices[0].message.content` | response `model` |
+
+| `watsonx:<exact-model-id>` | `WATSONX_API_KEY` (IAM exchange) | IBM `/ml/v1/text/chat` | `choices[0].message.content` | response `model_id` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
 | `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
 | `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` | Reka Chat Completions | `choices[0].message.content` | response `model` |
+
+| `meituan:<model>` / `longcat:<model>` | `LONGCAT_API_KEY` | native LongCat Chat Completions | `choices[0].message.content` | response `model` |
+| `baidu:<exact-model-api-name>` | `QIANFAN_API_KEY` | Qianfan Chat Completions | `choices[0].message.content` | response `model` |
+| `tencent-hunyuan:<model>` / `hunyuan:<model>` | `TENCENTCLOUD_SECRET_ID` + `TENCENTCLOUD_SECRET_KEY` | signed native ChatCompletions | `Choices[0].Message.Content` (optional `Response` wrapper) | unknown; no attested model field |
+| `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` | ModelArk Chat, ap-southeast-1 | `choices[0].message.content` | concrete response `model`; an `ep-*` alone leaves weights unknown |
+| `sensetime:<model>` (alias `sensenova`) | `SENSENOVA_API_KEY` | SenseNova Token Plan Chat Completions | `choices[0].message.content` | response `model` |
+| `nvidia:<exact-model-id>` | `NVIDIA_API_KEY` | NVIDIA-hosted Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `ai21-labs:<model-id>` | `AI21_API_KEY` | AI21 Studio Chat Completions | `choices[0].message.content` | unknown in documented envelope |
 
@@ -53,6 +66,26 @@ Step Plan and the Chinese `.com` endpoint are separate contracts, not aliases.
 The 0.7.1 candidate [Arcee adapter notes](providers/ARCEE.md) document direct
 endpoint provenance, model discovery, native reasoning defaults, accounting
 limits and deterministic fixture coverage. Arcee requires an explicit model ID.
+
+The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including
+official API sources, exact aliases, reasoning controls and unresolved native
+accounting semantics. LongCat requires an explicit model ID and has no fallback.
+
+For the native Baidu Qianfan adapter, aliases,
+domestic endpoint scope, exact controls, accounting and raw-wire provenance are
+documented in [BAIDU_QIANFAN.md](BAIDU_QIANFAN.md).
+
+See the [Tencent native Hunyuan guide](providers/TENCENT_HUNYUAN.md) for TC3
+signing, separate Tencent products, controls and the announced December 2026
+retirement. This adapter does not enable TokenHub or Coding Plan catalogue routes.
+
+See the [SenseNova adapter notes](providers/SENSENOVA.md) for the verified direct API,
+reasoning limitations, region evidence, and live availability caveat.
+
+The [NVIDIA hosted adapter](providers/NVIDIA.md) requires an explicit
+model ID and is for authorized development/test/evaluation access. The shared
+hosted trial is not verified for production. See its provider guide for aliases,
+reasoning controls, terms, missing accounting and live-entitlement limitations.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

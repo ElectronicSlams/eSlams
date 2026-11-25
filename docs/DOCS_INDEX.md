@@ -28,6 +28,11 @@
 | StepFun direct API scope and fixture provenance | [STEPFUN.md](providers/STEPFUN.md) |
 | Inception Labs Mercury direct adapter (planned 0.7.1) | [INCEPTION.md](INCEPTION.md) |
 | Reka direct adapter research and usage | [PROVIDER_REKA.md](PROVIDER_REKA.md) |
+| IBM Cloud watsonx.ai host adapter and IAM | [PROVIDER_WATSONX.md](PROVIDER_WATSONX.md) |
+
+| Meituan LongCat native API, controls and accounting limits | [providers/LONGCAT.md](providers/LONGCAT.md) |
+
+| Native Baidu Qianfan adapter, direct endpoint scope and source provenance | [BAIDU_QIANFAN.md](BAIDU_QIANFAN.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

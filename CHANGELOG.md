@@ -130,6 +130,54 @@
   usage receipts. Azure aliases now select Azure inference instead of the
   Microsoft publisher catalogue. See `docs/AZURE_FOUNDRY.md` for setup and scope.
 
+- Add the native IBM Cloud watsonx.ai base-model chat adapter, explicit host aliases,
+  IAM API-key exchange, sanitized receipts and deterministic wire tests. Author
+  catalogue names remain separate. See `docs/PROVIDER_WATSONX.md` for configuration,
+  reasoning/accounting limits and unsupported deployment/gateway surfaces.
+
+- Add a native Meituan LongCat Chat Completions adapter with explicit model IDs,
+  aliases, Models discovery, full-history prompts and provider-native reasoning
+  controls. Reuse bounded HTTP transport and private receipts with zero default
+  retries. Preserve unknown identity/accounting and fail closed on incomplete
+  responses. See `docs/providers/LONGCAT.md` for sources and limitations.
+
+- Add a native Baidu Qianfan direct Chat Completions adapter under `baidu`,
+  `qianfan`, and `baidu-qianfan`, requiring an explicit model API name and
+  `QIANFAN_API_KEY`. Preserve native defaults, full supplied history, exact
+  requested/attested identities and incomplete accounting; reject filtered,
+  truncated, malformed and tool-call responses before action parsing.
+- Add deterministic Qianfan wire, transport, discovery, CLI and artifact-privacy
+  regressions, with official source provenance in `docs/BAIDU_QIANFAN.md`.
+- Reject blank Qianfan models at construction/preflight, validate explicit
+  reasoning budgets before discovery/transport, and remove primary/secondary
+  credential echoes from success and failure receipts, discovery and final text.
+
+- Exclude opaque and encoded Tencent transport credential diagnostics and private exception contexts; retain the unresolved native host/lifecycle review limitations.
+
+- Add the signed native Tencent Hunyuan ChatCompletions adapter under
+  `tencent-hunyuan` / `hunyuan`, with offline raw-wire tests and lifecycle docs.
+  Preserve unknown identity/accounting and reject unsupported controls. Tencent
+  announces retirement of this legacy API on 2026-12-21; TokenHub and Coding
+  Plan remain separate, unsupported inference routes.
+- Require explicit nonblank Hunyuan model IDs for every alias and exclude
+  reflected credential values from success and failure receipt identifiers.
+- Reject raw or decoded/escaped Hunyuan credential echoes in action content
+  before parsing or repair; report local configuration rejection consistently.
+
+- Add a native BytePlus ModelArk direct Chat adapter with explicit model selection,
+  BytePlus aliases, configuration preflight, sanitized receipts, inclusive reasoning
+  usage, fallback rejection and deterministic offline raw-wire tests. See
+  `docs/providers/BYTEPLUS.md` for service boundaries and verification limits.
+- Reject missing/blank BytePlus model IDs and unsupported reasoning budgets in
+  preflight; remove primary/secondary credential echoes from all receipt paths
+  and reject credential-bearing action text before parsing.
+
+- Add an NVIDIA-hosted Chat Completions adapter with explicit model IDs,
+  `nvidia-nim` / `nvidia-hosted` aliases, documented reasoning controls,
+  safe transport and sanitized receipts. Preserve unknown identity/accounting
+  and zero default retries. Hosted API Catalog use is limited by development
+  entitlements; production access is unverified. See `docs/providers/NVIDIA.md`.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

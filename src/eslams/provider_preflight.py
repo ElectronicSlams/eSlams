@@ -19,6 +19,7 @@ from eslams.providers import (
     contextual,
     deepseek,
     load_provider_registry,
+    longcat,
     moonshot,
     morph,
     perceptron,
@@ -39,6 +40,7 @@ from eslams.providers.inception import MODELS_ENDPOINT as INCEPTION_MODELS_ENDPO
 from eslams.providers.inception import configuration_error as inception_configuration_error
 from eslams.providers.inception import credential_echo as inception_credential_echo
 from eslams.providers.inception import validate_model_id as validate_inception_model_id
+from eslams.providers.nvidia import validate_options as validate_nvidia_options
 from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
 from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
 from eslams.providers.qwen import validate_controls as qwen_validate_controls
@@ -48,10 +50,12 @@ from eslams.providers.reka import API_KEY_ENV as REKA_API_KEY_ENV
 from eslams.providers.reka import MODELS_ENDPOINT as REKA_MODELS_ENDPOINT
 from eslams.providers.reka import configuration_error as reka_configuration_error
 from eslams.providers.reka import credential_echo as reka_credential_echo
+from eslams.providers.sensenova import configuration_error as sensenova_configuration_error
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
 from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
 from eslams.providers.stepfun import validate_model_id as validate_stepfun_model_id
+from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
 
 DEFAULT_PROVIDER_ENV = {
     "deepseek": deepseek.API_KEY_ENV,
@@ -61,6 +65,9 @@ DEFAULT_PROVIDER_ENV = {
     moonshot.PROVIDER_ID: moonshot.API_KEY_ENV,
     "arcee-ai": ARCEE_API_KEY_ENV,
     "azure": azure.API_KEY_ENV,
+    longcat.PROVIDER_ID: longcat.API_KEY_ENV,
+    "baidu": "QIANFAN_API_KEY",
+    "byteplus": "BYTEPLUS_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -72,6 +79,10 @@ DEFAULT_PROVIDER_ENV = {
     "upstage": "UPSTAGE_API_KEY",
     "stepfun": STEPFUN_API_KEY_ENV,
     "reka-ai": REKA_API_KEY_ENV,
+    "watsonx": "WATSONX_API_KEY",
+    "tencent-hunyuan": "TENCENTCLOUD_SECRET_ID",
+    "sensetime": "SENSENOVA_API_KEY",
+    "nvidia": "NVIDIA_API_KEY",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
     "kuaishou": "STREAMLAKE_API_KEY",
     "kwaipilot": "STREAMLAKE_API_KEY",
@@ -91,6 +102,8 @@ _MODELS_ENDPOINTS = {
     moonshot.PROVIDER_ID: moonshot.MODELS_ENDPOINT,
     "arcee-ai": ARCEE_MODELS_ENDPOINT,
     "reka-ai": REKA_MODELS_ENDPOINT,
+    longcat.PROVIDER_ID: longcat.MODELS_ENDPOINT,
+    "baidu": "https://qianfan.baidubce.com/v2/models",
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -123,6 +136,34 @@ def provider_preflight(
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
+    provider = longcat.normalize_provider(provider)
+    if provider == longcat.PROVIDER_ID:
+        longcat.validate_configuration(model, runtime_config)
+    from eslams.providers.watsonx import configuration_error as watsonx_configuration_error
+    from eslams.providers.watsonx import normalize_alias
+    from eslams.providers.watsonx import validate_model as validate_watsonx_model
+    watsonx_problem = None
+    if normalize_alias(provider) == "watsonx":
+        validate_watsonx_model(model)
+        watsonx_problem = watsonx_configuration_error(runtime_config)
+    configuration_error: dict[str, Any] | None = None
+    if PROVIDER_ALIASES.get(provider, provider) == "baidu":
+        from eslams.providers.baidu import reasoning_controls, validate_model
+
+        validate_model(model)
+        try:
+            reasoning_controls(model, runtime_config)
+        except ProviderCallError as exc:
+            configuration_error = _public_error(exc, provider=provider, model=model)
+    if provider.strip().replace("_", "-") in {"hunyuan", "tencent-hunyuan"}:
+        provider = "tencent-hunyuan"
+    from eslams.providers.byteplus import canonical_provider
+    from eslams.providers.byteplus import configuration_error as byteplus_configuration_error
+
+    if canonical_provider(provider) and (
+        byteplus_error := byteplus_configuration_error(model, runtime_config)
+    ):
+        raise ValueError(byteplus_error)
     provider = canonicalize_qwen_provider(provider)
     if provider.strip() == "stepfun":
         provider = "stepfun"
@@ -170,6 +211,10 @@ def provider_preflight(
     record = provider_registry.resolve(provider, registry_model)
     if record.provider == contextual.PROVIDER_ID:
         contextual.validate_configuration(model, runtime_config, max_output_tokens)
+    adapter_configuration_error = (
+        sensenova_configuration_error(model, runtime_config)
+        if record.provider == "sensetime" else None
+    )
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
@@ -184,10 +229,10 @@ def provider_preflight(
     elif record.provider == "inception":
         validate_inception_model_id(model)
 
-    configuration_error: dict[str, Any] | None = (
-        {"error_class": "provider_request_rejected", "message": provider_config_error}
-        if provider_config_error else None
-    )
+    if provider_config_error is not None:
+        configuration_error = {
+            "error_class": "provider_request_rejected", "message": provider_config_error,
+        }
     try:
         if record.provider == "qwen":
             qwen_validate_controls(runtime_config)
@@ -220,10 +265,22 @@ def provider_preflight(
         try:
             if provider_key(credential_environment) is not None:
                 credential_present = True
+            if record.provider == "tencent-hunyuan":
+                from eslams.providers.tencent_hunyuan import credentials
+
+                credentials()
+                if not credential_present:
+                    raise ValueError("native Hunyuan requires a primary credential")
         except ValueError:
             credential_error = (
                 "API key must contain printable ASCII without internal whitespace"
             )
+            if record.provider == "tencent-hunyuan":
+                credential_present = False
+                credential_error = (
+                    "native Hunyuan requires valid TENCENTCLOUD_SECRET_ID/SECRET_KEY "
+                    "and optional TOKEN/REGION"
+                )
     checks: dict[str, bool | None] = {
         "registry_entry": record.known,
         "adapter_available": credential_environment is not None,
@@ -240,18 +297,34 @@ def provider_preflight(
         "usage_extraction": False,
     }
     warnings = provider_registry.warnings_for(provider, registry_model)
+    control_error = None
+    if record.provider == "tencent-hunyuan":
+        from eslams.providers.tencent_hunyuan import validate_controls
+
+        warnings.append(RETIREMENT_WARNING)
+        try:
+            validate_controls(model, runtime_config or ProviderRuntimeConfig(), max_output_tokens)
+        except ValueError as exc:
+            control_error = str(exc)
     error: dict[str, Any] | None = None
     receipt: dict[str, Any] | None = None
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
+    option_error = (
+        validate_nvidia_options(model, runtime_config) if record.provider == "nvidia" else None
+    )
 
     if configuration_error is not None:
         error = configuration_error
+    elif option_error:
+        error = {"error_class": "provider_request_rejected", "message": option_error}
     elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",
         }
+    elif watsonx_problem:
+        error = {"error_class": "provider_request_rejected", "message": watsonx_problem}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -264,6 +337,11 @@ def provider_preflight(
         }
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
+    elif control_error:
+        error = {"error_class": "provider_request_rejected", "message": control_error}
+    elif adapter_configuration_error:
+        error = {"error_class": "provider_request_rejected",
+                 "message": adapter_configuration_error}
     elif not live:
         warnings.append("This configuration preflight did not verify live provider availability.")
     elif not credential_environment or not credential_present:
@@ -285,7 +363,9 @@ def provider_preflight(
                 )
         if visible_models is None and error is None:
             warnings.append(
-                "This adapter has no Models API; account visibility remains unverified."
+                "Adapter model discovery is unavailable; account visibility remains unverified."
+                 if record.provider == "watsonx" else
+                 "This adapter has no Models API; account visibility remains unverified."
             )
         if visible_models is not None:
             checks["account_model_visible"] = model in visible_models
@@ -334,10 +414,18 @@ def provider_preflight(
                 checks["response_parsing"] = response.action in legal_actions
                 receipt = agent.last_receipt
                 usage = receipt.get("usage") if isinstance(receipt, dict) else None
-                checks["usage_extraction"] = isinstance(usage, dict) and all(
-                    _is_int(usage.get(key))
-                    for key in ("input_tokens", "output_tokens", "total_tokens")
+                checks["usage_extraction"] = (
+                    isinstance(usage, dict)
+                    and not usage.get("usage_validation_errors")
+                    and all(_is_int(usage.get(key))
+                            for key in ("input_tokens", "output_tokens", "total_tokens"))
                 )
+                if record.provider == longcat.PROVIDER_ID and isinstance(usage, dict):
+                    checks["usage_extraction"] = (
+                        checks["usage_extraction"] is True
+                        and isinstance(usage.get("reasoning_included_in_output"), bool)
+                        and not usage.get("usage_validation_errors")
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -368,8 +456,12 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": (checks["adapter_available"] is True
-                                    and credential_error is None and configuration_error is None),
+            "configuration_ready": (
+                checks["adapter_available"] is True and credential_error is None
+                and configuration_error is None and control_error is None
+                and adapter_configuration_error is None and option_error is None
+                and (record.provider != "watsonx" or error is None)
+            ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -507,6 +599,15 @@ def provider_models_live(provider: str) -> list[str] | None:
                 raise _discovery_schema_error(provider)
             if provider == "reka-ai" and reka_credential_echo(raw):
                 raise _discovery_schema_error(provider)
+            if provider == longcat.PROVIDER_ID and longcat.credential_echo(
+                raw, longcat.credential_values(api_key, api_key_env),
+            ):
+                raise _discovery_schema_error(provider)
+            if provider == "baidu":
+                from eslams.providers.baidu import contains_credential, credential_values
+
+                if contains_credential(raw, credential_values(api_key)):
+                    raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
         if provider == "anthropic":
