@@ -212,24 +212,35 @@ _JSON_ESCAPE_RUN = re.compile(r'(?:\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))+')
 
 def action_text_matches(text: str, matches: Callable[[str], bool]) -> bool:
     """Inspect wire prose and parsed action fields before accepting an action."""
-    if matches(text):
-        return True
+    def matches_normalized(value: str) -> bool:
+        if matches(value):
+            return True
+        # One layer may come from embedded action JSON and another from a
+        # provider escaping individual characters in the returned field.
+        for _ in range(2):
+            normalized = _JSON_ESCAPE_RUN.sub(
+                lambda match: str(json.loads('"' + match.group(0) + '"')), value,
+            )
+            if normalized == value:
+                break
+            if matches(normalized):
+                return True
+            value = normalized
+        return False
+
     try:
-        decoded = _JSON_ESCAPE_RUN.sub(
-            lambda match: str(json.loads('"' + match.group(0) + '"')), text,
-        )
+        if matches_normalized(text):
+            return True
         pending = [extract_json(text)]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, str) and matches_normalized(value):
+                return True
+            if isinstance(value, dict):
+                pending.extend(value.keys())
+                pending.extend(value.values())
+            elif isinstance(value, list):
+                pending.extend(value)
     except (ValueError, RecursionError):
         return True  # The action could not be checked reliably.
-    if decoded != text and matches(decoded):
-        return True
-    while pending:
-        value = pending.pop()
-        if isinstance(value, str) and matches(value):
-            return True
-        if isinstance(value, dict):
-            pending.extend(value.keys())
-            pending.extend(value.values())
-        elif isinstance(value, list):
-            pending.extend(value)
     return False
