@@ -134,6 +134,7 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
     data = _response_json_with_receipt(
         response, provider=PROVIDER, model=agent.model,
         capabilities=agent.capabilities, runtime_config=runtime,
+        synchronous=True,
     )
     # Catalogue author rows can carry OpenRouter prices. Those are not evidence
     # for direct Arcee billing; no direct per-request cost contract is documented.
