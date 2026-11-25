@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Qwen / Alibaba Cloud DashScope synchronous text adapter with
+  regional/workspace routing, canonical aliases, sanitized attempt receipts,
+  conservative identity/accounting, explicit caller controls and offline fixtures.
+  See `docs/providers/QWEN.md` for supported routes and limitations.
+- Require explicit Qwen model IDs, reject unrepresentable reasoning controls in
+  preflight and execution, and redact primary/secondary credential echoes from
+  receipt evidence and response metadata, including interrupted responses.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

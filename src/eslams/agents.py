@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, load_provider_registry, qwen
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -326,6 +326,8 @@ def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
+    if qwen.contains_credential(value):
+        return None
     sanitized = _sanitize_receipt_value(value)
     return sanitized if isinstance(sanitized, str) else None
 
@@ -401,7 +403,9 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = qwen.canonicalize_provider(self.provider)
+        if self.provider == "qwen":
+            qwen.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -426,6 +430,8 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "qwen":
+                return qwen.act(self, request)
             if self.provider == "krutrim":
                 from eslams.providers.krutrim import credential_scope
 
@@ -600,7 +606,10 @@ class ModelProviderAgent:
                 metadata={
                     "provider": self.provider,
                     "model": self.model,
-                    **({"raw_action_text": text[:500]} if self.provider != "krutrim" else {}),
+                    **(
+                        {"raw_action_text": text[:500]}
+                        if self.provider not in {"qwen", "krutrim"} else {}
+                    ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
                 },
@@ -627,6 +636,8 @@ class ModelProviderAgent:
         self._receipt_batch = (batch[0], tuple(copy.deepcopy(receipts)))
 
     def _remember_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "qwen":
+            receipt = qwen.redact(receipt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import sanitize_receipt
 
@@ -637,6 +648,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _replace_last_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "qwen":
+            receipt = qwen.redact(receipt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import sanitize_receipt
 
@@ -647,6 +660,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "qwen":
+            return qwen.call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -1244,9 +1259,12 @@ def _post_json(
         body_retry_permitted = _capture_error_body_observations(
             response, provider=provider, receipt=receipt,
         )
+        if provider == "qwen":
+            kind = qwen.annotate_http_error(response, receipt, kind)
+            body_retry_permitted = False
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
-            or response.headers.get("x-amzn-requestid"),
+            or response.headers.get("x-amzn-requestid") or receipt.get("request_id"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
             response.headers.get("cf-aig-request-id")
@@ -1995,6 +2013,7 @@ def _provider_endpoint(
 
 def _endpoint_kind(provider: str) -> str:
     return {
+        "qwen": qwen.ENDPOINT_KIND,
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -2007,6 +2026,7 @@ def _endpoint_kind(provider: str) -> str:
 
 def _parser_version(provider: str) -> str:
     return {
+        "qwen": qwen.PARSER_VERSION,
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -2024,6 +2044,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
+    if provider == "qwen":
+        return _normalize_usage("dashscope_native", qwen.usage_fields(usage))
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2776,8 +2798,17 @@ def _response_json_with_receipt(
     model: str,
     capabilities: ModelCapabilities,
     runtime_config: ProviderRuntimeConfig | None,
+    synchronous: bool = False,
 ) -> dict[str, Any]:
     try:
+        if synchronous and response.status_code == httpx.codes.ACCEPTED:
+            raise ProviderCallError(
+                "provider accepted the request without completing it",
+                status_code=response.status_code,
+                error_kind="provider_response_schema_mismatch",
+                provider=provider,
+                model=model,
+            )
         return _response_json(response, provider=provider, model=model)
     except ProviderCallError as exc:
         receipt = _failure_receipt(
