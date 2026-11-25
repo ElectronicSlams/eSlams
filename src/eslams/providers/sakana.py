@@ -124,6 +124,7 @@ def call_sakana(
         data = _response_json_with_receipt(
             response, provider=PROVIDER_ID, model=agent.model,
             capabilities=agent.capabilities, runtime_config=config,
+            synchronous=True,
         )
         receipt = _receipt(
             provider=PROVIDER_ID, model=agent.model, response=response,

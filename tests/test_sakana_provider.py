@@ -508,3 +508,15 @@ def test_discovery_failures_never_expose_either_configured_credential(monkeypatc
     with pytest.raises(ProviderCallError) as failure:
         provider_models_live("sakana")
     assert SECRET not in str(failure.value) and SECONDARY not in str(failure.value)
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = mock_wire(monkeypatch, status=202)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(_request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1
