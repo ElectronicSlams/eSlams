@@ -27,6 +27,8 @@ See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 | `tencent-hunyuan:<model>` / `hunyuan:<model>` | `TENCENTCLOUD_SECRET_ID` + `TENCENTCLOUD_SECRET_KEY` | signed native ChatCompletions | `Choices[0].Message.Content` (optional `Response` wrapper) | unknown; no attested model field |
 
 | `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` | ModelArk Chat, ap-southeast-1 | `choices[0].message.content` | concrete response `model`; an `ep-*` alone leaves weights unknown |
+
+| `sensetime:<model>` (alias `sensenova`) | `SENSENOVA_API_KEY` | SenseNova Token Plan Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including
@@ -40,6 +42,9 @@ documented in [BAIDU_QIANFAN.md](BAIDU_QIANFAN.md).
 See the [Tencent native Hunyuan guide](providers/TENCENT_HUNYUAN.md) for TC3
 signing, separate Tencent products, controls and the announced December 2026
 retirement. This adapter does not enable TokenHub or Coding Plan catalogue routes.
+
+See the [SenseNova adapter notes](providers/SENSENOVA.md) for the verified direct API,
+reasoning limitations, region evidence, and live availability caveat.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

@@ -49,6 +49,8 @@ from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 from eslams.providers.tencent_hunyuan import ALIASES as HUNYUAN_ALIASES
+from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
+from eslams.providers.sensenova import call as call_sensenova
 
 
 class AgentError(RuntimeError):
@@ -426,6 +428,8 @@ class ModelProviderAgent:
 
             if error := model_error(self.model):
                 raise ValueError(error)
+        if self.provider in SENSENOVA_ALIASES:
+            self.provider = "sensetime"
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -690,6 +694,8 @@ class ModelProviderAgent:
             from eslams.providers.byteplus import call
 
             return call(self, api_key, prompt)
+        if self.provider == "sensetime":
+            return call_sensenova(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -2072,6 +2078,7 @@ def _endpoint_kind(provider: str) -> str:
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
+        "sensetime": "sensenova_chat_completions",
         "bedrock": "bedrock_converse",
         "watsonx": "watsonx_text_chat",
         longcat.PROVIDER_ID: longcat.ENDPOINT_KIND,
@@ -2089,6 +2096,7 @@ def _parser_version(provider: str) -> str:
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
+        "sensetime": "sensenova-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "watsonx": "watsonx-text-chat-raw-v1",
         longcat.PROVIDER_ID: longcat.PARSER_VERSION,
@@ -2278,7 +2286,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "sensetime"}
+            else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2650,7 +2659,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", longcat.PROVIDER_ID}:
+    elif provider in {"openrouter", longcat.PROVIDER_ID, "sensetime"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

@@ -16,6 +16,7 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry, longcat
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
+from eslams.providers.sensenova import configuration_error as sensenova_configuration_error
 
 DEFAULT_PROVIDER_ENV = {
     longcat.PROVIDER_ID: longcat.API_KEY_ENV,
@@ -29,6 +30,7 @@ DEFAULT_PROVIDER_ENV = {
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "watsonx": "WATSONX_API_KEY",
     "tencent-hunyuan": "TENCENTCLOUD_SECRET_ID",
+    "sensetime": "SENSENOVA_API_KEY",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -95,6 +97,10 @@ def provider_preflight(
         validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
+    adapter_configuration_error = (
+        sensenova_configuration_error(model, runtime_config)
+        if record.provider == "sensetime" else None
+    )
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)
@@ -174,6 +180,9 @@ def provider_preflight(
         error = {"error_class": "provider_auth_failed", "message": credential_error}
     elif control_error:
         error = {"error_class": "provider_request_rejected", "message": control_error}
+    elif adapter_configuration_error:
+        error = {"error_class": "provider_request_rejected",
+                 "message": adapter_configuration_error}
     elif not live:
         warnings.append("This configuration preflight did not verify live provider availability.")
     elif not credential_environment or not credential_present:
@@ -290,6 +299,7 @@ def provider_preflight(
             "configuration_ready": (
                 checks["adapter_available"] is True and credential_error is None
                 and configuration_error is None and control_error is None
+                and adapter_configuration_error is None
                 and (record.provider != "watsonx" or error is None)
             ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else

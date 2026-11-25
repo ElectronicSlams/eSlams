@@ -1,0 +1,22 @@
+{
+  "id": "sensenova-fixture-response",
+  "request_id": "sensenova-fixture-request",
+  "model": "sensenova-6.8-flash-lite",
+  "object": "chat.completion",
+  "created": 1776952631,
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "{\"action\": 1}",
+      "reasoning": "PRIVATE_REASONING_DO_NOT_PERSIST {\"action\": 2}"
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16,
+    "prompt_tokens_details": {"cached_tokens": 0, "audio_tokens": 0}
+  }
+}

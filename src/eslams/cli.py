@@ -54,6 +54,8 @@ from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
 from eslams.providers.byteplus import API_KEY_ENV as BYTEPLUS_API_KEY_ENV
 from eslams.providers.byteplus import canonical_provider as byteplus_provider
+from eslams.providers.sensenova import API_KEY_ENV as SENSENOVA_API_KEY_ENV
+from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1456,6 +1458,7 @@ def _provider_agent(
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "tencent-hunyuan": ("", "TENCENTCLOUD_SECRET_ID"),
+        "sensetime": ("", SENSENOVA_API_KEY_ENV),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1493,6 +1496,8 @@ def _provider_agent(
             provider="byteplus", model=model, api_key_env=BYTEPLUS_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    if provider in SENSENOVA_ALIASES:
+        provider = "sensetime"
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 
@@ -1503,6 +1508,8 @@ def _provider_agent(
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]
+    if provider == "sensetime" and not model.strip():
+        raise ValueError("SenseNova requires an explicit nonblank model ID")
     return ModelProviderAgent(
         provider=provider,
         model=model or default_model,
