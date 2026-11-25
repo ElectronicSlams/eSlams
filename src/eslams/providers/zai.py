@@ -151,7 +151,10 @@ def _text(data: dict[str, Any], receipt: dict[str, Any]) -> str:
         kind = "provider_output_truncated"
     elif reason == "network_error":
         kind = "provider_interrupted"
-    elif reason == "tool_calls" or (isinstance(message, dict) and message.get("tool_calls")):
+    elif reason in ("tool_calls", "function_call") or (
+        isinstance(message, dict)
+        and (message.get("tool_calls") or message.get("function_call") is not None)
+    ):
         kind = "provider_request_rejected"
     elif (
         reason != "stop"

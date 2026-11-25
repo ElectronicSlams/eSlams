@@ -499,6 +499,7 @@ class ModelProviderAgent:
                 provider_attempt += 1
                 try:
                     text, receipt = self._call_provider(api_key, prompt)
+                    _drop_credential_identifiers(receipt, api_key)
                     if _action_contains_credential(text, api_key):
                         raise ProviderCallError(
                             "provider returned credential material in its action",
@@ -526,6 +527,8 @@ class ModelProviderAgent:
                     # Never replay it automatically, even with optional safe retries.
                     raise
                 except ProviderCallError as exc:
+                    if exc.receipt is not None:
+                        _drop_credential_identifiers(exc.receipt, api_key)
                     failure_receipt = (
                         {
                             **exc.receipt,
@@ -2873,14 +2876,26 @@ def _redact_sensitive_text(value: str) -> str:
     return redacted[:500]
 
 
+def _drop_credential_identifiers(receipt: dict[str, Any], credential: str) -> None:
+    """Discard credential echoes before provider-supplied identifiers become public."""
+    if not credential:
+        return
+    for name in ("request_id", "gateway_request_id", "provider_response_id", "locked_model_id"):
+        value = receipt.get(name)
+        if isinstance(value, str) and credential in value:
+            receipt[name] = None
+            if name == "locked_model_id":
+                receipt["model_identity_source"] = None
+
+
 def _action_contains_credential(text: str, credential: str) -> bool:
     """Check raw metadata and decoded JSON values before returning an action."""
     if credential in text:
         return True
     try:
         pending = [extract_json(text)]
-    except RecursionError:
-        # Excessively nested JSON cannot be checked safely.
+    except (ValueError, RecursionError):
+        # Oversized or deeply nested action JSON cannot be checked safely.
         return True
     while pending:
         value = pending.pop()
