@@ -325,6 +325,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             )
             if not isinstance(raw, str) or not raw.strip():
                 raise _discovery_schema_error(provider)
+            if provider == moonshot.PROVIDER_ID and api_key in raw:
+                raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
         if provider == "anthropic":

@@ -393,3 +393,56 @@ def test_raw_response_boundaries(mutation, monkeypatch):
     assert len(calls) == 1 and native.last_receipt["outcome"] != "ok"
     assert native.last_receipt["usage"]["total_tokens"] == 485
     assert "private-refusal-canary" not in json.dumps(native.last_receipt)
+
+
+@pytest.mark.parametrize("duplicate_field", [False, True])
+def test_unicode_escaped_action_credentials_are_rejected_without_public_diagnostics(
+    monkeypatch, duplicate_field,
+):
+    native = agent()
+    canary = "OpaqueReviewCredentialCanary"
+    monkeypatch.setenv(native.api_key_env, canary)
+    body = wire()
+    message = body["choices"][0]["message"]
+    ending = ',"public_explanation":"safe"' if duplicate_field else ""
+    message["content"] = (
+        '{"action":1,"public_explanation":"' + chr(92) + 'u004f' + canary[1:] + '"' + ending + "}"
+    )
+    monkeypatch.setattr(
+        "eslams.agents.bounded_post", lambda *args, **kwargs: httpx.Response(200, json=body),
+    )
+    with pytest.raises(ProviderCallError) as caught:
+        native.act(_request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert canary not in str(caught.value) + json.dumps(native.attempt_receipts)
+    assert native.last_receipt["usage"]["total_tokens"] is not None
+
+
+def test_unsolicited_legacy_function_call_is_rejected(monkeypatch):
+    native = agent()
+    monkeypatch.setenv(native.api_key_env, "OpaqueReviewCredentialCanary")
+    body = wire()
+    body["choices"][0]["message"]["function_call"] = {"name": "unsupported"}
+    monkeypatch.setattr(
+        "eslams.agents.bounded_post", lambda *args, **kwargs: httpx.Response(200, json=body),
+    )
+    with pytest.raises(ProviderCallError) as caught:
+        native.act(_request())
+    assert caught.value.error_kind in {
+        "provider_response_schema_mismatch", "provider_request_rejected",
+    }
+
+
+def test_credential_echoes_do_not_become_full_provider_receipt_identifiers(monkeypatch):
+    canary = "OpaqueMoonshotCredentialCanary"
+    monkeypatch.setenv(moonshot.API_KEY_ENV, canary)
+    body = wire()
+    body["id"] = f"response-{canary}"
+    body["model"] = f"alias-{canary}"
+    post(monkeypatch, body, **{"x-request-id": f"http-{canary}"})
+    native = agent()
+    assert native.act(_request()).action == 1
+    assert native.last_receipt["provider_response_id"] is None
+    assert native.last_receipt["locked_model_id"] is None
+    assert native.last_receipt["model_identity_source"] is None
+    assert canary not in json.dumps(native.attempt_receipts)

@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 
 import httpx
+
+from eslams.providers.action_privacy import (
+    contains_credential,
+    credential_encodings,
+    validate_provider_action_text,
+)
 
 if TYPE_CHECKING:
     from eslams.agents import ModelProviderAgent
@@ -96,6 +103,33 @@ def usage_for_receipt(usage: Any) -> Any:
 
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+    from eslams.agents import ProviderCallError
+
+    credentials = credential_encodings({api_key, os.getenv(API_KEY_ENV, "").strip()})
+    try:
+        text, receipt = _call(agent, api_key, prompt)
+    except ProviderCallError as exc:
+        if exc.receipt is not None:
+            exc.receipt = _safe_receipt(exc.receipt, credentials)
+        if contains_credential(str(exc), credentials):
+            exc.args = ("Moonshot provider failure",)
+        raise exc from None
+    safe_receipt = _safe_receipt(receipt, credentials)
+    validate_provider_action_text(text, credentials, safe_receipt,
+                                  provider=PROVIDER_ID, model=agent.model)
+    return text, safe_receipt
+
+
+def _safe_receipt(receipt: dict[str, Any], credentials: set[str]) -> dict[str, Any]:
+    # Keep original work evidence for the shared retry admission check.
+    result = {field: None if contains_credential(value, credentials) else value
+              for field, value in receipt.items()}
+    if result.get("locked_model_id") is None:
+        result["model_identity_source"] = None
+    return result
+
+
+def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     # Import at call time so the shared agent owns transport/receipt custody
     # without introducing an import cycle or a second transport implementation.
     from eslams.agents import (
@@ -153,7 +187,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         if (data.get("object") != "chat.completion" or not isinstance(first, dict)
                 or not isinstance(message, dict)
                 or message.get("role") != "assistant" or first.get("finish_reason") != "stop"
-                or message.get("tool_calls") or not isinstance(message.get("content"), str)
+                or message.get("tool_calls") or message.get("function_call") is not None
+                or message.get("refusal") or not isinstance(message.get("content"), str)
                 or not message["content"].strip()):
             raise ProviderCallError(
                 "Moonshot response must contain one completed assistant text choice",
