@@ -572,3 +572,15 @@ def test_live_preflight_does_not_publish_credential_echoes(monkeypatch, credenti
     assert result["ok"] is False
     assert len(calls) == 1
     assert_private(result)
+
+
+@pytest.mark.parametrize("double_escaped", [False, True])
+def test_no_escaped_credential_in_action(monkeypatch, double_escaped):
+    data = wire()
+    secret = "".join(f"\\u{ord(c):04x}" for c in SECRET)
+    if double_escaped:
+        secret = secret.replace("\\", "\\\\")
+    data["choices"][0]["message"]["content"] = '{"action":1,"public_explanation":"' + secret + '"}'
+    install(monkeypatch, data)
+    with pytest.raises(ProviderCallError):
+        agent().act(_request())

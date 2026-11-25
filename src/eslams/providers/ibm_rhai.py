@@ -64,6 +64,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str,
         _receipt,
         _response_json_with_receipt,
     )
+    from eslams.model_actions import action_text_matches
 
     runtime = agent.runtime_config
     try:
@@ -108,7 +109,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str,
     _exclude_credentials(receipt, api_key)
     try:
         text = _text(data, receipt)
-        if api_key in text:
+        if action_text_matches(text, lambda value: api_key in value):
             raise ProviderCallError("ibm-rhai response contains credential material; "
                                     "no action accepted",
                                     error_kind="provider_response_schema_mismatch",
