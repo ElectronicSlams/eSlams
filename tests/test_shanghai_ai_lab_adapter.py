@@ -241,7 +241,9 @@ def test_legal_looking_partial_output_is_not_accepted(monkeypatch, reason):
     assert target.last_receipt["usage"]["input_tokens"] == 12
 
 
-@pytest.mark.parametrize("mutation", ["model", "tool", "search", "choices", "content", "role", "error"])
+@pytest.mark.parametrize("mutation",
+    ["model", "tool", "search", "choices", "content", "role", "error"],
+)
 def test_mismatched_identity_tools_search_and_wrong_envelopes_fail(monkeypatch, mutation):
     data = wire()
     if mutation == "model":
