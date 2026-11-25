@@ -94,6 +94,7 @@ def _contains_secret(value: Any, secrets: tuple[str, ...]) -> bool:
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     # Import at call time to reuse transport/receipt custody without a module cycle.
     from eslams import agents
+    from eslams.model_actions import action_text_matches
 
     runtime = agent.runtime_config
     secrets = _credential_values(api_key, agent.api_key_env)
@@ -178,8 +179,10 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         text = message.get("content") if isinstance(message, dict) else None
         if reason != "stop" or not isinstance(text, str) or not text.strip():
             reject("provider_response_schema_mismatch", "provider returned invalid text")
-        # Validation above proves this value is text; no SDK convenience fields.
+        # Validate embedded action text separately from the outer response JSON.
         assert isinstance(text, str)
+        if action_text_matches(text, lambda value: _contains_secret(value, secrets)):
+            reject("provider_response_schema_mismatch", "provider response echoed a credential")
         return text, receipt
     except agents.ProviderCallError as exc:
         # Shared transport may have already observed partial headers/error bodies.

@@ -59,6 +59,7 @@ def test_raw_wire_dispatch_full_history_and_no_implicit_controls(monkeypatch):
     target = _provider_agent("shanghai-ai-lab:Atria-Dawn")
     result = target.act(request)
     assert result.action == 1
+    assert "raw_action_text" not in result.metadata
     url, kwargs = calls[0]
     assert url == CHAT_COMPLETIONS_ENDPOINT
     assert kwargs["headers"]["Authorization"] == f"Bearer {SECRET}"
@@ -493,3 +494,18 @@ def test_model_revalidated_at_transport_boundary(monkeypatch, model):
     with pytest.raises(ProviderCallError) as caught:
         target.act(_request())
     assert caught.value.error_kind == "provider_request_rejected"
+
+
+@pytest.mark.parametrize("where", ["prose", "explanation"])
+def test_no_escaped_secret(monkeypatch, where):
+    data = wire()
+    secret = "".join(f"\\u{ord(char):04x}" for char in SECRET)
+    action = '{"action": 1}'
+    if where == "prose":
+        action = secret + "\n" + action
+    else:
+        action = '{"action": 1, "public_explanation":"' + secret + '"}'
+    data["choices"][0]["message"]["content"] = action
+    install(monkeypatch, httpx.Response(200, json=data))
+    with pytest.raises(ProviderCallError):
+        agent().act(_request())
