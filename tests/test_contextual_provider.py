@@ -322,3 +322,21 @@ def test_cli_run_writes_valid_unknown_accounting_artifact(monkeypatch, tmp_path,
     # The CLI output itself also includes no credentials or fabricated accounting.
     assert SECRET not in json.dumps(output)
     assert output["score"]["aggregate_usage"]["totalCostUsd"] is None
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = []
+
+    def post(url, **kwargs):
+        calls.append(url)
+        return httpx.Response(202, json=SUCCESS)
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    selected = _agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(_request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1
