@@ -1460,10 +1460,10 @@ def _provider_agent(
         provider, model = value, ""
     provider = normalize_provider(provider.lower())
     if provider == "krutrim":
-        from eslams.providers.krutrim import API_KEY_ENV
+        from eslams.providers.krutrim import API_KEY_ENV as KRUTRIM_API_KEY_ENV
 
         return ModelProviderAgent(
-            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            provider=provider, model=model, api_key_env=KRUTRIM_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
     if provider not in defaults:
