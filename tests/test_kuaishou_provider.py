@@ -201,6 +201,8 @@ def test_malformed_body_keeps_sanitized_header_receipt(monkeypatch, body):
     (lambda d: d["choices"][0].update(finish_reason="tool_calls"), "provider_request_rejected"),
     (lambda d: d["choices"][0]["message"].update(tool_calls=[{}]),
      "provider_response_schema_mismatch"),
+    (lambda d: d["choices"][0].update(error={"message": SECRET}),
+     "provider_response_schema_mismatch"),
     (lambda d: d.update(choices=[]), "provider_response_schema_mismatch"),
     (lambda d: d.update(choices=[{}, {}]), "provider_response_schema_mismatch"),
     (lambda d: d.update(ResponseMeta={"ErrorCode": []}), "provider_unavailable"),

@@ -248,7 +248,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             kind = "provider_request_rejected"
         elif (data.get("object") == "chat.completion" and reason == "stop"
               and isinstance(first, dict) and type(first.get("index")) is int
-              and first["index"] == 0
+              and first["index"] == 0 and first.get("error") is None
               and isinstance(message, dict) and message.get("role") == "assistant"
               and not message.get("tool_calls") and not message.get("function_call")):
             text = message.get("content")
