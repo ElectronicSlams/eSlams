@@ -827,3 +827,78 @@ def test_mock_provider_scenarios_emit_safe_receipts():
         assert agent.last_receipt["estimated_cost"]["status"] == "cost_unavailable"
         assert "raw_output_preview" not in agent.last_receipt
         assert "api_key_env" not in agent.last_receipt
+
+
+@pytest.mark.parametrize(("provider", "model"), [
+    ("openai", "gpt-test"), ("relace", "relace-test"), ("morph", "morph-kimik31"),
+])
+def test_shared_provider_rejects_pending_legal_action(monkeypatch, provider, model):
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", "fixture-opaque-active-credential")
+    response = {"status_code": 202, "outcome": "ok", "request_id": "fixture-pending-request"}
+    calls = []
+
+    def provider_response(self, api_key, prompt):
+        calls.append(self.provider)
+        return '{"action": 1}', response
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    agent = ModelProviderAgent(
+        provider, model, "ESLAMS_FIXTURE_KEY",
+        runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=1),
+    )
+
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+
+    assert failure.value.error_kind == "provider_pending"
+    assert failure.value.status_code == 202
+    assert calls == [provider]
+    assert agent.last_receipt["request_id"] == "fixture-pending-request"
+    assert agent.last_receipt["outcome"] == "provider_pending"
+    assert len(agent.attempt_receipts) == 1
+    assert response["outcome"] == "ok"
+
+
+@pytest.mark.parametrize("encoding", ["plain", "escaped_prose", "nested_explanation"])
+def test_shared_native_provider_rejects_echoed_active_credential(monkeypatch, encoding):
+    credential = "fixture-opaque-active-credential"
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", credential)
+    escaped = "".join(f"\\u{ord(character):04x}" for character in credential)
+    if encoding == "escaped_prose":
+        text = escaped + '\n{"action": 1}'
+    else:
+        explanation = credential if encoding == "plain" else escaped
+        text = json.dumps({"action": 1, "public_explanation": explanation})
+
+    def provider_response(self, api_key, prompt):
+        return text, {"status_code": 200, "outcome": "ok"}
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    agent = ModelProviderAgent("relace", "relace-test", "ESLAMS_FIXTURE_KEY")
+
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    assert credential not in str(failure.value)
+    assert len(agent.attempt_receipts) == 1
+
+
+@pytest.mark.parametrize(("provider", "model", "raw_expected"), [
+    ("openai", "gpt-test", True), ("relace", "relace-test", False),
+])
+def test_shared_diagnostics_expose_raw_output_only_for_legacy_providers(
+    monkeypatch, provider, model, raw_expected,
+):
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", "fixture-opaque-active-credential")
+    text = '{"action": 1, "public_explanation": "Fixture answer."}'
+
+    def provider_response(self, api_key, prompt):
+        return text, {"status_code": 200, "outcome": "ok"}
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    result = ModelProviderAgent(provider, model, "ESLAMS_FIXTURE_KEY").act(_request())
+
+    assert result.action == 1
+    assert result.public_explanation == "Fixture answer."
+    assert result.metadata.get("raw_action_text") == (text if raw_expected else None)

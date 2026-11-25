@@ -33,6 +33,7 @@ from eslams.deadlines import (
 from eslams.hashing import sha256_json
 from eslams.http_io import TotalTimeout, bounded_post, response_observation
 from eslams.model_actions import (
+    action_text_matches,
     coerce_action,
     extract_json,
     find_legal_action,
@@ -59,6 +60,9 @@ from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 
+_PROVIDERS_WITH_RAW_ACTION_DIAGNOSTICS = frozenset({
+    "openai", "anthropic", "google", "gemini", "openrouter", "bedrock",
+})
 
 class AgentError(RuntimeError):
     pass
@@ -556,6 +560,22 @@ class ModelProviderAgent:
                 provider_attempt += 1
                 try:
                     text, receipt = self._call_provider(api_key, prompt)
+                    if receipt.get("status_code") == httpx.codes.ACCEPTED:
+                        raise ProviderCallError(
+                            "provider accepted the request without completing it",
+                            status_code=httpx.codes.ACCEPTED,
+                            error_kind="provider_pending",
+                            provider=self.provider, model=self.model, receipt=receipt,
+                        )
+                    if (
+                        self.provider not in _PROVIDERS_WITH_RAW_ACTION_DIAGNOSTICS
+                        and action_text_matches(text, lambda value: api_key in value)
+                    ):
+                        raise ProviderCallError(
+                            "provider returned credential material in its action",
+                            error_kind="provider_response_schema_mismatch",
+                            provider=self.provider, model=self.model, receipt=receipt,
+                        )
                 except TimeoutError:
                     self._remember_receipt(
                         _failure_receipt(
@@ -659,7 +679,7 @@ class ModelProviderAgent:
                     "model": self.model,
                     **(
                         {"raw_action_text": text[:500]}
-                        if self.provider not in {"deepseek", "krutrim"} else {}
+                        if self.provider in _PROVIDERS_WITH_RAW_ACTION_DIAGNOSTICS else {}
                     ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
