@@ -48,9 +48,9 @@ from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
-from eslams.providers.tencent_hunyuan import ALIASES as HUNYUAN_ALIASES
 from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
 from eslams.providers.sensenova import call as call_sensenova
+from eslams.providers.tencent_hunyuan import ALIASES as HUNYUAN_ALIASES
 
 
 class AgentError(RuntimeError):
@@ -417,9 +417,9 @@ class ModelProviderAgent:
         if self.provider in {"qianfan", "baidu-qianfan"}:
             self.provider = "baidu"
         if self.provider == "baidu":
-            from eslams.providers.baidu import validate_model
+            from eslams.providers.baidu import validate_model as validate_baidu_model
 
-            validate_model(self.model)
+            validate_baidu_model(self.model)
         if self.provider.strip().replace("_", "-") in HUNYUAN_ALIASES:
             self.provider = "tencent-hunyuan"
         self.provider = byteplus_provider(self.provider) or self.provider.lower()
@@ -689,23 +689,23 @@ class ModelProviderAgent:
         if self.provider == longcat.PROVIDER_ID:
             return longcat.complete(self, api_key, prompt, system_instructions=_SYSTEM_INSTRUCTIONS)
         if self.provider == "baidu":
-            from eslams.providers.baidu import call
+            from eslams.providers.baidu import call as call_baidu
 
-            return call(self, api_key, prompt)
+            return call_baidu(self, api_key, prompt)
         if self.provider == "tencent-hunyuan":
-            from eslams.providers.tencent_hunyuan import call
+            from eslams.providers.tencent_hunyuan import call as call_tencent_hunyuan
 
-            return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+            return call_tencent_hunyuan(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "byteplus":
-            from eslams.providers.byteplus import call
+            from eslams.providers.byteplus import call as call_byteplus
 
-            return call(self, api_key, prompt)
+            return call_byteplus(self, api_key, prompt)
         if self.provider == "sensetime":
             return call_sensenova(self, api_key, prompt)
         if self.provider == "krutrim":
-            from eslams.providers.krutrim import call
+            from eslams.providers.krutrim import call as call_krutrim
 
-            return call(self, api_key, prompt)
+            return call_krutrim(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -715,8 +715,8 @@ class ModelProviderAgent:
         if self.provider == "openrouter":
             return self._call_openrouter(api_key, prompt)
         if self.provider == "watsonx":
-            from eslams.providers.watsonx import call
-            return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+            from eslams.providers.watsonx import call as call_watsonx
+            return call_watsonx(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == nvidia.PROVIDER_ID:
@@ -2119,26 +2119,28 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == longcat.PROVIDER_ID:
         return longcat.normalize_usage(usage)
     if provider == "baidu":
-        from eslams.providers.baidu import normalize_usage
+        from eslams.providers.baidu import normalize_usage as normalize_usage_baidu
 
-        return normalize_usage(usage)
+        return normalize_usage_baidu(usage)
     if provider == "tencent-hunyuan":
-        from eslams.providers.tencent_hunyuan import normalize_usage
+        from eslams.providers.tencent_hunyuan import (
+            normalize_usage as normalize_usage_tencent_hunyuan,
+        )
 
-        return normalize_usage(usage)
+        return normalize_usage_tencent_hunyuan(usage)
     if provider == "byteplus":
-        from eslams.providers.byteplus import normalize_usage
+        from eslams.providers.byteplus import normalize_usage as normalize_usage_byteplus
 
-        return normalize_usage(usage)
+        return normalize_usage_byteplus(usage)
     if provider == "krutrim":
-        from eslams.providers.krutrim import normalize_usage
+        from eslams.providers.krutrim import normalize_usage as normalize_usage_krutrim
 
-        return normalize_usage(usage)
+        return normalize_usage_krutrim(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     if provider == "watsonx":
-        from eslams.providers.watsonx import normalize_usage
-        return normalize_usage(usage)
+        from eslams.providers.watsonx import normalize_usage as normalize_usage_watsonx
+        return normalize_usage_watsonx(usage)
     if provider == nvidia.PROVIDER_ID:
         return nvidia.normalize_usage(usage)
     validation_errors: list[str] = []

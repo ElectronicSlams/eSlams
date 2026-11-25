@@ -139,7 +139,7 @@ def reasoning_controls(model: str, runtime: ProviderRuntimeConfig | None) -> dic
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     """Scrub all receipt paths, including transport and body-parser failures."""
     from eslams.agents import ProviderCallError
-    from eslams.model_actions import action_text_contains_credentials
+    from eslams.model_actions import action_text_matches
 
     credentials = credential_values(api_key, agent.api_key_env)
     try:
@@ -150,7 +150,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         exc.args = tuple(_redact_public(item, credentials) for item in exc.args)
         raise
     receipt = _redact_public(receipt, credentials)
-    if action_text_contains_credentials(text, credentials):
+    if action_text_matches(text, lambda value: any(secret in value for secret in credentials)):
         raise ProviderCallError(
             "Qianfan returned credential material in final text; no action accepted",
             error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID, model=agent.model,

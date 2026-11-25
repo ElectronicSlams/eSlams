@@ -799,7 +799,10 @@ def test_unrelated_json_escapes_preserve_original_action_text_and_decoded_explan
     payload = wire()
     payload["choices"][0]["message"]["content"] = text
     stub(monkeypatch, payload)
-    response = agent().act(request())
+    native = agent()
+    completion, _ = native._call_provider("fixture-secret-never-persisted", "Public game request")
+    assert completion == text
+    response = native.act(request())
     assert response.action == 0
     assert response.public_explanation == "ordinary/safe text\n😀"
-    assert response.metadata["raw_action_text"] == text
+    assert "raw_action_text" not in response.metadata

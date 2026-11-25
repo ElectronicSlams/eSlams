@@ -16,8 +16,8 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry, longcat
 from eslams.providers.nvidia import validate_options as validate_nvidia_options
 from eslams.providers.registry import PROVIDER_ALIASES
-from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
 from eslams.providers.sensenova import configuration_error as sensenova_configuration_error
+from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
 
 DEFAULT_PROVIDER_ENV = {
     longcat.PROVIDER_ID: longcat.API_KEY_ENV,
@@ -70,7 +70,8 @@ def provider_preflight(
     if provider == longcat.PROVIDER_ID:
         longcat.validate_configuration(model, runtime_config)
     from eslams.providers.watsonx import configuration_error as watsonx_configuration_error
-    from eslams.providers.watsonx import normalize_alias, validate_model as validate_watsonx_model
+    from eslams.providers.watsonx import normalize_alias
+    from eslams.providers.watsonx import validate_model as validate_watsonx_model
     watsonx_problem = None
     if normalize_alias(provider) == "watsonx":
         validate_watsonx_model(model)

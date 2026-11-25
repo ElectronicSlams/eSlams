@@ -11,7 +11,6 @@ with IAM authentication and explicit project/space and region configuration.
 See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 
 ## Provider Matrix
-
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
@@ -21,15 +20,10 @@ See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 | `watsonx:<exact-model-id>` | `WATSONX_API_KEY` (IAM exchange) | IBM `/ml/v1/text/chat` | `choices[0].message.content` | response `model_id` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `meituan:<model>` / `longcat:<model>` | `LONGCAT_API_KEY` | native LongCat Chat Completions | `choices[0].message.content` | response `model` |
-
 | `baidu:<exact-model-api-name>` | `QIANFAN_API_KEY` | Qianfan Chat Completions | `choices[0].message.content` | response `model` |
-
 | `tencent-hunyuan:<model>` / `hunyuan:<model>` | `TENCENTCLOUD_SECRET_ID` + `TENCENTCLOUD_SECRET_KEY` | signed native ChatCompletions | `Choices[0].Message.Content` (optional `Response` wrapper) | unknown; no attested model field |
-
 | `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` | ModelArk Chat, ap-southeast-1 | `choices[0].message.content` | concrete response `model`; an `ep-*` alone leaves weights unknown |
-
 | `sensetime:<model>` (alias `sensenova`) | `SENSENOVA_API_KEY` | SenseNova Token Plan Chat Completions | `choices[0].message.content` | response `model` |
-
 | `nvidia:<exact-model-id>` | `NVIDIA_API_KEY` | NVIDIA-hosted Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
