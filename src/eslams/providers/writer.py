@@ -269,7 +269,9 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
     if reason == "length":
         fail("provider_output_truncated", "Writer output was truncated; no action accepted",
              finish="incomplete")
-    if reason == "tool_calls" or message.get("tool_calls"):
+    if reason in ("tool_calls", "function_call") or (
+        message.get("tool_calls") or message.get("function_call")
+    ):
         fail("provider_request_rejected", "Writer returned unsupported tool calls",
              finish="incomplete")
     content = message.get("content")

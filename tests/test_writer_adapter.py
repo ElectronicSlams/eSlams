@@ -190,6 +190,16 @@ def test_finish_rejects_even_parseable_action_retains_usage(
     assert "private-refusal-marker" not in json.dumps(native.last_receipt)
 
 
+def test_legacy_function_call_rejects_even_parseable_action(monkeypatch, wire):
+    wire["choices"][0]["message"]["function_call"] = {"name": "move"}
+    calls = respond(monkeypatch, wire)
+    native = agent()
+    with pytest.raises(ProviderCallError) as failure:
+        native.act(request())
+    assert failure.value.error_kind == "provider_request_rejected"
+    assert native.last_receipt["usage"]["total_tokens"] == 340 and len(calls) == 1
+
+
 @pytest.mark.parametrize("status,kind", [(400,"provider_request_rejected"),
     (401,"provider_auth_failed"), (403,"provider_permission_failed"),
     (404,"provider_unavailable"), (429,"provider_rate_limited"),
