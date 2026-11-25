@@ -65,6 +65,7 @@ def _redact(value: Any, secrets: tuple[str, ...]) -> Any:
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams.agents import ProviderCallError
+    from eslams.model_actions import action_text_contains_credentials
 
     # Include secondary credentials: providers may echo unrelated process secrets
     # in syntactically valid identifiers. Never log or persist these values.
@@ -91,9 +92,14 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         if exc.receipt is not None:
             exc.receipt = _redact(exc.receipt, secrets)
         raise
-    for secret in sorted(secrets, key=len, reverse=True):
-        text = text.replace(secret, "[REDACTED]")
-    return text, _redact(receipt, secrets)
+    receipt = _redact(receipt, secrets)
+    if action_text_contains_credentials(text, secrets):
+        raise ProviderCallError(
+            "NVIDIA response failed action credential checks; no action accepted",
+            error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID, model=agent.model,
+            receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
+        )
+    return text, receipt
 
 
 def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
