@@ -139,6 +139,7 @@ def reasoning_controls(model: str, runtime: ProviderRuntimeConfig | None) -> dic
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     """Scrub all receipt paths, including transport and body-parser failures."""
     from eslams.agents import ProviderCallError
+    from eslams.model_actions import action_text_contains_credentials
 
     credentials = credential_values(api_key, agent.api_key_env)
     try:
@@ -149,11 +150,11 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         exc.args = tuple(_redact_public(item, credentials) for item in exc.args)
         raise
     receipt = _redact_public(receipt, credentials)
-    if contains_credential(text, credentials):
+    if action_text_contains_credentials(text, credentials):
         raise ProviderCallError(
             "Qianfan returned credential material in final text; no action accepted",
             error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID, model=agent.model,
-            receipt=receipt,
+            receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
         )
     return text, receipt
 
@@ -267,7 +268,9 @@ def _completed_text(data: dict[str, Any], receipt: dict[str, Any], model: str) -
         receipt["finish_status"] = "incomplete"
         _reject("Qianfan token/context constraint interrupted the response; no action accepted",
                 model=model, kind="provider_output_truncated")
-    if reason == "tool_calls" or isinstance(message, dict) and message.get("tool_calls"):
+    if reason in ("tool_calls", "function_call") or (
+        isinstance(message, dict) and (message.get("tool_calls") or message.get("function_call"))
+    ):
         receipt["finish_status"] = "incomplete"
         _reject("Qianfan requested unsupported tool execution; no action accepted", model=model)
     if reason != "stop" or not isinstance(message, dict) or message.get("role") != "assistant":
