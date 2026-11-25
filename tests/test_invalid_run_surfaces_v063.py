@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 import eslams.arenas  # noqa: F401
-from eslams.agents import FunctionAgent
+from eslams.agents import FunctionAgent, create_builtin_agent
 from eslams.cli import main
 from eslams.official import merge_official_results
 from eslams.protocol import ActResponse
@@ -247,14 +247,16 @@ def test_bundle_and_merged_rows_carry_no_winner_for_invalid_runs(tmp_path: Path)
 # --- CLI output -----------------------------------------------------------------
 
 
-def _cli_run(tmp_path: Path, capsys, *extra: str) -> dict[str, Any]:
+def _cli_run(
+    tmp_path: Path, capsys, *extra: str, agent: str = "http://127.0.0.1:9/act"
+) -> dict[str, Any]:
     code = main(
         [
             "run",
             "--arena",
             "tic-tac-toe",
             "--agent",
-            "http://127.0.0.1:9/act",
+            agent,
             "--opponent",
             "first-legal",
             "--output-dir",
@@ -280,10 +282,31 @@ def test_cli_summary_prints_no_winner_for_invalid_run(tmp_path: Path, capsys, po
     assert summary["board_winner"] == payload["score"]["winner"]
 
 
-def test_cli_fallback_failing_seat_board_win_is_only_a_board_result(tmp_path: Path, capsys):
-    payload = _cli_run(tmp_path, capsys, "--on-agent-error", "fallback", "--run-id", "cli-fb")
+def test_cli_fallback_failing_seat_board_win_is_only_a_board_result(
+    tmp_path: Path, capsys, monkeypatch,
+):
+    # Local no-action failures can opt into fallback. Transport interruptions cannot.
+    def local_agent(name, *, seed):
+        if name == "no-action":
+            return _failing_agent("no_move")[0]
+        return create_builtin_agent(name, seed=seed)
+
+    monkeypatch.setattr("eslams.runner.create_builtin_agent", local_agent)
+    payload = _cli_run(tmp_path, capsys, "--on-agent-error", "fallback", "--run-id", "cli-fb",
+                       agent="no-action")
     assert payload["summary"]["winner"] is None
     assert payload["summary"]["board_winner"] == "player_1"
+    assert payload["summary"]["scoring_status"] == "excluded_invalid_run"
+    assert payload["score"]["fallback_action_count_by_player"]["player_1"] > 0
+
+
+def test_cli_transport_interruption_never_uses_fallback(tmp_path: Path, capsys):
+    payload = _cli_run(tmp_path, capsys, "--on-agent-error", "fallback", "--run-id", "cli-http")
+    assert payload["summary"]["winner"] is None
+    assert payload["summary"]["board_winner"] is None
+    assert payload["summary"]["scoring_status"] == "excluded_invalid_run"
+    assert "provider_transport_error" in payload["score"]["invalid_reason_codes"]
+    assert payload["score"]["fallback_action_count_by_player"] == {"player_1": 0, "player_2": 0}
 
 
 def test_cli_summary_for_valid_run_is_unchanged(tmp_path: Path, capsys):
