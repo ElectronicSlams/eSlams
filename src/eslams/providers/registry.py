@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from eslams.hashing import sha256_json
+from eslams.providers.azure import ALIASES
 from eslams.providers.capabilities import ModelCapabilities
 from eslams.providers.huawei import model_records as huawei_model_records
+from eslams.providers.inception import PROVIDER_ALIASES as INCEPTION_ALIASES
 from eslams.providers.morph import capability_records as morph_capability_records
 from eslams.providers.morph import is_specialized as morph_is_specialized
 
@@ -160,6 +162,7 @@ PROVIDER_ALIASES = {
     "inflection": "inflection-ai",
     "liquid": "liquid-ai",
     "mistral": "mistral-ai",
+    "kimi": "moonshot-ai",
     "moonshot": "moonshot-ai",
     "moonshotai": "moonshot-ai",
     "moonshotai-cn": "moonshot-ai",
@@ -173,12 +176,11 @@ PROVIDER_ALIASES = {
     "zhipuai": "zhipu",
     "zhipuai-coding-plan": "zhipu",
     "bailing": "ant-group",
-    "inception": "core42",
+    **INCEPTION_ALIASES,
     "gigachat": "sber",
     "aws": "amazon-aws",
     "bedrock": "bedrock",
-    "azure": "microsoft",
-    "azure-ai": "microsoft",
+    **dict.fromkeys(ALIASES, "azure"),
     "watsonx": "ibm",
     "xverse": "xverse-ai",
 }

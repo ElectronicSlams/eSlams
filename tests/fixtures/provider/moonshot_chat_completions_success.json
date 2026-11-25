@@ -1,0 +1,24 @@
+{
+  "id": "chatcmpl-redacted-kimi-fixture",
+  "object": "chat.completion",
+  "created": 1792740680,
+  "model": "kimi-k3.1-pro",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "content": "{\"action\": 1, \"confidence\": 0.8, \"public_explanation\": \"Selected a legal action.\"}",
+        "role": "assistant",
+        "reasoning_content": "redacted-private-reasoning-canary"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "completion_tokens": 112,
+    "prompt_tokens": 373,
+    "total_tokens": 485,
+    "completion_tokens_details": {"reasoning_tokens": 90},
+    "prompt_tokens_details": {"cache_write_tokens": 256}
+  }
+}

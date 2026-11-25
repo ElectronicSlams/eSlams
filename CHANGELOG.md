@@ -81,6 +81,55 @@
   Add raw-wire, CLI, preflight and interrupted-response regressions. No package
   version change or live inference verification.
 
+- Add a native Qwen / Alibaba Cloud DashScope synchronous text adapter with
+  regional/workspace routing, canonical aliases, sanitized attempt receipts,
+  conservative identity/accounting, explicit caller controls and offline fixtures.
+  See `docs/providers/QWEN.md` for supported routes and limitations.
+- Require explicit Qwen model IDs, reject unrepresentable reasoning controls in
+  preflight and execution, and redact primary/secondary credential echoes from
+  receipt evidence and response metadata, including interrupted responses.
+
+- Add a native Moonshot/Kimi Chat Completions adapter with explicit global/China
+  routing, model-specific reasoning controls, sanitized receipts, offline wire
+  regressions, and CLI/preflight aliases. Keep the 0.7.0 package version and
+  frozen registry unchanged. See `docs/PROVIDER_MOONSHOT.md`.
+
+- Add a native Upstage Chat Completions adapter for 0.7.1, with exact model
+  forwarding, explicit reasoning effort, shared safe transport/receipt custody,
+  keyless wire tests and [provider documentation](docs/providers/UPSTAGE.md).
+- Require explicit Upstage model IDs, validate reasoning controls in preflight,
+  and exclude primary/secondary credential echoes before receipt custody.
+
+- Add the native StepFun direct Chat Completions adapter for 0.7.1 review,
+  with CLI dispatch, offline/live preflight support, documented model controls,
+  conservative usage accounting and deterministic raw-wire/privacy regressions.
+  Keep full supplied history, exact model IDs, zero default retries and native
+  output/reasoning defaults. Step Plan and regional aliases are not inferred.
+  No package version, protocol or arena behavior changes.
+- Require explicit nonblank StepFun model IDs, reject unsupported explicit
+  reasoning budgets before transport, and remove literal primary/secondary
+  credential echoes from receipts without changing safe retry admission.
+
+- Add an Arcee Platform direct Chat Completions adapter, exact-model CLI aliases,
+  preflight/discovery wiring, sanitized receipts and deterministic raw-wire tests.
+  Native reasoning defaults apply; unsupported explicit controls fail before
+  submission. Missing identity/accounting stays unknown. See `docs/providers/ARCEE.md`.
+  Reject blank model IDs and unsupported controls in preflight, and discard
+  credential echoes from receipt identifiers on success and failure paths.
+
+- Add the native Inception Labs Mercury Chat Completions adapter with keyless
+  wire tests, sanitized receipts and explicit-only controls. Separate Inception
+  Labs aliases from Core42/G42. See `docs/INCEPTION.md` for API provenance,
+  accounting limits and retry policy. Package version remains 0.7.0.
+- Require explicit Inception model IDs, reject foreign reasoning budgets during
+  preflight, and exclude primary/secondary credential echoes from Mercury
+  receipts, discovery results and action text, including partial/error responses.
+
+- Add an Azure Foundry direct v1 Chat Completions adapter with explicit deployment
+  identity, API-key/Entra-token authentication, conservative retries and sanitized
+  usage receipts. Azure aliases now select Azure inference instead of the
+  Microsoft publisher catalogue. See `docs/AZURE_FOUNDRY.md` for setup and scope.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

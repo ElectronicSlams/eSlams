@@ -52,9 +52,10 @@ from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
-from eslams.providers import load_provider_registry
+from eslams.providers import azure, load_provider_registry, moonshot
 from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
 from eslams.providers.deepseek import validate_model as validate_deepseek_model
+from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1477,27 +1478,59 @@ def _provider_agent(
             provider=PROVIDER_ID, model=model if separator else "", api_key_env=API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
+    from eslams.providers.inception import normalize_provider as normalize_inception_provider
+    from eslams.providers.qwen import canonicalize_provider, validate_model
+
     defaults = {
         "deepseek": ("deepseek-flash", "DEEPSEEK_API_KEY"),
         "ai21-labs": ("", "AI21_API_KEY"),
         "ai21": ("", "AI21_API_KEY"),
+        "qwen": ("", "DASHSCOPE_API_KEY"),
+        moonshot.PROVIDER_ID: (moonshot.DEFAULT_MODEL, moonshot.API_KEY_ENV),
+        "reka": ("", "REKA_API_KEY"),
+        "reka-ai": ("", "REKA_API_KEY"),
+        "reka_ai": ("", "REKA_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "google": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
+        "inception": ("", INCEPTION_API_KEY_ENV),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "kuaishou": ("", "STREAMLAKE_API_KEY"),
         "kwaipilot": ("", "STREAMLAKE_API_KEY"),
         "relace": ("", "RELACE_API_KEY"),
         "naver": ("", "CLOVASTUDIO_API_KEY"),
         "morph": ("", "MORPH_API_KEY"),
+        "upstage": ("", "UPSTAGE_API_KEY"),
+        "stepfun": ("", STEPFUN_API_KEY_ENV),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    original_provider = provider
+    provider = moonshot.canonical_provider(provider)
+    provider = canonicalize_provider(provider)
+    if provider.replace("_", "-") in {"arcee", "arcee-ai"}:
+        if not model.strip():
+            raise ValueError("Arcee requires an explicit exact model ID: arcee-ai:<model>")
+        from eslams.providers.arcee import API_KEY_ENV
+
+        return ModelProviderAgent(
+            provider="arcee-ai", model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
+    provider = normalize_inception_provider(provider)
+    provider = azure.normalize_provider(provider)
+    if provider == "azure":
+        if not model or not model.strip():
+            raise ValueError("Azure requires an explicit deployment name: azure:<deployment>")
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=azure.credential_environment(),
+            version=model, runtime_config=runtime_config,
+        )
     provider = canonical_deepseek_provider(provider)
     if provider == "deepseek":
         validate_deepseek_model(model)
@@ -1533,9 +1566,11 @@ def _provider_agent(
         )
     if provider not in defaults:
         return None
+    if provider == "qwen":
+        validate_model(model)
     default_model, env_name = defaults[provider]
     return ModelProviderAgent(
-        provider=provider,
+        provider=(original_provider if provider == moonshot.PROVIDER_ID else provider),
         model=model or default_model,
         api_key_env=env_name,
         version=model or default_model,

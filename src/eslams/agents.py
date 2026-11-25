@@ -44,10 +44,14 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import (
     ModelCapabilities,
     ai21,
+    azure,
     contextual,
     load_provider_registry,
+    moonshot,
     morph,
+    qwen,
     relace,
+    upstage,
 )
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
@@ -56,8 +60,18 @@ from eslams.providers.deepseek import canonical_provider as canonical_deepseek_p
 from eslams.providers.deepseek import normalize_usage as normalize_deepseek_usage
 from eslams.providers.deepseek import validate_model as validate_deepseek_model
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
+from eslams.providers.inception import call as call_inception
+from eslams.providers.inception import normalize_provider as normalize_inception_provider
+from eslams.providers.inception import validate_model_id as validate_inception_model_id
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.reka import call as call_reka
+from eslams.providers.reka import configuration_error as reka_configuration_error
+from eslams.providers.stepfun import ENDPOINT_KIND as STEPFUN_ENDPOINT_KIND
+from eslams.providers.stepfun import PARSER_VERSION as STEPFUN_PARSER_VERSION
+from eslams.providers.stepfun import call as call_stepfun
+from eslams.providers.stepfun import usage_fields as stepfun_usage_fields
+from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
 
 
 class AgentError(RuntimeError):
@@ -337,6 +351,8 @@ def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
+    if qwen.contains_credential(value):
+        return None
     sanitized = _sanitize_receipt_value(value)
     return sanitized if isinstance(sanitized, str) else None
 
@@ -412,15 +428,35 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self._moonshot_endpoint = moonshot.chat_endpoint(self.provider)
+        self.provider = moonshot.canonical_provider(self.provider)
+        self.provider = qwen.canonicalize_provider(self.provider)
+        if self.provider == "qwen":
+            qwen.validate_model(self.model)
+        if self.provider == upstage.PROVIDER_ID:
+            upstage.validate_model(self.model)
+        if self.provider.replace("_", "-") in {"arcee", "arcee-ai"}:
+            self.provider = "arcee-ai"
+            from eslams.providers.arcee import validate_model
+
+            validate_model(self.model)
+        self.provider = normalize_inception_provider(self.provider)
+        if self.provider == "inception":
+            validate_inception_model_id(self.model)
+        if self.provider.strip().replace("_", "-") in {"reka", "reka-ai"}:
+            self.provider = "reka-ai"
+            error = reka_configuration_error(self.model)
+            if error:
+                raise ValueError(error)
+        self.provider = azure.normalize_provider(self.provider)
         self.provider = canonical_deepseek_provider(self.provider)
         if self.provider == "deepseek":
             validate_deepseek_model(self.model)
         if self.provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
-            from eslams.providers.liquid import validate_config
+            from eslams.providers.liquid import validate_config as liquid_validate_config
 
             self.provider = "liquid-ai"
-            validate_config(self.model, self.runtime_config)
+            liquid_validate_config(self.model, self.runtime_config)
         if self.provider in {"ai21", ai21.PROVIDER_ID}:
             self.provider = ai21.PROVIDER_ID
             ai21.validate_config(self.model, self.runtime_config)
@@ -429,38 +465,42 @@ class ModelProviderAgent:
 
             validate_configuration(self.model, self.runtime_config, self.temperature)
         if self.provider == "perceptron":
-            from eslams.providers.perceptron import validate_settings
-            validate_settings(self.model, self.runtime_config)
+            from eslams.providers.perceptron import (
+                validate_settings as perceptron_validate_settings,
+            )
+            perceptron_validate_settings(self.model, self.runtime_config)
         if self.provider == "sakana":
-            from eslams.providers.sakana import validate_config
+            from eslams.providers.sakana import validate_config as sakana_validate_config
 
-            validate_config(self.model, self.runtime_config or ProviderRuntimeConfig())
+            sakana_validate_config(self.model, self.runtime_config or ProviderRuntimeConfig())
         if self.provider in {"ant-group", "bailing"}:
-            from eslams.providers.ant_ling import validate_config
+            from eslams.providers.ant_ling import validate_config as ant_ling_validate_config
 
             self.provider = "ant-group"
-            validate_config(self.model, self.runtime_config or ProviderRuntimeConfig(),
+            ant_ling_validate_config(self.model, self.runtime_config or ProviderRuntimeConfig(),
                             self.temperature)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "stepfun":
+            validate_stepfun_configuration(self.model, self.runtime_config)
         if self.provider == "krutrim":
-            from eslams.providers.krutrim import validate_config
+            from eslams.providers.krutrim import validate_config as krutrim_validate_config
 
-            validate_config(self.model, self.runtime_config)
+            krutrim_validate_config(self.model, self.runtime_config)
         if self.provider == "relace":
             relace.validate_configuration(self.model, self.runtime_config)
         if self.provider == "naver":
-            from eslams.providers.naver import validate_settings
+            from eslams.providers.naver import validate_settings as naver_validate_settings
 
-            validate_settings(self.model, self.runtime_config)
+            naver_validate_settings(self.model, self.runtime_config)
         if self.provider == "morph":
             morph.validate_configuration(self.model, self.runtime_config)
         if self.provider == "huawei":
-            from eslams.providers.huawei import validate_config
+            from eslams.providers.huawei import validate_config as huawei_validate_config
 
-            validate_config(self.model, self.runtime_config)
+            huawei_validate_config(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -481,6 +521,8 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "qwen":
+                return qwen.act(self, request)
             if self.provider == "krutrim":
                 from eslams.providers.krutrim import credential_scope
 
@@ -659,7 +701,9 @@ class ModelProviderAgent:
                     "model": self.model,
                     **(
                         {"raw_action_text": text[:500]}
-                        if self.provider not in {"deepseek", "krutrim"} else {}
+                        if self.provider in {
+                            "anthropic", "bedrock", "gemini", "google", "openai", "openrouter",
+                        } else {}
                     ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
@@ -687,6 +731,8 @@ class ModelProviderAgent:
         self._receipt_batch = (batch[0], tuple(copy.deepcopy(receipts)))
 
     def _remember_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "qwen":
+            receipt = qwen.redact(receipt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import sanitize_receipt
 
@@ -701,6 +747,8 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _replace_last_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "qwen":
+            receipt = qwen.redact(receipt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import sanitize_receipt
 
@@ -719,6 +767,14 @@ class ModelProviderAgent:
             from eslams.providers.liquid import call
 
             return call(self, api_key, prompt)
+        if self.provider == "qwen":
+            return qwen.call(self, api_key, prompt)
+        if self.provider == "arcee-ai":
+            from eslams.providers.arcee import call
+
+            return call(self, api_key, prompt)
+        if self.provider == "azure":
+            return azure.call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -765,8 +821,18 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == "deepseek":
             return call_deepseek(self, api_key, prompt)
+        if self.provider == upstage.PROVIDER_ID:
+            return upstage.call(self, api_key, prompt)
+        if self.provider == "stepfun":
+            return call_stepfun(self, api_key, prompt)
+        if self.provider == "inception":
+            return call_inception(self, api_key, prompt)
+        if self.provider == "reka-ai":
+            return call_reka(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == moonshot.PROVIDER_ID:
+            return moonshot.call(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1340,7 +1406,17 @@ def _post_json(
             ) from exc
     if response.status_code >= 400:
         kind = _provider_error_kind(response.status_code)
-        retry_after = _retry_after_seconds(response)
+        if provider == moonshot.PROVIDER_ID:
+            kind = moonshot.http_error_kind(response, kind)
+        if provider == "azure" and azure.is_content_filter_rejection(response):
+            kind = "provider_refused"
+        retry_after = (azure.retry_after_seconds(response) if provider == "azure" else None)
+        if retry_after is None:
+            retry_after = _retry_after_seconds(response)
+        if provider == upstage.PROVIDER_ID:
+            category_delay = upstage.retry_after_seconds(response)
+            if category_delay is not None:
+                retry_after = max(retry_after or 0.0, category_delay)
         receipt = _failure_receipt(
             provider=provider, model=model, agent_id="", agent_version="", turn_id=0,
             outcome=kind, usage_unavailable_reason="provider_error_usage_unverified",
@@ -1350,10 +1426,14 @@ def _post_json(
         body_retry_permitted = _capture_error_body_observations(
             response, provider=provider, receipt=receipt,
         )
+        if provider == "qwen":
+            kind = qwen.annotate_http_error(response, receipt, kind)
+            body_retry_permitted = False
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-ncp-clovastudio-request-id")
-            or response.headers.get("x-amzn-requestid") or response.headers.get("x-trace-id"),
+            or response.headers.get("x-amzn-requestid") or response.headers.get("x-trace-id")
+            or receipt.get("request_id"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
             response.headers.get("cf-aig-request-id")
@@ -2113,6 +2193,8 @@ def _provider_endpoint(
 def _endpoint_kind(provider: str) -> str:
     return {
         ai21.PROVIDER_ID: ai21.ENDPOINT_KIND,
+        "qwen": qwen.ENDPOINT_KIND,
+        "azure": azure.ENDPOINT_KIND,
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -2122,7 +2204,13 @@ def _endpoint_kind(provider: str) -> str:
         "liquid-ai": "liquid_chat_completions",
         "relace": relace.ENDPOINT_KIND,
         "morph": "morph_chat_completions",
+        "inception": "inception_chat_completions",
+        "reka-ai": "reka_chat_completions",
         "bedrock": "bedrock_converse",
+        moonshot.PROVIDER_ID: "moonshot_chat_completions",
+        "upstage": upstage.ENDPOINT_KIND,
+        "stepfun": STEPFUN_ENDPOINT_KIND,
+        "arcee-ai": "arcee_chat_completions",
         "krutrim": "krutrim_chat_completions",
         "kuaishou": "streamlake_chat_completions",
         "kwaipilot": "streamlake_chat_completions",
@@ -2138,6 +2226,8 @@ def _endpoint_kind(provider: str) -> str:
 def _parser_version(provider: str) -> str:
     return {
         ai21.PROVIDER_ID: ai21.PARSER_VERSION,
+        "qwen": qwen.PARSER_VERSION,
+        "azure": azure.PARSER_VERSION,
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -2147,7 +2237,13 @@ def _parser_version(provider: str) -> str:
         "liquid-ai": "liquid-chat-completions-raw-v1",
         "relace": relace.PARSER_VERSION,
         "morph": "morph-chat-completions-raw-v1",
+        "inception": "inception-chat-completions-raw-v1",
+        "reka-ai": "reka-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
+        "upstage": upstage.PARSER_VERSION,
+        "stepfun": STEPFUN_PARSER_VERSION,
+        "arcee-ai": "arcee-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
         "kuaishou": "streamlake-chat-completions-raw-v1",
         "kwaipilot": "streamlake-chat-completions-raw-v1",
@@ -2161,6 +2257,8 @@ def _parser_version(provider: str) -> str:
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == moonshot.PROVIDER_ID:
+        usage = moonshot.usage_for_receipt(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
@@ -2181,6 +2279,10 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return _empty_usage()
     if provider == "deepseek":
         return normalize_deepseek_usage(usage)
+    if provider == "qwen":
+        return _normalize_usage("dashscope_native", qwen.usage_fields(usage))
+    if provider == "stepfun":
+        usage = stepfun_usage_fields(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2338,8 +2440,17 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter", "morph", "perceptron", "sakana"}
-            else _optional_bool(raw_inclusion)
+            True if provider in {
+                "azure",
+                "inception",
+                "morph",
+                "openai",
+                "openrouter",
+                "perceptron",
+                "reka-ai",
+                "sakana",
+                "upstage",
+            } else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2723,7 +2834,10 @@ def _check_provider_completion(
             refused = reason == "content_filter" or (
                 isinstance(message, dict) and bool(message.get("refusal"))
             )
-    elif provider in {"openrouter", "liquid-ai", "relace"}:
+    elif provider in {
+        "openrouter", "liquid-ai", "relace", moonshot.PROVIDER_ID, "upstage",
+        "stepfun", "inception", "reka-ai", "azure",
+    }:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):
@@ -2825,7 +2939,8 @@ def _body_error_status(error: Any) -> int | None:
     )
     codes = {
         "authentication_error": 401, "invalid_api_key": 401, "permission_error": 403,
-        "rate_limit_error": 429, "rate_limit_exceeded": 429,
+        "rate_limit_error": 429, "rate_limit_exceeded": 429, "rate_limit_reached": 429,
+        "rate_limit_reached_error": 429, "engine_overloaded_error": 429,
         "overloaded_error": 529, "api_error": 500, "server_error": 500, "server": 500,
         "internal_error": 500, "timeout_error": 504, "timeout": 504,
         "not_found_error": 404, "invalid_request_error": 400,

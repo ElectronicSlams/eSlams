@@ -1,0 +1,16 @@
+{
+  "id": "chatcmpl-arcee-redacted",
+  "object": "chat.completion",
+  "created": 1793808000,
+  "model": "zai-org/glm-5.3-flash",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "{\"action\": 1}",
+      "reasoning_content": "PRIVATE_REASONING"
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 4, "total_tokens": 16}
+}

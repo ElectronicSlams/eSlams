@@ -754,6 +754,8 @@ Core has native HTTP adapters for the provider routes below:
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `morph:<model-id>` | `MORPH_API_KEY` |
+
+| `inception:<model>` | `INCEPTION_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 | `contextual-ai:<model>` | `CONTEXTUAL_API_KEY` |
 
@@ -767,6 +769,14 @@ unverified. The package version is unchanged pending release review.
 
 The [Sakana Namazu adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDER_SAKANA.md) uses Sakana's direct API,
 requires an explicit model ID and excludes Fugu's routed/orchestrated products.
+
+| `stepfun:<model>` | `STEPFUN_API_KEY` |
+
+StepFun uses direct Chat Completions at `api.stepfun.ai`; see the
+[StepFun contract notes](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/STEPFUN.md) for region, model variants,
+reasoning and accounting limits. StepFun requires an explicit nonblank model ID.
+
+| `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` |
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native

@@ -15,32 +15,63 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import (
     ai21,
+    azure,
     contextual,
     deepseek,
     load_provider_registry,
+    moonshot,
     morph,
     perceptron,
     relace,
     sakana,
+    upstage,
 )
+from eslams.providers.arcee import API_KEY_ENV as ARCEE_API_KEY_ENV
+from eslams.providers.arcee import MODELS_ENDPOINT as ARCEE_MODELS_ENDPOINT
+from eslams.providers.arcee import validate_configuration as validate_arcee_configuration
 from eslams.providers.huawei import API_KEY_ENV as HUAWEI_API_KEY_ENV
 from eslams.providers.huawei import MODELS_ENDPOINT as HUAWEI_MODELS_ENDPOINT
 from eslams.providers.huawei import contains_credential as huawei_contains_credential
 from eslams.providers.huawei import credential_values as huawei_credential_values
 from eslams.providers.huawei import validate_config as validate_huawei_config
+from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
+from eslams.providers.inception import MODELS_ENDPOINT as INCEPTION_MODELS_ENDPOINT
+from eslams.providers.inception import configuration_error as inception_configuration_error
+from eslams.providers.inception import credential_echo as inception_credential_echo
+from eslams.providers.inception import validate_model_id as validate_inception_model_id
+from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
+from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
+from eslams.providers.qwen import validate_controls as qwen_validate_controls
+from eslams.providers.qwen import validate_model as qwen_validate_model
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.reka import API_KEY_ENV as REKA_API_KEY_ENV
+from eslams.providers.reka import MODELS_ENDPOINT as REKA_MODELS_ENDPOINT
+from eslams.providers.reka import configuration_error as reka_configuration_error
+from eslams.providers.reka import credential_echo as reka_credential_echo
+from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
+from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
+from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
+from eslams.providers.stepfun import validate_model_id as validate_stepfun_model_id
 
 DEFAULT_PROVIDER_ENV = {
     "deepseek": deepseek.API_KEY_ENV,
     ai21.PROVIDER_ID: ai21.API_KEY_ENV,
     "perceptron": perceptron.API_KEY_ENV,
+    "qwen": "DASHSCOPE_API_KEY",
+    moonshot.PROVIDER_ID: moonshot.API_KEY_ENV,
+    "arcee-ai": ARCEE_API_KEY_ENV,
+    "azure": azure.API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
+    "inception": INCEPTION_API_KEY_ENV,
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "liquid-ai": "LIQUID_API_KEY",
+    "upstage": "UPSTAGE_API_KEY",
+    "stepfun": STEPFUN_API_KEY_ENV,
+    "reka-ai": REKA_API_KEY_ENV,
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
     "kuaishou": "STREAMLAKE_API_KEY",
     "kwaipilot": "STREAMLAKE_API_KEY",
@@ -57,14 +88,19 @@ _MODELS_ENDPOINTS = {
     "deepseek": deepseek.MODELS_ENDPOINT,
     "perceptron": perceptron.MODELS_ENDPOINT,
     "huawei": HUAWEI_MODELS_ENDPOINT,
+    moonshot.PROVIDER_ID: moonshot.MODELS_ENDPOINT,
+    "arcee-ai": ARCEE_MODELS_ENDPOINT,
+    "reka-ai": REKA_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
+    "inception": INCEPTION_MODELS_ENDPOINT,
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
     "relace": relace.MODELS_ENDPOINT,
     "sakana": sakana.MODELS_ENDPOINT,
     "morph": morph.MODELS_ENDPOINT,
+    "stepfun": STEPFUN_MODELS_ENDPOINT,
 }
 
 
@@ -87,16 +123,18 @@ def provider_preflight(
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
-    provider = provider.lower()
+    provider = canonicalize_qwen_provider(provider)
+    if provider.strip() == "stepfun":
+        provider = "stepfun"
     provider = deepseek.canonical_provider(provider)
     provider_config_error = (deepseek.configuration_error(model, runtime_config)
                              if provider == "deepseek" else None)
     registry_model = "" if provider == "deepseek" and not isinstance(model, str) else model
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
-        from eslams.providers.liquid import validate_config
+        from eslams.providers.liquid import validate_config as liquid_validate_config
 
         provider = "liquid-ai"
-        validate_config(model, runtime_config)
+        liquid_validate_config(model, runtime_config)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config as validate_krutrim_config
 
@@ -112,9 +150,9 @@ def provider_preflight(
     if provider == "relace":
         relace.validate_configuration(model, runtime_config)
     if provider == "naver":
-        from eslams.providers.naver import validate_settings
+        from eslams.providers.naver import validate_settings as naver_validate_settings
 
-        validate_settings(model, runtime_config or ProviderRuntimeConfig())
+        naver_validate_settings(model, runtime_config or ProviderRuntimeConfig())
     if provider.strip() == "perceptron":
         provider = "perceptron"
         perceptron.validate_settings(model, runtime_config)
@@ -126,9 +164,9 @@ def provider_preflight(
     provider_registry = load_provider_registry()
     normalized_provider = provider.strip().replace("_", "-")
     if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "ant-group":
-        from eslams.providers.ant_ling import validate_config
+        from eslams.providers.ant_ling import validate_config as ant_ling_validate_config
 
-        validate_config(model, runtime_config or ProviderRuntimeConfig())
+        ant_ling_validate_config(model, runtime_config or ProviderRuntimeConfig())
     record = provider_registry.resolve(provider, registry_model)
     if record.provider == contextual.PROVIDER_ID:
         contextual.validate_configuration(model, runtime_config, max_output_tokens)
@@ -137,6 +175,46 @@ def provider_preflight(
     legal_actions = arena.legal_actions_for(state, state.active_player)
     credential_environment = DEFAULT_PROVIDER_ENV.get(record.provider)
     credential_error = None
+    if record.provider == "qwen":
+        qwen_validate_model(model)
+    elif record.provider == upstage.PROVIDER_ID:
+        upstage.validate_model(model)
+    elif record.provider == "stepfun":
+        validate_stepfun_model_id(model)
+    elif record.provider == "inception":
+        validate_inception_model_id(model)
+
+    configuration_error: dict[str, Any] | None = (
+        {"error_class": "provider_request_rejected", "message": provider_config_error}
+        if provider_config_error else None
+    )
+    try:
+        if record.provider == "qwen":
+            qwen_validate_controls(runtime_config)
+            qwen_generation_endpoint()
+        elif record.provider == upstage.PROVIDER_ID:
+            upstage.reasoning_effort(runtime_config)
+        elif record.provider == "stepfun":
+            validate_stepfun_configuration(model, runtime_config)
+        elif record.provider == "arcee-ai":
+            validate_arcee_configuration(model, runtime_config)
+        elif record.provider == "inception":
+            message = inception_configuration_error(runtime_config)
+            if message is not None:
+                raise ValueError(message)
+        elif record.provider == "reka-ai":
+            message = reka_configuration_error(model, runtime_config)
+            if message is not None:
+                raise ValueError(message)
+        elif record.provider == "azure":
+            credential_environment = azure.credential_environment()
+            azure.endpoint(runtime_config)
+            if not model or not model.strip():
+                raise ValueError("Azure requires an explicit deployment name")
+    except ProviderCallError as exc:
+        configuration_error = _public_error(exc, provider=provider, model=model)
+    except ValueError as exc:
+        configuration_error = {"error_class": "provider_request_rejected", "message": str(exc)}
     credential_present = False
     if credential_environment:
         try:
@@ -167,8 +245,8 @@ def provider_preflight(
     discovery_error: dict[str, Any] | None = None
     inference_invoked = False
 
-    if provider_config_error:
-        error = {"error_class": "provider_request_rejected", "message": provider_config_error}
+    if configuration_error is not None:
+        error = configuration_error
     elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
@@ -195,7 +273,7 @@ def provider_preflight(
         }
     else:
         try:
-            visible_models = provider_models_live(record.provider)
+            visible_models = provider_models_live(provider)
         except ProviderCallError as exc:
             visible_models = None
             discovery_error = _public_error(exc, provider=provider, model=model)
@@ -242,7 +320,8 @@ def provider_preflight(
                           model_execution_policy(time_budget_ms, max_output_tokens)},
             )
             agent = ModelProviderAgent(
-                provider=record.provider,
+                provider=(provider if record.provider == moonshot.PROVIDER_ID
+                          else record.provider),
                 model=model,
                 api_key_env=credential_environment,
                 max_output_tokens=max_output_tokens,
@@ -289,8 +368,8 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": (checks["adapter_available"] is True and credential_error is None
-                                    and provider_config_error is None),
+            "configuration_ready": (checks["adapter_available"] is True
+                                    and credential_error is None and configuration_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -325,9 +404,11 @@ def provider_models_live(provider: str) -> list[str] | None:
     ``None`` means the adapter has no Models API. Authentication, transport,
     HTTP and malformed/pagination failures raise a diagnostic ProviderCallError.
     """
+    regional_endpoint = moonshot.models_endpoint(provider)
     provider = provider.strip().lower().replace("_", "-")
     provider = PROVIDER_ALIASES.get(provider, provider)
-    endpoint = _MODELS_ENDPOINTS.get(provider)
+    endpoint = (regional_endpoint if provider == moonshot.PROVIDER_ID
+                else _MODELS_ENDPOINTS.get(provider))
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
     if api_key_env is None:
         raise ProviderCallError(
@@ -419,6 +500,12 @@ def provider_models_live(provider: str) -> list[str] | None:
             if provider == "morph" and morph.contains_credentials(raw, discovery_credentials):
                 raise _discovery_schema_error(provider)
             if provider == "huawei" and huawei_contains_credential(raw, huawei_credentials):
+                raise _discovery_schema_error(provider)
+            if provider == moonshot.PROVIDER_ID and api_key in raw:
+                raise _discovery_schema_error(provider)
+            if provider == "inception" and inception_credential_echo(raw, api_key):
+                raise _discovery_schema_error(provider)
+            if provider == "reka-ai" and reka_credential_echo(raw):
                 raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None

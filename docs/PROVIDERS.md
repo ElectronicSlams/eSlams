@@ -4,16 +4,29 @@ The native adapters below use secret-free artifacts and raw HTTP APIs. Their
 parsers are pinned to documented REST envelopes rather than SDK convenience
 properties.
 
+The 0.7.1-targeted [Moonshot/Kimi native adapter](PROVIDER_MOONSHOT.md) also
+supports direct Chat Completions, regional endpoint selection, and account
+model discovery through `MOONSHOT_API_KEY`.
+
 ## Provider Matrix
 
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
+| `qwen:<model>` | `DASHSCOPE_API_KEY` | native DashScope text generation | `output.choices[0].message.content` | unknown (no native response model field) |
+| `moonshot-ai:<model>` / `kimi:<model>` | `MOONSHOT_API_KEY` | Kimi Chat Completions | `choices[0].message.content` | response `model` |
+| `azure:<deployment>` | `AZURE_AI_API_KEY` (or explicit Entra token) | Azure v1 Chat Completions | `choices[0].message.content` | response `model`; see [setup](AZURE_FOUNDRY.md) |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `liquid-ai:<exact-model>` (alias `liquid`) | `LIQUID_API_KEY` | Liquid direct Chat Completions | `choices[0].message.content` | response `model`, if present |
+
+| `upstage:<model>` | `UPSTAGE_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
+| `inception:<model>` | `INCEPTION_API_KEY` | Direct Mercury Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
+| `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
+| `reka-ai:<model>` (alias `reka`) | `REKA_API_KEY` | Reka Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `ai21-labs:<model-id>` | `AI21_API_KEY` | AI21 Studio Chat Completions | `choices[0].message.content` | unknown in documented envelope |
 
@@ -32,6 +45,14 @@ properties.
 | `morph:<model-id>` | `MORPH_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` only |
 
 | `huawei:<model-id>` | `HUAWEI_MAAS_API_KEY` | Huawei MaaS OpenAI-compatible Chat | `choices[0].message.content` | response `model` |
+
+The [StepFun adapter notes](providers/STEPFUN.md) document endpoint/region scope,
+model variants, controls, error handling, usage and raw-wire fixture provenance.
+Step Plan and the Chinese `.com` endpoint are separate contracts, not aliases.
+
+The 0.7.1 candidate [Arcee adapter notes](providers/ARCEE.md) document direct
+endpoint provenance, model discovery, native reasoning defaults, accounting
+limits and deterministic fixture coverage. Arcee requires an explicit model ID.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
@@ -80,6 +101,13 @@ pinned_endpoint`. NAVER v3 similarly names the model in the endpoint path, with
 `pinned_endpoint` evidence on successful direct responses. A custom gateway does
 not establish NAVER model identity or region. Neither adapter claims an immutable
 backend revision from a model alias.
+
+For the proposed 0.7.1 Qwen adapter, see [DashScope setup, supported scope,
+regional routing, controls and accounting limits](providers/QWEN.md). `alibaba`,
+`alibaba-cn` and `dashscope` are aliases of `qwen`; region selection is explicit.
+
+See the [Upstage adapter guide](providers/UPSTAGE.md) for current primary sources,
+reasoning controls, retry limits and keyless verification.
 
 ## Setup and Preflight
 
