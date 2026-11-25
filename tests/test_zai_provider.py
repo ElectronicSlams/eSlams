@@ -491,3 +491,22 @@ def test_body_request_id_and_explicit_output_policy(monkeypatch):
     _, receipt = call(agent, "fixture-key", "private prompt")
     assert receipt["request_id"] == body["request_id"]
     assert "private prompt" not in json.dumps(receipt)
+
+
+@pytest.mark.parametrize("provider", ("zai", "zhipu"))
+@pytest.mark.parametrize("escaped", (False, True))
+def test_successful_response_cannot_echo_active_credential(monkeypatch, escaped, provider):
+    body = wire()
+    credential = "fixture-secret-never-persisted"
+    act_request = _request()
+    output = json.dumps({"action": act_request.legal_actions[0], "public_explanation": credential})
+    if escaped:
+        output = output.replace(credential, "".join(f"\\u{ord(char):04x}" for char in credential))
+    body["choices"][0]["message"]["content"] = output
+    selected, _ = setup(monkeypatch, provider, payload=body)
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(act_request)
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert credential not in str(error.value)
+    assert credential not in json.dumps(selected.attempt_receipts)
+    assert len(selected.attempt_receipts) == 1
