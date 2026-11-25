@@ -29,6 +29,8 @@ properties.
 
 | `ant-group:<model>` (also `bailing`) | `ANT_LING_API_KEY` | direct Ant Ling Chat Completions | `choices[0].message.content` | response `model` |
 
+| `morph:<model-id>` | `MORPH_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` only |
+
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
@@ -60,6 +62,10 @@ provider-owned text-only integration support from unverified live availability.
 The [Ant Ling guide](providers/ANT_LING.md) records current direct API evidence,
 Ling/Ring lifecycle, the separate InclusionAI routed namespace, supported
 reasoning controls, and account/region/accounting limitations.
+
+The 0.7.1 adapter workstream adds [Morph direct text inference](MORPH.md).
+It requires an explicit model ID and excludes Morph's specialized Apply, search,
+compaction and routing models. Package version remains 0.7.0 pending release review.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

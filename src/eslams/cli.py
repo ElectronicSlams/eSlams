@@ -1491,6 +1491,7 @@ def _provider_agent(
         "kwaipilot": ("", "STREAMLAKE_API_KEY"),
         "relace": ("", "RELACE_API_KEY"),
         "naver": ("", "CLOVASTUDIO_API_KEY"),
+        "morph": ("", "MORPH_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)

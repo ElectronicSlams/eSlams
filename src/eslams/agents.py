@@ -41,7 +41,14 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, ai21, contextual, load_provider_registry, relace
+from eslams.providers import (
+    ModelCapabilities,
+    ai21,
+    contextual,
+    load_provider_registry,
+    morph,
+    relace,
+)
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.deepseek import call as call_deepseek
@@ -448,6 +455,8 @@ class ModelProviderAgent:
             from eslams.providers.naver import validate_settings
 
             validate_settings(self.model, self.runtime_config)
+        if self.provider == "morph":
+            morph.validate_configuration(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -473,6 +482,8 @@ class ModelProviderAgent:
 
                 with credential_scope(self):
                     return self._act(request)
+            if self.provider == "morph":
+                return morph.act(self, request)
             return self._act(request)
 
     def _act(self, request: ActRequest) -> ActResponse:
@@ -678,6 +689,8 @@ class ModelProviderAgent:
             receipt = sanitize_receipt(self, receipt)
         if self.provider == ai21.PROVIDER_ID:
             receipt = ai21.sanitize_receipt(receipt, self.api_key_env)
+        if self.provider == "morph":
+            receipt = morph.sanitize_receipt(receipt, self.api_key_env)
         receipts = [*self.attempt_receipts, receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
@@ -690,6 +703,8 @@ class ModelProviderAgent:
             receipt = sanitize_receipt(self, receipt)
         if self.provider == ai21.PROVIDER_ID:
             receipt = ai21.sanitize_receipt(receipt, self.api_key_env)
+        if self.provider == "morph":
+            receipt = morph.sanitize_receipt(receipt, self.api_key_env)
         receipts = [*self.attempt_receipts[:-1], receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
@@ -730,6 +745,8 @@ class ModelProviderAgent:
             from eslams.providers.ant_ling import call
 
             return call(self, api_key, prompt)
+        if self.provider == "morph":
+            return morph.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -2096,6 +2113,7 @@ def _endpoint_kind(provider: str) -> str:
         "openrouter": "openrouter_chat_completions",
         "liquid-ai": "liquid_chat_completions",
         "relace": relace.ENDPOINT_KIND,
+        "morph": "morph_chat_completions",
         "bedrock": "bedrock_converse",
         "krutrim": "krutrim_chat_completions",
         "kuaishou": "streamlake_chat_completions",
@@ -2119,6 +2137,7 @@ def _parser_version(provider: str) -> str:
         "openrouter": "openrouter-chat-completions-raw-v1",
         "liquid-ai": "liquid-chat-completions-raw-v1",
         "relace": relace.PARSER_VERSION,
+        "morph": "morph-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
         "kuaishou": "streamlake-chat-completions-raw-v1",
@@ -2142,6 +2161,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         from eslams.providers.kuaishou import normalize_usage
 
         return normalize_usage(usage)
+    if provider == "morph":
+        usage = morph.usage_fields(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     if provider == "deepseek":
@@ -2303,7 +2324,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter", "perceptron", "sakana"}
+            True if provider in {"openai", "openrouter", "morph", "perceptron", "sakana"}
             else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True

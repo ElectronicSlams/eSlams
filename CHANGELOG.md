@@ -69,6 +69,18 @@
   credentials from provider identifiers, errors, partial responses, and action
   text without enabling credential fallback.
 
+- Refresh verified Morph model IDs for November 10 and document rolling aliases,
+  accepted effort aliases and Core's unsupported integer-effort boundary.
+
+- Add native Morph general text Chat Completions with explicit model selection,
+  verified reasoning controls, full history and existing safe transport/receipts.
+  Exclude specialized Morph products from text-game eligibility; retain unknown
+  identity/accounting and prevent credential echoes in action and receipt fields.
+  Protect secondary configured credentials and reject credential echoes in model
+  discovery; revalidate explicit budgets before transport on reconfigured agents.
+  Add raw-wire, CLI, preflight and interrupted-response regressions. No package
+  version change or live inference verification.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
