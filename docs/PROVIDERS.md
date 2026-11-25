@@ -13,12 +13,29 @@ The prospective 0.7.1 IBM Cloud `watsonx` adapter adds direct base-model chat
 with IAM authentication and explicit project/space and region configuration.
 See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 
+The proposed 0.7.1 [native Cohere adapter](providers/cohere.md) adds
+`cohere:<model>` / `cohere-ai:<model>` using `COHERE_API_KEY` and native Chat v2.
+Its research note documents controls, discovery, accounting, and identity limits.
+
+
+The prospective 0.7.1 `ibm-rhai` adapter adds Red Hat AI Inference on IBM Cloud
+under a distinct hosting namespace. Granite author names do not select a host.
+See [configuration, wire sources and limitations](PROVIDER_IBM_RHAI.md).
+
+Mistral AI is also available through its direct API; see the
+[Mistral adapter guide](providers/MISTRAL.md) for scope, research and limitations.
+
+For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
+[research, setup and limits](PROVIDER_XAI.md).
+
 ## Provider Matrix
 | CLI agent | Credential environment variable | Endpoint contract | Response text path | Model identity evidence |
 | --- | --- | --- | --- | --- |
 | `qwen:<model>` | `DASHSCOPE_API_KEY` | native DashScope text generation | `output.choices[0].message.content` | unknown (no native response model field) |
 | `moonshot-ai:<model>` / `kimi:<model>` | `MOONSHOT_API_KEY` | Kimi Chat Completions | `choices[0].message.content` | response `model` |
 | `azure:<deployment>` | `AZURE_AI_API_KEY` (or explicit Entra token) | Azure v1 Chat Completions | `choices[0].message.content` | response `model`; see [setup](AZURE_FOUNDRY.md) |
+
+| `xai:<model>` (alias `x-ai`) | `XAI_API_KEY` | Responses | typed assistant `output[].content[]` `output_text` parts | response `model` |
 | `openai:<model>` | `OPENAI_API_KEY` | Responses | typed `output[].content[]` `output_text` parts | response `model` |
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
@@ -29,6 +46,10 @@ See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 | `inception:<model>` | `INCEPTION_API_KEY` | Direct Mercury Chat Completions | `choices[0].message.content` | response `model` |
 
 | `watsonx:<exact-model-id>` | `WATSONX_API_KEY` (IAM exchange) | IBM `/ml/v1/text/chat` | `choices[0].message.content` | response `model_id` |
+
+| `ibm-rhai:<exact-model-id>` | `IBM_RHAI_API_KEY` | IBM project-scoped Chat Completions | `choices[0].message.content` | response `model` |
+| `mistral-ai:<model>` (alias `mistral`) | `MISTRAL_API_KEY` | native Chat Completions | string or typed text chunks in `choices[0].message.content` | response `model` |
+| `writer:<model>` | `WRITER_API_KEY` | Writer `/v1/chat` | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
 | `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
@@ -40,6 +61,11 @@ See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 | `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` | ModelArk Chat, ap-southeast-1 | `choices[0].message.content` | concrete response `model`; an `ep-*` alone leaves weights unknown |
 | `sensetime:<model>` (alias `sensenova`) | `SENSENOVA_API_KEY` | SenseNova Token Plan Chat Completions | `choices[0].message.content` | response `model` |
 | `nvidia:<exact-model-id>` | `NVIDIA_API_KEY` | NVIDIA-hosted Chat Completions | `choices[0].message.content` | response `model` |
+
+| `apodex:<model>` | `APODEX_API_KEY` | Direct Core Chat Completions | `choices[0].message.content` | response `model` |
+| `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` | Atria Chat Completions | `choices[0].message.content` | reported model only; null when absent |
+| `sarvam:<model>` / `sarvam-ai:<model>` | `SARVAM_API_KEY` | Sarvam V1 Chat Completions | `choices[0].message.content` | response `model` |
+| `minimax:<model>` | `MINIMAX_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `ai21-labs:<model-id>` | `AI21_API_KEY` | AI21 Studio Chat Completions | `choices[0].message.content` | unknown in documented envelope |
 
@@ -87,6 +113,23 @@ model ID and is for authorized development/test/evaluation access. The shared
 hosted trial is not verified for production. See its provider guide for aliases,
 reasoning controls, terms, missing accounting and live-entitlement limitations.
 
+The proposed 0.7.1 [Apodex adapter](providers/APODEX.md) accepts only the two
+documented Core model IDs. Apodex Deep Research models run server-side tools and
+are outside this adapter. The package version remains 0.7.0 pending release review.
+
+The proposed 0.7.1 [Shanghai AI Lab adapter](SHANGHAI_AI_LAB.md) uses native
+reasoning defaults and requires an explicit model ID. Its reasoning accounting
+and total usage remain unknown. See that guide for verified service boundaries,
+rejected controls and fixture provenance; legacy InternLM controls do not apply.
+
+See [Sarvam direct API](providers/SARVAM.md) for model IDs, controls, accounting,
+and primary-source research for the proposed 0.7.1 adapter.
+
+The [MiniMax adapter guide](providers/MINIMAX.md) records current official API
+research, regions, reasoning preservation, retry limits and keyless test coverage
+for the 0.7.1 adapter work. Its configuration preflight is advisory and makes no
+inference request unless `--live` is explicitly requested.
+
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
@@ -125,6 +168,9 @@ compaction and routing models. Package version remains 0.7.0 pending release rev
 
 See [Huawei MaaS / Pangu](providers/HUAWEI.md) for its verified direct Guiyang
 endpoint, explicit model requirement, thinking controls, and fixture evidence.
+
+See [Writer direct API](WRITER.md) for its verified wire contract, aliases,
+model lifecycle, accounting limitations, and deterministic validation.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

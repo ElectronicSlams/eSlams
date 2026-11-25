@@ -1,0 +1,21 @@
+{
+  "id": "cmpl-mistral-wire-fixture",
+  "object": "chat.completion",
+  "created": 1702256327,
+  "model": "mistral-small-latest",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"action\": 1}"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 4,
+    "total_tokens": 16
+  }
+}

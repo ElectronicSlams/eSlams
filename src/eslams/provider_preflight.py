@@ -16,6 +16,7 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import (
     ai21,
     azure,
+    cohere,
     contextual,
     deepseek,
     load_provider_registry,
@@ -26,6 +27,8 @@ from eslams.providers import (
     relace,
     sakana,
     upstage,
+    writer,
+    xai,
 )
 from eslams.providers.arcee import API_KEY_ENV as ARCEE_API_KEY_ENV
 from eslams.providers.arcee import MODELS_ENDPOINT as ARCEE_MODELS_ENDPOINT
@@ -40,6 +43,12 @@ from eslams.providers.inception import MODELS_ENDPOINT as INCEPTION_MODELS_ENDPO
 from eslams.providers.inception import configuration_error as inception_configuration_error
 from eslams.providers.inception import credential_echo as inception_credential_echo
 from eslams.providers.inception import validate_model_id as validate_inception_model_id
+from eslams.providers.minimax import API_KEY_ENV as MINIMAX_API_KEY_ENV
+from eslams.providers.mistral import API_KEY_ENV as MISTRAL_API_KEY_ENV
+from eslams.providers.mistral import MODELS_ENDPOINT as MISTRAL_MODELS_ENDPOINT
+from eslams.providers.mistral import configuration_error as mistral_configuration_error
+from eslams.providers.mistral import contains_credential as mistral_contains_credential
+from eslams.providers.mistral import discovery_guard as mistral_discovery_guard
 from eslams.providers.nvidia import validate_options as validate_nvidia_options
 from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_provider
 from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
@@ -51,11 +60,14 @@ from eslams.providers.reka import MODELS_ENDPOINT as REKA_MODELS_ENDPOINT
 from eslams.providers.reka import configuration_error as reka_configuration_error
 from eslams.providers.reka import credential_echo as reka_credential_echo
 from eslams.providers.sensenova import configuration_error as sensenova_configuration_error
+from eslams.providers.shanghai_ai_lab import validate_configuration as validate_shanghai_ai_lab
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
 from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
 from eslams.providers.stepfun import validate_model_id as validate_stepfun_model_id
 from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
+from eslams.providers.writer import API_KEY_ENV as WRITER_API_KEY_ENV
+from eslams.providers.writer import MODELS_ENDPOINT as WRITER_MODELS_ENDPOINT
 
 DEFAULT_PROVIDER_ENV = {
     "deepseek": deepseek.API_KEY_ENV,
@@ -68,6 +80,10 @@ DEFAULT_PROVIDER_ENV = {
     longcat.PROVIDER_ID: longcat.API_KEY_ENV,
     "baidu": "QIANFAN_API_KEY",
     "byteplus": "BYTEPLUS_API_KEY",
+    "mistral-ai": MISTRAL_API_KEY_ENV,
+    "xai": xai.API_KEY_ENV,
+    "cohere": "COHERE_API_KEY",
+    "writer": WRITER_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -83,6 +99,11 @@ DEFAULT_PROVIDER_ENV = {
     "tencent-hunyuan": "TENCENTCLOUD_SECRET_ID",
     "sensetime": "SENSENOVA_API_KEY",
     "nvidia": "NVIDIA_API_KEY",
+    "apodex": "APODEX_API_KEY",
+    "shanghai-ai-lab": "ATRIA_API_KEY",
+    "ibm-rhai": "IBM_RHAI_API_KEY",
+    "sarvam-ai": "SARVAM_API_KEY",
+    "minimax": MINIMAX_API_KEY_ENV,
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
     "kuaishou": "STREAMLAKE_API_KEY",
     "kwaipilot": "STREAMLAKE_API_KEY",
@@ -104,7 +125,11 @@ _MODELS_ENDPOINTS = {
     "reka-ai": REKA_MODELS_ENDPOINT,
     longcat.PROVIDER_ID: longcat.MODELS_ENDPOINT,
     "baidu": "https://qianfan.baidubce.com/v2/models",
+    "mistral-ai": MISTRAL_MODELS_ENDPOINT,
+    "xai": xai.MODELS_ENDPOINT,
+    "writer": WRITER_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
+    "apodex": "https://api.apodex.ai/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
     "inception": INCEPTION_MODELS_ENDPOINT,
@@ -170,12 +195,69 @@ def provider_preflight(
     provider = deepseek.canonical_provider(provider)
     provider_config_error = (deepseek.configuration_error(model, runtime_config)
                              if provider == "deepseek" else None)
-    registry_model = "" if provider == "deepseek" and not isinstance(model, str) else model
+    provider = xai.canonical_provider(provider.lower())
+    if provider == "xai":
+        xai.validate_model(model)
+        xai_error = xai.configuration_error(runtime_config)
+        if xai_error is not None:
+            configuration_error = {"error_class": "provider_request_rejected", "message": xai_error}
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
         from eslams.providers.liquid import validate_config as liquid_validate_config
 
         provider = "liquid-ai"
         liquid_validate_config(model, runtime_config)
+    if provider == "apodex":
+        from eslams.providers.apodex import validate_configuration
+
+        try:
+            validate_configuration(model, runtime_config)
+        except ValueError as exc:
+            configuration_error = {"error_class": "provider_request_rejected", "message": str(exc)}
+    if provider.strip().replace("_", "-") == "shanghai-ai-lab":
+        validate_shanghai_ai_lab(model, runtime_config, max_output_tokens=max_output_tokens)
+    from eslams.providers.ibm_rhai import configuration_error as ibm_configuration_error
+    from eslams.providers.ibm_rhai import normalize_alias, validate_model
+    provider = normalize_alias(provider)
+    config_error = None
+    if provider == "ibm-rhai":
+        validate_model(model)
+        config_error = ibm_configuration_error(runtime_config)
+    mistral_error = (
+        mistral_configuration_error(model, runtime_config)
+        if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"} else None
+    )
+    provider = cohere.canonical_provider(provider) or provider
+    if provider == "cohere":
+        cohere.validate_model(model)
+        cohere_error = cohere.configuration_error(model, runtime_config)
+        if cohere_error is not None:
+            configuration_error = {
+                "error_class": "provider_request_rejected", "message": cohere_error,
+            }
+    sarvam_error: dict[str, Any] | None = None
+    normalized_provider = provider.replace("_", "-")
+    if PROVIDER_ALIASES.get(normalized_provider, normalized_provider) == "sarvam-ai":
+        from eslams.providers.sarvam import validate_configuration
+        from eslams.providers.sarvam import validate_model as validate_sarvam_model
+
+        validate_sarvam_model(model)
+        try:
+            validate_configuration(model, runtime_config)
+        except ProviderCallError as exc:
+            sarvam_error = _public_error(exc, provider=provider, model=model)
+    if provider in writer.ALIASES:
+        writer.validate_model(model)
+    writer_config_error = (
+        writer.configuration_error(runtime_config) if provider in writer.ALIASES else None
+    )
+    from eslams.providers.minimax import configuration_error as minimax_configuration_error
+    minimax_error = (
+        minimax_configuration_error(model, runtime_config) if provider == "minimax" else None
+    )
+    registry_model = (
+        "" if (provider_config_error or mistral_error or minimax_error)
+        and not isinstance(model, str) else model
+    )
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config as validate_krutrim_config
 
@@ -314,8 +396,12 @@ def provider_preflight(
         validate_nvidia_options(model, runtime_config) if record.provider == "nvidia" else None
     )
 
-    if configuration_error is not None:
+    if sarvam_error is not None:
+        error = sarvam_error
+    elif configuration_error is not None:
         error = configuration_error
+    elif writer_config_error:
+        error = {"error_class": "provider_request_rejected", "message": writer_config_error}
     elif option_error:
         error = {"error_class": "provider_request_rejected", "message": option_error}
     elif credential_environment is None:
@@ -325,6 +411,12 @@ def provider_preflight(
         }
     elif watsonx_problem:
         error = {"error_class": "provider_request_rejected", "message": watsonx_problem}
+    elif config_error:
+        error = {"error_class": "provider_request_rejected", "message": config_error}
+    elif mistral_error:
+        error = {"error_class": "provider_request_rejected", "message": mistral_error}
+    elif minimax_error:
+        error = {"error_class": "provider_request_rejected", "message": minimax_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -365,7 +457,9 @@ def provider_preflight(
             warnings.append(
                 "Adapter model discovery is unavailable; account visibility remains unverified."
                  if record.provider == "watsonx" else
-                 "This adapter has no Models API; account visibility remains unverified."
+                "Model discovery is not implemented; account visibility remains unverified."
+                if record.provider == "ibm-rhai" else
+                "This adapter has no Models API; account visibility remains unverified."
             )
         if visible_models is not None:
             checks["account_model_visible"] = model in visible_models
@@ -426,6 +520,11 @@ def provider_preflight(
                         and isinstance(usage.get("reasoning_included_in_output"), bool)
                         and not usage.get("usage_validation_errors")
                     )
+                if record.provider == "xai" and isinstance(usage, dict):
+                    checks["usage_extraction"] = checks["usage_extraction"] and (
+                        isinstance(usage.get("reasoning_included_in_output"), bool)
+                        and usage.get("usage_validation_errors") == []
+                    )
             except (ProviderCallError, TimeoutError) as exc:
                 error = _public_error(exc, provider=provider, model=model)
 
@@ -446,6 +545,8 @@ def provider_preflight(
         )
         and (not strict_catalogue or not live or checks["account_model_visible"] is not False)
     )
+    # This host has numeric counters but no verified reasoning-inclusion contract.
+    usage_complete = checks["usage_extraction"] is True and record.provider != "ibm-rhai"
     payload: dict[str, Any] = {
         "provider": provider,
         "model": model,
@@ -460,12 +561,14 @@ def provider_preflight(
                 checks["adapter_available"] is True and credential_error is None
                 and configuration_error is None and control_error is None
                 and adapter_configuration_error is None and option_error is None
+                and config_error is None and sarvam_error is None and mistral_error is None
+                and writer_config_error is None and minimax_error is None
                 and (record.provider != "watsonx" or error is None)
             ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
             "cost_and_official_eligibility": "not_assessed",
             "meaning_of_ok": "configuration ready, and if live, one legal action observed",
         },
@@ -480,7 +583,7 @@ def provider_preflight(
             "schema_version": "eslams.provider.receipt.v2",
             "outcome": receipt.get("outcome") if isinstance(receipt, dict) else "not_called",
             "redaction_version": "provider-receipt-redaction-v1",
-            "usage_complete": checks["usage_extraction"] is True,
+            "usage_complete": usage_complete,
         },
     }
     if error is not None:
@@ -490,6 +593,7 @@ def provider_preflight(
     return payload
 
 
+@mistral_discovery_guard
 def provider_models_live(provider: str) -> list[str] | None:
     """Discover every model page, or fail without treating partial results as complete.
 
@@ -499,6 +603,13 @@ def provider_models_live(provider: str) -> list[str] | None:
     regional_endpoint = moonshot.models_endpoint(provider)
     provider = provider.strip().lower().replace("_", "-")
     provider = PROVIDER_ALIASES.get(provider, provider)
+    if provider == "xai" and not xai.credentials_scoped():
+        with xai.credential_scope(environment_name=xai.API_KEY_ENV):
+            return provider_models_live(provider)
+    if provider == "cohere":
+        return cohere.models_live()
+    if provider == "writer":
+        return writer.models_live()
     endpoint = (regional_endpoint if provider == moonshot.PROVIDER_ID
                 else _MODELS_ENDPOINTS.get(provider))
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
@@ -526,6 +637,11 @@ def provider_models_live(provider: str) -> list[str] | None:
     huawei_credentials = (
         huawei_credential_values(api_key, api_key_env) if provider == "huawei" else ()
     )
+    apodex_credentials: tuple[str, ...] = ()
+    if provider == "apodex":
+        from eslams.providers.apodex import redaction_credentials
+
+        apodex_credentials = redaction_credentials(api_key)
     headers = {"Accept": "application/json"}
     params: dict[str, str] = {}
     if provider == "anthropic":
@@ -569,7 +685,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             raise _discovery_schema_error(provider) from None
         if not isinstance(payload, dict):
             raise _discovery_schema_error(provider)
-        rows = payload.get("models" if provider == "google" else "data")
+        rows = payload.get("models" if provider in {"google", "writer"} else "data")
         if not isinstance(rows, list):
             raise _discovery_schema_error(provider)
         for row in rows:
@@ -608,6 +724,12 @@ def provider_models_live(provider: str) -> list[str] | None:
 
                 if contains_credential(raw, credential_values(api_key)):
                     raise _discovery_schema_error(provider)
+            if any(secret in raw for secret in apodex_credentials):
+                raise _discovery_schema_error(provider)
+            if provider == "mistral-ai" and mistral_contains_credential(raw, api_key):
+                raise _discovery_schema_error(provider)
+            if provider == "xai" and xai.contains_credential(raw):
+                raise _discovery_schema_error(provider)
             models.append(raw[7:] if provider == "google" and raw.startswith("models/") else raw)
         cursor = None
         if provider == "anthropic":
@@ -632,11 +754,16 @@ def provider_models_live(provider: str) -> list[str] | None:
 
 def provider_models_result(provider: str) -> dict[str, Any]:
     """JSON-safe live discovery response shared by the CLI and local clients."""
+    provider = xai.canonical_provider(provider)
+    provider = cohere.canonical_provider(provider) or provider
     payload: dict[str, Any] = {"provider": provider, "mode": "live", "ok": False, "models": []}
     try:
         models = provider_models_live(provider)
         if models is None:
+            from eslams.providers.ibm_rhai import normalize_alias
             raise ProviderCallError(
+                "Model discovery is not implemented; account visibility remains unverified"
+                if normalize_alias(provider.lower()) == "ibm-rhai" else
                 "This adapter has no Models API; account visibility remains unverified",
                 error_kind="provider_discovery_unavailable", provider=provider,
             )

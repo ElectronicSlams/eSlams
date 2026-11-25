@@ -178,6 +178,58 @@
   and zero default retries. Hosted API Catalog use is limited by development
   entitlements; production access is unverified. See `docs/providers/NVIDIA.md`.
 
+- Add an Apodex direct Core text adapter candidate for 0.7.1, with explicit model
+  selection, native reasoning, sanitized receipts, CLI/preflight wiring and
+  deterministic offline wire/privacy tests. Deep Research SKUs are rejected.
+  See `docs/providers/APODEX.md`; no package version change or live inference claim.
+
+- Add a Shanghai AI Lab Atria text adapter proposed for 0.7.1, requiring the
+  exact `Atria-Dawn` model ID and using `ATRIA_API_KEY`. Preserve full history,
+  reject unverified controls, and keep missing identity/accounting unknown.
+  Include deterministic raw-wire, CLI/preflight and credential-custody tests.
+  Protect secondary configured credentials and validate normalized preflight
+  spellings and configuration changed after construction before transport.
+  See `docs/SHANGHAI_AI_LAB.md`; the package version is unchanged.
+
+- Add native Red Hat AI Inference on IBM Cloud chat under `ibm-rhai`, separate
+  from Granite model-author names and watsonx hosting. Includes explicit region
+  and project configuration, conservative accounting, credential-echo protection
+  and deterministic wire/CLI tests. See `docs/PROVIDER_IBM_RHAI.md` for limits.
+
+- Use dated Mistral examples and CLI identity guidance, validate documented per-model efforts, and exclude encoded transport credential diagnostics.
+
+- Add a native Mistral AI Chat Completions adapter (`mistral-ai`, alias `mistral`)
+  with account model discovery, sanitized receipts and offline wire regressions.
+  See `docs/providers/MISTRAL.md` for supported behavior and limitations.
+- Require explicit Mistral model IDs and matching returned identity, reject
+  unsupported reasoning token budgets, and scrub configured primary/secondary
+  credential echoes from provider results.
+- Reject credential-contaminated Mistral actions before parsing or repair,
+  including mixed/full JSON Unicode escapes, without rewriting model actions.
+
+- Add a native xAI Responses adapter (`xai`, alias `x-ai`) with full public
+  history, sanitized attempt receipts, conservative usage accounting, native
+  tick-based cost reporting, keyless wire fixtures, and account model discovery.
+  Require explicit nonblank model IDs, reject unsupported thinking budgets during
+  preflight, and scrub configured primary/secondary credentials from native
+  telemetry, discovery and action text.
+  See `docs/PROVIDER_XAI.md` for supported behavior and limits.
+
+- Reject credential-bearing Cohere completions before action parsing or repair,
+  preserving clean text and sanitized receipts without substituting an action.
+
+- Add a native Sarvam V1 chat adapter with exact model forwarding, explicit
+  reasoning controls, sanitized receipts and deterministic raw-wire tests.
+
+- Reject unsupported MiniMax thinking controls and blank model IDs locally; exclude raw/decoded primary and secondary credential echoes before action parsing and from response/error identifiers.
+
+- Add a native MiniMax direct Chat Completions adapter with CLI/preflight wiring,
+  separated reasoning retained privately for explicit action repairs, and
+  provider-specific error, refusal, truncation and accounting checks. Preserve
+  full supplied history and native defaults; never substitute a model or route.
+- Document the verified MiniMax API, regions and model lifecycle caveats; add
+  deterministic keyless wire and privacy regressions for the 0.7.1 adapter work.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

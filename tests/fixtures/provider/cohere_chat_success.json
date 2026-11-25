@@ -1,0 +1,12 @@
+{
+  "id": "c14c80c3-18eb-4519-9460-6c92edd8cfb4",
+  "finish_reason": "COMPLETE",
+  "message": {
+    "role": "assistant",
+    "content": [{"type": "text", "text": "{\"action\":1}"}]
+  },
+  "usage": {
+    "billed_units": {"input_tokens": 5, "output_tokens": 6},
+    "tokens": {"input_tokens": 71, "output_tokens": 10}
+  }
+}

@@ -52,7 +52,7 @@ from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
-from eslams.providers import azure, load_provider_registry, moonshot
+from eslams.providers import azure, load_provider_registry, moonshot, writer
 from eslams.providers.byteplus import API_KEY_ENV as BYTEPLUS_API_KEY_ENV
 from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
@@ -60,6 +60,8 @@ from eslams.providers.deepseek import validate_model as validate_deepseek_model
 from eslams.providers.sensenova import API_KEY_ENV as SENSENOVA_API_KEY_ENV
 from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
+from eslams.providers.xai import canonical_provider
+from eslams.providers.xai import validate_model as validate_xai_model
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -663,7 +665,9 @@ def _main(argv: list[str] | None = None) -> int:
         "--agent",
         default="random",
         help=("Agent for player_1: random (default), first-legal, URL, provider:model, "
-              "or uci:ABSOLUTE_PATH."),
+              "or uci:ABSOLUTE_PATH. "
+              "Mistral requires an exact response model ID; use a dated ID such as "
+              "mistral:mistral-small-2603. An alias resolving to a different ID is rejected."),
     )
     run.add_argument(
         "--opponent",
@@ -1351,6 +1355,9 @@ def _official_command(args: argparse.Namespace) -> int:
 
 
 def _providers_command(args: argparse.Namespace) -> int:
+    from eslams.providers import cohere
+
+    args.provider = cohere.canonical_provider(args.provider) or args.provider
     if args.providers_command == "preflight":
         payload = provider_preflight(
             args.provider, args.model, args.arena, live=args.live,
@@ -1365,7 +1372,7 @@ def _providers_command(args: argparse.Namespace) -> int:
         else:
             records = load_provider_registry().list_models(provider=args.provider)
             payload = {
-                "provider": args.provider,
+                "provider": canonical_provider(args.provider),
                 "mode": "registry_only",
                 "ok": True,
                 "models": [record.to_dict() for record in records],
@@ -1484,6 +1491,7 @@ def _provider_agent(
             provider=PROVIDER_ID, model=model if separator else "", api_key_env=API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    from eslams.providers import cohere
     from eslams.providers.inception import API_KEY_ENV as INCEPTION_API_KEY_ENV
     from eslams.providers.inception import normalize_provider as normalize_inception_provider
     from eslams.providers.qwen import canonicalize_provider, validate_model
@@ -1497,6 +1505,8 @@ def _provider_agent(
         "reka": ("", "REKA_API_KEY"),
         "reka-ai": ("", "REKA_API_KEY"),
         "reka_ai": ("", "REKA_API_KEY"),
+        "mistral-ai": ("", "MISTRAL_API_KEY"),
+        "xai": ("", "XAI_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1516,6 +1526,10 @@ def _provider_agent(
         "nvidia": ("", "NVIDIA_API_KEY"),
         "nvidia-nim": ("", "NVIDIA_API_KEY"),
         "nvidia-hosted": ("", "NVIDIA_API_KEY"),
+        "apodex": ("", "APODEX_API_KEY"),
+        "shanghai-ai-lab": ("", "ATRIA_API_KEY"),
+        "sarvam-ai": ("sarvam-105b", "SARVAM_API_KEY"),
+        "minimax": ("", "MINIMAX_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1545,6 +1559,22 @@ def _provider_agent(
     provider = canonical_deepseek_provider(provider)
     if provider == "deepseek":
         validate_deepseek_model(model)
+    provider = canonical_provider(provider.lower())
+    if provider == "xai":
+        validate_xai_model(model)
+    provider = cohere.canonical_provider(provider) or provider
+    if provider == "cohere":
+        cohere.validate_model(model)
+        defaults[provider] = (model, cohere.API_KEY_ENV)
+    if provider in {"sarvam", "sarvam_ai"}:
+        provider = "sarvam-ai"
+    if provider in writer.ALIASES:
+        provider = "writer"
+        writer.validate_model(model)
+        defaults[provider] = (model, writer.API_KEY_ENV)
+    if provider == "minimax":
+        from eslams.providers.minimax import require_model
+        require_model(model)
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
         return ModelProviderAgent(
             provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",
@@ -1572,9 +1602,9 @@ def _provider_agent(
             version=model, runtime_config=runtime_config,
         )
     if provider.strip().replace("_", "-") in {"hunyuan", "tencent-hunyuan"}:
-        from eslams.providers.tencent_hunyuan import require_model
+        from eslams.providers.tencent_hunyuan import require_model as require_hunyuan_model
 
-        require_model(model)
+        require_hunyuan_model(model)
         provider = "tencent-hunyuan"
     if byteplus_provider(provider):
         if not model:
@@ -1587,8 +1617,13 @@ def _provider_agent(
         provider = "sensetime"
     if provider in {"nvidia", "nvidia-nim", "nvidia-hosted"} and not model.strip():
         raise ValueError("NVIDIA requires an explicit nonblank model ID")
+    from eslams.providers import ibm_rhai
+    provider = ibm_rhai.normalize_alias(provider)
+    if provider == "ibm-rhai":
+        ibm_rhai.validate_model(model)
+        defaults[provider] = (model, ibm_rhai.API_KEY_ENV)
     if provider == "krutrim":
-        from eslams.providers.krutrim import API_KEY_ENV
+        from eslams.providers.krutrim import API_KEY_ENV as KRUTRIM_API_KEY_ENV
         return ModelProviderAgent(
             provider=provider, model=model, api_key_env=API_KEY_ENV,
             version=model, runtime_config=runtime_config,
@@ -1609,13 +1644,21 @@ def _provider_agent(
         from eslams.providers.huawei import API_KEY_ENV
 
         return ModelProviderAgent(
-            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            provider=provider, model=model, api_key_env=KRUTRIM_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    if provider.strip().replace("_", "-") in {"mistral", "mistral-ai"}:
+        provider = "mistral-ai"
+        if not model.strip():
+            raise ValueError("Mistral requires a non-empty explicit model ID")
     if provider not in defaults:
         return None
     if provider == "qwen":
         validate_model(model)
+    if provider == "sarvam-ai":
+        from eslams.providers.sarvam import validate_model as validate_sarvam_model
+
+        validate_sarvam_model(model)
     default_model, env_name = defaults[provider]
     if provider == "sensetime" and not model.strip():
         raise ValueError("SenseNova requires an explicit nonblank model ID")

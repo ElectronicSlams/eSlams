@@ -751,6 +751,10 @@ minimal environment, so use an executable and engine assets you have verified.
 
 ## Provider Support
 
+The proposed 0.7.1 [native Cohere adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/cohere.md) adds
+`cohere:<model>` (alias `cohere-ai:<model>`) with `COHERE_API_KEY`.
+It uses Chat v2 and retains unknown served identity and monetary cost explicitly.
+
 Core has native HTTP adapters for the provider routes below:
 
 | Provider Argument | API Key Environment Variable |
@@ -762,6 +766,9 @@ Core has native HTTP adapters for the provider routes below:
 | `morph:<model-id>` | `MORPH_API_KEY` |
 
 | `inception:<model>` | `INCEPTION_API_KEY` |
+
+| `writer:<model>` | `WRITER_API_KEY` |
+| `minimax:<model>` | `MINIMAX_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 | `contextual-ai:<model>` | `CONTEXTUAL_API_KEY` |
 
@@ -789,6 +796,16 @@ reasoning and accounting limits. StepFun requires an explicit nonblank model ID.
 The proposed 0.7.1 [BytePlus ModelArk adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/BYTEPLUS.md) targets
 the direct ap-southeast-1 service. Supply an explicit model or deployment ID;
 Volcengine Ark and Coding Plan use different services.
+
+| `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` |
+
+The proposed 0.7.1 [Shanghai AI Lab adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/SHANGHAI_AI_LAB.md) calls the
+Atria service with an explicit model ID. Reasoning controls are unverified and
+rejected; missing identity and accounting stay unknown. The package remains 0.7.0.
+
+MiniMax calls its [direct Chat Completions API](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/MINIMAX.md) with
+separated reasoning and no model or provider fallback. Select an explicit model such as
+`MiniMax-M3.1-Flash`; configuration preflight is offline unless `--live` is selected.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native

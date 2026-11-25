@@ -153,6 +153,12 @@ PROVIDER_ALIASES = {
     "sense-time": "sensetime",
     "nvidia-nim": "nvidia",
     "nvidia-hosted": "nvidia",
+    "rhai": "ibm-rhai",
+    "redhat-ai-inference": "ibm-rhai",
+    "x-ai": "xai",
+    "cohere-ai": "cohere",
+    "writer-ai": "writer",
+    "writerai": "writer",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",
@@ -259,6 +265,9 @@ class ProviderRegistry:
 def load_provider_registry() -> ProviderRegistry:
     generated = _load_package_json("models.generated.json")
     overrides = _load_package_json("overrides.json")
+    overrides["models"] = [
+        *overrides.get("models", []), *_load_package_json("sarvam.json").get("models", []),
+    ]
     overrides["models"] = [
         *overrides.get("models", []), *_load_package_json("perceptron.json")["models"],
     ]

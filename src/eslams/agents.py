@@ -40,11 +40,12 @@ from eslams.model_actions import (
     parse_model_action,
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
-from eslams.provider_credentials import provider_key
+from eslams.provider_credentials import contains_credentials, provider_key, redact_credentials
 from eslams.providers import (
     ModelCapabilities,
     ai21,
     azure,
+    cohere,
     contextual,
     load_provider_registry,
     longcat,
@@ -54,6 +55,8 @@ from eslams.providers import (
     qwen,
     relace,
     upstage,
+    writer,
+    xai,
 )
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
@@ -66,12 +69,24 @@ from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.inception import call as call_inception
 from eslams.providers.inception import normalize_provider as normalize_inception_provider
 from eslams.providers.inception import validate_model_id as validate_inception_model_id
+from eslams.providers.minimax import call as call_minimax
+from eslams.providers.minimax import conversation as minimax_conversation
+from eslams.providers.minimax import observe_http_error as minimax_http_error
+from eslams.providers.mistral import complete as complete_mistral
+from eslams.providers.mistral import configuration_error as mistral_configuration_error
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
 from eslams.providers.reka import call as call_reka
 from eslams.providers.reka import configuration_error as reka_configuration_error
+from eslams.providers.sarvam import call as call_sarvam
 from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
 from eslams.providers.sensenova import call as call_sensenova
+from eslams.providers.shanghai_ai_lab import (
+    call as call_shanghai_ai_lab,
+)
+from eslams.providers.shanghai_ai_lab import (
+    validate_configuration as validate_shanghai_ai_lab,
+)
 from eslams.providers.stepfun import ENDPOINT_KIND as STEPFUN_ENDPOINT_KIND
 from eslams.providers.stepfun import PARSER_VERSION as STEPFUN_PARSER_VERSION
 from eslams.providers.stepfun import call as call_stepfun
@@ -355,6 +370,10 @@ class HttpAgent:
 
 def _http_error_identifier(value: Any) -> str | None:
     # Bounded identifier syntax, not a content-redaction or authenticity proof.
+    if xai.contains_credential(value):
+        return None
+    if isinstance(value, str) and contains_credentials(value):
+        return None
     if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_./:@+-]{1,256}", value):
         return None
     if qwen.contains_credential(value):
@@ -460,6 +479,9 @@ class ModelProviderAgent:
         self.provider = canonical_deepseek_provider(self.provider)
         if self.provider == "deepseek":
             validate_deepseek_model(self.model)
+        self.provider = xai.canonical_provider(self.provider.lower())
+        if self.provider == "xai":
+            xai.validate_model(self.model)
         if self.provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
             from eslams.providers.liquid import validate_config as liquid_validate_config
 
@@ -517,12 +539,45 @@ class ModelProviderAgent:
             not isinstance(self.model, str) or not self.model.strip()
         ):
             raise ValueError("NVIDIA requires an explicit nonblank model ID")
+        if self.provider == "apodex":
+            from eslams.providers.apodex import validate_configuration as validate_apodex
+
+            validate_apodex(self.model, self.runtime_config)
+        from eslams.providers.ibm_rhai import normalize_alias, validate_model
+        self.provider = normalize_alias(self.provider)
+        if self.provider == "ibm-rhai":
+            validate_model(self.model)
+        if self.provider.strip().replace("_", "-") in {"mistral", "mistral-ai"}:
+            self.provider = "mistral-ai"
+            error = mistral_configuration_error(self.model, None)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider)
+        self.provider = cohere.canonical_provider(self.provider) or self.provider
+        if self.provider == "cohere":
+            cohere.validate_model(self.model)
+        if self.provider in {"sarvam", "sarvam_ai"}:
+            self.provider = "sarvam-ai"
+        if self.provider == "sarvam-ai":
+            from eslams.providers.sarvam import validate_model as validate_sarvam_model
+
+            validate_sarvam_model(self.model)
+        if self.provider in writer.ALIASES:
+            self.provider = "writer"
+            writer.validate_model(self.model)
+        if self.provider == "minimax":
+            from eslams.providers.minimax import require_model
+            require_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
         if self.provider == "stepfun":
             validate_stepfun_configuration(self.model, self.runtime_config)
+        if self.provider == "shanghai-ai-lab":
+            validate_shanghai_ai_lab(
+                self.model, self.runtime_config, self.temperature, self.max_output_tokens,
+            )
         if self.provider == "krutrim":
             from eslams.providers.krutrim import validate_config as krutrim_validate_config
 
@@ -561,6 +616,12 @@ class ModelProviderAgent:
         with action_deadline(request.time_budget_ms):
             if self.provider == "qwen":
                 return qwen.act(self, request)
+            if self.provider == "xai":
+                with xai.credential_scope(environment_name=self.api_key_env):
+                    return self._act(request)
+            if self.provider == "minimax":
+                with minimax_conversation():
+                    return self._act(request)
             if self.provider == "krutrim":
                 from eslams.providers.krutrim import credential_scope
 
@@ -573,7 +634,18 @@ class ModelProviderAgent:
     def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
+        if self.provider == "minimax":
+            from eslams.providers.minimax import configuration_error
+            error = configuration_error(self.model, self.runtime_config)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider, model=self.model)
         request = ActRequest.from_mapping(request.to_dict())
+        if self.provider == "mistral-ai":
+            error = mistral_configuration_error(self.model, self.runtime_config)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider, model=self.model)
         policy = request.metadata.get("model_execution_policy")
         output = policy.get("output", {}) if isinstance(policy, dict) else {}
         requested = output.get("max_tokens") if output.get("mode") == "bounded" else None
@@ -805,6 +877,18 @@ class ModelProviderAgent:
             from eslams.providers.liquid import call
 
             return call(self, api_key, prompt)
+        if self.provider == "apodex":
+            from eslams.providers.apodex import call
+
+            return call(self, api_key, prompt)
+        if self.provider == "shanghai-ai-lab":
+            return call_shanghai_ai_lab(self, api_key, prompt)
+        if self.provider == "mistral-ai":
+            return complete_mistral(self, api_key, prompt)
+        if self.provider == "xai":
+            return xai.call(self, api_key, prompt)
+        if self.provider == "cohere":
+            return cohere.call(self, api_key, prompt)
         if self.provider == "qwen":
             return qwen.call(self, api_key, prompt)
         if self.provider == "arcee-ai":
@@ -886,12 +970,22 @@ class ModelProviderAgent:
         if self.provider == "watsonx":
             from eslams.providers.watsonx import call as call_watsonx
             return call_watsonx(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+        if self.provider == "ibm-rhai":
+            from eslams.providers.ibm_rhai import call as call_ibm_rhai
+
+            return call_ibm_rhai(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+        if self.provider == "writer":
+            return writer.call(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == moonshot.PROVIDER_ID:
             return moonshot.call(self, api_key, prompt)
         if self.provider == nvidia.PROVIDER_ID:
             return nvidia.call(self, api_key, prompt)
+        if self.provider == "sarvam-ai":
+            return call_sarvam(self, api_key, prompt)
+        if self.provider == "minimax":
+            return call_minimax(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1419,7 +1513,10 @@ def _post_json(
     check_cancelled()
     # None removes only framework limits; omitted wire parameters retain
     # genuine provider defaults/constraints, whose actual ceiling may be unknown.
-    payload = {key: value for key, value in payload.items() if value is not None}
+    payload = {
+        key: value for key, value in payload.items()
+        if value is not None or (provider == "sarvam-ai" and key == "reasoning_effort")
+    }
     for group in ("generationConfig", "inferenceConfig"):
         if isinstance(payload.get(group), dict):
             payload[group] = {
@@ -1505,6 +1602,14 @@ def _post_json(
             body_retry_permitted = False
             with suppress(ValueError, UnicodeError, RecursionError):
                 kind = error_kind(_strict_provider_json(response), response.status_code)
+        if provider == "sarvam-ai":
+            from eslams.providers.sarvam import http_error
+
+            kind, body_retry_permitted = http_error(response)
+            receipt["outcome"] = kind
+        if provider == "minimax":
+            kind, body_retry_permitted = minimax_http_error(response, receipt, kind)
+            receipt["outcome"] = kind
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-ncp-clovastudio-request-id")
@@ -1825,7 +1930,8 @@ def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]
         "provider": provider,
         "model": model,
         "currency": "USD",
-        "sourceUri": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+        "sourceUri": (xai.COST_SOURCE if provider == "xai" else
+                      "https://openrouter.ai/docs/cookbook/administration/usage-accounting"),
     }
     return {
         "schemaVersion": "eslams.price-card-reference.v1",
@@ -1837,7 +1943,7 @@ def _provider_native_cost_reference(provider: str, model: str) -> dict[str, Any]
         "sourceUri": identity["sourceUri"],
         "effectiveAt": None,
         "retrievedAt": None,
-        "complete": provider == "openrouter",
+        "complete": provider in {"openrouter", "xai"},
     }
 
 
@@ -2280,7 +2386,11 @@ def _endpoint_kind(provider: str) -> str:
         "azure": azure.ENDPOINT_KIND,
         "baidu": "baidu_qianfan_chat_completions",
         "byteplus": "byteplus_modelark_chat_completions",
+        "mistral-ai": "mistral_chat_completions",
+        "cohere": "cohere_chat_v2",
         "openai": "openai_responses",
+        "apodex": "apodex_chat_completions",
+        "xai": "xai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
         "google": "gemini_generate_content",
@@ -2292,6 +2402,8 @@ def _endpoint_kind(provider: str) -> str:
         "inception": "inception_chat_completions",
         "reka-ai": "reka_chat_completions",
         "sensetime": "sensenova_chat_completions",
+        "ibm-rhai": "ibm_rhai_chat_completions",
+        "writer": "writer_chat",
         "bedrock": "bedrock_converse",
         moonshot.PROVIDER_ID: "moonshot_chat_completions",
         "upstage": upstage.ENDPOINT_KIND,
@@ -2301,6 +2413,9 @@ def _endpoint_kind(provider: str) -> str:
         longcat.PROVIDER_ID: longcat.ENDPOINT_KIND,
         "tencent-hunyuan": "tencent_hunyuan_chat_completions",
         "nvidia": "nvidia_chat_completions",
+        "shanghai-ai-lab": "shanghai_ai_lab_atria_chat_completions",
+        "sarvam-ai": "sarvam_chat_completions_v1",
+        "minimax": "minimax_chat_completions",
         "krutrim": "krutrim_chat_completions",
         "kuaishou": "streamlake_chat_completions",
         "kwaipilot": "streamlake_chat_completions",
@@ -2320,7 +2435,11 @@ def _parser_version(provider: str) -> str:
         "azure": azure.PARSER_VERSION,
         "baidu": "baidu-qianfan-chat-completions-raw-v1",
         "byteplus": "byteplus-modelark-chat-raw-v1",
+        "mistral-ai": "mistral-chat-completions-raw-v1",
+        "cohere": "cohere-chat-raw-v1",
         "openai": "openai-responses-raw-v2",
+        "apodex": "apodex-chat-completions-raw-v1",
+        "xai": "xai-responses-raw-v1",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
         "google": "gemini-generate-content-raw-v2",
@@ -2332,6 +2451,8 @@ def _parser_version(provider: str) -> str:
         "inception": "inception-chat-completions-raw-v1",
         "reka-ai": "reka-chat-completions-raw-v1",
         "sensetime": "sensenova-chat-completions-raw-v1",
+        "ibm-rhai": "ibm-rhai-chat-completions-raw-v1",
+        "writer": "writer-chat-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
         "upstage": upstage.PARSER_VERSION,
@@ -2341,6 +2462,9 @@ def _parser_version(provider: str) -> str:
         longcat.PROVIDER_ID: longcat.PARSER_VERSION,
         "tencent-hunyuan": "tencent-hunyuan-chat-completions-raw-v1",
         "nvidia": "nvidia-chat-completions-raw-v1",
+        "shanghai-ai-lab": "shanghai-ai-lab-atria-chat-raw-v1",
+        "sarvam-ai": "sarvam-chat-completions-raw-v1",
+        "minimax": "minimax-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
         "kuaishou": "streamlake-chat-completions-raw-v1",
         "kwaipilot": "streamlake-chat-completions-raw-v1",
@@ -2354,6 +2478,16 @@ def _parser_version(provider: str) -> str:
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
+    if provider == "cohere":
+        return cohere.normalize_usage(usage)
+    if provider == "sarvam-ai":
+        from eslams.providers.sarvam import normalize_usage
+
+        return normalize_usage(usage)
+    if provider == "minimax":
+        from eslams.providers.minimax import normalize_usage
+
+        return normalize_usage(usage)
     if provider == moonshot.PROVIDER_ID:
         usage = moonshot.usage_for_receipt(usage)
     if provider == longcat.PROVIDER_ID:
@@ -2401,6 +2535,17 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return normalize_usage_watsonx(usage)
     if provider == nvidia.PROVIDER_ID:
         return nvidia.normalize_usage(usage)
+    if provider == "ibm-rhai":
+        from eslams.providers.ibm_rhai import normalize_usage
+        return normalize_usage(usage)
+    if provider == "mistral-ai":
+        # Only documented raw REST token counters; never SDK default zeros or
+        # unverified cache/reasoning/cost extensions. Missing counters stay null.
+        usage = {key: usage[key] for key in (
+            "prompt_tokens", "completion_tokens", "total_tokens",
+        ) if key in usage}
+    if provider == "xai":
+        usage = xai.usage_fields(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2559,6 +2704,7 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
             True if provider in {
+                "apodex",
                 "azure",
                 "inception",
                 "morph",
@@ -2907,7 +3053,7 @@ def _check_provider_completion(
     status: Any = None
     error = data.get("error")
     refused = False
-    if provider == "openai":
+    if provider in {"openai", "xai"}:
         status = data.get("status")
         details = data.get("incomplete_details")
         reason = details.get("reason") if isinstance(details, dict) else None
@@ -2954,7 +3100,7 @@ def _check_provider_completion(
                 isinstance(message, dict) and bool(message.get("refusal"))
             )
     elif provider in {
-        "openrouter", "liquid-ai", "relace", moonshot.PROVIDER_ID, "upstage",
+        "openrouter", "liquid-ai", "relace", moonshot.PROVIDER_ID, "upstage", "sarvam-ai",
         "stepfun", "inception", "reka-ai", "azure", longcat.PROVIDER_ID, "sensetime", "nvidia",
     }:
         choices = data.get("choices")
@@ -3060,6 +3206,7 @@ def _body_error_status(error: Any) -> int | None:
         "authentication_error": 401, "invalid_api_key": 401, "permission_error": 403,
         "rate_limit_error": 429, "rate_limit_exceeded": 429, "rate_limit_reached": 429,
         "rate_limit_reached_error": 429, "engine_overloaded_error": 429,
+        "rate_limited": 429,
         "overloaded_error": 529, "api_error": 500, "server_error": 500, "server": 500,
         "internal_error": 500, "timeout_error": 504, "timeout": 504,
         "not_found_error": 404, "invalid_request_error": 400,
@@ -3262,7 +3409,8 @@ _SECRET_TEXT_PATTERNS = (
 
 
 def _redact_sensitive_text(value: str) -> str:
-    redacted = value.replace("\r", " ").replace("\n", " ")
+    value = xai.scrub_text(value)
+    redacted = redact_credentials(value).replace("\r", " ").replace("\n", " ")
     for pattern in _SECRET_TEXT_PATTERNS:
         redacted = pattern.sub(
             lambda match: f"{match.group(1)}[REDACTED]" if match.lastindex else "[REDACTED]",
