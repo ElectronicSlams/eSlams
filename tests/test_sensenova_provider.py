@@ -501,3 +501,11 @@ def test_privacy_scan_of_nested_invalid_action_retains_receipt(wire):
     }
     assert selected.last_receipt["usage"]["total_tokens"] == 16
     assert len(calls) == 1
+
+
+def test_no_streaming(wire):
+    data = success()
+    data["object"] = "chat.completion.chunk"
+    wire(data)
+    with pytest.raises(ProviderCallError):
+        agent().act(request())

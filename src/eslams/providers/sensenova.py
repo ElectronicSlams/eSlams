@@ -7,7 +7,6 @@ See docs/providers/SENSENOVA.md for pinned official sources and limitations.
 from __future__ import annotations
 
 import os
-import re
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -22,26 +21,12 @@ CHAT_COMPLETIONS_ENDPOINT = "https://token.sensenova.cn/v1/chat/completions"
 
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams.agents import ProviderCallError
-    from eslams.model_actions import extract_json
+    from eslams.model_actions import action_text_matches
 
     try:
         text, receipt = _call(agent, api_key, prompt)
         secrets = _credential_values(api_key)
-        # Test decoded action fields as well as wire text: JSON Unicode escapes
-        # can hide an echo until the shared action parser decodes it. Reject the
-        # response rather than editing an action or publishing its explanation.
-        try:
-            echoed = _contains_credentials(text, secrets) or _contains_credentials(
-                extract_json(text), secrets,
-            )
-        except (ValueError, RecursionError):
-            raise ProviderCallError(
-                "SenseNova returned malformed action text; no action accepted",
-                error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
-                model=agent.model,
-                receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
-            ) from None
-        if echoed:
+        if action_text_matches(text, lambda value: any(secret in value for secret in secrets)):
             raise ProviderCallError(
                 "SenseNova response echoed configured credentials; no action accepted",
                 error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
@@ -69,29 +54,13 @@ def configuration_error(model: str, runtime: ProviderRuntimeConfig | None) -> st
 
 
 def _credential_values(api_key: str) -> set[str]:
-    secrets = {api_key}
+    secrets = {api_key} if api_key else set()
     for name, value in os.environ.items():
         if name.upper().startswith(("SENSENOVA_", "SENSETIME_")) and any(
             part in name.upper() for part in ("KEY", "SECRET", "TOKEN", "PASSWORD", "AUTH")
         ) and value.strip():
             secrets.add(value.strip())
     return secrets
-
-
-def _contains_credentials(value: Any, secrets: set[str]) -> bool:
-    pending = [value]
-    while pending:
-        item = pending.pop()
-        if isinstance(item, str):
-            decoded = re.sub(r"\\u([0-9a-fA-F]{4})", lambda match: chr(int(match[1], 16)), item)
-            if any(secret and (secret in item or secret in decoded) for secret in secrets):
-                return True
-        elif isinstance(item, dict):
-            pending.extend(item.keys())
-            pending.extend(item.values())
-        elif isinstance(item, list):
-            pending.extend(item)
-    return False
 
 
 def redact_credentials(receipt: dict[str, Any], api_key: str) -> dict[str, Any]:
@@ -190,7 +159,8 @@ def response_text(data: dict[str, Any], *, model: str) -> str:
     first = choices[0] if isinstance(choices, list) and len(choices) == 1 else None
     message = first.get("message") if isinstance(first, dict) else None
     if (
-        isinstance(first, dict) and first.get("finish_reason") == "stop"
+        data.get("object", "chat.completion") == "chat.completion"
+        and isinstance(first, dict) and first.get("finish_reason") == "stop"
         and isinstance(message, dict) and message.get("role") == "assistant"
         and not message.get("tool_calls") and not message.get("function_call")
         and isinstance(message.get("content"), str) and message["content"].strip()
