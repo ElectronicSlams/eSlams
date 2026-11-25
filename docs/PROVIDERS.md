@@ -15,10 +15,15 @@ convenience properties.
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `meituan:<model>` / `longcat:<model>` | `LONGCAT_API_KEY` | native LongCat Chat Completions | `choices[0].message.content` | response `model` |
+| `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including
 official API sources, exact aliases, reasoning controls and unresolved native
 accounting semantics. LongCat requires an explicit model ID and has no fallback.
+
+The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
+undocumented reasoning/accounting/region semantics unknown. See the
+[Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
