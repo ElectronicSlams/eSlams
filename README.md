@@ -725,6 +725,13 @@ Fireworks uses direct Chat Completions with an explicit `accounts/.../models/...
 resource. See the [Fireworks guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/FIREWORKS.md) for aliases, native reasoning,
 keyless checks, usage and discovery limits. No default model is selected.
 
+| `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` |
+
+Snowflake also requires `SNOWFLAKE_ACCOUNT_URL`. See the
+[Snowflake guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/SNOWFLAKE.md) for authentication, exact model IDs,
+region policy, and completion/accounting limitations. `cortex` and `snowflake-cortex`
+are provider aliases; a model is always required.
+
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native
 `usage.cost`, and Bedrock uses Converse. OpenRouter provider fallback is

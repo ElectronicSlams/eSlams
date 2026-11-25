@@ -13,6 +13,16 @@
 - Remove the `zhipuai-coding-plan` catalogue alias so it cannot activate standard
   API billing. Coding Plan endpoints remain unsupported. See `docs/PROVIDER_ZAI.md`.
 
+## Unreleased — planned 0.7.1
+
+- Add a native Snowflake Cortex Chat Completions adapter with explicit account
+  configuration, exact native model IDs, and `cortex`/`snowflake-cortex` aliases.
+- Preserve full history, native defaults, explicit reasoning controls, sanitized
+  per-attempt receipts, unknown accounting, and zero default retries. Reject
+  refusals, truncated output, and responses without an explicit terminal stop.
+- Add deterministic Snowflake wire/CLI/preflight/privacy tests and official API
+  research notes in `docs/providers/SNOWFLAKE.md`. No package version change.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

@@ -48,6 +48,8 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.snowflake import call as call_snowflake
+from eslams.providers.snowflake import canonical_provider
 
 
 class AgentError(RuntimeError):
@@ -402,6 +404,7 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
+        self.provider = canonical_provider(self.provider)
         self.provider = zai.canonical_provider(self.provider.lower())
         if self.provider in fireworks.PROVIDER_ALIASES:
             self.provider = fireworks.PROVIDER_ID
@@ -688,6 +691,8 @@ class ModelProviderAgent:
             return databricks.call(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
+        if self.provider == "snowflake":
+            return call_snowflake(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -2036,6 +2041,7 @@ def _endpoint_kind(provider: str) -> str:
         "bedrock": "bedrock_converse",
         "zai": "zai_chat_completions",
         "zhipu": "zhipu_chat_completions",
+        "snowflake": "snowflake_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2052,6 +2058,7 @@ def _parser_version(provider: str) -> str:
         "bedrock": "bedrock-converse-raw-v1",
         "zai": "zai-chat-completions-raw-v1",
         "zhipu": "zhipu-chat-completions-raw-v1",
+        "snowflake": "snowflake-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2226,7 +2233,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         )
         raw_inclusion = usage.get("reasoning_included_in_output")
         reasoning_included_in_output = (
-            True if provider in {"openai", "openrouter"} else _optional_bool(raw_inclusion)
+            True if provider in {"openai", "openrouter", "snowflake"}
+            else _optional_bool(raw_inclusion)
         )
         cached_input_is_subset = True
 
@@ -2598,7 +2606,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", "fireworks", databricks.PROVIDER_ID}:
+    elif provider in {"openrouter", "fireworks", databricks.PROVIDER_ID, "snowflake"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

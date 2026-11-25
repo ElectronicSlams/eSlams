@@ -16,6 +16,7 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import databricks, fireworks, load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.zai import API_KEY_ENVS
+from eslams.providers.snowflake import connection_settings as snowflake_connection_settings
 
 DEFAULT_PROVIDER_ENV = {
     **API_KEY_ENVS,
@@ -27,6 +28,7 @@ DEFAULT_PROVIDER_ENV = {
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "fireworks": fireworks.API_KEY_ENV,
     databricks.PROVIDER_ID: databricks.API_KEY_ENV,
+    "snowflake": "SNOWFLAKE_TOKEN",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -94,6 +96,14 @@ def provider_preflight(
         "response_parsing": False,
         "usage_extraction": False,
     }
+    connection_error = None
+    if record.provider == "snowflake":
+        try:
+            snowflake_connection_settings()
+            checks["account_endpoint_configured"] = True
+        except ValueError as exc:
+            checks["account_endpoint_configured"] = False
+            connection_error = str(exc)
     warnings = provider_registry.warnings_for(provider, model)
     configuration_error = None
     if record.provider == databricks.PROVIDER_ID:
@@ -126,6 +136,8 @@ def provider_preflight(
         error = {"error_class": "provider_request_rejected", "message": configuration_error}
     elif credential_error:
         error = {"error_class": "provider_auth_failed", "message": credential_error}
+    elif connection_error:
+        error = {"error_class": "provider_request_rejected", "message": connection_error}
     elif not live:
         warnings.append("This configuration preflight did not verify live provider availability.")
     elif not credential_environment or not credential_present:
@@ -229,8 +241,10 @@ def provider_preflight(
             "inference_succeeded" if checks["minimal_inference"] is True else "unverified"
         ),
         "readiness": {
-            "configuration_ready": checks["adapter_available"] is True
-            and credential_error is None and configuration_error is None,
+            "configuration_ready": (
+                checks["adapter_available"] is True and credential_error is None
+                and connection_error is None and configuration_error is None
+            ),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

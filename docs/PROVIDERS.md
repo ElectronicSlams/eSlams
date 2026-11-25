@@ -5,6 +5,8 @@ including explicit workspace/deployment configuration, reasoning, and accounting
 
 eSlams Core has native provider support for OpenAI, Anthropic, Google Gemini,
 OpenRouter, Amazon Bedrock, Fireworks, and [Z.ai and Zhipu](PROVIDER_ZAI.md).
+Snowflake Cortex uses account-scoped credentials and endpoints. See
+[Snowflake Cortex](providers/SNOWFLAKE.md) for its native wire details.
 The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
@@ -21,10 +23,15 @@ convenience properties.
 | `zhipu:<model>` | `ZHIPU_API_KEY` | Zhipu China Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `fireworks:<model-resource>` | `FIREWORKS_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+
+| `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` | Cortex Chat Completions | `choices[0].message.content` with `finish_reason=stop` | response `model` only |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [Fireworks adapter guide](FIREWORKS.md) documents aliases, exact model resources,
 explicit native reasoning controls, accounting, fixture provenance and discovery limits.
+
+Snowflake requires an account origin as well. See [Snowflake Cortex](providers/SNOWFLAKE.md)
+for the verified wire contract, provider aliases, configuration, and limitations.
 
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
