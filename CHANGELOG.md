@@ -31,6 +31,13 @@
   reasoning budgets before transport, and remove literal primary/secondary
   credential echoes from receipts without changing safe retry admission.
 
+- Add an Arcee Platform direct Chat Completions adapter, exact-model CLI aliases,
+  preflight/discovery wiring, sanitized receipts and deterministic raw-wire tests.
+  Native reasoning defaults apply; unsupported explicit controls fail before
+  submission. Missing identity/accounting stays unknown. See `docs/providers/ARCEE.md`.
+  Reject blank model IDs and unsupported controls in preflight, and discard
+  credential echoes from receipt identifiers on success and failure paths.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

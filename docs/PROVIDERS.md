@@ -22,11 +22,17 @@ model discovery through `MOONSHOT_API_KEY`.
 | `upstage:<model>` | `UPSTAGE_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `stepfun:<model>` | `STEPFUN_API_KEY` | direct Chat Completions (`api.stepfun.ai`) | `choices[0].message.content` | response `model` |
+
+| `arcee-ai:<exact-model-id>` (alias `arcee`) | `ARCEE_API_KEY` | Arcee Platform direct Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [StepFun adapter notes](providers/STEPFUN.md) document endpoint/region scope,
 model variants, controls, error handling, usage and raw-wire fixture provenance.
 Step Plan and the Chinese `.com` endpoint are separate contracts, not aliases.
+
+The 0.7.1 candidate [Arcee adapter notes](providers/ARCEE.md) document direct
+endpoint provenance, model discovery, native reasoning defaults, accounting
+limits and deterministic fixture coverage. Arcee requires an explicit model ID.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

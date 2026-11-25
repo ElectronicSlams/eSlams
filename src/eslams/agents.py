@@ -415,6 +415,11 @@ class ModelProviderAgent:
             qwen.validate_model(self.model)
         if self.provider == upstage.PROVIDER_ID:
             upstage.validate_model(self.model)
+        if self.provider.replace("_", "-") in {"arcee", "arcee-ai"}:
+            self.provider = "arcee-ai"
+            from eslams.providers.arcee import validate_model
+
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -620,6 +625,7 @@ class ModelProviderAgent:
                     **(
                         {"raw_action_text": text[:500]}
                         if self.provider not in {
+                            "arcee-ai",
                             "krutrim",
                             "moonshot-ai",
                             "qwen",
@@ -679,6 +685,10 @@ class ModelProviderAgent:
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         if self.provider == "qwen":
             return qwen.call(self, api_key, prompt)
+        if self.provider == "arcee-ai":
+            from eslams.providers.arcee import call
+
+            return call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -2052,6 +2062,7 @@ def _endpoint_kind(provider: str) -> str:
         moonshot.PROVIDER_ID: "moonshot_chat_completions",
         "upstage": upstage.ENDPOINT_KIND,
         "stepfun": STEPFUN_ENDPOINT_KIND,
+        "arcee-ai": "arcee_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2068,6 +2079,7 @@ def _parser_version(provider: str) -> str:
         moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
         "upstage": upstage.PARSER_VERSION,
         "stepfun": STEPFUN_PARSER_VERSION,
+        "arcee-ai": "arcee-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 

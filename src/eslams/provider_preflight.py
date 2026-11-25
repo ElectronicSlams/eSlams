@@ -18,6 +18,9 @@ from eslams.providers.qwen import canonicalize_provider as canonicalize_qwen_pro
 from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoint
 from eslams.providers.qwen import validate_controls as qwen_validate_controls
 from eslams.providers.qwen import validate_model as qwen_validate_model
+from eslams.providers.arcee import API_KEY_ENV as ARCEE_API_KEY_ENV
+from eslams.providers.arcee import MODELS_ENDPOINT as ARCEE_MODELS_ENDPOINT
+from eslams.providers.arcee import validate_configuration as validate_arcee_configuration
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
@@ -27,6 +30,7 @@ from eslams.providers.stepfun import validate_model_id as validate_stepfun_model
 DEFAULT_PROVIDER_ENV = {
     "qwen": "DASHSCOPE_API_KEY",
     moonshot.PROVIDER_ID: moonshot.API_KEY_ENV,
+    "arcee-ai": ARCEE_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -40,6 +44,7 @@ DEFAULT_PROVIDER_ENV = {
 
 _MODELS_ENDPOINTS = {
     moonshot.PROVIDER_ID: moonshot.MODELS_ENDPOINT,
+    "arcee-ai": ARCEE_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -85,6 +90,12 @@ def provider_preflight(
         validate_stepfun_model_id(model)
         try:
             validate_stepfun_configuration(model, runtime_config)
+        except ValueError as exc:
+            configuration_error = str(exc)
+    configuration_error = None
+    if provider.replace("_", "-") in {"arcee", "arcee-ai"}:
+        try:
+            validate_arcee_configuration(model, runtime_config)
         except ValueError as exc:
             configuration_error = str(exc)
     if provider == "krutrim":
