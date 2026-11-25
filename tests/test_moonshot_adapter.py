@@ -446,3 +446,15 @@ def test_credential_echoes_do_not_become_full_provider_receipt_identifiers(monke
     assert native.last_receipt["locked_model_id"] is None
     assert native.last_receipt["model_identity_source"] is None
     assert canary not in json.dumps(native.attempt_receipts)
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = post(monkeypatch, status=202)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(_request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1
