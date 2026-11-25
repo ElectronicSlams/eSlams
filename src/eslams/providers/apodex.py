@@ -75,11 +75,11 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
     from eslams.agents import (
         _SYSTEM_INSTRUCTIONS,
         ProviderCallError,
-        _extract_json,
         _post_json,
         _receipt,
         _response_json_with_receipt,
     )
+    from eslams.model_actions import action_text_matches
 
     validate_configuration(agent.model, agent.runtime_config)
     credentials = redaction_credentials(api_key)
@@ -117,8 +117,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
                 error_kind="provider_request_rejected",
             )
         text = _completion_text(data, receipt)
-        if (_contains_credentials(text, credentials)
-                or _contains_credentials(_extract_json(text), credentials)):
+        if action_text_matches(text, lambda value: any(key in value for key in credentials)):
             raise ProviderCallError(
                 "Apodex returned credential material; no action accepted",
                 error_kind="provider_response_schema_mismatch",
@@ -137,19 +136,6 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             model=agent.model, receipt=_without_credentials(failure, credentials),
             retry_permitted=exc.retry_permitted,
         ) from None
-
-
-def _contains_credentials(value: Any, credentials: tuple[str, ...]) -> bool:
-    if isinstance(value, str):
-        return any(credential in value for credential in credentials)
-    if isinstance(value, dict):
-        return any(
-            _contains_credentials(key, credentials) or _contains_credentials(item, credentials)
-            for key, item in value.items()
-        )
-    if isinstance(value, list):
-        return any(_contains_credentials(item, credentials) for item in value)
-    return False
 
 
 def _completion_text(data: dict[str, Any], receipt: dict[str, Any]) -> str:

@@ -479,3 +479,12 @@ def test_real_bounded_transport_decodes_mock_raw_bytes(monkeypatch):
     subject = agent()
     assert subject.act(native_request()).action == 1
     assert subject.last_receipt["request_id"] == "safe-id" and len(requests) == 1
+
+
+def test_no_escaped_credential_in_prose(monkeypatch):
+    data = wire()
+    escaped = "".join(f"\\u{ord(c):04x}" for c in SECRET)
+    data["choices"][0]["message"]["content"] = escaped + '\n{"action":1}'
+    install_post(monkeypatch, httpx.Response(200, json=data))
+    with pytest.raises(ProviderCallError):
+        agent().act(native_request())
