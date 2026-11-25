@@ -9,6 +9,9 @@
 - Add a native DeepSeek Chat Completions adapter with conservative identity, usage,
   safe retry and interruption handling; see `docs/providers/DEEPSEEK.md` for scope
   and synthetic fixture provenance. No live service availability is claimed.
+- Add a native Liquid AI direct text adapter (`liquid-ai`, alias `liquid`) with
+  explicit model selection, full history, native-default reasoning, sanitized
+  attempt receipts and deterministic raw-wire tests. See `docs/LIQUID_AI.md`.
 
 ## v0.9.1
 

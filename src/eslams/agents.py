@@ -409,6 +409,11 @@ class ModelProviderAgent:
         self.provider = canonical_deepseek_provider(self.provider)
         if self.provider == "deepseek":
             validate_deepseek_model(self.model)
+        if self.provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
+            from eslams.providers.liquid import validate_config
+
+            self.provider = "liquid-ai"
+            validate_config(self.model, self.runtime_config)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -657,6 +662,10 @@ class ModelProviderAgent:
         self.last_receipt = receipt
 
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
+        if self.provider == "liquid-ai":
+            from eslams.providers.liquid import call
+
+            return call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -2013,6 +2022,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "deepseek": "deepseek_chat_completions",
         "openrouter": "openrouter_chat_completions",
+        "liquid-ai": "liquid_chat_completions",
         "bedrock": "bedrock_converse",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
@@ -2026,6 +2036,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "deepseek": "deepseek-chat-completions-raw-v1",
         "openrouter": "openrouter-chat-completions-raw-v1",
+        "liquid-ai": "liquid-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
@@ -2581,7 +2592,7 @@ def _check_provider_completion(
             refused = reason == "content_filter" or (
                 isinstance(message, dict) and bool(message.get("refusal"))
             )
-    elif provider == "openrouter":
+    elif provider in {"openrouter", "liquid-ai"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

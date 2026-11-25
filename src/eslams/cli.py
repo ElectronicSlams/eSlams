@@ -1463,6 +1463,11 @@ def _provider_agent(
     provider = canonical_deepseek_provider(provider)
     if provider == "deepseek":
         validate_deepseek_model(model)
+    if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
+        return ModelProviderAgent(
+            provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",
+            version=model, runtime_config=runtime_config,
+        )
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 
