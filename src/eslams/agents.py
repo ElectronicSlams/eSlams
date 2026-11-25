@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, load_provider_registry
+from eslams.providers import ModelCapabilities, ai21, load_provider_registry
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.deepseek import call as call_deepseek
@@ -414,6 +414,9 @@ class ModelProviderAgent:
 
             self.provider = "liquid-ai"
             validate_config(self.model, self.runtime_config)
+        if self.provider in {"ai21", ai21.PROVIDER_ID}:
+            self.provider = ai21.PROVIDER_ID
+            ai21.validate_config(self.model, self.runtime_config)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -646,6 +649,8 @@ class ModelProviderAgent:
             from eslams.providers.krutrim import sanitize_receipt
 
             receipt = sanitize_receipt(self, receipt)
+        if self.provider == ai21.PROVIDER_ID:
+            receipt = ai21.sanitize_receipt(receipt, self.api_key_env)
         receipts = [*self.attempt_receipts, receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
@@ -656,6 +661,8 @@ class ModelProviderAgent:
             from eslams.providers.krutrim import sanitize_receipt
 
             receipt = sanitize_receipt(self, receipt)
+        if self.provider == ai21.PROVIDER_ID:
+            receipt = ai21.sanitize_receipt(receipt, self.api_key_env)
         receipts = [*self.attempt_receipts[:-1], receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
@@ -670,6 +677,8 @@ class ModelProviderAgent:
             from eslams.providers.krutrim import call
 
             return call(self, api_key, prompt)
+        if self.provider == ai21.PROVIDER_ID:
+            return ai21.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -2016,6 +2025,7 @@ def _provider_endpoint(
 
 def _endpoint_kind(provider: str) -> str:
     return {
+        ai21.PROVIDER_ID: ai21.ENDPOINT_KIND,
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -2030,6 +2040,7 @@ def _endpoint_kind(provider: str) -> str:
 
 def _parser_version(provider: str) -> str:
     return {
+        ai21.PROVIDER_ID: ai21.PARSER_VERSION,
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -2047,6 +2058,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         from eslams.providers.krutrim import normalize_usage
 
         return normalize_usage(usage)
+    if provider == ai21.PROVIDER_ID:
+        return ai21.normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     if provider == "deepseek":

@@ -13,6 +13,16 @@
   explicit model selection, full history, native-default reasoning, sanitized
   attempt receipts and deterministic raw-wire tests. See `docs/LIQUID_AI.md`.
 
+- Add a native AI21 Labs Jamba Chat Completions adapter with explicit model
+  selection, CLI/preflight support, credential-safe receipts, and deterministic
+  wire tests. Reject unsupported reasoning controls and ambiguous automatic
+  retries; preserve missing model identity, usage details and cost as unknown.
+- Protect AI21 primary and configured secondary credentials in IDs, errors,
+  malformed/partial responses and action text, including custom key-variable
+  selection and credentials rotated during a request.
+- Document the official AI21 direct API contract, model lifecycle evidence and
+  remaining account/availability verification limits. No package version bump.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

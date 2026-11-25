@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import load_provider_registry
+from eslams.providers import ai21, load_provider_registry
 from eslams.providers.deepseek import (
     API_KEY_ENV,
     MODELS_ENDPOINT,
@@ -26,6 +26,7 @@ from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
     "deepseek": API_KEY_ENV,
+    ai21.PROVIDER_ID: ai21.API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -79,6 +80,8 @@ def provider_preflight(
         from eslams.providers.krutrim import validate_config
 
         validate_config(model, runtime_config)
+    if provider in {"ai21", ai21.PROVIDER_ID}:
+        ai21.validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)
