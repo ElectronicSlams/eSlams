@@ -20,11 +20,17 @@ See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 | `watsonx:<exact-model-id>` | `WATSONX_API_KEY` (IAM exchange) | IBM `/ml/v1/text/chat` | `choices[0].message.content` | response `model_id` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `meituan:<model>` / `longcat:<model>` | `LONGCAT_API_KEY` | native LongCat Chat Completions | `choices[0].message.content` | response `model` |
+
+| `baidu:<exact-model-api-name>` | `QIANFAN_API_KEY` | Qianfan Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including
 official API sources, exact aliases, reasoning controls and unresolved native
 accounting semantics. LongCat requires an explicit model ID and has no fallback.
+
+For the native Baidu Qianfan adapter, aliases,
+domestic endpoint scope, exact controls, accounting and raw-wire provenance are
+documented in [BAIDU_QIANFAN.md](BAIDU_QIANFAN.md).
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

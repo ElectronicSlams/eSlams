@@ -410,6 +410,12 @@ class ModelProviderAgent:
         self.provider = normalize_alias(self.provider)
         if self.provider == "watsonx":
             validate_model(self.model)
+        if self.provider in {"qianfan", "baidu-qianfan"}:
+            self.provider = "baidu"
+        if self.provider == "baidu":
+            from eslams.providers.baidu import validate_model
+
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -662,6 +668,10 @@ class ModelProviderAgent:
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         if self.provider == longcat.PROVIDER_ID:
             return longcat.complete(self, api_key, prompt, system_instructions=_SYSTEM_INSTRUCTIONS)
+        if self.provider == "baidu":
+            from eslams.providers.baidu import call
+
+            return call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -2023,6 +2033,7 @@ def _provider_endpoint(
 
 def _endpoint_kind(provider: str) -> str:
     return {
+        "baidu": "baidu_qianfan_chat_completions",
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -2037,6 +2048,7 @@ def _endpoint_kind(provider: str) -> str:
 
 def _parser_version(provider: str) -> str:
     return {
+        "baidu": "baidu-qianfan-chat-completions-raw-v1",
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -2052,6 +2064,10 @@ def _parser_version(provider: str) -> str:
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == longcat.PROVIDER_ID:
         return longcat.normalize_usage(usage)
+    if provider == "baidu":
+        from eslams.providers.baidu import normalize_usage
+
+        return normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
@@ -2813,8 +2829,17 @@ def _response_json_with_receipt(
     model: str,
     capabilities: ModelCapabilities,
     runtime_config: ProviderRuntimeConfig | None,
+    synchronous: bool = False,
 ) -> dict[str, Any]:
     try:
+        if synchronous and response.status_code == httpx.codes.ACCEPTED:
+            raise ProviderCallError(
+                "provider accepted the request without completing it",
+                status_code=response.status_code,
+                error_kind="provider_response_schema_mismatch",
+                provider=provider,
+                model=model,
+            )
         return _response_json(response, provider=provider, model=model)
     except ProviderCallError as exc:
         receipt = _failure_receipt(

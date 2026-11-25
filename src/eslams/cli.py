@@ -1471,6 +1471,13 @@ def _provider_agent(
             provider=provider, model=model, api_key_env=longcat.API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    if provider in {"baidu", "qianfan", "baidu-qianfan"}:
+        if not model:
+            raise ValueError("Baidu Qianfan requires an explicit model API name")
+        return ModelProviderAgent(
+            provider="baidu", model=model, api_key_env="QIANFAN_API_KEY",
+            version=model, runtime_config=runtime_config,
+        )
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 

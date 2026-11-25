@@ -136,6 +136,8 @@ FROZEN_OPENROUTER_DISCOVERED_PROVIDER_KEYS: tuple[str, ...] = (
 PROVIDER_ALIASES = {
     "longcat": "meituan",
     "meituan-longcat": "meituan",
+    "qianfan": "baidu",
+    "baidu-qianfan": "baidu",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",

@@ -95,6 +95,32 @@ def extract_json(text: str) -> Any:
     return None
 
 
+def action_text_contains_credentials(text: str, credentials: tuple[str, ...]) -> bool:
+    """Check wire text and the decoded action fields before public action parsing."""
+    # Core retains the original response text on successful actions, including
+    # surrounding prose ignored by extract_json. Check that text for both plain
+    # credentials and literal JSON Unicode escapes before parsing the action.
+    decoded_text = re.sub(r"\\u([0-9a-fA-F]{4})",
+                          lambda match: chr(int(match[1], 16)), text)
+    if any(secret and (secret in text or secret in decoded_text) for secret in credentials):
+        return True
+    try:
+        pending = [extract_json(text)]
+    except (ValueError, RecursionError):
+        # Unparseable output cannot be checked safely for escaped credentials.
+        return True
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str) and any(secret and secret in value for secret in credentials):
+            return True
+        if isinstance(value, dict):
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return False
+
+
 def coerce_action(
     value: Any,
     legal_actions: list[Any],
