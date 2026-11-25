@@ -24,6 +24,7 @@ DEFAULT_PROVIDER_ENV = {
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "ibm-rhai": "IBM_RHAI_API_KEY",
+    "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -61,6 +62,10 @@ def provider_preflight(
     if provider == "ibm-rhai":
         validate_model(model)
         config_error = configuration_error(runtime_config)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import validate_config
+
+        validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)

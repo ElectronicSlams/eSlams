@@ -8,6 +8,8 @@
 | Private/public custody and verification claims | [PUBLIC_CUSTODY.md](PUBLIC_CUSTODY.md), [SECURITY.md](../SECURITY.md) |
 | Platform Labs handoff | [LABS_PAGE_CONTRACT.md](LABS_PAGE_CONTRACT.md) |
 | Act protocol and failure/deadline behavior | [PROTOCOL.md](PROTOCOL.md) |
+| Unscored recovered board positions and historical uncertainty | [BOARD_RECOVERY.md](BOARD_RECOVERY.md) |
+| Chess continuation, lineage and accounting | [CHESS_CONTINUATION.md](CHESS_CONTINUATION.md) |
 | Artifact profiles, signatures and migration boundaries | [ARTIFACTS.md](ARTIFACTS.md) |
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
 | Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |
@@ -18,3 +20,5 @@
 
 The lab guide pins Core 0.6.2 and requires Python 3.10+. Release changes and
 migration boundaries are recorded in [CHANGELOG.md](../CHANGELOG.md). Local validation and green tests do not confer Official trust.
+
+- [Opt-in native multi-unit matches](NATIVE_MATCHES.md)

@@ -19,6 +19,11 @@ See [configuration, wire sources and limitations](PROVIDER_IBM_RHAI.md).
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `ibm-rhai:<exact-model-id>` | `IBM_RHAI_API_KEY` | IBM project-scoped Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
+| `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
+
+The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
+undocumented reasoning/accounting/region semantics unknown. See the
+[Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
