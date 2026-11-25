@@ -647,3 +647,15 @@ def test_unsolicited_legacy_function_call_is_rejected(monkeypatch):
     assert caught.value.error_kind in {
         "provider_response_schema_mismatch", "provider_request_rejected",
     }
+
+
+
+def test_pending_http_response_cannot_apply_action(monkeypatch):
+    calls = install(monkeypatch, status=202)
+    selected = agent()
+    with pytest.raises(ProviderCallError) as error:
+        selected.act(_request())
+    assert error.value.error_kind == "provider_response_schema_mismatch"
+    assert selected.last_receipt["status_code"] == 202
+    assert selected.last_receipt["outcome"] == "provider_response_schema_mismatch"
+    assert len(calls) == 1
