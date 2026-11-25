@@ -6,6 +6,11 @@
   explicit model selection, full history, native-default reasoning, sanitized
   attempt receipts and deterministic raw-wire tests. See `docs/LIQUID_AI.md`.
 
+- Add an Apodex direct Core text adapter candidate for 0.7.1, with explicit model
+  selection, native reasoning, sanitized receipts, CLI/preflight wiring and
+  deterministic offline wire/privacy tests. Deep Research SKUs are rejected.
+  See `docs/providers/APODEX.md`; no package version change or live inference claim.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
