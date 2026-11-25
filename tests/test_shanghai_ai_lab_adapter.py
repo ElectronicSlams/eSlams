@@ -496,10 +496,12 @@ def test_model_revalidated_at_transport_boundary(monkeypatch, model):
     assert caught.value.error_kind == "provider_request_rejected"
 
 
-@pytest.mark.parametrize("where", ["prose", "explanation"])
+@pytest.mark.parametrize("where", ["prose", "explanation", "double_escaped_explanation"])
 def test_no_escaped_secret(monkeypatch, where):
     data = wire()
     secret = "".join(f"\\u{ord(char):04x}" for char in SECRET)
+    if where == "double_escaped_explanation":
+        secret = secret.replace("\\", "\\\\")
     action = '{"action": 1}'
     if where == "prose":
         action = secret + "\n" + action
