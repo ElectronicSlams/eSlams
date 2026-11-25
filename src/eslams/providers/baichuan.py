@@ -331,7 +331,8 @@ def _call(
     if (reason != "stop" or choice.get("error") is not None
             or type(choice.get("index")) is not int or choice["index"] != 0
             or not isinstance(message, dict) or message.get("role") != "assistant"
-            or message.get("tool_calls") or not isinstance(message.get("content"), str)
+            or message.get("tool_calls") or message.get("function_call") is not None
+            or not isinstance(message.get("content"), str)
             or not message["content"].strip()):
         fail("provider_response_schema_mismatch", "Baichuan returned no completed assistant text")
     receipt["finish_status"] = "completed"

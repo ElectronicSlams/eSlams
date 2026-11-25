@@ -751,3 +751,19 @@ def test_long_nested_escape_chain_is_inspected_before_action_parsing(monkeypatch
     assert caught.value.error_kind == "provider_response_schema_mismatch"
     assert len(calls) == 1
     assert encoded not in json.dumps(chosen.attempt_receipts)
+
+
+def test_contradictory_completion_cannot_apply_action(monkeypatch):
+    selected = agent()
+    monkeypatch.setenv(selected.api_key_env, "synthetic-action-test-credential")
+    body = payload()
+    choice = body["choices"][0]
+    choice["message"]["function_call"] = {"name": "unused", "arguments": "{}"}
+
+    def post(url, **kwargs):
+        return httpx.Response(200, json=body, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    with pytest.raises(ProviderCallError):
+        selected.act(request())
+    assert len(selected.attempt_receipts) == 1
