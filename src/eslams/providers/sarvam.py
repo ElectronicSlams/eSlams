@@ -203,7 +203,8 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
         choices = data.get("choices")
         choice = choices[0] if isinstance(choices, list) and len(choices) == 1 else None
         message = choice.get("message") if isinstance(choice, dict) else None
-        if (not isinstance(choice, dict) or choice.get("finish_reason") != "stop"
+        if (data.get("object", "chat.completion") != "chat.completion"
+                or not isinstance(choice, dict) or choice.get("finish_reason") != "stop"
                 or not isinstance(message, dict) or message.get("role") != "assistant"
                 or message.get("tool_calls") or message.get("function_call")
                 or not isinstance(message.get("content"), str) or not message["content"].strip()):

@@ -209,7 +209,7 @@ def test_structured_refusal_discards_private_prose(monkeypatch):
     assert SECRET not in json.dumps(selected.attempt_receipts)
 
 
-@pytest.mark.parametrize("change", ["no-content", "no-choices", "role", "multiple", "finish-type"])
+@pytest.mark.parametrize("change", ["no-content", "no-choices", "role", "multiple", "finish-type", "stream-chunk"])
 def test_malformed_wire_cannot_use_private_reasoning_as_action(monkeypatch, change):
     payload = wire()
     payload["choices"][0]["message"]["reasoning_content"] = '{"action": 1}'
@@ -221,6 +221,8 @@ def test_malformed_wire_cannot_use_private_reasoning_as_action(monkeypatch, chan
         payload["choices"][0]["message"]["role"] = "user"
     elif change == "multiple":
         payload["choices"].append(copy.deepcopy(payload["choices"][0]))
+    elif change == "stream-chunk":
+        payload["object"] = "chat.completion.chunk"
     else:
         payload["choices"][0]["finish_reason"] = {"secret": SECRET}
     mock_wire(monkeypatch, payload)
