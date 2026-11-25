@@ -1456,7 +1456,11 @@ def _provider_agent(
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    from eslams.providers.watsonx import normalize_alias, validate_model
+    provider = normalize_alias(provider.lower())
+    if provider == "watsonx":
+        validate_model(model)
+        defaults[provider] = (model, "WATSONX_API_KEY")
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 

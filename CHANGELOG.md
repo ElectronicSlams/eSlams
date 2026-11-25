@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add the native IBM Cloud watsonx.ai base-model chat adapter, explicit host aliases,
+  IAM API-key exchange, sanitized receipts and deterministic wire tests. Author
+  catalogue names remain separate. See `docs/PROVIDER_WATSONX.md` for configuration,
+  reasoning/accounting limits and unsupported deployment/gateway surfaces.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

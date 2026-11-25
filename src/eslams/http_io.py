@@ -67,8 +67,9 @@ def bounded_post(
     url: str,
     *,
     headers: dict[str, str],
-    json: dict[str, Any],
+    json: dict[str, Any] | None,
     timeout: Any,
+    data: dict[str, str] | None = None,
 ) -> httpx.Response:
     deadline: float | None
     if isinstance(timeout, TotalTimeout):
@@ -84,7 +85,7 @@ def bounded_post(
     remaining_seconds(deadline)
     observed: list[ResponseObservation] = []
     coroutine = _bounded_post(
-        url, headers=headers, json=json, timeout=timeout, _observed=observed,
+        url, headers=headers, json=json, timeout=timeout, data=data, _observed=observed,
     )
     try:
         future = asyncio.run_coroutine_threadsafe(coroutine, _network_loop())
@@ -115,8 +116,9 @@ async def _bounded_post(
     url: str,
     *,
     headers: dict[str, str],
-    json: dict[str, Any],
+    json: dict[str, Any] | None,
     timeout: Any,
+    data: dict[str, str] | None = None,
     _observed: list[ResponseObservation] | None = None,
 ) -> httpx.Response:
     global _NETWORK_CAPACITY
@@ -126,11 +128,11 @@ async def _bounded_post(
         request_headers = {**headers, "Accept-Encoding": "identity"}
         async with (
             httpx.AsyncClient(timeout=timeout) as client,
-            client.stream("POST", url, headers=request_headers, json=json) as response,
+            client.stream("POST", url, headers=request_headers, json=json, data=data) as response,
         ):
             if _observed is not None:
                 allowed = (
-                    "x-request-id", "request-id", "x-amzn-requestid",
+                    "x-request-id", "request-id", "x-amzn-requestid", "x-global-transaction-id",
                     "cf-aig-request-id", "x-gateway-request-id",
                 )
                 _observed.append(ResponseObservation(

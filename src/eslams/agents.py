@@ -402,6 +402,10 @@ class ModelProviderAgent:
 
     def __post_init__(self) -> None:
         self.provider = self.provider.lower()
+        from eslams.providers.watsonx import normalize_alias, validate_model
+        self.provider = normalize_alias(self.provider)
+        if self.provider == "watsonx":
+            validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -659,6 +663,9 @@ class ModelProviderAgent:
             return self._call_gemini(api_key, prompt)
         if self.provider == "openrouter":
             return self._call_openrouter(api_key, prompt)
+        if self.provider == "watsonx":
+            from eslams.providers.watsonx import call
+            return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         raise ProviderCallError(
@@ -1246,7 +1253,8 @@ def _post_json(
         )
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
-            or response.headers.get("x-amzn-requestid"),
+            or response.headers.get("x-amzn-requestid")
+            or response.headers.get("x-global-transaction-id"),
         )
         receipt["gateway_request_id"] = _http_error_identifier(
             response.headers.get("cf-aig-request-id")
@@ -1381,7 +1389,7 @@ def _raise_observed_transport_failure(
     )
     receipt["request_id"] = _http_error_identifier(
         headers.get("x-request-id") or headers.get("request-id")
-        or headers.get("x-amzn-requestid"),
+        or headers.get("x-amzn-requestid") or headers.get("x-global-transaction-id"),
     )
     receipt["gateway_request_id"] = _http_error_identifier(
         headers.get("cf-aig-request-id") or headers.get("x-gateway-request-id"),
@@ -2001,6 +2009,7 @@ def _endpoint_kind(provider: str) -> str:
         "google": "gemini_generate_content",
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
+        "watsonx": "watsonx_text_chat",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2013,6 +2022,7 @@ def _parser_version(provider: str) -> str:
         "google": "gemini-generate-content-raw-v2",
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "watsonx": "watsonx-text-chat-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2024,6 +2034,9 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
+    if provider == "watsonx":
+        from eslams.providers.watsonx import normalize_usage
+        return normalize_usage(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2796,7 +2809,8 @@ def _response_json_with_receipt(
                 "request_id": _http_error_identifier(response.headers.get("x-request-id")
                 or response.headers.get("request-id")
                 or response.headers.get("x-cloud-trace-context")
-                or response.headers.get("x-amzn-requestid")),
+                or response.headers.get("x-amzn-requestid")
+                or response.headers.get("x-global-transaction-id")),
                 "gateway_request_id": _http_error_identifier(
                     response.headers.get("cf-aig-request-id")
                     or response.headers.get("x-gateway-request-id")),
