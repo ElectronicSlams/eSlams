@@ -25,6 +25,8 @@ convenience properties.
 | `fireworks:<model-resource>` | `FIREWORKS_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 
 | `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` | Cortex Chat Completions | `choices[0].message.content` with `finish_reason=stop` | response `model` only |
+
+| `iflytek:<model>` | `IFLYTEK_API_PASSWORD` | Spark HTTP | `choices[0].message.content` | optional response `model`; otherwise unknown |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [Fireworks adapter guide](FIREWORKS.md) documents aliases, exact model resources,
@@ -32,6 +34,10 @@ explicit native reasoning controls, accounting, fixture provenance and discovery
 
 Snowflake requires an account origin as well. See [Snowflake Cortex](providers/SNOWFLAKE.md)
 for the verified wire contract, provider aliases, configuration, and limitations.
+
+The [Spark adapter guide](providers/IFLYTEK.md) records exact X2/v1 routing,
+aliases, authentication, reasoning controls, provider model upgrades, and
+accounting limits. It adds no live inference during configuration preflight.
 
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves

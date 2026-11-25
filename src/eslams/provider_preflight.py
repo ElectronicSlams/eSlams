@@ -29,6 +29,7 @@ DEFAULT_PROVIDER_ENV = {
     "fireworks": fireworks.API_KEY_ENV,
     databricks.PROVIDER_ID: databricks.API_KEY_ENV,
     "snowflake": "SNOWFLAKE_TOKEN",
+    "iflytek": "IFLYTEK_API_PASSWORD",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 

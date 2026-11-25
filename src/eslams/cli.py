@@ -1457,6 +1457,7 @@ def _provider_agent(
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "snowflake": ("", "SNOWFLAKE_TOKEN"),
+        "iflytek": ("spark-x", "IFLYTEK_API_PASSWORD"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1480,6 +1481,8 @@ def _provider_agent(
         if not model:
             raise ValueError("Databricks requires an explicit serving endpoint name")
         defaults[provider] = (model, databricks.API_KEY_ENV)
+    from eslams.providers.iflytek import canonical_provider
+    provider = canonical_provider(provider)
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 

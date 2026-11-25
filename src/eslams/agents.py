@@ -410,6 +410,8 @@ class ModelProviderAgent:
             self.provider = fireworks.PROVIDER_ID
         if databricks.is_databricks(self.provider):
             self.provider = databricks.PROVIDER_ID
+        from eslams.providers.iflytek import canonical_provider
+        self.provider = canonical_provider(self.provider)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -675,6 +677,10 @@ class ModelProviderAgent:
             return fireworks.call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider in zai.ENDPOINTS:
             return zai.call(self, api_key, prompt)
+        if self.provider == "iflytek":
+            from eslams.providers.iflytek import call
+
+            return call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -1213,6 +1219,7 @@ def _post_json(
     payload: dict[str, Any],
     runtime_config: ProviderRuntimeConfig | None,
     control_key: str,
+    handle_http_errors: bool = True,
 ) -> httpx.Response:
     provider, _, model = control_key.partition(":")
     check_cancelled()
@@ -1264,7 +1271,7 @@ def _post_json(
                 provider=provider,
                 model=model,
             ) from exc
-    if response.status_code >= 400:
+    if response.status_code >= 400 and handle_http_errors:
         kind = _provider_error_kind(response.status_code)
         retry_after = _retry_after_seconds(response)
         receipt = _failure_receipt(
@@ -2042,6 +2049,7 @@ def _endpoint_kind(provider: str) -> str:
         "zai": "zai_chat_completions",
         "zhipu": "zhipu_chat_completions",
         "snowflake": "snowflake_chat_completions",
+        "iflytek": "iflytek_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2059,6 +2067,7 @@ def _parser_version(provider: str) -> str:
         "zai": "zai-chat-completions-raw-v1",
         "zhipu": "zhipu-chat-completions-raw-v1",
         "snowflake": "snowflake-chat-completions-raw-v1",
+        "iflytek": "iflytek-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2070,6 +2079,10 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return zai.normalize_usage(usage)
     if provider == databricks.PROVIDER_ID:
         return databricks.normalize_usage(usage)
+    if provider == "iflytek":
+        from eslams.providers.iflytek import normalize_usage
+
+        return normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
