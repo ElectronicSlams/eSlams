@@ -417,6 +417,10 @@ class ModelProviderAgent:
         if self.provider in {"ai21", ai21.PROVIDER_ID}:
             self.provider = ai21.PROVIDER_ID
             ai21.validate_config(self.model, self.runtime_config)
+        if self.provider in {"kuaishou", "kwaipilot"}:
+            from eslams.providers.kuaishou import validate_configuration
+
+            validate_configuration(self.model, self.runtime_config, self.temperature)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -679,6 +683,10 @@ class ModelProviderAgent:
             return call(self, api_key, prompt)
         if self.provider == ai21.PROVIDER_ID:
             return ai21.call(self, api_key, prompt)
+        if self.provider in {"kuaishou", "kwaipilot"}:
+            from eslams.providers.kuaishou import call
+
+            return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -1282,6 +1290,10 @@ def _post_json(
             response.headers.get("cf-aig-request-id")
             or response.headers.get("x-gateway-request-id"),
         )
+        if provider in {"kuaishou", "kwaipilot"}:
+            from eslams.providers.kuaishou import error_kind
+
+            kind = error_kind(response, kind, receipt)
         raise ProviderCallError(
             f"provider returned HTTP {response.status_code}",
             status_code=response.status_code, error_kind=kind,
@@ -2035,6 +2047,8 @@ def _endpoint_kind(provider: str) -> str:
         "liquid-ai": "liquid_chat_completions",
         "bedrock": "bedrock_converse",
         "krutrim": "krutrim_chat_completions",
+        "kuaishou": "streamlake_chat_completions",
+        "kwaipilot": "streamlake_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -2050,6 +2064,8 @@ def _parser_version(provider: str) -> str:
         "liquid-ai": "liquid-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
+        "kuaishou": "streamlake-chat-completions-raw-v1",
+        "kwaipilot": "streamlake-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
@@ -2060,6 +2076,10 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return normalize_usage(usage)
     if provider == ai21.PROVIDER_ID:
         return ai21.normalize_usage(usage)
+    if provider in {"kuaishou", "kwaipilot"}:
+        from eslams.providers.kuaishou import normalize_usage
+
+        return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()
     if provider == "deepseek":

@@ -18,6 +18,8 @@ convenience properties.
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `ai21-labs:<model-id>` | `AI21_API_KEY` | AI21 Studio Chat Completions | `choices[0].message.content` | unknown in documented envelope |
 
+| `kuaishou:<model-or-endpoint>` / `kwaipilot:<model-or-endpoint>` | `STREAMLAKE_API_KEY` | StreamLake Chat Completions | `choices[0].message.content` | response `model` |
+
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
@@ -246,3 +248,10 @@ Core uses a shared bounded asynchronous HTTP loop behind its synchronous adapter
 API. Expired requests are cancelled and their network streams are closed; it
 also works when the caller already has an asyncio loop or is a worker thread.
 Network concurrency is bounded to 32 active requests in a process.
+## Kuaishou / KwaiPilot KAT (proposed for 0.7.1)
+
+The native `kuaishou:MODEL` and `kwaipilot:MODEL` adapters call StreamLake's
+direct text API with an explicit model/endpoint ID. See the
+[provider-specific contract and setup](providers/KUAISHOU.md), including region,
+reasoning, accounting, and credential-redaction limitations. Kling's media
+products are separate.

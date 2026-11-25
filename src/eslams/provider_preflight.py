@@ -35,6 +35,8 @@ DEFAULT_PROVIDER_ENV = {
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "liquid-ai": "LIQUID_API_KEY",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
+    "kuaishou": "STREAMLAKE_API_KEY",
+    "kwaipilot": "STREAMLAKE_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -82,6 +84,10 @@ def provider_preflight(
         validate_config(model, runtime_config)
     if provider in {"ai21", ai21.PROVIDER_ID}:
         ai21.validate_config(model, runtime_config)
+    if provider in {"kuaishou", "kwaipilot"}:
+        from eslams.providers.kuaishou import validate_configuration
+
+        validate_configuration(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)

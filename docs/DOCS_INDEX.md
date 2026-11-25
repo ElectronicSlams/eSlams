@@ -14,6 +14,8 @@
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
 | Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |
 | Liquid AI direct text adapter and source evidence | [LIQUID_AI.md](LIQUID_AI.md) |
+
+| Kuaishou / KwaiPilot KAT direct text adapter | [providers/KUAISHOU.md](providers/KUAISHOU.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

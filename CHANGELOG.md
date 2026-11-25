@@ -23,6 +23,11 @@
 - Document the official AI21 direct API contract, model lifecycle evidence and
   remaining account/availability verification limits. No package version bump.
 
+- Add a native Kuaishou / KwaiPilot KAT text adapter through StreamLake's direct
+  pay-as-you-go API, with explicit service-region selection, exact model IDs,
+  full history, conservative receipts/retries, and deterministic wire tests.
+  See `docs/providers/KUAISHOU.md` for verified contracts and limitations.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
