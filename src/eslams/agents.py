@@ -42,7 +42,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, databricks, fireworks, load_provider_registry, zai
+from eslams.providers import ModelCapabilities, databricks, fireworks, load_provider_registry, poolside, zai
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -410,8 +410,9 @@ class ModelProviderAgent:
             self.provider = fireworks.PROVIDER_ID
         if databricks.is_databricks(self.provider):
             self.provider = databricks.PROVIDER_ID
-        from eslams.providers.iflytek import canonical_provider
-        self.provider = canonical_provider(self.provider)
+        from eslams.providers.iflytek import canonical_provider as canonical_iflytek_provider
+        self.provider = canonical_iflytek_provider(self.provider)
+        self.provider = poolside.normalize_provider(self.provider.lower())
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -695,6 +696,8 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == databricks.PROVIDER_ID:
             return databricks.call(self, api_key, prompt)
+        if self.provider == "poolside":
+            return poolside.call(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == "snowflake":
@@ -2045,6 +2048,7 @@ def _endpoint_kind(provider: str) -> str:
         "openrouter": "openrouter_chat_completions",
         "fireworks": fireworks.ENDPOINT_KIND,
         databricks.PROVIDER_ID: databricks.ENDPOINT_KIND,
+        "poolside": poolside.ENDPOINT_KIND,
         "bedrock": "bedrock_converse",
         "zai": "zai_chat_completions",
         "zhipu": "zhipu_chat_completions",
@@ -2063,6 +2067,7 @@ def _parser_version(provider: str) -> str:
         "openrouter": "openrouter-chat-completions-raw-v1",
         "fireworks": fireworks.PARSER_VERSION,
         databricks.PROVIDER_ID: databricks.PARSER_VERSION,
+        "poolside": poolside.PARSER_VERSION,
         "bedrock": "bedrock-converse-raw-v1",
         "zai": "zai-chat-completions-raw-v1",
         "zhipu": "zhipu-chat-completions-raw-v1",
@@ -2083,6 +2088,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         from eslams.providers.iflytek import normalize_usage
 
         return normalize_usage(usage)
+    if provider == "poolside":
+        return poolside.normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
@@ -2619,7 +2626,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", "fireworks", databricks.PROVIDER_ID, "snowflake"}:
+    elif provider in {"openrouter", "fireworks", databricks.PROVIDER_ID, "snowflake", "poolside"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

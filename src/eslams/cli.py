@@ -53,6 +53,7 @@ from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import fireworks, load_provider_registry
 from eslams.providers.zai import canonical_provider
+from eslams.providers.poolside import API_KEY_ENV, normalize_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1450,6 +1451,7 @@ def _provider_agent(
     defaults = {
         "zai": ("glm-5.3", "ZAI_API_KEY"),
         "zhipu": ("glm-5.3", "ZHIPU_API_KEY"),
+        "poolside": ("", API_KEY_ENV),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1481,17 +1483,20 @@ def _provider_agent(
         if not model:
             raise ValueError("Databricks requires an explicit serving endpoint name")
         defaults[provider] = (model, databricks.API_KEY_ENV)
-    from eslams.providers.iflytek import canonical_provider
-    provider = canonical_provider(provider)
+    from eslams.providers.iflytek import canonical_provider as canonical_iflytek_provider
+    provider = canonical_iflytek_provider(provider)
+    provider = normalize_provider(provider.lower())
     if provider == "krutrim":
-        from eslams.providers.krutrim import API_KEY_ENV
+        from eslams.providers.krutrim import API_KEY_ENV as KRUTRIM_API_KEY_ENV
 
         return ModelProviderAgent(
-            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            provider=provider, model=model, api_key_env=KRUTRIM_API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
     if provider not in defaults:
         return None
+    if provider == "poolside" and not model.strip():
+        raise ValueError("Poolside requires an explicit model: poolside:<model-id>")
     default_model, env_name = defaults[provider]
     return ModelProviderAgent(
         provider=provider,

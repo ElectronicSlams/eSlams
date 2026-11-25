@@ -15,6 +15,7 @@
 | Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md), [Z.ai/Zhipu](PROVIDER_ZAI.md) |
 | Fireworks direct inference and fixture provenance | [FIREWORKS.md](FIREWORKS.md) |
 | Snowflake Cortex adapter and official wire references | [providers/SNOWFLAKE.md](providers/SNOWFLAKE.md) |
+| Poolside direct inference and verified contract limits | [POOLSIDE.md](POOLSIDE.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

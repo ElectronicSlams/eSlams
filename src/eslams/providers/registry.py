@@ -141,6 +141,8 @@ PROVIDER_ALIASES = {
     "spark": "iflytek",
     "iflytek-spark": "iflytek",
     "xfyun": "iflytek",
+    "poolside-ai": "poolside",
+    "poolsideai": "poolside",
     "adept": "adept-ai",
     "ai21": "ai21-labs",
     "gemini": "google",

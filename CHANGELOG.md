@@ -23,6 +23,12 @@
 - Add deterministic Snowflake wire/CLI/preflight/privacy tests and official API
   research notes in `docs/providers/SNOWFLAKE.md`. No package version change.
 
+- Add a native Poolside-hosted Chat Completions adapter with explicit model IDs,
+  CLI/preflight/discovery aliases, native thinking on/off controls, sanitized
+  attempt receipts and deterministic wire regressions. Missing accounting stays
+  unknown; native costs and safe automatic retries remain unverified. See
+  `docs/POOLSIDE.md` for official sources and restricted-reference limitations.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
