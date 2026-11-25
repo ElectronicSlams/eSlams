@@ -21,6 +21,16 @@
 - Require explicit Upstage model IDs, validate reasoning controls in preflight,
   and exclude primary/secondary credential echoes before receipt custody.
 
+- Add the native StepFun direct Chat Completions adapter for 0.7.1 review,
+  with CLI dispatch, offline/live preflight support, documented model controls,
+  conservative usage accounting and deterministic raw-wire/privacy regressions.
+  Keep full supplied history, exact model IDs, zero default retries and native
+  output/reasoning defaults. Step Plan and regional aliases are not inferred.
+  No package version, protocol or arena behavior changes.
+- Require explicit nonblank StepFun model IDs, reject unsupported explicit
+  reasoning budgets before transport, and remove literal primary/secondary
+  credential echoes from receipts without changing safe retry admission.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

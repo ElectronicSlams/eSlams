@@ -19,6 +19,10 @@ from eslams.providers.qwen import generation_endpoint as qwen_generation_endpoin
 from eslams.providers.qwen import validate_controls as qwen_validate_controls
 from eslams.providers.qwen import validate_model as qwen_validate_model
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
+from eslams.providers.stepfun import MODELS_ENDPOINT as STEPFUN_MODELS_ENDPOINT
+from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
+from eslams.providers.stepfun import validate_model_id as validate_stepfun_model_id
 
 DEFAULT_PROVIDER_ENV = {
     "qwen": "DASHSCOPE_API_KEY",
@@ -30,6 +34,7 @@ DEFAULT_PROVIDER_ENV = {
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "upstage": "UPSTAGE_API_KEY",
+    "stepfun": STEPFUN_API_KEY_ENV,
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -40,6 +45,7 @@ _MODELS_ENDPOINTS = {
     "openrouter": "https://openrouter.ai/api/v1/models",
     "google": "https://generativelanguage.googleapis.com/v1beta/models",
     "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
+    "stepfun": STEPFUN_MODELS_ENDPOINT,
 }
 
 
@@ -72,6 +78,15 @@ def provider_preflight(
             upstage.reasoning_effort(runtime_config)
         except ProviderCallError as exc:
             configuration_error = _public_error(exc, provider=provider, model=model)
+    if provider.strip() == "stepfun":
+        provider = "stepfun"
+    configuration_error = None
+    if provider == "stepfun":
+        validate_stepfun_model_id(model)
+        try:
+            validate_stepfun_configuration(model, runtime_config)
+        except ValueError as exc:
+            configuration_error = str(exc)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -121,7 +136,9 @@ def provider_preflight(
         except ValueError as exc:
             configuration_error = str(exc)
 
-    if credential_environment is None:
+    if configuration_error:
+        error = {"error_class": "provider_request_rejected", "message": configuration_error}
+    elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
             "message": f"Core has no inference adapter for provider {provider!r}",

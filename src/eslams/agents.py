@@ -47,6 +47,11 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.stepfun import ENDPOINT_KIND as STEPFUN_ENDPOINT_KIND
+from eslams.providers.stepfun import PARSER_VERSION as STEPFUN_PARSER_VERSION
+from eslams.providers.stepfun import call as call_stepfun
+from eslams.providers.stepfun import usage_fields as stepfun_usage_fields
+from eslams.providers.stepfun import validate_configuration as validate_stepfun_configuration
 
 
 class AgentError(RuntimeError):
@@ -414,6 +419,8 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "stepfun":
+            validate_stepfun_configuration(self.model, self.runtime_config)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import validate_config
 
@@ -612,7 +619,13 @@ class ModelProviderAgent:
                     "model": self.model,
                     **(
                         {"raw_action_text": text[:500]}
-                        if self.provider not in {"krutrim", "moonshot-ai", "qwen", "upstage"} else {}
+                        if self.provider not in {
+                            "krutrim",
+                            "moonshot-ai",
+                            "qwen",
+                            "stepfun",
+                            "upstage",
+                        } else {}
                     ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
@@ -680,6 +693,8 @@ class ModelProviderAgent:
             return self._call_openrouter(api_key, prompt)
         if self.provider == upstage.PROVIDER_ID:
             return upstage.call(self, api_key, prompt)
+        if self.provider == "stepfun":
+            return call_stepfun(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == moonshot.PROVIDER_ID:
@@ -2036,6 +2051,7 @@ def _endpoint_kind(provider: str) -> str:
         "bedrock": "bedrock_converse",
         moonshot.PROVIDER_ID: "moonshot_chat_completions",
         "upstage": upstage.ENDPOINT_KIND,
+        "stepfun": STEPFUN_ENDPOINT_KIND,
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2051,6 +2067,7 @@ def _parser_version(provider: str) -> str:
         "bedrock": "bedrock-converse-raw-v1",
         moonshot.PROVIDER_ID: "moonshot-chat-completions-raw-v1",
         "upstage": upstage.PARSER_VERSION,
+        "stepfun": STEPFUN_PARSER_VERSION,
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2066,6 +2083,8 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return _empty_usage()
     if provider == "qwen":
         return _normalize_usage("dashscope_native", qwen.usage_fields(usage))
+    if provider == "stepfun":
+        usage = stepfun_usage_fields(usage)
     validation_errors: list[str] = []
     if provider in {"gemini", "google"}:
         prompt_tokens = _usage_int(
@@ -2596,7 +2615,7 @@ def _check_provider_completion(
             "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION",
             "PUP_LIMITED_DISABLED",
         })
-    elif provider in {"openrouter", moonshot.PROVIDER_ID, "upstage"}:
+    elif provider in {"openrouter", moonshot.PROVIDER_ID, "upstage", "stepfun"}:
         choices = data.get("choices")
         first = choices[0] if isinstance(choices, list) and choices else None
         if isinstance(first, dict):

@@ -227,6 +227,195 @@
       "sources": [
         "https://platform.claude.com/docs/en/about-claude/model-deprecations"
       ]
+    },
+    {
+      "provider": "stepfun",
+      "model": "step-3.5-flash",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [],
+      "default_reasoning_effort": null,
+      "supported_reasoning_modes": [
+        "native-default"
+      ],
+      "accepted_control_fields": [],
+      "default_reasoning_track": "native-default",
+      "max_output_tokens": null,
+      "context_window": 256000,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "lifecycle": "account-dependent",
+      "sources": [
+        "https://platform.stepfun.ai/docs/en/api-reference/chat/chat-completion-create",
+        "https://platform.stepfun.ai/docs/en/guides/models/step-3.5-flash"
+      ],
+      "pricing": {}
+    },
+    {
+      "provider": "stepfun",
+      "model": "step-3.5-flash-2603",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "high"
+      ],
+      "default_reasoning_effort": null,
+      "supported_reasoning_modes": [
+        "native-default",
+        "low",
+        "high"
+      ],
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "max_output_tokens": null,
+      "context_window": 256000,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "lifecycle": "account-dependent",
+      "sources": [
+        "https://platform.stepfun.ai/docs/en/api-reference/chat/chat-completion-create",
+        "https://platform.stepfun.ai/docs/en/guides/models/step-3.5-flash"
+      ],
+      "pricing": {}
+    },
+    {
+      "provider": "stepfun",
+      "model": "step-3.7-flash",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default_reasoning_effort": null,
+      "supported_reasoning_modes": [
+        "native-default",
+        "low",
+        "medium",
+        "high"
+      ],
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "max_output_tokens": null,
+      "context_window": 256000,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "lifecycle": "account-dependent",
+      "sources": [
+        "https://platform.stepfun.ai/docs/en/api-reference/chat/chat-completion-create",
+        "https://platform.stepfun.ai/docs/en/guides/models/step-3.7-flash"
+      ],
+      "pricing": {}
+    },
+    {
+      "provider": "stepfun",
+      "model": "step-5-preview",
+      "available_from_api": null,
+      "game_agent_supported": true,
+      "endpoints": [
+        "chat/completions"
+      ],
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "supports_temperature": true,
+      "supports_reasoning": true,
+      "reasoning_efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default_reasoning_effort": null,
+      "supported_reasoning_modes": [
+        "native-default",
+        "low",
+        "medium",
+        "high"
+      ],
+      "accepted_control_fields": [
+        "reasoning_effort"
+      ],
+      "default_reasoning_track": "native-default",
+      "max_output_tokens": 64000,
+      "context_window": 1000000,
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "lifecycle": "account-dependent",
+      "sources": [
+        "https://platform.stepfun.ai/docs/en/api-reference/chat/chat-completion-create",
+        "https://platform.stepfun.ai/docs/en/guides/models/step-5-preview"
+      ],
+      "pricing": {}
+    },
+    {
+      "provider": "stepfun",
+      "model": "step-1-32k",
+      "available_from_api": false,
+      "lifecycle": "retired",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://platform.stepfun.ai/docs/en/guides/model-migration"
+      ]
+    },
+    {
+      "provider": "stepfun",
+      "model": "step-2-16k",
+      "available_from_api": false,
+      "lifecycle": "retired",
+      "last_verified_at": "2026-11-04T00:00:00Z",
+      "sources": [
+        "https://platform.stepfun.ai/docs/en/guides/model-migration"
+      ]
     }
   ]
 }

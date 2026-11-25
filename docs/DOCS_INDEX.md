@@ -14,6 +14,8 @@
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
 | Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |
 | Moonshot/Kimi native API, regions and fixture provenance | [PROVIDER_MOONSHOT.md](PROVIDER_MOONSHOT.md) |
+
+| StepFun direct API scope and fixture provenance | [STEPFUN.md](providers/STEPFUN.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |
 | Backlog dispositions and verification evidence | [BACKLOG_RESOLUTION.md](BACKLOG_RESOLUTION.md), [resolution ledger](backlog-resolution.json) |

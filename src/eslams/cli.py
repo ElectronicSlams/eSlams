@@ -52,6 +52,7 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry, moonshot
+from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1456,6 +1457,7 @@ def _provider_agent(
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "upstage": ("", "UPSTAGE_API_KEY"),
+        "stepfun": ("", STEPFUN_API_KEY_ENV),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
