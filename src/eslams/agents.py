@@ -2786,8 +2786,17 @@ def _response_json_with_receipt(
     model: str,
     capabilities: ModelCapabilities,
     runtime_config: ProviderRuntimeConfig | None,
+    synchronous: bool = False,
 ) -> dict[str, Any]:
     try:
+        if synchronous and response.status_code == httpx.codes.ACCEPTED:
+            raise ProviderCallError(
+                "provider accepted the request without completing it",
+                status_code=response.status_code,
+                error_kind="provider_response_schema_mismatch",
+                provider=provider,
+                model=model,
+            )
         return _response_json(response, provider=provider, model=model)
     except ProviderCallError as exc:
         receipt = _failure_receipt(

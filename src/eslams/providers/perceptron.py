@@ -123,6 +123,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         data = _response_json_with_receipt(
             response, provider=PROVIDER_ID, model=agent.model,
             capabilities=agent.capabilities, runtime_config=runtime,
+            synchronous=True,
         )
         raw_usage = data.get("usage")
         # Only documented native token fields feed the shared accounting parser.
