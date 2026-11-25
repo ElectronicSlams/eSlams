@@ -146,6 +146,15 @@ def test_finish_failures_never_accept_parseable_partial_actions(monkeypatch, rea
     assert "unknown-private-reason" not in json.dumps(model.last_receipt)
 
 
+def test_http_accepted_is_not_a_completed_action(monkeypatch):
+    calls = wire(monkeypatch, fixture(), status=202)
+    model = agent(runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=1))
+    with pytest.raises(ProviderCallError) as caught:
+        model.act(_request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert len(calls) == 1 and model.last_receipt["status_code"] == 202
+
+
 @pytest.mark.parametrize("field,value", [
     ("function_call", {"name": "other", "arguments": "{}"}),
     ("server_tool_calls", [{"type": "web_search"}]),
