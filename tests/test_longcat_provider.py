@@ -742,3 +742,17 @@ def test_json_escaped_credentials_cannot_leak_through_decoded_explanation(
         agent.act(_request())
     _assert_no_credentials(error.value.receipt)
     _assert_no_credentials(agent.attempt_receipts)
+
+
+@pytest.mark.parametrize("mode", ("prose", "chunk"))
+def test_no_bad_completion(transport, mode):
+    _, responses = transport
+    data = _wire()
+    if mode == "prose":
+        escaped = "".join(f"\\u{ord(c):04x}" for c in KEY)
+        data["choices"][0]["message"]["content"] = escaped + '\n{"action":1}'
+    else:
+        data["object"] = "chat.completion.chunk"
+    responses.append(httpx.Response(200, json=data))
+    with pytest.raises(ProviderCallError):
+        _agent().act(_request())

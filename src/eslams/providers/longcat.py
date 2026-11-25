@@ -103,7 +103,7 @@ def _complete(
         _receipt,
         _response_json_with_receipt,
     )
-    from eslams.model_actions import extract_json
+    from eslams.model_actions import action_text_matches
 
     runtime = agent.runtime_config
     try:
@@ -159,7 +159,8 @@ def _complete(
         message = first.get("message") if isinstance(first, dict) else None
         content = message.get("content") if isinstance(message, dict) else None
         # Reasoning is private telemetry, never an alternate source of action text.
-        if (not isinstance(choices, list) or len(choices) != 1
+        if (data.get("object", "chat.completion") != "chat.completion"
+                or not isinstance(choices, list) or len(choices) != 1
                 or not isinstance(first, dict) or first.get("finish_reason") != "stop"
                 or not isinstance(message, dict) or message.get("role") != "assistant"
                 or message.get("tool_calls") or message.get("function_call")
@@ -169,17 +170,7 @@ def _complete(
                 error_kind="provider_response_schema_mismatch",
                 provider=PROVIDER_ID, model=agent.model,
             )
-        try:
-            content_has_credentials = (
-                credential_echo(content) or credential_echo(extract_json(content))
-            )
-        except (ValueError, RecursionError):
-            raise ProviderCallError(
-                "LongCat returned unverifiable action content; no action accepted",
-                error_kind="provider_response_schema_mismatch",
-                provider=PROVIDER_ID, model=agent.model,
-            ) from None
-        if content_has_credentials:
+        if action_text_matches(content, credential_echo):
             raise ProviderCallError(
                 "LongCat returned credential-bearing action content; no action accepted",
                 error_kind="provider_response_schema_mismatch",
