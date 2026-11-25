@@ -1,5 +1,8 @@
 # Provider Guide
 
+Databricks native serving-endpoint chat is documented in [DATABRICKS.md](DATABRICKS.md),
+including explicit workspace/deployment configuration, reasoning, and accounting limits.
+
 eSlams Core has native provider support for OpenAI, Anthropic, Google Gemini,
 OpenRouter, Amazon Bedrock, Fireworks, and [Z.ai and Zhipu](PROVIDER_ZAI.md).
 The adapters call raw

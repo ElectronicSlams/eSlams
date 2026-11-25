@@ -1467,6 +1467,13 @@ def _provider_agent(
             provider=fireworks.PROVIDER_ID, model=model, api_key_env=fireworks.API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    from eslams.providers import databricks
+
+    if databricks.is_databricks(provider):
+        provider = databricks.PROVIDER_ID
+        if not model:
+            raise ValueError("Databricks requires an explicit serving endpoint name")
+        defaults[provider] = (model, databricks.API_KEY_ENV)
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 
