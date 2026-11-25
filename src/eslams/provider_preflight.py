@@ -20,6 +20,7 @@ from eslams.providers.tencent_hunyuan import RETIREMENT_WARNING
 DEFAULT_PROVIDER_ENV = {
     longcat.PROVIDER_ID: longcat.API_KEY_ENV,
     "baidu": "QIANFAN_API_KEY",
+    "byteplus": "BYTEPLUS_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -81,6 +82,13 @@ def provider_preflight(
             configuration_error = _public_error(exc, provider=provider, model=model)
     if provider.strip().replace("_", "-") in {"hunyuan", "tencent-hunyuan"}:
         provider = "tencent-hunyuan"
+    from eslams.providers.byteplus import canonical_provider
+    from eslams.providers.byteplus import configuration_error as byteplus_configuration_error
+
+    if canonical_provider(provider) and (
+        byteplus_error := byteplus_configuration_error(model, runtime_config)
+    ):
+        raise ValueError(byteplus_error)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 

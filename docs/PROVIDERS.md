@@ -1,7 +1,8 @@
 # Provider Guide
 
 eSlams Core 0.6 has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. The adapters call raw
+Anthropic, Google Gemini, OpenRouter, and Amazon Bedrock. For regional service
+details, see the [BytePlus ModelArk guide](providers/BYTEPLUS.md). The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -24,6 +25,8 @@ See [watsonx.ai configuration and verified wire scope](PROVIDER_WATSONX.md).
 | `baidu:<exact-model-api-name>` | `QIANFAN_API_KEY` | Qianfan Chat Completions | `choices[0].message.content` | response `model` |
 
 | `tencent-hunyuan:<model>` / `hunyuan:<model>` | `TENCENTCLOUD_SECRET_ID` + `TENCENTCLOUD_SECRET_KEY` | signed native ChatCompletions | `Choices[0].Message.Content` (optional `Response` wrapper) | unknown; no attested model field |
+
+| `byteplus:<model-or-endpoint-id>` | `BYTEPLUS_API_KEY` | ModelArk Chat, ap-southeast-1 | `choices[0].message.content` | concrete response `model`; an `ep-*` alone leaves weights unknown |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The 0.7.1 adapter series adds [Meituan LongCat](providers/LONGCAT.md), including

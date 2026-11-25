@@ -52,6 +52,8 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import load_provider_registry
+from eslams.providers.byteplus import API_KEY_ENV as BYTEPLUS_API_KEY_ENV
+from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1484,6 +1486,13 @@ def _provider_agent(
 
         require_model(model)
         provider = "tencent-hunyuan"
+    if byteplus_provider(provider):
+        if not model:
+            raise ValueError("BytePlus requires an explicit model or ep-* endpoint ID")
+        return ModelProviderAgent(
+            provider="byteplus", model=model, api_key_env=BYTEPLUS_API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     if provider == "krutrim":
         from eslams.providers.krutrim import API_KEY_ENV
 

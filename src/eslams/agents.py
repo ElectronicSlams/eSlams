@@ -10,7 +10,7 @@ import re
 import threading
 import time
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -44,6 +44,7 @@ from eslams.provider_credentials import provider_key
 from eslams.providers import ModelCapabilities, load_provider_registry, longcat
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
+from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
@@ -419,6 +420,12 @@ class ModelProviderAgent:
             validate_model(self.model)
         if self.provider.strip().replace("_", "-") in HUNYUAN_ALIASES:
             self.provider = "tencent-hunyuan"
+        self.provider = byteplus_provider(self.provider) or self.provider.lower()
+        if self.provider == "byteplus":
+            from eslams.providers.byteplus import model_error
+
+            if error := model_error(self.model):
+                raise ValueError(error)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -679,6 +686,10 @@ class ModelProviderAgent:
             from eslams.providers.tencent_hunyuan import call
 
             return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+        if self.provider == "byteplus":
+            from eslams.providers.byteplus import call
+
+            return call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -1288,6 +1299,14 @@ def _post_json(
             receipt["retry_after_ms"] = (
                 round(min(retry_after, 86_400.0) * 1000) if retry_after is not None else None
             )
+        if provider == "byteplus":
+            from eslams.providers.byteplus import error_kind
+
+            # Ark quota/burst errors do not attest that replay is safe. Retain
+            # shared custody, but never opt this adapter into automatic retry.
+            body_retry_permitted = False
+            with suppress(ValueError, UnicodeError, RecursionError):
+                kind = error_kind(_strict_provider_json(response), response.status_code)
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
             or response.headers.get("x-amzn-requestid")
@@ -2047,6 +2066,7 @@ def _provider_endpoint(
 def _endpoint_kind(provider: str) -> str:
     return {
         "baidu": "baidu_qianfan_chat_completions",
+        "byteplus": "byteplus_modelark_chat_completions",
         "openai": "openai_responses",
         "anthropic": "anthropic_messages",
         "gemini": "gemini_generate_content",
@@ -2063,6 +2083,7 @@ def _endpoint_kind(provider: str) -> str:
 def _parser_version(provider: str) -> str:
     return {
         "baidu": "baidu-qianfan-chat-completions-raw-v1",
+        "byteplus": "byteplus-modelark-chat-raw-v1",
         "openai": "openai-responses-raw-v2",
         "anthropic": "anthropic-messages-raw-v2",
         "gemini": "gemini-generate-content-raw-v2",
@@ -2085,6 +2106,10 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return normalize_usage(usage)
     if provider == "tencent-hunyuan":
         from eslams.providers.tencent_hunyuan import normalize_usage
+
+        return normalize_usage(usage)
+    if provider == "byteplus":
+        from eslams.providers.byteplus import normalize_usage
 
         return normalize_usage(usage)
     if provider == "krutrim":
