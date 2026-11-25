@@ -25,6 +25,7 @@ DEFAULT_PROVIDER_ENV = {
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "shanghai-ai-lab": "ATRIA_API_KEY",
+    "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -58,6 +59,10 @@ def provider_preflight(
     provider = provider.lower()
     if provider.strip().replace("_", "-") == "shanghai-ai-lab":
         validate_shanghai_ai_lab(model, runtime_config, max_output_tokens=max_output_tokens)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import validate_config
+
+        validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
