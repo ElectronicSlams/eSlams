@@ -23,6 +23,7 @@ ARTIFACT_KINDS: tuple[str, ...] = (
     "battlefield_match",
     "arena_session",
     "uploaded_replay",
+    "recovered_position",
 )
 
 VALIDATION_PROFILES: tuple[str, ...] = (*ARTIFACT_PROFILES, "official_case", "auto")

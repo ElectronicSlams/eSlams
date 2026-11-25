@@ -15,9 +15,15 @@ convenience properties.
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `snowflake:<native-model-id>` | `SNOWFLAKE_TOKEN` | Cortex Chat Completions | `choices[0].message.content` with `finish_reason=stop` | response `model` only |
+| `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 Snowflake requires an account origin as well. See [Snowflake Cortex](providers/SNOWFLAKE.md)
 for the verified wire contract, provider aliases, configuration, and limitations.
+
+
+The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
+undocumented reasoning/accounting/region semantics unknown. See the
+[Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
