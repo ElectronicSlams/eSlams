@@ -23,6 +23,7 @@ DEFAULT_PROVIDER_ENV = {
     "google": "GEMINI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "krutrim": "KRUTRIM_CLOUD_API_KEY",
     "morph": morph.API_KEY_ENV,
 }
 
@@ -56,6 +57,10 @@ def provider_preflight(
         ):
             raise ValueError(f"{name} must be a positive operator choice or null")
     provider = provider.lower()
+    if provider == "krutrim":
+        from eslams.providers.krutrim import validate_config
+
+        validate_config(model, runtime_config)
     if provider == "morph":
         morph.validate_configuration(model, runtime_config or ProviderRuntimeConfig())
     provider_registry = load_provider_registry()
