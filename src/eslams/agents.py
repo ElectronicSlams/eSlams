@@ -408,6 +408,10 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "krutrim":
+            from eslams.providers.krutrim import validate_config
+
+            validate_config(self.model, self.runtime_config)
         self._receipt_batch: tuple[object, tuple[dict[str, Any], ...]] | None = None
         self.last_receipt: dict[str, Any] | None = None
         self.attempt_receipts: list[dict[str, Any]] = []
@@ -424,6 +428,11 @@ class ModelProviderAgent:
         request = ActRequest.from_mapping(request.to_dict())
         self._receipt_batch = (current_receipt_invocation() or object(), ())
         with action_deadline(request.time_budget_ms):
+            if self.provider == "krutrim":
+                from eslams.providers.krutrim import credential_scope
+
+                with credential_scope(self):
+                    return self._act(request)
             return self._act(request)
 
     def _act(self, request: ActRequest) -> ActResponse:
@@ -570,6 +579,10 @@ class ModelProviderAgent:
                 break
             try:
                 action, confidence, explanation = _parse_model_action(text, request.legal_actions)
+                if self.provider == "krutrim":
+                    from eslams.providers.krutrim import validate_action
+
+                    validate_action(self, action, explanation, api_key)
             except ProtocolError as exc:
                 parse_error = exc
                 failed_receipt: dict[str, Any] = self.last_receipt or {}
@@ -589,7 +602,7 @@ class ModelProviderAgent:
                 metadata={
                     "provider": self.provider,
                     "model": self.model,
-                    "raw_action_text": text[:500],
+                    **({"raw_action_text": text[:500]} if self.provider != "krutrim" else {}),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
                 },
@@ -616,12 +629,20 @@ class ModelProviderAgent:
         self._receipt_batch = (batch[0], tuple(copy.deepcopy(receipts)))
 
     def _remember_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "krutrim":
+            from eslams.providers.krutrim import sanitize_receipt
+
+            receipt = sanitize_receipt(self, receipt)
         receipts = [*self.attempt_receipts, receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
         self.last_receipt = receipt
 
     def _replace_last_receipt(self, receipt: dict[str, Any]) -> None:
+        if self.provider == "krutrim":
+            from eslams.providers.krutrim import sanitize_receipt
+
+            receipt = sanitize_receipt(self, receipt)
         receipts = [*self.attempt_receipts[:-1], receipt]
         self._publish_receipts(receipts)
         self.attempt_receipts = receipts
@@ -630,6 +651,11 @@ class ModelProviderAgent:
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         if self.provider == "iflytek":
             from eslams.providers.iflytek import call
+
+            return call(self, api_key, prompt)
+        if self.provider == "krutrim":
+            from eslams.providers.krutrim import call
+
             return call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
@@ -1773,6 +1799,12 @@ def _http_provider_receipt(
         "provider",
         "model",
         "locked_model_id",
+        # Preserve optional bridge identity attestations so a contradictory raw
+        # field cannot disappear before continuation's exact pin checks.
+        "requested_model",
+        "model_version_id",
+        "route_key",
+        "route_sha256",
         "model_identity_source",
         "endpoint_kind",
         "parser_version",
@@ -1977,6 +2009,7 @@ def _endpoint_kind(provider: str) -> str:
         "openrouter": "openrouter_chat_completions",
         "bedrock": "bedrock_converse",
         "iflytek": "iflytek_chat_completions",
+        "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
 
@@ -1989,12 +2022,18 @@ def _parser_version(provider: str) -> str:
         "openrouter": "openrouter-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "iflytek": "iflytek-chat-completions-raw-v1",
+        "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
 
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == "iflytek":
         from eslams.providers.iflytek import normalize_usage
+
+        return normalize_usage(usage)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import normalize_usage
+
         return normalize_usage(usage)
     if not isinstance(usage, dict):
         return _empty_usage()

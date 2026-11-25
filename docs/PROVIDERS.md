@@ -15,10 +15,16 @@ convenience properties.
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `iflytek:<model>` | `IFLYTEK_API_PASSWORD` | Spark HTTP | `choices[0].message.content` | optional response `model`; otherwise unknown |
+| `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [Spark adapter guide](providers/IFLYTEK.md) records exact X2/v1 routing,
 aliases, authentication, reasoning controls, provider model upgrades, and
 accounting limits. It adds no live inference during configuration preflight.
+
+
+The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
+undocumented reasoning/accounting/region semantics unknown. See the
+[Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
