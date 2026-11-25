@@ -25,6 +25,7 @@ DEFAULT_PROVIDER_ENV = {
     "openrouter": "OPENROUTER_API_KEY",
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "minimax": MINIMAX_API_KEY_ENV,
+    "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -59,6 +60,10 @@ def provider_preflight(
     from eslams.providers.minimax import configuration_error
     minimax_error = configuration_error(model, runtime_config) if provider == "minimax" else None
     registry_model = "" if minimax_error and not isinstance(model, str) else model
+    if provider == "krutrim":
+        from eslams.providers.krutrim import validate_config
+
+        validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, registry_model)
     arena = registry.create(arena_id)

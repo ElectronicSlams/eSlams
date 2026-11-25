@@ -15,11 +15,16 @@ convenience properties.
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `minimax:<model>` | `MINIMAX_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
+| `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The [MiniMax adapter guide](providers/MINIMAX.md) records current official API
 research, regions, reasoning preservation, retry limits and keyless test coverage
 for the 0.7.1 adapter work. Its configuration preflight is advisory and makes no
 inference request unless `--live` is explicitly requested.
+
+The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
+undocumented reasoning/accounting/region semantics unknown. See the
+[Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock
