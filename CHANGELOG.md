@@ -8,6 +8,11 @@
   raw-wire fixtures and deterministic error, privacy and artifact regressions.
   Package/contract versions remain unchanged; live availability is unverified.
 
+- Add native Z.ai international and Zhipu China standard Chat Completions adapters,
+  explicit reasoning controls, conservative accounting and deterministic wire tests.
+- Remove the `zhipuai-coding-plan` catalogue alias so it cannot activate standard
+  API billing. Coding Plan endpoints remain unsupported. See `docs/PROVIDER_ZAI.md`.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

@@ -52,6 +52,7 @@ from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
 from eslams.providers import fireworks, load_provider_registry
+from eslams.providers.zai import canonical_provider
 from eslams.public_replay import (
     create_uploaded_smoke_fixture,
     export_public_replay,
@@ -1445,6 +1446,8 @@ def _provider_agent(
     runtime_config: ProviderRuntimeConfig | None = None,
 ) -> ModelProviderAgent | None:
     defaults = {
+        "zai": ("glm-5.3", "ZAI_API_KEY"),
+        "zhipu": ("glm-5.3", "ZHIPU_API_KEY"),
         "openai": ("gpt-5-mini", "OPENAI_API_KEY"),
         "anthropic": ("claude-sonnet-4-6", "ANTHROPIC_API_KEY"),
         "gemini": ("gemini-flash-lite-latest", "GEMINI_API_KEY"),
@@ -1456,7 +1459,7 @@ def _provider_agent(
         provider, model = value.split(":", 1)
     else:
         provider, model = value, ""
-    provider = provider.lower()
+    provider = canonical_provider(provider.lower())
     if provider in fireworks.PROVIDER_ALIASES:
         if not model:
             raise ValueError("Fireworks requires an explicit model resource: fireworks:<model>")

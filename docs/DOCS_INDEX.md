@@ -12,7 +12,7 @@
 | Chess continuation, lineage and accounting | [CHESS_CONTINUATION.md](CHESS_CONTINUATION.md) |
 | Artifact profiles, signatures and migration boundaries | [ARTIFACTS.md](ARTIFACTS.md) |
 | Arenas, compact fidelity and ruleset version history | [ARENAS.md](ARENAS.md), [ARENA_VERSIONING.md](ARENA_VERSIONING.md) |
-| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md) |
+| Provider wire controls, credentials and discovery | [PROVIDERS.md](PROVIDERS.md), [Z.ai/Zhipu](PROVIDER_ZAI.md) |
 | Fireworks direct inference and fixture provenance | [FIREWORKS.md](FIREWORKS.md) |
 | Versioned integration contracts | [PLATFORM_CONTRACTS.md](PLATFORM_CONTRACTS.md) |
 | Registry snapshot and capability caveats | [REGISTRY_AVAILABLE_MODELS.md](REGISTRY_AVAILABLE_MODELS.md) |

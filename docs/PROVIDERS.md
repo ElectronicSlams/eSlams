@@ -1,7 +1,8 @@
 # Provider Guide
 
-eSlams Core has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Fireworks. The adapters call raw
+eSlams Core has native provider support for OpenAI, Anthropic, Google Gemini,
+OpenRouter, Amazon Bedrock, Fireworks, and [Z.ai and Zhipu](PROVIDER_ZAI.md).
+The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
 
@@ -13,6 +14,8 @@ convenience properties.
 | `anthropic:<model>` | `ANTHROPIC_API_KEY` | Messages | `content[]` text blocks | response `model` |
 | `gemini:<model>` | `GEMINI_API_KEY` | `generateContent` | `candidates[].content.parts[]` text | `modelVersion` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
+| `zai:<model>` | `ZAI_API_KEY` | Z.ai Chat Completions | `choices[0].message.content` | response `model` |
+| `zhipu:<model>` | `ZHIPU_API_KEY` | Zhipu China Chat Completions | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `fireworks:<model-resource>` | `FIREWORKS_API_KEY` | Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |

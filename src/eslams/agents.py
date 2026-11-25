@@ -42,7 +42,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, fireworks, load_provider_registry
+from eslams.providers import ModelCapabilities, fireworks, load_provider_registry, zai
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -402,7 +402,7 @@ class ModelProviderAgent:
     runtime_config: ProviderRuntimeConfig | None = None
 
     def __post_init__(self) -> None:
-        self.provider = self.provider.lower()
+        self.provider = zai.canonical_provider(self.provider.lower())
         if self.provider in fireworks.PROVIDER_ALIASES:
             self.provider = fireworks.PROVIDER_ID
         if self.id is None:
@@ -668,6 +668,8 @@ class ModelProviderAgent:
     def _call_provider(self, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
         if self.provider == fireworks.PROVIDER_ID:
             return fireworks.call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+        if self.provider in zai.ENDPOINTS:
+            return zai.call(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -1383,7 +1385,11 @@ def _capture_error_body_observations(
             provenance["cost_observation_status"] = "reported_unverified"
     # Error-body pricing never supplies a trusted rate card or a measured cost.
     # Quoted observations remain diagnostic; canonical cost stays unknown.
-    return (_safe_rate_rejection(data, response.status_code)
+    safe_rejection = (
+        zai.safe_rate_rejection(data, response.status_code) if provider in zai.ENDPOINTS
+        else _safe_rate_rejection(data, response.status_code)
+    )
+    return (safe_rejection
             and not provenance["work_observation_present"])
 
 
@@ -2023,6 +2029,8 @@ def _endpoint_kind(provider: str) -> str:
         "openrouter": "openrouter_chat_completions",
         "fireworks": fireworks.ENDPOINT_KIND,
         "bedrock": "bedrock_converse",
+        "zai": "zai_chat_completions",
+        "zhipu": "zhipu_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2036,6 +2044,8 @@ def _parser_version(provider: str) -> str:
         "openrouter": "openrouter-chat-completions-raw-v1",
         "fireworks": fireworks.PARSER_VERSION,
         "bedrock": "bedrock-converse-raw-v1",
+        "zai": "zai-chat-completions-raw-v1",
+        "zhipu": "zhipu-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2043,6 +2053,8 @@ def _parser_version(provider: str) -> str:
 def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
     if provider == fireworks.PROVIDER_ID:
         return fireworks.normalize_usage(usage)
+    if provider in zai.ENDPOINTS:
+        return zai.normalize_usage(usage)
     if provider == "krutrim":
         from eslams.providers.krutrim import normalize_usage
 
