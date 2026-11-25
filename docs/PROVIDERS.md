@@ -34,6 +34,8 @@ For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
 | `ibm-rhai:<exact-model-id>` | `IBM_RHAI_API_KEY` | IBM project-scoped Chat Completions | `choices[0].message.content` | response `model` |
 
 | `mistral-ai:<model>` (alias `mistral`) | `MISTRAL_API_KEY` | native Chat Completions | string or typed text chunks in `choices[0].message.content` | response `model` |
+
+| `writer:<model>` | `WRITER_API_KEY` | Writer `/v1/chat` | `choices[0].message.content` | response `model` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `apodex:<model>` | `APODEX_API_KEY` | Direct Core Chat Completions | `choices[0].message.content` | response `model` |
 
@@ -57,6 +59,9 @@ and primary-source research for the proposed 0.7.1 adapter.
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
+
+See [Writer direct API](WRITER.md) for its verified wire contract, aliases,
+model lifecycle, accounting limitations, and deterministic validation.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

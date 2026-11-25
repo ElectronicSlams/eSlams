@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import cohere, load_provider_registry, xai
+from eslams.providers import cohere, load_provider_registry, writer, xai
 from eslams.providers.mistral import API_KEY_ENV as MISTRAL_API_KEY_ENV
 from eslams.providers.mistral import MODELS_ENDPOINT as MISTRAL_MODELS_ENDPOINT
 from eslams.providers.mistral import configuration_error as mistral_configuration_error
@@ -21,11 +21,14 @@ from eslams.providers.mistral import contains_credential as mistral_contains_cre
 from eslams.providers.mistral import discovery_guard as mistral_discovery_guard
 from eslams.providers.registry import PROVIDER_ALIASES
 from eslams.providers.shanghai_ai_lab import validate_configuration as validate_shanghai_ai_lab
+from eslams.providers.writer import API_KEY_ENV as WRITER_API_KEY_ENV
+from eslams.providers.writer import MODELS_ENDPOINT as WRITER_MODELS_ENDPOINT
 
 DEFAULT_PROVIDER_ENV = {
     "mistral-ai": MISTRAL_API_KEY_ENV,
     "xai": xai.API_KEY_ENV,
     "cohere": "COHERE_API_KEY",
+    "writer": WRITER_API_KEY_ENV,
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "gemini": "GEMINI_API_KEY",
@@ -43,6 +46,7 @@ DEFAULT_PROVIDER_ENV = {
 _MODELS_ENDPOINTS = {
     "mistral-ai": MISTRAL_MODELS_ENDPOINT,
     "xai": xai.MODELS_ENDPOINT,
+    "writer": WRITER_MODELS_ENDPOINT,
     "openai": "https://api.openai.com/v1/models",
     "apodex": "https://api.apodex.ai/v1/models",
     "anthropic": "https://api.anthropic.com/v1/models",
@@ -116,6 +120,11 @@ def provider_preflight(
             validate_configuration(model, runtime_config)
         except ProviderCallError as exc:
             sarvam_error = _public_error(exc, provider=provider, model=model)
+    if provider in writer.ALIASES:
+        writer.validate_model(model)
+    writer_config_error = (
+        writer.configuration_error(runtime_config) if provider in writer.ALIASES else None
+    )
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -161,6 +170,8 @@ def provider_preflight(
         error = sarvam_error
     elif configuration_error is not None:
         error = {"error_class": "provider_request_rejected", "message": configuration_error}
+    elif writer_config_error:
+        error = {"error_class": "provider_request_rejected", "message": writer_config_error}
     elif credential_environment is None:
         error = {
             "error_class": "provider_adapter_unavailable",
@@ -297,7 +308,8 @@ def provider_preflight(
             "configuration_ready": (checks["adapter_available"] is True
                                     and credential_error is None and configuration_error is None
                                     and config_error is None
-                                    and mistral_error is None),
+                                    and mistral_error is None
+                                    and writer_config_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,
@@ -340,6 +352,8 @@ def provider_models_live(provider: str) -> list[str] | None:
             return provider_models_live(provider)
     if provider == "cohere":
         return cohere.models_live()
+    if provider == "writer":
+        return writer.models_live()
     endpoint = _MODELS_ENDPOINTS.get(provider)
     api_key_env = DEFAULT_PROVIDER_ENV.get(provider)
     if api_key_env is None:
@@ -407,7 +421,7 @@ def provider_models_live(provider: str) -> list[str] | None:
             raise _discovery_schema_error(provider) from None
         if not isinstance(payload, dict):
             raise _discovery_schema_error(provider)
-        rows = payload.get("models" if provider == "google" else "data")
+        rows = payload.get("models" if provider in {"google", "writer"} else "data")
         if not isinstance(rows, list):
             raise _discovery_schema_error(provider)
         for row in rows:

@@ -51,7 +51,7 @@ from eslams.output import write_text_file
 from eslams.planning import battlefield_plan, official_plan, public_match_plan
 from eslams.protocol import ActRequest
 from eslams.provider_preflight import provider_models_result, provider_preflight
-from eslams.providers import load_provider_registry
+from eslams.providers import load_provider_registry, writer
 from eslams.providers.xai import canonical_provider
 from eslams.providers.xai import validate_model as validate_xai_model
 from eslams.public_replay import (
@@ -1479,6 +1479,10 @@ def _provider_agent(
         defaults[provider] = (model, cohere.API_KEY_ENV)
     if provider in {"sarvam", "sarvam_ai"}:
         provider = "sarvam-ai"
+    if provider in writer.ALIASES:
+        provider = "writer"
+        writer.validate_model(model)
+        defaults[provider] = (model, writer.API_KEY_ENV)
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
         return ModelProviderAgent(
             provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",

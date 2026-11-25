@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import contains_credentials, provider_key, redact_credentials
-from eslams.providers import ModelCapabilities, cohere, load_provider_registry, xai
+from eslams.providers import ModelCapabilities, cohere, load_provider_registry, writer, xai
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
@@ -445,6 +445,9 @@ class ModelProviderAgent:
             from eslams.providers.sarvam import validate_model
 
             validate_model(self.model)
+        if self.provider in writer.ALIASES:
+            self.provider = "writer"
+            writer.validate_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -739,6 +742,8 @@ class ModelProviderAgent:
             from eslams.providers.ibm_rhai import call as call_ibm_rhai
 
             return call_ibm_rhai(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+        if self.provider == "writer":
+            return writer.call(self, api_key, prompt)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         if self.provider == "sarvam-ai":
@@ -2097,6 +2102,7 @@ def _endpoint_kind(provider: str) -> str:
         "openrouter": "openrouter_chat_completions",
         "liquid-ai": "liquid_chat_completions",
         "ibm-rhai": "ibm_rhai_chat_completions",
+        "writer": "writer_chat",
         "bedrock": "bedrock_converse",
         "shanghai-ai-lab": "shanghai_ai_lab_atria_chat_completions",
         "sarvam-ai": "sarvam_chat_completions_v1",
@@ -2117,6 +2123,7 @@ def _parser_version(provider: str) -> str:
         "openrouter": "openrouter-chat-completions-raw-v1",
         "liquid-ai": "liquid-chat-completions-raw-v1",
         "ibm-rhai": "ibm-rhai-chat-completions-raw-v1",
+        "writer": "writer-chat-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
         "shanghai-ai-lab": "shanghai-ai-lab-atria-chat-raw-v1",
         "sarvam-ai": "sarvam-chat-completions-raw-v1",
