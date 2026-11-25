@@ -35,18 +35,23 @@ def _exclusive(descriptor: int) -> None:
 def _open_existing(path: Path) -> int:
     if path.is_symlink():
         raise ValueError("output guard must not be a symlink")
-    flags = os.O_RDWR | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    flags = (
+        os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
+    )
     descriptor = os.open(path, flags)
     try:
         info = os.fstat(descriptor)
         if not stat.S_ISREG(info.st_mode):
             raise ValueError("output guard must be a regular file")
+        # Windows byte-range locks deny other handles reads of the marker's first byte.
+        # Acquire first so contention surfaces through the nonblocking lock contract.
+        _exclusive(descriptor)
         if info.st_size != len(_MARKER) or os.read(descriptor, len(_MARKER) + 1) != _MARKER:
             raise FileExistsError(
                 f"legacy or unrecognized output guard: {path}; verify old writers have stopped "
                 "before operator-managed recovery; it will not be removed automatically"
             )
-        _exclusive(descriptor)
         return descriptor
     except BaseException:
         os.close(descriptor)
