@@ -241,7 +241,7 @@ def test_legal_looking_partial_output_is_not_accepted(monkeypatch, reason):
     assert target.last_receipt["usage"]["input_tokens"] == 12
 
 
-@pytest.mark.parametrize("mutation", ["model", "tool", "search", "choices", "content", "error"])
+@pytest.mark.parametrize("mutation", ["model", "tool", "search", "choices", "content", "role", "error"])
 def test_mismatched_identity_tools_search_and_wrong_envelopes_fail(monkeypatch, mutation):
     data = wire()
     if mutation == "model":
@@ -254,6 +254,8 @@ def test_mismatched_identity_tools_search_and_wrong_envelopes_fail(monkeypatch, 
         data["choices"] = []
     elif mutation == "content":
         data["choices"][0]["message"]["content"] = [{"type": "output_text", "text": "hi"}]
+    elif mutation == "role":
+        data["choices"][0]["message"]["role"] = "user"
     else:
         data["error"] = {"message": "private diagnostic"}
     install(monkeypatch, httpx.Response(200, json=data))

@@ -173,6 +173,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         metadata = data.get("metadata")
         if isinstance(metadata, dict) and metadata.get("search_used") is True:
             reject("provider_interrupted", "provider reported unrequested search")
+        if isinstance(message, dict) and message.get("role", "assistant") != "assistant":
+            reject("provider_response_schema_mismatch", "provider returned a non-assistant role")
         text = message.get("content") if isinstance(message, dict) else None
         if reason != "stop" or not isinstance(text, str) or not text.strip():
             reject("provider_response_schema_mismatch", "provider returned invalid text")
