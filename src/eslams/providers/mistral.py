@@ -332,7 +332,7 @@ def _text(data: dict[str, Any], receipt: dict[str, Any]) -> str:
     if message.get("refusal"):
         receipt["finish_status"] = "refused"
         raise _error("Mistral refused the requested action", "provider_refused")
-    if message.get("tool_calls"):
+    if message.get("tool_calls") or message.get("function_call"):
         raise _error("Mistral returned an unsupported tool call", "provider_request_rejected")
     content = message.get("content")
     if isinstance(content, str) and content.strip():

@@ -172,6 +172,7 @@ def test_malformed_envelopes_fail_with_usage_and_no_replay(monkeypatch, mutation
 
 
 @pytest.mark.parametrize("field,kind", [("tool_calls", "provider_request_rejected"),
+                                      ("function_call", "provider_request_rejected"),
                                       ("refusal", "provider_refused")])
 def test_message_failures_with_stop_do_not_accept_text(monkeypatch, field, kind):
     payload = _success()
