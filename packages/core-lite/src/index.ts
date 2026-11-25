@@ -1,5 +1,7 @@
 import type { CoreStepResponse } from "@eslams/core-contracts";
 
+import { RESPONSE_VERSIONS } from "./versions.js";
+
 type PlayerId = "player_1" | "player_2";
 type Cell = string | null;
 
@@ -102,11 +104,7 @@ export function applyAction(input: unknown, action: unknown): CoreStepResponse {
 }
 
 function responseVersions() {
-  return {
-    coreVersion: "0.6.2", coreContractVersion: "2.0" as const, rulesetVersion: "standard",
-    promptVersion: "eslams.core.prompt.v2", actionSchemaVersion: "eslams.core.action_schema.v2",
-    replaySchemaVersion: "eslams.core.replay_event.v2",
-  };
+  return RESPONSE_VERSIONS;
 }
 
 function resolveAction(action: unknown, legal: unknown[]): unknown {
