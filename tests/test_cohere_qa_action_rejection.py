@@ -49,4 +49,9 @@ def test_clean_answer_bytes_are_not_reserialized(monkeypatch):
     data = fixture()
     data["message"]["content"][0]["text"] = text
     wire(monkeypatch, data)
-    assert agent().act(_request()).metadata["raw_action_text"] == text
+    selected = agent()
+    completion, _ = selected._call_provider("fixture-cohere-key", "Public game request")
+    assert completion == text
+    response = selected.act(_request())
+    assert response.action == 1 and response.public_explanation == "Clean answer."
+    assert "raw_action_text" not in response.metadata

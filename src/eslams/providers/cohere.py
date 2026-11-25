@@ -71,20 +71,9 @@ def _redact_text(value: str, credentials: tuple[str, ...]) -> str:
     return value
 
 
-def _contains_credential(value: Any, credentials: tuple[str, ...]) -> bool:
-    if isinstance(value, str):
-        return _redact_text(value, credentials) != value
-    if isinstance(value, dict):
-        return any(_contains_credential(key, credentials) or _contains_credential(item, credentials)
-                   for key, item in value.items())
-    if isinstance(value, list):
-        return any(_contains_credential(item, credentials) for item in value)
-    return False
-
-
 def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dict[str, Any]]:
     from eslams import agents as core
-    from eslams.model_actions import extract_json
+    from eslams.model_actions import action_text_matches
 
     config = agent.runtime_config
     try:
@@ -170,8 +159,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
             data, provider=PROVIDER_ID, model=agent.model, response=response, receipt=receipt,
         )
         text = _text(data, receipt, agent.model)
-        if (_contains_credential(text, credentials)
-                or _contains_credential(extract_json(text), credentials)):
+        if action_text_matches(text, lambda value: any(key in value for key in credentials)):
             raise core.ProviderCallError(
                 "Cohere returned credential-bearing action text; no action accepted",
                 error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
@@ -223,7 +211,7 @@ def _text(data: dict[str, Any], receipt: dict[str, Any], model: str) -> str:
         raise _schema_error(model)
     if message.get("tool_calls") is not None and not isinstance(message["tool_calls"], list):
         raise _schema_error(model)
-    if message.get("tool_calls"):
+    if message.get("tool_calls") or message.get("function_call"):
         receipt["finish_status"] = "incomplete"
         raise ProviderCallError(
             "Cohere returned unsolicited tool calls; no action accepted",

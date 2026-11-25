@@ -553,3 +553,16 @@ def test_runner_receipts_and_artifacts_preserve_unknown_identity(monkeypatch, tm
     assert receipts[0]["cost_complete"] is False
     assert "fixture-cohere-key" not in json.dumps(receipts)
     assert "fixture-cohere-key" not in json.dumps(result.score.to_dict())
+
+
+@pytest.mark.parametrize("mode", ("prose", "function"))
+def test_no_bad_completion(monkeypatch, mode):
+    data = fixture()
+    if mode == "prose":
+        secret = "".join(f"\\u{ord(c):04x}" for c in "fixture-cohere-key")
+        data["message"]["content"][-1]["text"] = secret + '\n{"action":1}'
+    else:
+        data["message"]["function_call"] = {"name": "legacy", "arguments": "{}"}
+    wire(monkeypatch, data)
+    with pytest.raises(ProviderCallError):
+        agent().act(_request())
