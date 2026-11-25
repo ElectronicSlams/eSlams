@@ -184,7 +184,8 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         fail("provider_output_truncated", "Spark response was truncated; no action accepted")
     if status not in (None, "complete") or reason not in (None, "stop"):
         fail("provider_interrupted", "Spark response did not complete; no action accepted")
-    if message.get("tool_calls") or choice.get("error") or message.get("security_suggest"):
+    if (message.get("tool_calls") or message.get("function_call") is not None
+            or choice.get("error") is not None or message.get("security_suggest")):
         fail("provider_refused", "Spark returned tools, an error, or filtered content")
     text = message.get("content")
     if message.get("role") != "assistant" or not isinstance(text, str) or not text.strip():

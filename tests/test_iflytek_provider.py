@@ -353,3 +353,45 @@ def test_successful_response_cannot_echo_active_credential(monkeypatch, escaped)
     assert credential not in str(error.value)
     assert credential not in json.dumps(selected.attempt_receipts)
     assert len(selected.attempt_receipts) == 1
+
+
+@pytest.mark.parametrize("status", (200, 400))
+def test_active_credential_cannot_be_published_as_remote_identifier(monkeypatch, status):
+    selected = native()
+    credential = "opaqueSyntheticCredentialInRemoteIdentifier93801"
+    monkeypatch.setenv(selected.api_key_env, credential)
+    body = wire() if status == 200 else {"error": {"id": credential}}
+    body.update(id=credential, sid=credential)
+    headers = {"x-request-id": credential, "x-gateway-request-id": credential}
+
+    def post(url, **kwargs):
+        return httpx.Response(
+            status, json=body, headers=headers, request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    if status == 200:
+        response = selected.act(request())
+        assert credential not in json.dumps(response.metadata)
+    else:
+        with pytest.raises(ProviderCallError) as caught:
+            selected.act(request())
+        assert credential not in json.dumps(caught.value.receipt)
+    assert len(selected.attempt_receipts) == 1
+    assert credential not in json.dumps(selected.attempt_receipts)
+
+
+def test_contradictory_completion_cannot_apply_action(monkeypatch):
+    selected = native()
+    monkeypatch.setenv(selected.api_key_env, "synthetic-action-test-credential")
+    body = wire()
+    choice = body["choices"][0]
+    choice["message"]["function_call"] = {"name": "unused", "arguments": "{}"}
+
+    def post(url, **kwargs):
+        return httpx.Response(200, json=body, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    with pytest.raises(ProviderCallError):
+        selected.act(request())
+    assert len(selected.attempt_receipts) == 1
