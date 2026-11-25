@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -12,6 +13,28 @@ import tarfile
 import tempfile
 import venv
 from pathlib import Path
+
+_COMMAND_TIMEOUT_SECONDS = 300
+_WINDOWS_SDIST_SUITE_TIMEOUT_SECONDS = 480
+_PROGRESS_TAIL_BYTES = 4096
+_PROGRESS_LINE = re.compile(r"[.FEsxX]+(?: +\[ *[0-9]{1,3}%\])?")
+
+
+def _sdist_suite_timeout() -> int:
+    return (_WINDOWS_SDIST_SUITE_TIMEOUT_SECONDS
+            if sys.platform == "win32" else _COMMAND_TIMEOUT_SECONDS)
+
+
+def _timeout_progress(raw: bytes | str | None) -> str:
+    """Expose recent pytest progress markers only, never arbitrary captured output."""
+    if not raw:
+        return "(empty)"
+    tail = raw[-_PROGRESS_TAIL_BYTES:]
+    if isinstance(tail, bytes):
+        tail = tail.decode("utf-8", errors="replace")
+    progress = [line for row in tail.splitlines()
+                if _PROGRESS_LINE.fullmatch(line := row.strip()) and len(line) <= 100]
+    return " | ".join(progress[-4:]) if progress else "(no pytest progress lines)"
 
 
 def clean_environment() -> dict[str, str]:
@@ -46,6 +69,7 @@ def run(
     expected: int = 0,
     source: Path | None = None,
     offline_guard: Path | None = None,
+    timeout: int = _COMMAND_TIMEOUT_SECONDS,
 ) -> str:
     environment = clean_environment()
     if source is not None:
@@ -58,15 +82,22 @@ def run(
             PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PIP_NO_INDEX="1",
             CORE_NETWORK_ATTEMPT_LOG=str(offline_guard.parent / "consumer-network-attempts.log"),
         )
-    result = subprocess.run(
-        command,
-        cwd=cwd,
-        env=environment,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=300,
-    )
+    try:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            env=environment,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError(
+            f"Distribution verification command exceeded {timeout}s. "
+            f"Partial stdout progress: {_timeout_progress(error.stdout)}; "
+            f"partial stderr progress: {_timeout_progress(error.stderr)}"
+        ) from None
     if result.returncode != expected:
         raise RuntimeError(
             f"{command[0]} failed with exit {result.returncode}:\n{result.stdout}\n{result.stderr}"
@@ -276,6 +307,7 @@ def main() -> None:
             root,
             source=source,
             offline_guard=arguments.offline_suite_guard,
+            timeout=_sdist_suite_timeout(),
         )
         print(json.dumps({"sdist_suite_without_git": "passed"}))
 

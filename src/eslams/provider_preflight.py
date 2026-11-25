@@ -30,6 +30,7 @@ DEFAULT_PROVIDER_ENV = {
     "openrouter": "OPENROUTER_API_KEY",
     "inception": INCEPTION_API_KEY_ENV,
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
+    "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
 _MODELS_ENDPOINTS = {
@@ -66,6 +67,10 @@ def provider_preflight(
     if normalize_inception_provider(provider) == "inception":
         validate_inception_model_id(model)
         configuration_error = inception_configuration_error(runtime_config)
+    if provider == "krutrim":
+        from eslams.providers.krutrim import validate_config
+
+        validate_config(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, model)
     arena = registry.create(arena_id)
