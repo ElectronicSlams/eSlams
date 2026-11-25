@@ -13,7 +13,7 @@ from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
-from eslams.providers import ai21, deepseek, load_provider_registry, perceptron, relace
+from eslams.providers import ai21, contextual, deepseek, load_provider_registry, perceptron, relace
 from eslams.providers.registry import PROVIDER_ALIASES
 
 DEFAULT_PROVIDER_ENV = {
@@ -32,6 +32,7 @@ DEFAULT_PROVIDER_ENV = {
     "kwaipilot": "STREAMLAKE_API_KEY",
     "relace": relace.API_KEY_ENV,
     "naver": "CLOVASTUDIO_API_KEY",
+    "contextual-ai": contextual.API_KEY_ENV,
 }
 
 _MODELS_ENDPOINTS = {
@@ -96,6 +97,8 @@ def provider_preflight(
         perceptron.validate_settings(model, runtime_config)
     provider_registry = load_provider_registry()
     record = provider_registry.resolve(provider, registry_model)
+    if record.provider == contextual.PROVIDER_ID:
+        contextual.validate_configuration(model, runtime_config, max_output_tokens)
     arena = registry.create(arena_id)
     state = arena.initial_state(seed=1)
     legal_actions = arena.legal_actions_for(state, state.active_player)

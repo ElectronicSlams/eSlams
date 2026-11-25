@@ -1501,6 +1501,13 @@ def _provider_agent(
             provider=provider, model=model, api_key_env=API_KEY_ENV,
             version=model, runtime_config=runtime_config,
         )
+    if provider == "contextual-ai":
+        from eslams.providers.contextual import API_KEY_ENV
+
+        return ModelProviderAgent(
+            provider=provider, model=model, api_key_env=API_KEY_ENV,
+            version=model, runtime_config=runtime_config,
+        )
     if provider not in defaults:
         return None
     default_model, env_name = defaults[provider]

@@ -1,9 +1,8 @@
 # Provider Guide
 
-eSlams Core has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Relace. The adapters call raw
-HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
-convenience properties.
+The native adapters below use secret-free artifacts and raw HTTP APIs. Their
+parsers are pinned to documented REST envelopes rather than SDK convenience
+properties.
 
 ## Provider Matrix
 
@@ -26,6 +25,8 @@ convenience properties.
 
 | `perceptron:<model>` | `PERCEPTRON_API_KEY` | Direct Chat Completions | `choices[0].message.content` | response `model` |
 
+| `contextual-ai:<model>` | `CONTEXTUAL_API_KEY` | Generate | `response` string | unavailable (null) |
+
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the
 [Krutrim contract research and fixture provenance](providers/KRUTRIM.md).
@@ -47,6 +48,12 @@ It does not use the historical per-game reasoning behavior described below.
 The next-release [Perceptron adapter and evidence](PERCEPTRON.md) requires an
 explicit model ID and documents native reasoning controls, finality, usage,
 lifecycle, regional uncertainty, and keyless raw-wire validation.
+
+The proposed 0.7.1 [Contextual AI adapter](providers/CONTEXTUAL_AI.md) uses the
+standalone Generate endpoint without documents or retrieval. It requires an
+explicit model ID and `reasoning=auto`. Its API supplies no per-request identity,
+usage or cost attestation; all remain unknown. The linked evidence distinguishes
+provider-owned text-only integration support from unverified live availability.
 
 An absent provider model identity remains `null`. Core never copies the
 requested model into `locked_model_id` as if it came from the response. Bedrock

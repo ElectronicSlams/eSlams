@@ -41,7 +41,7 @@ from eslams.model_actions import (
 )
 from eslams.protocol import ActRequest, ActResponse, ProtocolError, validate_json_payload
 from eslams.provider_credentials import provider_key
-from eslams.providers import ModelCapabilities, ai21, load_provider_registry, relace
+from eslams.providers import ModelCapabilities, ai21, contextual, load_provider_registry, relace
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.deepseek import call as call_deepseek
@@ -443,6 +443,10 @@ class ModelProviderAgent:
         self.attempt_receipts: list[dict[str, Any]] = []
         self._reasoning_enabled = False
         self._request_max_output_tokens: int | None = self.max_output_tokens
+        if self.provider == contextual.PROVIDER_ID:
+            contextual.validate_configuration(
+                self.model, self.runtime_config, self.max_output_tokens, self.temperature,
+            )
         self.capabilities = load_provider_registry().resolve(self.provider, self.model)
         if self.max_output_tokens is not None and (
             isinstance(self.max_output_tokens, bool)
@@ -706,6 +710,8 @@ class ModelProviderAgent:
             from eslams.providers.perceptron import call
 
             return call(self, api_key, prompt)
+        if self.provider == contextual.PROVIDER_ID:
+            return contextual.call(self, api_key, prompt)
         if self.provider == "openai":
             return self._call_openai(api_key, prompt)
         if self.provider == "anthropic":
@@ -2078,6 +2084,7 @@ def _endpoint_kind(provider: str) -> str:
         "kwaipilot": "streamlake_chat_completions",
         "naver": "naver_chat_completions_v3",
         "perceptron": "perceptron_chat_completions",
+        "contextual-ai": "contextual_generate",
     }.get(provider, "unknown")
 
 
@@ -2098,6 +2105,7 @@ def _parser_version(provider: str) -> str:
         "kwaipilot": "streamlake-chat-completions-raw-v1",
         "naver": "naver-chat-completions-v3-raw-v1",
         "perceptron": "perceptron-chat-completions-raw-v1",
+        "contextual-ai": "contextual-generate-raw-v1",
     }.get(provider, "unknown")
 
 
