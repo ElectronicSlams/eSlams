@@ -14,6 +14,8 @@ from eslams.agents import (
     FunctionAgent,
     ModelProviderAgent,
     ProviderCallError,
+    _httpx_timeout,
+    _post_json,
     _provider_semaphore,
 )
 from eslams.artifacts import ArtifactValidator
@@ -190,6 +192,26 @@ def test_provider_runtime_deadline_records_failed_attempt(monkeypatch, mode):
         assert receipt["estimated_cost"]["status"] == "cost_unavailable"
         # Optional retries must not replay an attempt with unknown remote work.
         assert len(agent.attempt_receipts) == 1
+
+
+@pytest.mark.parametrize(("now", "milliseconds"), [(1000.0, 12345), (202.0, 54321)])
+def test_provider_runtime_deadline_respects_operator_limit_on_static_clock(
+    monkeypatch, now, milliseconds,
+):
+    monkeypatch.setattr(time, "monotonic", lambda: now)
+    runtime = ProviderRuntimeConfig(timeout_ms=milliseconds)
+    assert 0 < _httpx_timeout(runtime).read <= milliseconds / 1000
+
+    def post(url, *, headers, json, timeout):
+        assert 0 < timeout.read <= milliseconds / 1000
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr("eslams.agents.bounded_post", post)
+    response = _post_json(
+        "https://fixture.invalid", headers={}, payload={}, runtime_config=runtime,
+        control_key="openai:deadline-fixture",
+    )
+    assert response.status_code == 200
 
 
 def test_provider_runtime_deadline_bounds_queue_retry_waits(monkeypatch):

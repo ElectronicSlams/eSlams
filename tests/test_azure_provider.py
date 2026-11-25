@@ -32,7 +32,7 @@ def azure_environment(monkeypatch):
 
 def wire():
     path = Path(__file__).parent / "fixtures/provider/azure_chat_completions_success.json"
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def request():
@@ -466,13 +466,13 @@ def test_artifacts_do_not_publish_private_wire_material(monkeypatch, tmp_path):
     )
     for path in result.artifact_path.rglob("*"):
         if path.suffix in {".json", ".jsonl", ".html"}:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
             assert PRIVATE not in text and SECRET not in text
             assert "sk-secondary-secret-never-publish" not in text
     receipts = [
         json.loads(line)
         for line in (result.artifact_path / "receipts/provider_receipts.jsonl")
-        .read_text()
+        .read_text(encoding="utf-8")
         .splitlines()
     ]
     assert receipts and all(row["provider"] == "azure" for row in receipts)

@@ -28,6 +28,7 @@ from eslams.deadlines import (
     check_cancelled,
     current_deadline,
     current_receipt_invocation,
+    deadline_after,
     remaining_seconds,
     sleep_with_cancellation,
 )
@@ -1619,7 +1620,7 @@ def _post_json(
                 key: value for key, value in payload[group].items() if value is not None
             }
     timeout_ms = runtime_config.timeout_ms if runtime_config else None
-    deadline = time.monotonic() + timeout_ms / 1000 if timeout_ms is not None else None
+    deadline = deadline_after(timeout_ms / 1000) if timeout_ms is not None else None
     action = current_deadline()
     if action is not None:
         deadline = min(deadline, action) if deadline is not None else action
@@ -1983,7 +1984,7 @@ def _httpx_timeout(
     total_ms = runtime_config.timeout_ms if runtime_config else None
     limit = deadline
     if limit is None and total_ms is not None:
-        limit = time.monotonic() + total_ms / 1000
+        limit = deadline_after(total_ms / 1000)
     connect = runtime_config.connect_timeout_ms / 1000 if runtime_config else 10.0
     read_ms = runtime_config.read_timeout_ms if runtime_config else None
     read = read_ms / 1000 if read_ms is not None else None

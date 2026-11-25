@@ -25,7 +25,7 @@ from eslams.providers.tencent_hunyuan import ENDPOINT, HOST, signed_headers
 
 def fixture():
     return json.loads((Path(__file__).parent / "fixtures/provider" /
-                       "tencent_hunyuan_chat_completions_success.json").read_text())
+                       "tencent_hunyuan_chat_completions_success.json").read_text(encoding="utf-8"))
 
 
 @pytest.fixture(autouse=True)

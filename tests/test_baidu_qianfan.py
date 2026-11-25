@@ -32,7 +32,7 @@ SECRET = "fixture-secret-not-for-public-contracts"
 
 def wire():
     return json.loads((Path(__file__).parent / "fixtures/provider/"
-                       "baidu_qianfan_chat_completions_success.json").read_text())
+                       "baidu_qianfan_chat_completions_success.json").read_text(encoding="utf-8"))
 
 
 def request(arena="tic-tac-toe"):
@@ -386,7 +386,7 @@ def test_runner_artifacts_keep_receipts_and_do_not_publish_private_wire(
     calls = install(monkeypatch, payload)
     result = Runner().run(RunConfig("tic-tac-toe", agent_1=agent(), output_dir=tmp_path))
     receipt_file = result.expanded_path / "receipts/provider_receipts.jsonl"
-    receipts = [json.loads(line) for line in receipt_file.read_text().splitlines()]
+    receipts = [json.loads(line) for line in receipt_file.read_text(encoding="utf-8").splitlines()]
     assert len(receipts) == len(calls) and receipts
     assert all(item["provider"] == "baidu" for item in receipts)
     assert all(item["locked_model_id"] == MODEL for item in receipts)
@@ -395,7 +395,7 @@ def test_runner_artifacts_keep_receipts_and_do_not_publish_private_wire(
         assert result.score.match_valid_for_scoring is False
         assert all(event.action is None for event in result.replay_events)
     assert ArtifactValidator().validate(result.expanded_path) == []
-    public = "\n".join(path.read_text() for path in result.expanded_path.rglob("*")
+    public = "\n".join(path.read_text(encoding="utf-8") for path in result.expanded_path.rglob("*")
                        if path.is_file() and path.suffix in {".json", ".jsonl", ".html"})
     for forbidden in (SECRET, "private-reasoning-marker", "private-wire-marker", "Authorization"):
         assert forbidden not in public
