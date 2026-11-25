@@ -5,6 +5,7 @@ import threading
 import time
 from contextlib import suppress
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -827,3 +828,181 @@ def test_mock_provider_scenarios_emit_safe_receipts():
         assert agent.last_receipt["estimated_cost"]["status"] == "cost_unavailable"
         assert "raw_output_preview" not in agent.last_receipt
         assert "api_key_env" not in agent.last_receipt
+
+
+@pytest.mark.parametrize(("provider", "model"), [
+    ("openai", "gpt-test"), ("relace", "relace-test"), ("morph", "morph-kimik31"),
+])
+def test_shared_provider_rejects_pending_legal_action(monkeypatch, provider, model):
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", "fixture-opaque-active-credential")
+    response = {"status_code": 202, "outcome": "ok", "request_id": "fixture-pending-request"}
+    calls = []
+
+    def provider_response(self, api_key, prompt):
+        calls.append(self.provider)
+        return '{"action": 1}', response
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    agent = ModelProviderAgent(
+        provider, model, "ESLAMS_FIXTURE_KEY",
+        runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=1),
+    )
+
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+
+    assert failure.value.error_kind == "provider_pending"
+    assert failure.value.status_code == 202
+    assert calls == [provider]
+    assert agent.last_receipt["request_id"] == "fixture-pending-request"
+    assert agent.last_receipt["outcome"] == "provider_pending"
+    assert len(agent.attempt_receipts) == 1
+    assert response["outcome"] == "ok"
+
+
+@pytest.mark.parametrize("encoding", ["plain", "escaped_prose", "nested_explanation"])
+def test_shared_native_provider_rejects_echoed_active_credential(monkeypatch, encoding):
+    credential = "fixture-opaque-active-credential"
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", credential)
+    escaped = "".join(f"\\u{ord(character):04x}" for character in credential)
+    if encoding == "escaped_prose":
+        text = escaped + '\n{"action": 1}'
+    else:
+        explanation = credential if encoding == "plain" else escaped
+        text = json.dumps({"action": 1, "public_explanation": explanation})
+
+    def provider_response(self, api_key, prompt):
+        return text, {"status_code": 200, "outcome": "ok"}
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    agent = ModelProviderAgent("relace", "relace-test", "ESLAMS_FIXTURE_KEY")
+
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    assert credential not in str(failure.value)
+    assert len(agent.attempt_receipts) == 1
+
+
+@pytest.mark.parametrize(("provider", "model", "raw_expected"), [
+    ("openai", "gpt-test", True), ("relace", "relace-test", False),
+])
+def test_shared_diagnostics_expose_raw_output_only_for_legacy_providers(
+    monkeypatch, provider, model, raw_expected,
+):
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", "fixture-opaque-active-credential")
+    text = '{"action": 1, "public_explanation": "Fixture answer."}'
+
+    def provider_response(self, api_key, prompt):
+        return text, {"status_code": 200, "outcome": "ok"}
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    result = ModelProviderAgent(provider, model, "ESLAMS_FIXTURE_KEY").act(_request())
+
+    assert result.action == 1
+    assert result.public_explanation == "Fixture answer."
+    assert result.metadata.get("raw_action_text") == (text if raw_expected else None)
+
+
+@pytest.mark.parametrize("encoding", ["url", "double_url", "url_json", "repeated_escape"])
+def test_shared_native_provider_checks_canonical_alias_with_custom_key(monkeypatch, encoding):
+    canonical = "opaque/alternate+fixture:key"
+    monkeypatch.setenv("RELACE_API_KEY", canonical)
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", "opaque-configured-key")
+    if encoding in {"url", "double_url"}:
+        explanation = quote(canonical, safe="")
+        if encoding == "double_url":
+            explanation = quote(explanation, safe="")
+    else:
+        explanation = "".join(f"\\u{ord(character):04x}" for character in canonical)
+        if encoding == "url_json":
+            explanation = quote(quote(explanation, safe=""), safe="")
+        else:
+            for _ in range(3):
+                explanation = explanation.replace("\\", "\\\\")
+
+    def provider_response(self, api_key, prompt):
+        assert api_key == "opaque-configured-key"
+        return json.dumps({"action": 1, "public_explanation": explanation}), {
+            "status_code": 200, "outcome": "ok",
+        }
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    agent = ModelProviderAgent("relace", "relace-test", "ESLAMS_FIXTURE_KEY")
+
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+
+    assert failure.value.error_kind == "provider_response_schema_mismatch"
+    assert canonical not in str(failure.value)
+
+
+def test_shared_native_provider_scrubs_receipt_ids_and_leaves_other_credentials_unread(monkeypatch):
+    canonical = "opaque/alternate+fixture:key"
+    unrelated = "unrelated-openai-fixture-value"
+    monkeypatch.setenv("RELACE_API_KEY", canonical)
+    monkeypatch.setenv("OPENAI_API_KEY", unrelated)
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", "opaque-configured-key")
+    receipt = {
+        "status_code": 200,
+        "outcome": "ok",
+        "model_identity_source": "provider_response",
+        "locked_model_id": "".join(f"\\u{ord(character):04x}" for character in canonical),
+        "request_id": "opaque%2Falternate%2Bfixture%3Akey",
+        "gateway_request_id": "gateway-opaque-configured-key",
+        "provider_response_id": "unrelated-generation",
+    }
+
+    def provider_response(self, api_key, prompt):
+        return json.dumps({"action": 1, "public_explanation": unrelated}), receipt
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    result = ModelProviderAgent("relace", "relace-test", "ESLAMS_FIXTURE_KEY").act(_request())
+    published = result.metadata["provider_receipt"]
+
+    assert result.public_explanation == unrelated
+    assert published["request_id"] is None
+    assert published["gateway_request_id"] is None
+    assert published["locked_model_id"] is None
+    assert published["model_identity_source"] is None
+    assert published["provider_response_id"] == "unrelated-generation"
+    assert receipt["request_id"] == "opaque%2Falternate%2Bfixture%3Akey"
+
+
+def test_shared_provider_redacts_error_without_replaying_observed_work(monkeypatch):
+    canonical = "opaque/alternate+fixture:key"
+    encoded = "opaque%2Falternate%2Bfixture%3Akey"
+    monkeypatch.setenv("RELACE_API_KEY", canonical)
+    monkeypatch.setenv("ESLAMS_FIXTURE_KEY", "opaque-configured-key")
+    calls = []
+
+    def provider_response(self, api_key, prompt):
+        calls.append(1)
+        try:
+            raise ValueError(canonical)
+        except ValueError as cause:
+            raise ProviderCallError(
+                f"native response {encoded}",
+                status_code=429,
+                error_kind="provider_rate_limited",
+                retry_permitted=True,
+                receipt={"status_code": 429, "provider_response_id": encoded},
+            ) from cause
+
+    monkeypatch.setattr(ModelProviderAgent, "_call_provider", provider_response)
+    agent = ModelProviderAgent(
+        "relace", "relace-test", "ESLAMS_FIXTURE_KEY",
+        runtime_config=ProviderRuntimeConfig(max_retries=2, action_repair_attempts=1),
+    )
+
+    with pytest.raises(ProviderCallError) as failure:
+        agent.act(_request())
+
+    assert len(calls) == 1
+    assert failure.value.error_kind == "provider_rate_limited"
+    assert failure.value.receipt["provider_response_id"] is None
+    assert failure.value.retry_permitted is False
+    assert failure.value.__suppress_context__
+    assert encoded not in str(failure.value)
+    assert agent.last_receipt["provider_response_id"] is None

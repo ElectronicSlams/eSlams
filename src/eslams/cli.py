@@ -57,7 +57,8 @@ from eslams.providers.byteplus import API_KEY_ENV as BYTEPLUS_API_KEY_ENV
 from eslams.providers.byteplus import canonical_provider as byteplus_provider
 from eslams.providers.deepseek import canonical_provider as canonical_deepseek_provider
 from eslams.providers.deepseek import validate_model as validate_deepseek_model
-from eslams.providers.poolside import API_KEY_ENV, normalize_provider
+from eslams.providers.poolside import API_KEY_ENV as POOLSIDE_API_KEY_ENV
+from eslams.providers.poolside import normalize_provider
 from eslams.providers.sensenova import API_KEY_ENV as SENSENOVA_API_KEY_ENV
 from eslams.providers.sensenova import PROVIDER_ALIASES as SENSENOVA_ALIASES
 from eslams.providers.stepfun import API_KEY_ENV as STEPFUN_API_KEY_ENV
@@ -1522,7 +1523,7 @@ def _provider_agent(
         "xai": ("", "XAI_API_KEY"),
         "zai": ("glm-5.3", "ZAI_API_KEY"),
         "zhipu": ("glm-5.3", "ZHIPU_API_KEY"),
-        "poolside": ("", API_KEY_ENV),
+        "poolside": ("", POOLSIDE_API_KEY_ENV),
         "baichuan": ("", "BAICHUAN_API_KEY"),
         "baichuan-ai": ("", "BAICHUAN_API_KEY"),
         "baichuan_ai": ("", "BAICHUAN_API_KEY"),

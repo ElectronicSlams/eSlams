@@ -441,7 +441,8 @@ def provider_preflight(
         validate_nvidia_options(model, runtime_config) if record.provider == "nvidia" else None
     )
     poolside_error = (
-        poolside_configuration_error(model, runtime_config) if record.provider == "poolside" else None
+        poolside_configuration_error(model, runtime_config)
+        if record.provider == "poolside" else None
     )
     baichuan_error = None
     if record.provider == baichuan.PROVIDER_ID:

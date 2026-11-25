@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import os
 import random
 import re
 import threading
@@ -105,6 +106,9 @@ from eslams.providers.stepfun import validate_configuration as validate_stepfun_
 from eslams.providers.tencent_hunyuan import ALIASES as HUNYUAN_ALIASES
 from eslams.providers.xiaomi import canonical_provider as canonical_xiaomi_provider
 
+_PROVIDERS_WITH_RAW_ACTION_DIAGNOSTICS = frozenset({
+    "openai", "anthropic", "google", "gemini", "openrouter", "bedrock",
+})
 
 class AgentError(RuntimeError):
     pass
@@ -719,6 +723,19 @@ class ModelProviderAgent:
                 provider=self.provider,
                 model=self.model,
             )
+        # Snapshot the credentials for this invocation before transport starts.
+        from eslams.provider_preflight import DEFAULT_PROVIDER_ENV
+
+        default_key_env = (
+            DEFAULT_PROVIDER_ENV.get(self.capabilities.provider)
+            or DEFAULT_PROVIDER_ENV.get(self.provider)
+        )
+        canonical_key = os.getenv(default_key_env, "").strip() if default_key_env else ""
+        credentials = {value for value in (api_key, canonical_key) if value}
+
+        def matches_credential(value: str) -> bool:
+            return any(key in value for key in credentials)
+
         prompt = _provider_prompt(
             request, history_window_turns=(
                 self.runtime_config.history_window_turns if self.runtime_config else None
@@ -735,16 +752,23 @@ class ModelProviderAgent:
                 provider_attempt += 1
                 try:
                     text, receipt = self._call_provider(api_key, prompt)
-                    _drop_credential_identifiers(receipt, api_key)
-                    if _action_contains_credential(text, api_key):
+                    if receipt.get("status_code") == httpx.codes.ACCEPTED:
+                        raise ProviderCallError(
+                            "provider accepted the request without completing it",
+                            status_code=httpx.codes.ACCEPTED,
+                            error_kind="provider_pending",
+                            provider=self.provider, model=self.model, receipt=receipt,
+                        )
+                    if (
+                        self.provider not in _PROVIDERS_WITH_RAW_ACTION_DIAGNOSTICS
+                        and action_text_matches(text, matches_credential)
+                    ):
                         raise ProviderCallError(
                             "provider returned credential material in its action",
                             error_kind="provider_response_schema_mismatch",
-                            provider=self.provider,
-                            model=self.model,
-                            receipt=receipt,
+                            provider=self.provider, model=self.model, receipt=receipt,
                         )
-                except TimeoutError:
+                except TimeoutError as exc:
                     self._remember_receipt(
                         _failure_receipt(
                             provider=self.provider,
@@ -761,10 +785,22 @@ class ModelProviderAgent:
                     )
                     # A timeout does not prove remote work stopped or was rejected.
                     # Never replay it automatically, even with optional safe retries.
-                    raise
+                    if action_text_matches(str(exc), matches_credential):
+                        raise TimeoutError("provider timed out") from None
+                    raise exc from None
                 except ProviderCallError as exc:
+                    # Retry safety depends on observed work, even when an
+                    # identifier must be removed from the public receipt.
+                    retryable = _provider_error_is_retryable(exc)
+                    exc.retry_permitted = retryable
                     if exc.receipt is not None:
-                        _drop_credential_identifiers(exc.receipt, api_key)
+                        exc.receipt = _redact_provider_receipt_ids(exc.receipt, matches_credential)
+                    if action_text_matches(str(exc), matches_credential):
+                        exc.args = ("provider request failed",)
+                    if isinstance(exc.model, str) and action_text_matches(
+                        exc.model, matches_credential,
+                    ):
+                        exc.model = None
                     failure_receipt = (
                         {
                             **exc.receipt,
@@ -803,17 +839,17 @@ class ModelProviderAgent:
                     )
                     if retry_index < _max_retries(
                         self.runtime_config
-                    ) and _provider_error_is_retryable(exc):
+                    ) and retryable:
                         retry_index += 1
                         _sleep_before_retry(
                             self.runtime_config,
                             retry_after_seconds=exc.retry_after_seconds,
                         )
                         continue
-                    raise
+                    raise exc from None
                 self._remember_receipt(
                     _attempt_receipt(
-                        receipt,
+                        _redact_provider_receipt_ids(receipt, matches_credential),
                         agent_id=str(self.id),
                         agent_version=self.version,
                         turn_id=request.turn_id,
@@ -849,9 +885,7 @@ class ModelProviderAgent:
                     "model": self.model,
                     **(
                         {"raw_action_text": text[:500]}
-                        if self.provider in {
-                            "anthropic", "bedrock", "gemini", "google", "openai", "openrouter",
-                        } else {}
+                        if self.provider in _PROVIDERS_WITH_RAW_ACTION_DIAGNOSTICS else {}
                     ),
                     "provider_receipt": self.last_receipt,
                     "attempt_receipts": [dict(item) for item in self.attempt_receipts],
@@ -2101,6 +2135,22 @@ def _receipt(
         ),
         "redaction_version": "provider-receipt-redaction-v1",
     }
+
+
+def _redact_provider_receipt_ids(
+    receipt: dict[str, Any], matches_credential: Callable[[str], bool],
+) -> dict[str, Any]:
+    result = dict(receipt)
+    for name in (
+        "request_id", "gateway_request_id", "provider_response_id",
+        "locked_model_id", "served_model_name",
+    ):
+        value = result.get(name)
+        if isinstance(value, str) and action_text_matches(value, matches_credential):
+            result[name] = None
+            if name == "locked_model_id":
+                result["model_identity_source"] = None
+    return result
 
 
 def _attempt_receipt(
@@ -3531,22 +3581,6 @@ def _redact_sensitive_text(value: str) -> str:
             redacted,
         )
     return redacted[:500]
-
-
-def _drop_credential_identifiers(receipt: dict[str, Any], credential: str) -> None:
-    """Discard credential echoes before provider-supplied identifiers become public."""
-    if not credential:
-        return
-    for name in ("request_id", "gateway_request_id", "provider_response_id", "locked_model_id"):
-        value = receipt.get(name)
-        if isinstance(value, str) and credential in value:
-            receipt[name] = None
-            if name == "locked_model_id":
-                receipt["model_identity_source"] = None
-
-
-def _action_contains_credential(text: str, credential: str) -> bool:
-    return action_text_matches(text, lambda value: credential in value)
 
 
 def _parse_model_action(
