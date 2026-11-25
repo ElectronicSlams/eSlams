@@ -146,6 +146,18 @@ def test_finish_failures_never_accept_parseable_partial_actions(monkeypatch, rea
     assert "unknown-private-reason" not in json.dumps(model.last_receipt)
 
 
+def test_unsolicited_legacy_function_call_never_accepts_action(monkeypatch):
+    payload = fixture()
+    payload["choices"][0]["message"]["function_call"] = {"name": "other", "arguments": "{}"}
+    calls = wire(monkeypatch, payload)
+    model = agent(runtime_config=ProviderRuntimeConfig(action_repair_attempts=1))
+    with pytest.raises(ProviderCallError) as caught:
+        model.act(_request())
+    assert caught.value.error_kind == "provider_request_rejected"
+    assert len(calls) == 1
+    assert model.last_receipt["usage"]["total_tokens"] == 16
+
+
 @pytest.mark.parametrize("patch", [
     {"choices": []}, {"object": "chat.completion.chunk"},
     {"choices": [{"index": 0, "finish_reason": "stop", "delta": {"content": '{"action":1}'}}]},

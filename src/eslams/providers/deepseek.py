@@ -207,7 +207,7 @@ def _call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, di
         if (reason != "stop" or type(choice.get("index")) is not int or choice["index"] != 0
                 or not isinstance(message, dict) or message.get("role") != "assistant"):
             raise _schema_error()
-        if message.get("tool_calls"):
+        if message.get("tool_calls") or message.get("function_call") is not None:
             raise ProviderCallError(
                 "DeepSeek returned unsolicited tool calls; no action accepted",
                 error_kind="provider_request_rejected", provider=PROVIDER_ID,

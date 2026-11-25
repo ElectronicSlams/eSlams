@@ -38,6 +38,10 @@ def export_public_replay(artifact_path: Path, output_dir: Path) -> Path:
 def _export_public_replay(artifact_path: Path, output_dir: Path) -> None:
     with open_artifact(artifact_path) as artifact_dir:
         manifest = _read_json(artifact_dir / "manifest.json")
+        if (manifest.get("artifact_kind") == "recovered_position"
+                or manifest.get("run_metadata", {}).get("execution_mode")
+                == "unscored_recovered_position" or (artifact_dir / "recovery").exists()):
+            raise ValueError("recovered positions require the separate unscored publication reader")
         for member in PUBLIC_EXPORT_MEMBERS:
             source = artifact_dir / member
             if not source.exists():
