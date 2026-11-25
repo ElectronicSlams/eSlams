@@ -75,20 +75,30 @@ def parse_model_action(text: str, legal_actions: list[Any]) -> ParsedModelAction
     )
 
 
-def extract_json(text: str) -> Any:
+def _unique_json_fields(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate action JSON field")
+        result[key] = value
+    return result
+
+
+def extract_json(text: str, *, reject_duplicate_fields: bool = False) -> Any:
+    object_hook = _unique_json_fields if reject_duplicate_fields else None
     stripped = text.strip()
     fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", stripped, re.DOTALL)
     if fenced:
         stripped = fenced.group(1)
     try:
-        return json.loads(stripped)
+        return json.loads(stripped, object_pairs_hook=object_hook)
     except json.JSONDecodeError:
         start = stripped.find("{")
         end = stripped.rfind("}")
         if start != -1 and end > start:
             with_json = stripped[start : end + 1]
             try:
-                return json.loads(with_json)
+                return json.loads(with_json, object_pairs_hook=object_hook)
             except json.JSONDecodeError:
                 return None
     return None

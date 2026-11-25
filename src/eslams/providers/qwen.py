@@ -20,6 +20,7 @@ import httpx
 
 from eslams.contracts.provider import ProviderRuntimeConfig
 from eslams.protocol import validate_json_payload
+from eslams.providers.action_privacy import validate_provider_action_text
 from eslams.providers.registry import PROVIDER_ALIASES
 
 if TYPE_CHECKING:
@@ -270,9 +271,11 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         core._http_error_identifier(data.get("request_id")) or receipt["request_id"]
     )
     try:
-        # Redact before Core truncates raw_action_text diagnostics, otherwise a
-        # credential cut at the snippet boundary could leave a private prefix.
-        return redact(_completed_text(data, receipt, agent.model)), receipt
+        # Preserve DashScope’s output redaction while checking decoded fields.
+        text = redact(_completed_text(data, receipt, agent.model))
+        validate_provider_action_text(text, _CREDENTIALS.get(), receipt,
+                                      provider=PROVIDER_ID, model=agent.model)
+        return text, receipt
     except core.ProviderCallError as exc:
         exc.receipt = {**receipt, "outcome": exc.error_kind}
         raise

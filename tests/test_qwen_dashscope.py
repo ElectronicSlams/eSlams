@@ -796,3 +796,26 @@ def test_secondary_key_settings_are_still_private(monkeypatch, name):
     assert result.metadata["provider_receipt"]["request_id"] is None
     assert result.metadata["provider_receipt"]["provider_response_id"] is None
     assert secret not in json.dumps(result.to_dict())
+
+
+@pytest.mark.parametrize("duplicate_field", [False, True])
+def test_unicode_escaped_action_credentials_are_rejected_without_public_diagnostics(
+    monkeypatch, duplicate_field,
+):
+    native = agent()
+    canary = "OpaqueReviewCredentialCanary"
+    monkeypatch.setenv(native.api_key_env, canary)
+    body = fixture()
+    message = body["output"]["choices"][0]["message"]
+    ending = ',"public_explanation":"safe"' if duplicate_field else ""
+    message["content"] = (
+        '{"action":1,"public_explanation":"' + chr(92) + 'u004f' + canary[1:] + '"' + ending + "}"
+    )
+    monkeypatch.setattr(
+        "eslams.agents.bounded_post", lambda *args, **kwargs: httpx.Response(200, json=body),
+    )
+    with pytest.raises(ProviderCallError) as caught:
+        native.act(request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert canary not in str(caught.value) + json.dumps(native.attempt_receipts)
+    assert native.last_receipt["usage"]["total_tokens"] is not None
