@@ -723,12 +723,17 @@ Core has native HTTP adapters for the provider routes below:
 | `gemini:<model>` | `GEMINI_API_KEY` |
 | `openrouter:<vendor/model>` | `OPENROUTER_API_KEY` |
 | `writer:<model>` | `WRITER_API_KEY` |
+| `minimax:<model>` | `MINIMAX_API_KEY` |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` |
 | `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` |
 
 The proposed 0.7.1 [Shanghai AI Lab adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/SHANGHAI_AI_LAB.md) calls the
 Atria service with an explicit model ID. Reasoning controls are unverified and
 rejected; missing identity and accounting stay unknown. The package remains 0.7.0.
+
+MiniMax calls its [direct Chat Completions API](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/MINIMAX.md) with
+separated reasoning and no model or provider fallback. Select an explicit model such as
+`MiniMax-M3.1-Flash`; configuration preflight is offline unless `--live` is selected.
 
 OpenAI uses the raw Responses `output[]` wire shape, Anthropic uses Messages,
 Gemini uses `generateContent`, OpenRouter uses Chat Completions with native

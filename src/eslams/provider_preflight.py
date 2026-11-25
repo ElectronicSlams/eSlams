@@ -14,6 +14,7 @@ from eslams.execution_policy import model_execution_policy
 from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import cohere, load_provider_registry, writer, xai
+from eslams.providers.minimax import API_KEY_ENV as MINIMAX_API_KEY_ENV
 from eslams.providers.mistral import API_KEY_ENV as MISTRAL_API_KEY_ENV
 from eslams.providers.mistral import MODELS_ENDPOINT as MISTRAL_MODELS_ENDPOINT
 from eslams.providers.mistral import configuration_error as mistral_configuration_error
@@ -40,6 +41,7 @@ DEFAULT_PROVIDER_ENV = {
     "shanghai-ai-lab": "ATRIA_API_KEY",
     "ibm-rhai": "IBM_RHAI_API_KEY",
     "sarvam-ai": "SARVAM_API_KEY",
+    "minimax": MINIMAX_API_KEY_ENV,
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -125,6 +127,9 @@ def provider_preflight(
     writer_config_error = (
         writer.configuration_error(runtime_config) if provider in writer.ALIASES else None
     )
+    from eslams.providers.minimax import configuration_error
+    minimax_error = configuration_error(model, runtime_config) if provider == "minimax" else None
+    registry_model = "" if minimax_error and not isinstance(model, str) else model
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 
@@ -181,6 +186,8 @@ def provider_preflight(
         error = {"error_class": "provider_request_rejected", "message": config_error}
     elif mistral_error:
         error = {"error_class": "provider_request_rejected", "message": mistral_error}
+    elif minimax_error:
+        error = {"error_class": "provider_request_rejected", "message": minimax_error}
     elif strict_catalogue and not checks["model_lifecycle_available"]:
         error = {
             "error_class": "provider_unavailable",
@@ -309,7 +316,8 @@ def provider_preflight(
                                     and credential_error is None and configuration_error is None
                                     and config_error is None
                                     and mistral_error is None
-                                    and writer_config_error is None),
+                                    and writer_config_error is None
+                                    and minimax_error is None),
             "inference": ("succeeded" if checks["minimal_inference"] is True else
                           "failed" if inference_invoked else "not_attempted"),
             "legal_action_observed": checks["response_parsing"] is True,

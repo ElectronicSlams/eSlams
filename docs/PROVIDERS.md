@@ -5,7 +5,7 @@ The proposed 0.7.1 [native Cohere adapter](providers/cohere.md) adds
 Its research note documents controls, discovery, accounting, and identity limits.
 
 eSlams Core has native, secret-free artifact support for OpenAI,
-Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, and Sarvam (proposed 0.7.1).
+Anthropic, Google Gemini, OpenRouter, Amazon Bedrock, Sarvam, and MiniMax.
 The adapters call raw
 HTTP APIs; their parsers are pinned to documented REST envelopes rather than SDK
 convenience properties.
@@ -42,6 +42,8 @@ For the native xAI Responses adapter (`xai`, alias `x-ai`), see the
 | `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` | Atria Chat Completions | `choices[0].message.content` | reported model only; null when absent |
 
 | `sarvam:<model>` / `sarvam-ai:<model>` | `SARVAM_API_KEY` | Sarvam V1 Chat Completions | `choices[0].message.content` | response `model` |
+
+| `minimax:<model>` | `MINIMAX_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The proposed 0.7.1 [Apodex adapter](providers/APODEX.md) accepts only the two
@@ -55,6 +57,11 @@ rejected controls and fixture provenance; legacy InternLM controls do not apply.
 
 See [Sarvam direct API](providers/SARVAM.md) for model IDs, controls, accounting,
 and primary-source research for the proposed 0.7.1 adapter.
+
+The [MiniMax adapter guide](providers/MINIMAX.md) records current official API
+research, regions, reasoning preservation, retry limits and keyless test coverage
+for the 0.7.1 adapter work. Its configuration preflight is advisory and makes no
+inference request unless `--live` is explicitly requested.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

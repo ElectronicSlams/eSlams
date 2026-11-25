@@ -1465,6 +1465,7 @@ def _provider_agent(
         "apodex": ("", "APODEX_API_KEY"),
         "shanghai-ai-lab": ("", "ATRIA_API_KEY"),
         "sarvam-ai": ("sarvam-105b", "SARVAM_API_KEY"),
+        "minimax": ("", "MINIMAX_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)
@@ -1483,6 +1484,9 @@ def _provider_agent(
         provider = "writer"
         writer.validate_model(model)
         defaults[provider] = (model, writer.API_KEY_ENV)
+    if provider == "minimax":
+        from eslams.providers.minimax import require_model
+        require_model(model)
     if provider.strip().replace("_", "-") in {"liquid", "liquid-ai"}:
         return ModelProviderAgent(
             provider="liquid-ai", model=model, api_key_env="LIQUID_API_KEY",

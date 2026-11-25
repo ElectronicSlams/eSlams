@@ -49,6 +49,15 @@
 - Add a native Sarvam V1 chat adapter with exact model forwarding, explicit
   reasoning controls, sanitized receipts and deterministic raw-wire tests.
 
+- Reject unsupported MiniMax thinking controls and blank model IDs locally; exclude raw/decoded primary and secondary credential echoes before action parsing and from response/error identifiers.
+
+- Add a native MiniMax direct Chat Completions adapter with CLI/preflight wiring,
+  separated reasoning retained privately for explicit action repairs, and
+  provider-specific error, refusal, truncation and accounting checks. Preserve
+  full supplied history and native defaults; never substitute a model or route.
+- Document the verified MiniMax API, regions and model lifecycle caveats; add
+  deterministic keyless wire and privacy regressions for the 0.7.1 adapter work.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a

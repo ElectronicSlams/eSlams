@@ -45,6 +45,9 @@ from eslams.providers import ModelCapabilities, cohere, load_provider_registry, 
 from eslams.providers.anthropic import MESSAGES_ENDPOINT
 from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
+from eslams.providers.minimax import call as call_minimax
+from eslams.providers.minimax import conversation as minimax_conversation
+from eslams.providers.minimax import observe_http_error as minimax_http_error
 from eslams.providers.mistral import complete as complete_mistral
 from eslams.providers.mistral import configuration_error as mistral_configuration_error
 from eslams.providers.openai import RESPONSES_ENDPOINT
@@ -448,6 +451,9 @@ class ModelProviderAgent:
         if self.provider in writer.ALIASES:
             self.provider = "writer"
             writer.validate_model(self.model)
+        if self.provider == "minimax":
+            from eslams.providers.minimax import require_model
+            require_model(self.model)
         if self.id is None:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
@@ -479,6 +485,9 @@ class ModelProviderAgent:
             if self.provider == "xai":
                 with xai.credential_scope(environment_name=self.api_key_env):
                     return self._act(request)
+            if self.provider == "minimax":
+                with minimax_conversation():
+                    return self._act(request)
             if self.provider == "krutrim":
                 from eslams.providers.krutrim import credential_scope
 
@@ -489,6 +498,12 @@ class ModelProviderAgent:
     def _act(self, request: ActRequest) -> ActResponse:
         self.last_receipt = None
         self.attempt_receipts = []
+        if self.provider == "minimax":
+            from eslams.providers.minimax import configuration_error
+            error = configuration_error(self.model, self.runtime_config)
+            if error:
+                raise ProviderCallError(error, error_kind="provider_request_rejected",
+                                        provider=self.provider, model=self.model)
         request = ActRequest.from_mapping(request.to_dict())
         if self.provider == "mistral-ai":
             error = mistral_configuration_error(self.model, self.runtime_config)
@@ -748,6 +763,8 @@ class ModelProviderAgent:
             return self._call_bedrock(api_key, prompt)
         if self.provider == "sarvam-ai":
             return call_sarvam(self, api_key, prompt)
+        if self.provider == "minimax":
+            return call_minimax(self, api_key, prompt)
         raise ProviderCallError(
             f"unsupported provider {self.provider!r}",
             error_kind="provider_unavailable",
@@ -1338,6 +1355,9 @@ def _post_json(
             from eslams.providers.sarvam import http_error
 
             kind, body_retry_permitted = http_error(response)
+            receipt["outcome"] = kind
+        if provider == "minimax":
+            kind, body_retry_permitted = minimax_http_error(response, receipt, kind)
             receipt["outcome"] = kind
         receipt["request_id"] = _http_error_identifier(
             response.headers.get("x-request-id") or response.headers.get("request-id")
@@ -2106,6 +2126,7 @@ def _endpoint_kind(provider: str) -> str:
         "bedrock": "bedrock_converse",
         "shanghai-ai-lab": "shanghai_ai_lab_atria_chat_completions",
         "sarvam-ai": "sarvam_chat_completions_v1",
+        "minimax": "minimax_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2127,6 +2148,7 @@ def _parser_version(provider: str) -> str:
         "bedrock": "bedrock-converse-raw-v1",
         "shanghai-ai-lab": "shanghai-ai-lab-atria-chat-raw-v1",
         "sarvam-ai": "sarvam-chat-completions-raw-v1",
+        "minimax": "minimax-chat-completions-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 
@@ -2136,6 +2158,10 @@ def _normalize_usage(provider: str, usage: Any) -> dict[str, Any]:
         return cohere.normalize_usage(usage)
     if provider == "sarvam-ai":
         from eslams.providers.sarvam import normalize_usage
+
+        return normalize_usage(usage)
+    if provider == "minimax":
+        from eslams.providers.minimax import normalize_usage
 
         return normalize_usage(usage)
     if provider == "krutrim":
