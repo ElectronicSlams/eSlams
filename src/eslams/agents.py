@@ -669,8 +669,9 @@ class ModelProviderAgent:
         if self.provider == "openrouter":
             return self._call_openrouter(api_key, prompt)
         if self.provider == "ibm-rhai":
-            from eslams.providers.ibm_rhai import call
-            return call(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
+            from eslams.providers.ibm_rhai import call as call_ibm_rhai
+
+            return call_ibm_rhai(self, api_key, prompt, _SYSTEM_INSTRUCTIONS)
         if self.provider == "bedrock":
             return self._call_bedrock(api_key, prompt)
         raise ProviderCallError(
