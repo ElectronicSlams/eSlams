@@ -147,9 +147,15 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
                 "AI21 output reached its token limit", error_kind="provider_output_truncated",
             )
         message = choice.get("message")
+        if reason == "content_filter" or (isinstance(message, dict) and message.get("refusal")):
+            receipt.update(finish_reason="content_filter", finish_status="refused")
+            raise shared.ProviderCallError(
+                "AI21 refused the action", error_kind="provider_refused",
+            )
         if (reason != "stop" or type(choice.get("index")) is not int or choice["index"] != 0
                 or not isinstance(message, dict) or message.get("role") != "assistant"
                 or message.get("tool_calls") or choice.get("tool_calls")
+                or message.get("function_call") is not None
                 or choice.get("error") is not None
                 or not isinstance(message.get("content"), str) or not message["content"].strip()):
             raise shared.ProviderCallError(

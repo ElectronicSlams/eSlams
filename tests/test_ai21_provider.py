@@ -249,7 +249,7 @@ def test_nonfinal_http_status_cannot_accept_legal_looking_body(monkeypatch, code
 
 @pytest.mark.parametrize("fault", [
     "length", "missing-finish", "unknown-finish", "nontext", "tools", "extra-choice",
-    "missing-message", "empty", "index", "body-error", "choice-error",
+    "missing-message", "empty", "index", "body-error", "choice-error", "refusal", "function-call",
 ])
 def test_incomplete_unsupported_output_never_becomes_an_action(monkeypatch, fault):
     payload = wire()
@@ -264,6 +264,10 @@ def test_incomplete_unsupported_output_never_becomes_an_action(monkeypatch, faul
         choice["message"]["content"] = [{"text": '{"action":1}'}]
     elif fault == "tools":
         choice["message"]["tool_calls"] = [{"id": SECRET}]
+    elif fault == "refusal":
+        choice["message"]["refusal"] = SECRET
+    elif fault == "function-call":
+        choice["message"]["function_call"] = {"name": "unused", "arguments": SECRET}
     elif fault == "extra-choice":
         payload["choices"].append(dict(choice))
     elif fault == "missing-message":
@@ -280,9 +284,10 @@ def test_incomplete_unsupported_output_never_becomes_an_action(monkeypatch, faul
     native = agent()
     with pytest.raises(ProviderCallError) as caught:
         native.act(_request())
-    expected = "provider_output_truncated" if fault == "length" else (
-        "provider_response_schema_mismatch"
-    )
+    expected = {
+        "length": "provider_output_truncated",
+        "refusal": "provider_refused",
+    }.get(fault, "provider_response_schema_mismatch")
     assert caught.value.error_kind == expected
     assert native.last_receipt["usage"]["total_tokens"] == 16
     assert SECRET not in json.dumps(native.attempt_receipts)
