@@ -902,7 +902,7 @@ def _public_error(exc: BaseException, *, provider: str, model: str) -> dict[str,
     return {
         "provider": provider,
         "model": model,
-        "status_code": status_code if type(status_code) is int else None,
+        "status_code": int(status_code) if _is_int(status_code) else None,
         "error_class": error_class,
         "message": message,
     }

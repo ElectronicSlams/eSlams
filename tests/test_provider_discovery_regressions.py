@@ -196,14 +196,20 @@ def test_gpt5_preflight_preserves_native_defaults_without_framework_caps(monkeyp
 
 
 @pytest.mark.parametrize("phase", ["discovery", "inference"])
-def test_preflight_uses_safe_public_messages_for_provider_failures(monkeypatch, capsys, phase):
+@pytest.mark.parametrize(("status", "kind"), [
+    (401, "provider_auth_failed"),
+    (httpx.codes.ACCEPTED, "provider_pending"),
+])
+def test_preflight_uses_safe_public_messages_for_provider_failures(
+    monkeypatch, capsys, phase, status, kind,
+):
     from eslams.agents import ProviderCallError
 
     secret = "synthetic-preflight-password-953"
     monkeypatch.setenv("OPENAI_API_KEY", secret)
 
     def fail(*args, **kwargs):
-        raise ProviderCallError(secret, status_code=401, error_kind="provider_auth_failed")
+        raise ProviderCallError(secret, status_code=status, error_kind=kind)
 
     if phase == "discovery":
         monkeypatch.setattr("eslams.provider_preflight.provider_models_live", fail)
@@ -219,9 +225,11 @@ def test_preflight_uses_safe_public_messages_for_provider_failures(monkeypatch, 
     assert main(args) == 1
     output = capsys.readouterr().out
     error = json.loads(output)["error"]
-    assert error["error_class"] == "provider_auth_failed"
-    assert error["status_code"] == 401
-    assert "Provider authentication failed" in error["message"]
+    assert error["error_class"] == kind
+    assert error["status_code"] == int(status)
+    assert "Provider authentication failed" in error["message"] if status == 401 else (
+        "still pending" in error["message"]
+    )
     assert secret not in output
 
 
