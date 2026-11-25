@@ -538,6 +538,21 @@ def test_credential_echo_in_action_text_never_becomes_public_output(monkeypatch,
     assert len(calls) == 1 and model.last_receipt["usage"]["total_tokens"] == 16
 
 
+def test_duplicate_action_fields_cannot_conceal_escaped_credentials(monkeypatch):
+    payload = fixture()
+    escaped = f"\\u{ord(SECRET[0]):04x}{SECRET[1:]}"
+    payload["choices"][0]["message"]["content"] = (
+        '{"action":1,"public_explanation":"' + escaped + '","public_explanation":"safe"}'
+    )
+    calls = wire(monkeypatch, payload)
+    model = agent(runtime_config=ProviderRuntimeConfig(action_repair_attempts=1))
+    with pytest.raises(ProviderCallError) as caught:
+        model.act(_request())
+    assert caught.value.error_kind == "provider_response_schema_mismatch"
+    assert SECRET not in str(caught.value) + json.dumps(model.attempt_receipts)
+    assert len(calls) == 1 and model.last_receipt["usage"]["total_tokens"] == 16
+
+
 def test_secondary_canonical_key_is_redacted_with_custom_primary_environment(monkeypatch):
     monkeypatch.setenv("CUSTOM_DEEPSEEK_ACCESS", "custom-primary-key")
     payload = fixture()

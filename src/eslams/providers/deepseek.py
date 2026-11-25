@@ -129,11 +129,11 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         raise
     receipt = _redact_receipt(receipt, secrets)
     try:
-        decoded = extract_json(text)
+        decoded = extract_json(text, reject_duplicate_fields=True)
         _validate_action_json_depth(decoded)
     except (RecursionError, ValueError, OverflowError):
         raise ProviderCallError(
-            "DeepSeek action JSON exceeds structural inspection limits; no action accepted",
+            "DeepSeek action JSON failed structural inspection limits or field validation; no action accepted",
             error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
             model=agent.model,
             receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
