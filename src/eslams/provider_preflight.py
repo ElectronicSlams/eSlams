@@ -15,6 +15,7 @@ from eslams.protocol import make_act_request
 from eslams.provider_credentials import provider_key
 from eslams.providers import load_provider_registry
 from eslams.providers.registry import PROVIDER_ALIASES
+from eslams.providers.shanghai_ai_lab import validate_configuration as validate_shanghai_ai_lab
 
 DEFAULT_PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -25,6 +26,7 @@ DEFAULT_PROVIDER_ENV = {
     "bedrock": "AWS_BEARER_TOKEN_BEDROCK",
     "liquid-ai": "LIQUID_API_KEY",
     "apodex": "APODEX_API_KEY",
+    "shanghai-ai-lab": "ATRIA_API_KEY",
     "krutrim": "KRUTRIM_CLOUD_API_KEY",
 }
 
@@ -71,6 +73,8 @@ def provider_preflight(
             validate_configuration(model, runtime_config)
         except ValueError as exc:
             configuration_error = str(exc)
+    if provider.strip().replace("_", "-") == "shanghai-ai-lab":
+        validate_shanghai_ai_lab(model, runtime_config, max_output_tokens=max_output_tokens)
     if provider == "krutrim":
         from eslams.providers.krutrim import validate_config
 

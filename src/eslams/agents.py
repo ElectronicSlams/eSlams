@@ -47,6 +47,12 @@ from eslams.providers.bedrock import converse_endpoint
 from eslams.providers.google import GENERATE_CONTENT_ENDPOINT
 from eslams.providers.openai import RESPONSES_ENDPOINT
 from eslams.providers.openrouter import CHAT_COMPLETIONS_ENDPOINT
+from eslams.providers.shanghai_ai_lab import (
+    call as call_shanghai_ai_lab,
+)
+from eslams.providers.shanghai_ai_lab import (
+    validate_configuration as validate_shanghai_ai_lab,
+)
 
 
 class AgentError(RuntimeError):
@@ -415,6 +421,10 @@ class ModelProviderAgent:
             self.id = f"{self.provider}-{self.model}"
         if self.runtime_config is None:
             self.runtime_config = ProviderRuntimeConfig()
+        if self.provider == "shanghai-ai-lab":
+            validate_shanghai_ai_lab(
+                self.model, self.runtime_config, self.temperature, self.max_output_tokens,
+            )
         if self.provider == "krutrim":
             from eslams.providers.krutrim import validate_config
 
@@ -669,6 +679,8 @@ class ModelProviderAgent:
             from eslams.providers.apodex import call
 
             return call(self, api_key, prompt)
+        if self.provider == "shanghai-ai-lab":
+            return call_shanghai_ai_lab(self, api_key, prompt)
         if self.provider == "krutrim":
             from eslams.providers.krutrim import call
 
@@ -2025,6 +2037,7 @@ def _endpoint_kind(provider: str) -> str:
         "openrouter": "openrouter_chat_completions",
         "liquid-ai": "liquid_chat_completions",
         "bedrock": "bedrock_converse",
+        "shanghai-ai-lab": "shanghai_ai_lab_atria_chat_completions",
         "krutrim": "krutrim_chat_completions",
     }.get(provider, "unknown")
 
@@ -2039,6 +2052,7 @@ def _parser_version(provider: str) -> str:
         "openrouter": "openrouter-chat-completions-raw-v1",
         "liquid-ai": "liquid-chat-completions-raw-v1",
         "bedrock": "bedrock-converse-raw-v1",
+        "shanghai-ai-lab": "shanghai-ai-lab-atria-chat-raw-v1",
         "krutrim": "krutrim-chat-completions-raw-v1",
     }.get(provider, "unknown")
 

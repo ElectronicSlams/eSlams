@@ -1452,6 +1452,7 @@ def _provider_agent(
         "openrouter": ("openai/gpt-5-mini", "OPENROUTER_API_KEY"),
         "bedrock": ("amazon.nova-micro-v1:0", "AWS_BEARER_TOKEN_BEDROCK"),
         "apodex": ("", "APODEX_API_KEY"),
+        "shanghai-ai-lab": ("", "ATRIA_API_KEY"),
     }
     if ":" in value:
         provider, model = value.split(":", 1)

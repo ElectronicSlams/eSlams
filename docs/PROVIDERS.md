@@ -16,11 +16,18 @@ convenience properties.
 | `liquid-ai:<exact-model>` (alias `liquid`) | `LIQUID_API_KEY` | Liquid direct Chat Completions | `choices[0].message.content` | response `model`, if present |
 | `bedrock:<model-id>` | `AWS_BEARER_TOKEN_BEDROCK` | Converse | `output.message.content[]` text | explicitly pinned endpoint model |
 | `apodex:<model>` | `APODEX_API_KEY` | Direct Core Chat Completions | `choices[0].message.content` | response `model` |
+
+| `shanghai-ai-lab:Atria-Dawn` | `ATRIA_API_KEY` | Atria Chat Completions | `choices[0].message.content` | reported model only; null when absent |
 | `krutrim:<exact-model-id>` | `KRUTRIM_CLOUD_API_KEY` | direct Chat Completions | `choices[0].message.content` | response `model` |
 
 The proposed 0.7.1 [Apodex adapter](providers/APODEX.md) accepts only the two
 documented Core model IDs. Apodex Deep Research models run server-side tools and
 are outside this adapter. The package version remains 0.7.0 pending release review.
+
+The proposed 0.7.1 [Shanghai AI Lab adapter](SHANGHAI_AI_LAB.md) uses native
+reasoning defaults and requires an explicit model ID. Its reasoning accounting
+and total usage remain unknown. See that guide for verified service boundaries,
+rejected controls and fixture provenance; legacy InternLM controls do not apply.
 
 The 0.7.1 Krutrim adapter work requires an explicit model ID and leaves
 undocumented reasoning/accounting/region semantics unknown. See the

@@ -11,6 +11,14 @@
   deterministic offline wire/privacy tests. Deep Research SKUs are rejected.
   See `docs/providers/APODEX.md`; no package version change or live inference claim.
 
+- Add a Shanghai AI Lab Atria text adapter proposed for 0.7.1, requiring the
+  exact `Atria-Dawn` model ID and using `ATRIA_API_KEY`. Preserve full history,
+  reject unverified controls, and keep missing identity/accounting unknown.
+  Include deterministic raw-wire, CLI/preflight and credential-custody tests.
+  Protect secondary configured credentials and validate normalized preflight
+  spellings and configuration changed after construction before transport.
+  See `docs/SHANGHAI_AI_LAB.md`; the package version is unchanged.
+
 ## v0.9.1
 
 - Add separately versioned native multi-unit matches for 22 arenas, with a
