@@ -218,10 +218,9 @@ not marked game-agent-supported, or missing its API key. See
 [the provider guide](https://github.com/ElectronicSlams/eSlams/blob/main/docs/PROVIDERS.md) for the exact wire adapters, model
 identity rules, reasoning behavior, usage semantics, and rate-card contract.
 
-The proposed 0.7.1 [Kuaishou / KwaiPilot KAT adapter](docs/providers/KUAISHOU.md)
+The [Kuaishou / KwaiPilot KAT adapter](https://github.com/ElectronicSlams/eSlams/blob/main/docs/providers/KUAISHOU.md)
 uses `kwaipilot:<model>` or `kuaishou:<endpoint-id>` with `STREAMLAKE_API_KEY`.
 Select the documented service region explicitly when using China endpoints.
-The package version remains 0.7.0 during adapter review.
 
 The next-release native `perceptron:<explicit-model-id>` adapter uses
 `PERCEPTRON_API_KEY` and direct text Chat Completions. See the

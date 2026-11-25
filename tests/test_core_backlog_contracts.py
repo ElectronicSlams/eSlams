@@ -47,6 +47,14 @@ def test_live_preflight_explicit_operator_choices_are_preserved(monkeypatch):
     assert 1790 < calls[0]["timeout"].read <= 1800
 
 
+def test_action_deadline_does_not_round_up_operator_budget(monkeypatch):
+    from eslams.deadlines import action_deadline, current_deadline, remaining_seconds
+
+    monkeypatch.setattr("eslams.deadlines.time.monotonic", lambda: 248.14285714285714)
+    with action_deadline(1_800_000):
+        assert 1799.999 < remaining_seconds(current_deadline()) <= 1800
+
+
 @pytest.mark.parametrize("field", ["time_budget_ms", "max_output_tokens"])
 @pytest.mark.parametrize("bad", [0, -1, True, 1.5])
 def test_invalid_preflight_policies_fail_before_discovery_or_inference(monkeypatch, field, bad):
