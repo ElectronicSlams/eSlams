@@ -133,7 +133,7 @@ def call(agent: ModelProviderAgent, api_key: str, prompt: str) -> tuple[str, dic
         _validate_action_json_depth(decoded)
     except (RecursionError, ValueError, OverflowError):
         raise ProviderCallError(
-            "DeepSeek action JSON failed structural or field validation; no action accepted",
+            "DeepSeek action JSON failed structural inspection limits or field validation",
             error_kind="provider_response_schema_mismatch", provider=PROVIDER_ID,
             model=agent.model,
             receipt={**receipt, "outcome": "provider_response_schema_mismatch"},
